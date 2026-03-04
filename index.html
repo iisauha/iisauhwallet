@@ -86,6 +86,7 @@
     }
     .btn-primary { background: var(--accent); color: white; flex: 1; }
     .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .clear-btn { background: transparent !important; color: var(--red) !important; border-color: var(--red) !important; }
     .btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
     .btn-dashed { border: 1px dashed var(--border); color: var(--muted); width: 100%; margin-top: 8px; }
     .summary {
@@ -165,8 +166,10 @@
       color: var(--green);
     }
     .del {
-      background: var(--red-light);
+      background: transparent;
       color: var(--red);
+      border: 1px solid var(--red);
+      border-radius: 999px;
     }
     .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .filter-bar select { min-height: 44px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; }
@@ -2426,7 +2429,7 @@
       };
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
-      delBtn.className = 'del';
+      delBtn.className = 'btn del';
       delBtn.textContent = 'Delete';
       delBtn.style.marginTop = '8px';
       delBtn.style.marginRight = '4px';
