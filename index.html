@@ -319,7 +319,6 @@
   <div id="modalPurchase" class="modal-overlay hidden">
     <div class="modal">
       <h3 id="modalPurchaseHeading">Add Purchase</h3>
-      <p class="field hidden" id="modalPurchasePrefillBanner" style="font-size: 0.9rem; color: var(--accent); margin: 0 0 8px 0;">Prefilled from Shortcut</p>
       <div class="field">
         <label>Title / Merchant</label>
         <input type="text" id="modalPurchaseTitle" placeholder="e.g. Coffee shop" />
@@ -433,7 +432,6 @@
   };
   let spendingChart = null;
   let activeCategoryFilter = '';
-  let deepLinkHandled = false;
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
   function now() { return new Date().toISOString(); }
@@ -539,35 +537,6 @@
     const [y, m, d] = parts;
     if (isNaN(y) || isNaN(m) || isNaN(d)) return new Date(NaN);
     return new Date(y, m - 1, d);
-  }
-
-  function parseLocalYYYYMMDD(key) {
-    if (typeof key !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return new Date(NaN);
-    return parseLocalDateKey(key);
-  }
-
-  function truthyParam(v) {
-    if (typeof v !== 'string') return false;
-    const n = normalizeText(v);
-    return n === '1' || n === 'true' || n === 'yes' || n === 'on';
-  }
-
-  function getDeepLinkParams() {
-    try {
-      const params = new URLSearchParams(window.location.search || '');
-      const hash = window.location.hash || '';
-      const idx = hash.indexOf('?');
-      if (idx !== -1) {
-        const hashQuery = hash.slice(idx + 1);
-        const hashParams = new URLSearchParams(hashQuery);
-        hashParams.forEach((value, key) => {
-          params.set(key, value);
-        });
-      }
-      return params;
-    } catch (_) {
-      return new URLSearchParams();
-    }
   }
 
   function getDateRange(filter, rangeStart, rangeEnd) {
@@ -985,7 +954,6 @@
   const applyError = document.getElementById('modalPurchaseApplyError');
   const modalPurchaseOkBtn = document.getElementById('modalPurchaseOk');
   const targetDebug = document.getElementById('modalPurchaseTargetDebug');
-  const prefillBanner = document.getElementById('modalPurchasePrefillBanner');
   let applyToSnapshotState = false;
   let paymentSourceState = '';
   let paymentTargetIdState = '';
@@ -1099,7 +1067,6 @@
     const categoryInput = document.getElementById('modalPurchaseCategory');
     const notesInput = document.getElementById('modalPurchaseNotes');
     const nowKey = toLocalDateKey(new Date());
-    const fromShortcut = prefill && prefill.fromShortcut;
 
     titleInput.value = (prefill && prefill.title) || '';
     amountInput.value = (prefill && prefill.amountText) || '';
@@ -1147,10 +1114,6 @@
       updateApplyUI();
     }
 
-    if (prefillBanner) {
-      prefillBanner.classList.toggle('hidden', !fromShortcut);
-    }
-
     modalPurchaseOkBtn.disabled = false;
     document.getElementById('modalPurchase').classList.remove('hidden');
     updateBodyModalOpen();
@@ -1167,21 +1130,9 @@
     openAddPurchaseModal(null);
   };
 
-  function clearDeepLinkParamsFromUrl() {
-    try {
-      const url = new URL(window.location.href);
-      url.search = '';
-      if (url.hash && url.hash.includes('?')) {
-        url.hash = url.hash.split('?')[0];
-      }
-      window.history.replaceState({}, '', url.toString());
-    } catch (_) {}
-  }
-
   document.getElementById('modalPurchaseCancel').onclick = () => {
     document.getElementById('modalPurchase').classList.add('hidden');
     updateBodyModalOpen();
-    clearDeepLinkParamsFromUrl();
   };
   document.getElementById('modalPurchaseOk').onclick = function() {
     if (modalPurchaseOkBtn.disabled) return;
@@ -1228,7 +1179,6 @@
     renderSnapshot();
     document.getElementById('modalPurchase').classList.add('hidden');
     updateBodyModalOpen();
-    clearDeepLinkParamsFromUrl();
   };
 
   function renderSpending() {
@@ -1494,189 +1444,6 @@
   });
 
   renderSnapshot();
-
-  function normalizePaymentSource(src) {
-    const sourceRaw = (typeof src === 'string' ? src : '').trim().toLowerCase();
-    if (!sourceRaw) return '';
-    if (['credit_card', 'credit card', 'credit', 'card', 'cc'].includes(sourceRaw)) return 'card';
-    if (['bank', 'checking', 'account', 'bank account'].includes(sourceRaw)) return 'bank';
-    if (['cash', 'physical cash'].includes(sourceRaw)) return 'cash';
-    return '';
-  }
-
-  const CARD_ALIASES = ['discover', 'amazon', 'venmo', 'citi', 'chase', 'capital one', 'robinhood', 'us bank', 'delta', 'blue cash'];
-
-  function normalizeCardName(s) {
-    return normalizeText((s || '').replace(/[.,]/g, ' '));
-  }
-
-  function matchCardByTargetName(cards, targetRaw) {
-    if (!targetRaw || !cards.length) return { matched: null, availableNames: cards.map(c => c.name) };
-    const availableNames = cards.map(c => c.name);
-    const exact = cards.filter(c => normalizeCardName(c.name) === targetRaw);
-    if (exact.length === 1) return { matched: exact[0], availableNames };
-    if (exact.length > 1) return { matched: null, availableNames };
-    const byContains = cards.filter(c => {
-      const n = normalizeCardName(c.name);
-      return n.includes(targetRaw) || targetRaw.includes(n);
-    });
-    if (byContains.length === 1) return { matched: byContains[0], availableNames };
-    if (byContains.length > 1) return { matched: null, availableNames };
-    const aliasMatch = CARD_ALIASES.includes(targetRaw)
-      ? cards.filter(c => normalizeCardName(c.name).includes(targetRaw))
-      : [];
-    if (aliasMatch.length === 1) return { matched: aliasMatch[0], availableNames };
-    return { matched: null, availableNames };
-  }
-
-  function matchTargetByName(list, rawName) {
-    const result = { id: '', note: '' };
-    const nameNorm = normalizeText(rawName || '');
-    if (!nameNorm) return result;
-    const simplify = s => normalizeText((s || '').replace(/[.,]/g, ' '));
-    const exactMatches = list.filter(x => simplify(x.name) === nameNorm);
-    if (exactMatches.length === 1) {
-      result.id = exactMatches[0].id;
-      return result;
-    }
-    if (exactMatches.length > 1) {
-      result.note = 'Multiple matches; please choose';
-      return result;
-    }
-    const containsMatches = list.filter(x => {
-      const n = simplify(x.name);
-      return n.includes(nameNorm) || nameNorm.includes(n);
-    });
-    if (containsMatches.length === 1) {
-      result.id = containsMatches[0].id;
-      return result;
-    }
-    if (containsMatches.length > 1) {
-      result.note = 'Multiple matches; please choose';
-      return result;
-    }
-    result.note = 'No match; please choose';
-    return result;
-  }
-
-  function handleDeepLinkAddPurchase() {
-    if (deepLinkHandled) return;
-    const params = getDeepLinkParams();
-    if (!params) return;
-    if (!truthyParam(params.get('addPurchase'))) return;
-    deepLinkHandled = true;
-
-    console.log('Deep link params:', Object.fromEntries(params.entries()));
-
-    const clean = (v) => {
-      const s = (v ?? '').trim();
-      if (!s) return '';
-      try { return decodeURIComponent(s); } catch (_) { return s; }
-    };
-
-    const merchant = clean(params.get('merchant'));
-    const amountRaw = clean(params.get('amount'));
-    const amount = amountRaw ? parseFloat(amountRaw.replace(/[$,]/g, '')) : null;
-    const amountText = (amount != null && !isNaN(amount)) ? (amount % 1 === 0 ? String(amount) : amount.toFixed(2)) : amountRaw;
-    const dateVal = clean(params.get('date'));
-    const category = clean(params.get('category'));
-    const subcategory = clean(params.get('subcategory'));
-    const notes = clean(params.get('notes'));
-    const applyToSnapshot = /^(1|true|yes|on)$/i.test(clean(params.get('applyToSnapshot')));
-    const sourceRaw = clean(params.get('paymentSource')).toLowerCase();
-    let paymentSource = null;
-    if (['credit_card', 'credit card', 'credit', 'card', 'cc'].includes(sourceRaw)) {
-      paymentSource = 'card';
-    } else if (['bank', 'checking', 'account', 'bank account'].includes(sourceRaw)) {
-      paymentSource = 'bank';
-    } else if (['cash', 'physical cash'].includes(sourceRaw)) {
-      paymentSource = 'cash';
-    }
-    const paymentTargetId = clean(params.get('paymentTargetId'));
-    let paymentTargetNameRaw = params.get('paymentTargetName');
-    try {
-      paymentTargetNameRaw = (paymentTargetNameRaw != null ? decodeURIComponent(paymentTargetNameRaw) : '').trim().toLowerCase();
-    } catch (_) {
-      paymentTargetNameRaw = (paymentTargetNameRaw ?? '').trim().toLowerCase();
-    }
-
-    const prefill = { fromShortcut: true };
-
-    prefill.title = merchant;
-    prefill.amountText = amountText;
-    prefill.notes = notes;
-    prefill.applyToSnapshot = applyToSnapshot;
-    prefill.paymentSource = paymentSource || '';
-    prefill.paymentTargetId = '';
-    prefill.snapshotNote = '';
-
-    if (dateVal && /^\d{4}-\d{2}-\d{2}$/.test(dateVal) && !isNaN(parseLocalYYYYMMDD(dateVal).getTime())) {
-      prefill.dateKey = dateVal;
-    }
-
-    if (category) {
-      const catNorm = normalizeText(category);
-      const catMatch = CATEGORIES.find(c =>
-        normalizeText(c.name) === catNorm ||
-        normalizeText(c.id) === catNorm ||
-        normalizeText((c.id || '').replace(/_/g, ' ')) === catNorm
-      );
-      if (catMatch) {
-        prefill.categoryId = catMatch.id;
-        if (subcategory && catMatch.sub && catMatch.sub.length) {
-          const subNorm = normalizeText(subcategory);
-          const subMatch = catMatch.sub.find(s => normalizeText(s) === subNorm);
-          if (subMatch) prefill.subcategory = subMatch;
-        }
-      }
-    }
-
-    if (prefill.applyToSnapshot && (paymentSource || paymentTargetId || paymentTargetNameRaw)) {
-      prefill.paymentSource = paymentSource || '';
-      if (paymentSource === 'card' || paymentSource === 'bank') {
-        const list = paymentSource === 'card' ? data.cards : data.banks;
-        if (paymentTargetId) {
-          const found = list.find(x => x.id === paymentTargetId);
-          if (found) {
-            prefill.paymentTargetId = found.id;
-          } else {
-            prefill.snapshotNote = 'Target not found; please choose';
-          }
-        } else if (paymentTargetNameRaw) {
-          if (paymentSource === 'card') {
-            const { matched, availableNames } = matchCardByTargetName(data.cards, paymentTargetNameRaw);
-            console.log('Deep link card match:', { received: paymentTargetNameRaw, matched: matched ? matched.name : 'none', availableNames });
-            if (matched) {
-              prefill.paymentTargetId = matched.id;
-            } else {
-              prefill.snapshotNote = 'No match; please choose';
-              console.warn('Deep link paymentTargetName not found:', paymentTargetNameRaw, 'Available cards:', availableNames);
-            }
-          } else {
-            const match = matchTargetByName(list, paymentTargetNameRaw);
-            prefill.paymentTargetId = match.id;
-            if (match.note) prefill.snapshotNote = match.note;
-          }
-        }
-      } else if (!paymentSource && (sourceRaw || paymentTargetNameRaw)) {
-        prefill.snapshotNote = 'Unknown payment source; please choose';
-      }
-    }
-
-    if (!prefill.title) {
-      prefill.focusId = 'modalPurchaseTitle';
-    } else if (!prefill.amountText) {
-      prefill.focusId = 'modalPurchaseAmount';
-    }
-
-    const spendingTab = document.querySelector('.tab[data-tab="spending"]');
-    if (spendingTab && !spendingTab.classList.contains('active')) {
-      spendingTab.click();
-    }
-    setTimeout(() => openAddPurchaseModal(prefill), 0);
-  }
-
-  handleDeepLinkAddPurchase();
 
   (function checkLocalDateFilter() {
     var start = new Date(2026, 2, 1);
