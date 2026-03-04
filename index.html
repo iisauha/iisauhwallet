@@ -226,6 +226,7 @@
     .purchase-item .meta { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
     .settings-section { margin-bottom: 24px; }
     .settings-section .btn { width: 100%; margin-top: 8px; }
+    .category-total-row { margin-bottom: 8px; }
     .footer { margin-top: 32px; padding: 16px; font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; }
     .hidden { display: none !important; }
     body.modal-open { overflow: hidden; }
@@ -613,6 +614,7 @@
   const PHYSICAL_CASH_ID = 'physical_cash';
   const LAST_OUT_BANK_KEY = 'snapshot_lastPostedOutboundBankId';
   const LAST_IN_BANK_KEY = 'snapshot_lastPostedInboundBankId';
+  const BACKUP_BEFORE_COLOR_UPDATE_KEY = 'ledgerlite_backup_before_color_update';
   const SHOW_ZERO_BALANCES_KEY = 'ledgerlite_showZeroBalances'; // legacy (applied to both cash + cards)
   const SHOW_ZERO_CASH_KEY = 'ledgerlite_showZeroCashItems';
   const SHOW_ZERO_CARDS_KEY = 'ledgerlite_showZeroCreditCards';
@@ -639,6 +641,7 @@
     subscriptions: '#8B5CF6',
     necessities: '#14B8A6'
   };
+  const CATEGORY_COLOR_MAP_KEY = 'categoryColorMap_v1';
   let spendingChart = null;
   let activeCategoryFilter = '';
 
@@ -702,6 +705,42 @@
 
   function categoryIds() {
     return Object.keys(categoryConfig);
+  }
+
+  // STEP 0: Backup everything once before any color-map updates.
+  createLocalBackup();
+
+  // STEP 0: Create a one-time full localStorage backup before color-map changes.
+  function createLocalBackup() {
+    try {
+      if (localStorage.getItem(BACKUP_BEFORE_COLOR_UPDATE_KEY)) return;
+    } catch (_) {
+      return;
+    }
+    const backup = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        backup[key] = localStorage.getItem(key);
+      }
+    } catch (_) {
+      return;
+    }
+    try {
+      const serialized = JSON.stringify(backup);
+      localStorage.setItem(BACKUP_BEFORE_COLOR_UPDATE_KEY, serialized);
+      // Also trigger a JSON download so the user can restore manually if needed.
+      const blob = new Blob([serialized], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ledgerlite-backup.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch (_) {
+      // Ignore backup download/storage failures; do not clear or modify existing data.
+    }
   }
 
   function getCategoryName(id) {
@@ -907,6 +946,107 @@
   function csvEscape(value) {
     const s = value == null ? '' : String(value);
     return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  // Category color map: single source of truth shared by pie chart + lists.
+  function loadCategoryColorMap() {
+    // Start with default colors for built-in categories.
+    const base = { ...CATEGORY_COLORS };
+    let stored = {};
+    try {
+      const raw = localStorage.getItem(CATEGORY_COLOR_MAP_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          stored = parsed;
+        }
+      }
+    } catch (_) {}
+    return { ...base, ...stored };
+  }
+
+  function saveCategoryColorMapMerge(newAssignments) {
+    if (!newAssignments || typeof newAssignments !== 'object') return;
+    try {
+      const existingRaw = localStorage.getItem(CATEGORY_COLOR_MAP_KEY);
+      const existing = existingRaw ? JSON.parse(existingRaw) || {} : {};
+      const merged = { ...existing, ...newAssignments };
+      localStorage.setItem(CATEGORY_COLOR_MAP_KEY, JSON.stringify(merged));
+      // Update in-memory cache if present.
+      if (getCategoryColorMap.cache) {
+        getCategoryColorMap.cache = { ...getCategoryColorMap.cache, ...newAssignments };
+      }
+    } catch (_) {
+      // Never clear or rename keys; on failure, do nothing.
+    }
+  }
+
+  function getCategoryColorMap() {
+    if (!getCategoryColorMap.cache) {
+      getCategoryColorMap.cache = loadCategoryColorMap();
+    }
+    return getCategoryColorMap.cache;
+  }
+
+  const CATEGORY_COLOR_PALETTE = [
+    '#FF8C42', '#3B82F6', '#10B981', '#6366F1',
+    '#F59E0B', '#EF4444', '#8B5CF6', '#14B8A6',
+    '#0EA5E9', '#EC4899', '#22C55E', '#F97316',
+    '#A855F7', '#06B6D4', '#EAB308'
+  ];
+
+  function hashStringToInt(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function hslToHex(h, s, l) {
+    s /= 100;
+    l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => {
+      const v = l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return Math.round(255 * v);
+    };
+    const r = f(0);
+    const g = f(8);
+    const b = f(4);
+    const toHex = x => x.toString(16).padStart(2, '0');
+    return '#' + toHex(r) + toHex(g) + toHex(b);
+  }
+
+  function generateDeterministicColorForCategory(id) {
+    const name = getCategoryName(id) || id || '';
+    const h = hashStringToInt(name) % 360;
+    const s = 65;
+    const l = 50;
+    return hslToHex(h, s, l);
+  }
+
+  function getCategoryColor(id) {
+    const map = getCategoryColorMap();
+    if (map[id]) return map[id];
+    const existingColors = Object.values(map);
+    let color = '#64748b';
+    // Prefer unused palette colors first.
+    for (let i = 0; i < CATEGORY_COLOR_PALETTE.length; i++) {
+      if (!existingColors.includes(CATEGORY_COLOR_PALETTE[i])) {
+        color = CATEGORY_COLOR_PALETTE[i];
+        break;
+      }
+    }
+    // If palette fully used, derive a deterministic HSL color from category name.
+    if (color === '#64748b' && CATEGORY_COLOR_PALETTE.every(c => existingColors.includes(c))) {
+      color = generateDeterministicColorForCategory(id);
+    }
+    const assignment = { [id]: color };
+    saveCategoryColorMapMerge(assignment);
+    return color;
   }
 
   function ensureUncategorizedCategory() {
@@ -2648,7 +2788,10 @@
       const baseName = getCategoryName(v.category);
       const name = v.subcategory ? (baseName + ': ' + v.subcategory) : baseName;
       const div = document.createElement('div');
-      div.className = 'card';
+      div.className = 'card category-total-row';
+      const color = getCategoryColor(v.category);
+      // Use hex with alpha (approx 12% opacity) for a soft tint; fallback to neutral if unsupported.
+      div.style.backgroundColor = color + '1F';
       div.innerHTML = '<div class="row"><span class="name">' + escapeHtml(name) + '</span><span class="amount">' + formatCents(v.cents) + '</span></div>';
       catTotalsEl.appendChild(div);
     });
@@ -2670,7 +2813,7 @@
       chartLabels.push(v.name);
       chartValues.push(v.cents);
       chartIds.push(v.id);
-      chartColors.push(CATEGORY_COLORS[v.id] || '#64748b');
+      chartColors.push(getCategoryColor(v.id));
     });
     const chartContainer = document.getElementById('spendingChart');
     const chartSummaryEl = document.getElementById('spendingChartSummary');
@@ -2749,7 +2892,12 @@
       const div = document.createElement('div');
       div.className = 'purchase-item card';
       const displayDate = formatDisplayDate(p.dateISO.slice(0, 10));
-      div.innerHTML = '<div class="title">' + escapeHtml(p.title) + ' ' + formatCents(p.amountCents) + '</div><div class="meta">' + escapeHtml(displayDate) + ' · ' + escapeHtml(catName) + '</div>';
+      const color = getCategoryColor(p.category);
+      const safeColor = color || '#64748b';
+      div.innerHTML =
+        '<div class="title">' + escapeHtml(p.title) + ' ' + formatCents(p.amountCents) + '</div>' +
+        '<div class="meta"><span class="purchase-category-label" style="color:' + safeColor + ';">' +
+        escapeHtml(catName) + '</span> · ' + escapeHtml(displayDate) + '</div>';
       div.onclick = function() {
         editingPurchaseId = p.id;
         document.getElementById('modalPurchaseHeading').textContent = 'Edit Purchase';
