@@ -109,7 +109,7 @@
     .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
     .clear-btn { background: transparent !important; color: var(--red) !important; border-color: var(--red) !important; }
     .btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
-    .btn-dashed { border: 1px dashed var(--border); color: var(--muted); width: 100%; margin-top: 8px; }
+    .btn-dashed { border: 1px dashed var(--border); color: var(--muted); width: 100%; margin-top: 8px; background: var(--surface); }
     .summary {
       width: 100%;
       margin-top: 24px;
@@ -525,6 +525,13 @@
         <label>Start date</label>
         <input type="date" id="modalRecurringStart" />
       </div>
+      <div class="field toggle-row">
+        <input type="checkbox" id="modalRecurringLastDay" />
+        <label for="modalRecurringLastDay">Use last day of month</label>
+      </div>
+      <p class="field hidden" id="modalRecurringLastDayHint" style="font-size:0.9rem;color:var(--muted);margin:0 0 8px 0;">
+        This bill will post on the last day of each month.
+      </p>
       <div class="field">
         <label>End date (optional)</label>
         <input type="date" id="modalRecurringEnd" />
@@ -972,6 +979,8 @@
     }
 
     if (elCash) elCash.textContent = formatCents(cashInHand);
+    const cashCard = document.getElementById('cashInHandCard');
+    if (cashCard) cashCard.style.display = Math.abs(cashInHand || 0) > 0 ? '' : 'none';
     if (elNet) { elNet.textContent = formatCents(netCash); setSignClass(elNet, netCash); }
     if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, -1); }
     if (elCredit) { elCredit.textContent = formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
@@ -1050,7 +1059,7 @@
     container.addEventListener('click', function(e) {
       const btn = e.target.closest('.addset-btn');
       const clearBtn = e.target.closest('.clear-btn');
-      const delBtn = e.target.closest('.del[data-type="bank"]');
+      const delBtn = e.target.closest('.btn-delete[data-type="bank"]');
       if (btn) {
         addSetTarget = { type: btn.getAttribute('data-type'), id: btn.getAttribute('data-id') };
         if (addSetTarget.type === 'cash') {
@@ -1311,6 +1320,8 @@
     const everyInput = document.getElementById('modalRecurringEveryNDays');
     const startInput = document.getElementById('modalRecurringStart');
     const endInput = document.getElementById('modalRecurringEnd');
+    const lastDayCheck = document.getElementById('modalRecurringLastDay');
+    const lastDayHint = document.getElementById('modalRecurringLastDayHint');
     const activeCheck = document.getElementById('modalRecurringActive');
     const applyCheckRec = document.getElementById('modalRecurringApplyToSnapshot');
     const applySectionRec = document.getElementById('modalRecurringApplySection');
@@ -1378,6 +1389,17 @@
     startInput.value = (recurring && recurring.startDate) || todayKey;
     endInput.value = (recurring && recurring.endDate) || '';
     activeCheck.checked = recurring ? !!recurring.active : true;
+
+    const useLastDay = recurring ? !!recurring.useLastDayOfMonth : false;
+    if (lastDayCheck) lastDayCheck.checked = useLastDay;
+    if (lastDayHint) lastDayHint.classList.toggle('hidden', !useLastDay);
+    if (useLastDay) {
+      startInput.disabled = true;
+      startInput.style.opacity = '0.6';
+    } else {
+      startInput.disabled = false;
+      startInput.style.opacity = '';
+    }
 
     applyCheckRec.checked = recurring ? !!recurring.applyToSnapshot : false;
     sourceSelRec.value = recurring && recurring.paymentSource ? recurring.paymentSource : '';
@@ -1561,6 +1583,7 @@
     const endDate = document.getElementById('modalRecurringEnd').value || undefined;
     const active = document.getElementById('modalRecurringActive').checked;
     const applyToSnapshot = document.getElementById('modalRecurringApplyToSnapshot').checked;
+    const useLastDayOfMonth = document.getElementById('modalRecurringLastDay').checked;
     const paymentSource = document.getElementById('modalRecurringPaymentSource').value || undefined;
     let paymentTargetId = undefined;
     if (applyToSnapshot && (paymentSource === 'card' || paymentSource === 'bank')) {
@@ -1607,7 +1630,8 @@
       active,
       applyToSnapshot,
       paymentSource,
-      paymentTargetId
+      paymentTargetId,
+      useLastDayOfMonth
     };
     console.log('[recurring] saving payload:', payload);
 
@@ -1626,7 +1650,8 @@
         active,
         applyToSnapshot,
         paymentSource,
-        paymentTargetId
+        paymentTargetId,
+        useLastDayOfMonth
       };
       data.recurring.push(r);
     } else {
@@ -1645,6 +1670,7 @@
         r.applyToSnapshot = applyToSnapshot;
         r.paymentSource = paymentSource;
         r.paymentTargetId = paymentTargetId;
+        r.useLastDayOfMonth = useLastDayOfMonth;
       }
     }
     try {
@@ -1763,7 +1789,13 @@
       const start = parseLocalDateKey(r.startDate);
       if (isNaN(start.getTime())) return;
       const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
-      let current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const freq = r.frequency || 'monthly';
+      let current;
+      if (freq === 'monthly' && r.useLastDayOfMonth) {
+        current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      } else {
+        current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      }
       while (current <= today && (!end || current <= end)) {
         const dateKey = toLocalDateKey(current);
         const regKey = (r.id || '') + ':' + dateKey;
@@ -1792,7 +1824,6 @@
           mutated = true;
         }
 
-        const freq = r.frequency || 'monthly';
         if (freq === 'weekly') {
           current = addDaysLocal(current, 7);
         } else if (freq === 'biweekly') {
@@ -1802,6 +1833,8 @@
         } else if (freq === 'custom') {
           const n = (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1;
           current = addDaysLocal(current, n);
+        } else if (freq === 'monthly' && r.useLastDayOfMonth) {
+          current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
         } else {
           current = addMonthsPreserveDay(start, current, 1);
         }
@@ -1823,7 +1856,7 @@
       handlePendingPosted('in', postedBtn.getAttribute('data-id'));
       return;
     }
-    const delBtn = e.target.closest('.del[data-kind=\"in\"]');
+    const delBtn = e.target.closest('.btn-delete[data-kind=\"in\"]');
     if (delBtn) {
       data.pendingIn = data.pendingIn.filter(p => p.id !== delBtn.getAttribute('data-id'));
       save(data);
@@ -1836,7 +1869,7 @@
       handlePendingPosted('out', postedBtn.getAttribute('data-id'));
       return;
     }
-    const delBtn = e.target.closest('.del[data-kind=\"out\"]');
+    const delBtn = e.target.closest('.btn-delete[data-kind=\"out\"]');
     if (delBtn) {
       data.pendingOut = data.pendingOut.filter(p => p.id !== delBtn.getAttribute('data-id'));
       save(data);
