@@ -220,15 +220,8 @@
 </head>
 <body>
   <div id="snapshotContent" class="tab-panel active">
-    <div class="section-header" id="bankHeader"><span>Bank Accounts</span><span class="chevron" id="bankChevron">▾</span></div>
+    <div class="section-header" id="bankHeader"><span>Cash</span><span class="chevron" id="bankChevron">▾</span></div>
     <div id="bankList"></div>
-    <div id="cashInHandCard" class="card">
-      <div class="row"><span class="name">Physical Cash</span><span class="amount" id="cashInHandAmount">$0.00</span></div>
-      <div class="btn-row">
-        <button type="button" class="btn btn-primary addset-btn" data-type="cash" data-id="cash">Add / Set</button>
-        <button type="button" class="btn btn-secondary clear-btn" data-type="cash" data-id="cash">Clear</button>
-      </div>
-    </div>
     <button type="button" class="btn btn-dashed" id="addBankBtn">+ Add Bank Account</button>
 
     <div class="section-header" id="cardHeader" style="margin-top: 24px;"><span>Credit Cards</span><span class="chevron" id="cardChevron">▾</span></div>
@@ -251,7 +244,7 @@
 
     <div id="snapshotSummary" class="summary">
       <div class="summary-compact">
-        <div class="summary-kv"><span class="k">Net Cash (Bank Total + Physical Cash)</span><span class="v" id="sumNetCash">$0</span></div>
+        <div class="summary-kv"><span class="k">Net Cash (Cash Total)</span><span class="v" id="sumNetCash">$0</span></div>
         <div class="summary-kv"><span class="k">Total Current Credit Card Balance</span><span class="v" id="sumCcDebt">$0</span></div>
         <div class="summary-kv"><span class="k">Credit Card Credit</span><span class="v" id="sumCcCredit">$0</span></div>
         <div class="summary-kv"><span class="k">Total Pending Outbound</span><span class="v" id="sumPendingOut">$0</span></div>
@@ -436,8 +429,7 @@
         <select id="modalPurchasePaymentSource">
           <option value="">— Select source —</option>
           <option value="card">Credit Card</option>
-          <option value="bank">Bank Account</option>
-          <option value="cash">Physical Cash</option>
+          <option value="bank">Cash</option>
         </select>
       </div>
       <div class="field hidden" id="modalPurchaseTargetWrap">
@@ -549,8 +541,7 @@
         <select id="modalRecurringPaymentSource">
           <option value="">— Select source —</option>
           <option value="card">Credit Card</option>
-          <option value="bank">Bank Account</option>
-          <option value="cash">Physical Cash</option>
+          <option value="bank">Cash</option>
         </select>
       </div>
       <div class="field hidden" id="modalRecurringTargetWrap">
@@ -572,7 +563,8 @@
   <script>
 (function() {
   const STORAGE_KEY = 'ledgerlite';
-  const CASH_STORAGE_KEY = 'snapshot_cashInHandCents';
+  const CASH_STORAGE_KEY = 'snapshot_cashInHandCents'; // legacy (migrated into banks)
+  const PHYSICAL_CASH_ID = 'physical_cash';
   const LAST_OUT_BANK_KEY = 'snapshot_lastPostedOutboundBankId';
   const LAST_IN_BANK_KEY = 'snapshot_lastPostedInboundBankId';
   const CATEGORY_STORAGE_KEY = 'ledgerlite_categories_v1';
@@ -616,13 +608,15 @@
   ];
 
   function defaultData() {
-    const banks = [{ id: uid(), name: 'Bank', balanceCents: 0, updatedAt: now() }];
+    const banks = [
+      { id: uid(), name: 'Bank', type: 'bank', balanceCents: 0, updatedAt: now() },
+      { id: PHYSICAL_CASH_ID, name: 'Physical Cash', type: 'physical_cash', balanceCents: 0, updatedAt: now() }
+    ];
     const cards = [];
     for (const name of DEFAULT_CARD_NAMES) cards.push({ id: uid(), name, balanceCents: 0, updatedAt: now() });
     return {
       banks,
       cards,
-      cashInHandCents: 0,
       pendingIn: [],
       pendingOut: [],
       purchases: [],
@@ -719,17 +713,43 @@
     return trimmed;
   }
 
-  function getCashInHandCents() {
-    const raw = localStorage.getItem(CASH_STORAGE_KEY);
-    if (raw === null) return 0;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? 0 : n;
+  function findPhysicalCashBank(d) {
+    if (!d || !Array.isArray(d.banks)) return null;
+    return d.banks.find(b => b && (b.id === PHYSICAL_CASH_ID || b.type === 'physical_cash' || normalizeText(b.name) === 'physical cash')) || null;
   }
 
-  function setCashInHandCents(cents) {
-    const n = Math.round(Number(cents)) || 0;
-    localStorage.setItem(CASH_STORAGE_KEY, String(n));
-    return n;
+  function ensurePhysicalCashBank(d) {
+    if (!d.banks) d.banks = [];
+    let pc = findPhysicalCashBank(d);
+    if (!pc) {
+      pc = { id: PHYSICAL_CASH_ID, name: 'Physical Cash', type: 'physical_cash', balanceCents: 0, updatedAt: now() };
+      d.banks.push(pc);
+    } else {
+      pc.id = pc.id || PHYSICAL_CASH_ID;
+      pc.name = pc.name || 'Physical Cash';
+      pc.type = 'physical_cash';
+      if (typeof pc.balanceCents !== 'number') pc.balanceCents = 0;
+    }
+    return pc;
+  }
+
+  function migrateLegacyCashIntoBanks(d) {
+    // If old cash was stored separately, move it into the Physical Cash bank entry.
+    let legacy = null;
+    const raw = localStorage.getItem(CASH_STORAGE_KEY);
+    if (raw !== null) {
+      const n = parseInt(raw, 10);
+      legacy = isNaN(n) ? 0 : n;
+    } else if (typeof d.cashInHandCents === 'number') {
+      legacy = d.cashInHandCents;
+    }
+    if (legacy !== null) {
+      const pc = ensurePhysicalCashBank(d);
+      pc.balanceCents = legacy;
+      pc.updatedAt = now();
+      try { localStorage.removeItem(CASH_STORAGE_KEY); } catch (_) {}
+    }
+    delete d.cashInHandCents;
   }
 
   function load() {
@@ -739,11 +759,9 @@
       const d = JSON.parse(raw);
       if (!d.banks || !d.banks.length) d.banks = defaultData().banks;
       if (!d.cards || !d.cards.length) d.cards = defaultData().cards;
-      if (localStorage.getItem(CASH_STORAGE_KEY) !== null) {
-        d.cashInHandCents = getCashInHandCents();
-      } else if (typeof d.cashInHandCents !== 'number') {
-        d.cashInHandCents = 0;
-      }
+      // Ensure bank entries have a type (default to 'bank')
+      d.banks.forEach(b => { if (b && !b.type) b.type = 'bank'; });
+      migrateLegacyCashIntoBanks(d);
       if (!d.pendingIn) d.pendingIn = [];
       if (!d.pendingOut) d.pendingOut = [];
       if (!d.purchases) d.purchases = [];
@@ -886,6 +904,7 @@
     bankList.innerHTML = '';
     cardList.innerHTML = '';
 
+    ensurePhysicalCashBank(data);
     const nonZeroBanks = data.banks.filter(b => Math.abs(b.balanceCents || 0) > 0);
     const nonZeroCards = data.cards.filter(c => Math.abs(c.balanceCents || 0) > 0);
 
@@ -896,7 +915,8 @@
         card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">' + formatCents(b.balanceCents) + '</span></div>' +
           '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="bank" data-id="' + b.id + '">Add / Set</button>' +
           '<button type="button" class="btn btn-secondary clear-btn" data-type="bank" data-id="' + b.id + '">Clear</button>' +
-          '<button type="button" class="btn btn-delete" data-type="bank" data-id="' + b.id + '" aria-label="Delete bank account">Delete</button></div>';
+          (b.type === 'physical_cash' ? '' : '<button type="button" class="btn btn-delete" data-type="bank" data-id="' + b.id + '" aria-label="Delete bank account">Delete</button>') +
+          '</div>';
         bankList.appendChild(card);
       });
     } else {
@@ -953,14 +973,12 @@
       pendingOutList.appendChild(div);
     });
 
-    const bankTotal = data.banks.reduce((s, b) => s + b.balanceCents, 0);
-    const cashInHand = getCashInHandCents();
-    data.cashInHandCents = cashInHand;
+    const bankTotal = data.banks.reduce((s, b) => s + (b.balanceCents || 0), 0);
     const ccDebt = data.cards.reduce((s, c) => s + Math.max(c.balanceCents || 0, 0), 0);
     const ccCredit = data.cards.reduce((s, c) => s + Math.max(-(c.balanceCents || 0), 0), 0);
     const pendingOutTotal = data.pendingOut.reduce((s, p) => s + p.amountCents, 0);
     const pendingInTotal = data.pendingIn.reduce((s, p) => s + p.amountCents, 0);
-    const netCash = bankTotal + cashInHand;
+    const netCash = bankTotal;
     const finalNetCash = netCash + pendingInTotal - pendingOutTotal - ccDebt + ccCredit;
 
     const elCash = document.getElementById('cashInHandAmount');
@@ -978,9 +996,7 @@
       else if (value < 0) el.classList.add('neg');
     }
 
-    if (elCash) elCash.textContent = formatCents(cashInHand);
-    const cashCard = document.getElementById('cashInHandCard');
-    if (cashCard) cashCard.style.display = Math.abs(cashInHand || 0) > 0 ? '' : 'none';
+    if (elCash) elCash.textContent = formatCents(findPhysicalCashBank(data) ? findPhysicalCashBank(data).balanceCents : 0);
     if (elNet) { elNet.textContent = formatCents(netCash); setSignClass(elNet, netCash); }
     if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, -1); }
     if (elCredit) { elCredit.textContent = formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
@@ -1055,19 +1071,14 @@
 
   // Add/Set modal state
   let addSetTarget = { type: '', id: '' };
-  document.querySelectorAll('#bankList, #cardList, #cashInHandCard').forEach(container => {
+  document.querySelectorAll('#bankList, #cardList').forEach(container => {
     container.addEventListener('click', function(e) {
       const btn = e.target.closest('.addset-btn');
       const clearBtn = e.target.closest('.clear-btn');
       const delBtn = e.target.closest('.btn-delete[data-type="bank"]');
       if (btn) {
         addSetTarget = { type: btn.getAttribute('data-type'), id: btn.getAttribute('data-id') };
-        if (addSetTarget.type === 'cash') {
-          document.getElementById('modalAddSetAmount').value = (getCashInHandCents() / 100).toFixed(2);
-        } else {
-          const item = addSetTarget.type === 'bank' ? data.banks.find(x => x.id === addSetTarget.id) : data.cards.find(x => x.id === addSetTarget.id);
-          document.getElementById('modalAddSetAmount').value = '';
-        }
+        document.getElementById('modalAddSetAmount').value = '';
         document.getElementById('modalAddSetUseSet').checked = false;
         document.getElementById('modalAddSet').classList.remove('hidden');
         updateBodyModalOpen();
@@ -1082,10 +1093,6 @@
           } else if (type === 'card') {
             const c = data.cards.find(x => x.id === id);
             if (c) { c.balanceCents = 0; c.updatedAt = now(); save(data); renderSnapshot(); }
-          } else if (type === 'cash') {
-            setCashInHandCents(0);
-            data.cashInHandCents = 0;
-            renderSnapshot();
           }
         });
       }
@@ -1093,6 +1100,7 @@
         const id = delBtn.getAttribute('data-id');
         confirmModal('Delete bank account?', 'This will remove the bank account from Snapshot.', function() {
           data.banks = data.banks.filter(b => b.id !== id);
+          ensurePhysicalCashBank(data);
           save(data);
           renderSnapshot();
         });
@@ -1110,10 +1118,6 @@
     } else if (addSetTarget.type === 'card') {
       const c = data.cards.find(x => x.id === addSetTarget.id);
       if (c) { c.balanceCents = useSet ? cents : c.balanceCents + cents; c.updatedAt = now(); save(data); renderSnapshot(); }
-    } else if (addSetTarget.type === 'cash') {
-      const next = useSet ? cents : getCashInHandCents() + cents;
-      data.cashInHandCents = setCashInHandCents(next);
-      renderSnapshot();
     }
     document.getElementById('modalAddSet').classList.add('hidden');
     updateBodyModalOpen();
@@ -1758,18 +1762,15 @@
       } else {
         targetMissing = true;
       }
-    } else if (src === 'bank' && purchase.paymentTargetId) {
-      const bank = data.banks.find(b => b.id === purchase.paymentTargetId);
+    } else if ((src === 'bank' || src === 'cash') && (purchase.paymentTargetId || src === 'cash')) {
+      const targetId = purchase.paymentTargetId || PHYSICAL_CASH_ID;
+      const bank = data.banks.find(b => b.id === targetId) || ensurePhysicalCashBank(data);
       if (bank) {
         bank.balanceCents = (bank.balanceCents || 0) - amount;
         bank.updatedAt = now();
       } else {
         targetMissing = true;
       }
-    } else if (src === 'cash') {
-      const next = getCashInHandCents() - amount;
-      setCashInHandCents(next);
-      data.cashInHandCents = next;
     }
     if (targetMissing) {
       alert('Could not apply Snapshot update because the target account no longer exists.');
@@ -2374,9 +2375,9 @@
           const bank = data.banks.find(b => b.id === paymentTargetId);
           if (bank) { bank.balanceCents -= appliedAmount; bank.updatedAt = now(); }
         } else if (paymentSource === 'cash') {
-          const next = getCashInHandCents() - appliedAmount;
-          setCashInHandCents(next);
-          data.cashInHandCents = next;
+          const bank = ensurePhysicalCashBank(data);
+          bank.balanceCents = (bank.balanceCents || 0) - appliedAmount;
+          bank.updatedAt = now();
         }
       }
     }
@@ -2584,9 +2585,9 @@
                 targetMissing = true;
               }
             } else if (src === 'cash') {
-              const next = getCashInHandCents() + amount;
-              setCashInHandCents(next);
-              data.cashInHandCents = next;
+              const bank = ensurePhysicalCashBank(data);
+              bank.balanceCents = (bank.balanceCents || 0) + amount;
+              bank.updatedAt = now();
             }
             if (targetMissing) {
               alert('Could not reverse Snapshot because the target account no longer exists.');
@@ -2757,7 +2758,7 @@
 
   // Settings
   document.getElementById('exportBtn').onclick = function() {
-    const exportData = { ...data, cashInHandCents: getCashInHandCents() };
+    const exportData = { ...data };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -2775,14 +2776,15 @@
         if (imported.banks) data.banks = imported.banks;
         if (imported.cards) data.cards = imported.cards;
         if (typeof imported.cashInHandCents === 'number') {
-          data.cashInHandCents = imported.cashInHandCents;
-          setCashInHandCents(imported.cashInHandCents);
+          ensurePhysicalCashBank(data).balanceCents = imported.cashInHandCents;
+          ensurePhysicalCashBank(data).updatedAt = now();
         }
         if (imported.pendingIn) data.pendingIn = imported.pendingIn;
         if (imported.pendingOut) data.pendingOut = imported.pendingOut;
         if (imported.purchases) data.purchases = imported.purchases;
         if (Array.isArray(imported.recurring)) data.recurring = imported.recurring;
         if (imported.recurringPosted && typeof imported.recurringPosted === 'object') data.recurringPosted = imported.recurringPosted;
+        ensurePhysicalCashBank(data);
         save(data);
         renderSnapshot();
         if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
