@@ -313,6 +313,26 @@
         <label>Notes (optional)</label>
         <textarea id="modalPurchaseNotes" placeholder="Optional"></textarea>
       </div>
+      <div class="field toggle-row" id="modalPurchaseApplyWrap">
+        <input type="checkbox" id="modalPurchaseApplyToSnapshot" />
+        <label for="modalPurchaseApplyToSnapshot">Apply to Snapshot</label>
+      </div>
+      <div class="field hidden" id="modalPurchaseApplySection">
+        <label>Payment Source</label>
+        <select id="modalPurchasePaymentSource">
+          <option value="">— Select source —</option>
+          <option value="card">Credit Card</option>
+          <option value="bank">Bank Account</option>
+          <option value="cash">Physical Cash</option>
+        </select>
+      </div>
+      <div class="field hidden" id="modalPurchaseTargetWrap">
+        <label id="modalPurchaseTargetLabel">Select Card / Bank</label>
+        <select id="modalPurchaseTarget">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+      <p class="field hidden" id="modalPurchaseApplyError" style="color: var(--danger); font-size: 0.9rem; margin: 0;"></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalPurchaseCancel">Cancel</button>
         <button type="button" class="btn btn-primary" id="modalPurchaseOk">Save</button>
@@ -715,6 +735,77 @@
     }
   });
 
+  const applyWrap = document.getElementById('modalPurchaseApplyWrap');
+  const applyCheck = document.getElementById('modalPurchaseApplyToSnapshot');
+  const applySection = document.getElementById('modalPurchaseApplySection');
+  const paymentSourceSelect = document.getElementById('modalPurchasePaymentSource');
+  const targetWrap = document.getElementById('modalPurchaseTargetWrap');
+  const targetLabel = document.getElementById('modalPurchaseTargetLabel');
+  const targetSelect = document.getElementById('modalPurchaseTarget');
+  const applyError = document.getElementById('modalPurchaseApplyError');
+  const modalPurchaseOkBtn = document.getElementById('modalPurchaseOk');
+
+  function updatePurchaseTargetDropdown() {
+    const source = paymentSourceSelect.value;
+    targetSelect.innerHTML = '<option value="">— Select —</option>';
+    targetWrap.classList.add('hidden');
+    if (source === 'card') {
+      targetLabel.textContent = 'Select Card';
+      data.cards.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = c.name;
+        targetSelect.appendChild(o);
+      });
+      targetWrap.classList.remove('hidden');
+    } else if (source === 'bank') {
+      targetLabel.textContent = 'Select Bank';
+      data.banks.forEach(b => {
+        const o = document.createElement('option');
+        o.value = b.id;
+        o.textContent = b.name;
+        targetSelect.appendChild(o);
+      });
+      targetWrap.classList.remove('hidden');
+    }
+  }
+
+  function validateApplyToSnapshot() {
+    if (!applyCheck.checked) return true;
+    const source = paymentSourceSelect.value;
+    if (!source) return false;
+    if (source === 'cash') return true;
+    return !!targetSelect.value;
+  }
+
+  function updateApplyUI() {
+    const on = applyCheck.checked;
+    applySection.classList.toggle('hidden', !on);
+    if (!on) {
+      targetWrap.classList.add('hidden');
+      applyError.classList.add('hidden');
+      applyError.textContent = '';
+    } else {
+      updatePurchaseTargetDropdown();
+      const valid = validateApplyToSnapshot();
+      if (!valid) {
+        applyError.classList.remove('hidden');
+        applyError.textContent = 'Select a payment source' + (paymentSourceSelect.value === 'card' || paymentSourceSelect.value === 'bank' ? ' and a specific card or bank' : '') + '.';
+      } else {
+        applyError.classList.add('hidden');
+        applyError.textContent = '';
+      }
+    }
+    modalPurchaseOkBtn.disabled = on && !validateApplyToSnapshot();
+  }
+
+  applyCheck.addEventListener('change', updateApplyUI);
+  paymentSourceSelect.addEventListener('change', function() {
+    targetSelect.value = '';
+    updateApplyUI();
+  });
+  targetSelect.addEventListener('change', updateApplyUI);
+
   let editingPurchaseId = null;
   document.getElementById('addPurchaseBtn').onclick = function() {
     editingPurchaseId = null;
@@ -725,26 +816,62 @@
     document.getElementById('modalPurchaseCategory').value = 'food';
     catSelect.dispatchEvent(new Event('change'));
     document.getElementById('modalPurchaseNotes').value = '';
+    applyWrap.classList.remove('hidden');
+    applyCheck.checked = false;
+    paymentSourceSelect.value = '';
+    targetSelect.innerHTML = '<option value="">— Select —</option>';
+    applySection.classList.add('hidden');
+    targetWrap.classList.add('hidden');
+    applyError.classList.add('hidden');
+    applyError.textContent = '';
+    modalPurchaseOkBtn.disabled = false;
     document.getElementById('modalPurchase').classList.remove('hidden');
   };
 
   document.getElementById('modalPurchaseCancel').onclick = () => document.getElementById('modalPurchase').classList.add('hidden');
   document.getElementById('modalPurchaseOk').onclick = function() {
+    if (modalPurchaseOkBtn.disabled) return;
     const title = document.getElementById('modalPurchaseTitle').value.trim() || 'Purchase';
     const amountCents = parseCents(document.getElementById('modalPurchaseAmount').value);
-    const dateISO = document.getElementById('modalPurchaseDate').value || new Date().toISOString().slice(0, 10);
+    const dateISO = document.getElementById('modalPurchaseDate').value || toLocalDateKey(new Date());
     const category = document.getElementById('modalPurchaseCategory').value;
     const cat = CATEGORIES.find(c => c.id === category);
     const subcategory = (cat && cat.sub.length) ? document.getElementById('modalPurchaseSub').value : undefined;
     const notes = document.getElementById('modalPurchaseNotes').value.trim() || undefined;
+    const isEdit = !!editingPurchaseId;
+    let applyToSnapshot = false;
+    let paymentSource = null;
+    let paymentTargetId = null;
+    if (!isEdit && applyCheck.checked) {
+      applyToSnapshot = true;
+      paymentSource = paymentSourceSelect.value || null;
+      paymentTargetId = (paymentSource === 'card' || paymentSource === 'bank') ? targetSelect.value || null : null;
+    }
     if (editingPurchaseId) {
       const p = data.purchases.find(x => x.id === editingPurchaseId);
       if (p) { p.title = title; p.amountCents = amountCents; p.dateISO = dateISO; p.category = category; p.subcategory = subcategory; p.notes = notes; }
     } else {
-      data.purchases.push({ id: uid(), title, amountCents, dateISO, category, subcategory, notes });
+      const purchase = { id: uid(), title, amountCents, dateISO, category, subcategory, notes };
+      if (applyToSnapshot) {
+        purchase.applyToSnapshot = true;
+        purchase.paymentSource = paymentSource;
+        purchase.paymentTargetId = paymentTargetId;
+      }
+      data.purchases.push(purchase);
+      if (applyToSnapshot && paymentSource === 'card' && paymentTargetId) {
+        const card = data.cards.find(c => c.id === paymentTargetId);
+        if (card) { card.balanceCents += amountCents; card.updatedAt = now(); }
+      } else if (applyToSnapshot && paymentSource === 'bank' && paymentTargetId) {
+        const bank = data.banks.find(b => b.id === paymentTargetId);
+        if (bank) { bank.balanceCents -= amountCents; bank.updatedAt = now(); }
+      } else if (applyToSnapshot && paymentSource === 'cash') {
+        setCashInHandCents(getCashInHandCents() - amountCents);
+        data.cashInHandCents = getCashInHandCents();
+      }
     }
     save(data);
     renderSpending();
+    renderSnapshot();
     document.getElementById('modalPurchase').classList.add('hidden');
   };
 
@@ -798,6 +925,8 @@
         catSelect.dispatchEvent(new Event('change'));
         document.getElementById('modalPurchaseSub').value = p.subcategory || '';
         document.getElementById('modalPurchaseNotes').value = p.notes || '';
+        applyWrap.classList.add('hidden');
+        modalPurchaseOkBtn.disabled = false;
         document.getElementById('modalPurchase').classList.remove('hidden');
       };
       const delBtn = document.createElement('button');
