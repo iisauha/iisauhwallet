@@ -410,6 +410,7 @@
   const CASH_STORAGE_KEY = 'snapshot_cashInHandCents';
   const LAST_OUT_BANK_KEY = 'snapshot_lastPostedOutboundBankId';
   const LAST_IN_BANK_KEY = 'snapshot_lastPostedInboundBankId';
+  const CATEGORY_STORAGE_KEY = 'ledgerlite_categories_v1';
   const CATEGORIES = [
     { id: 'food', name: 'Food', sub: ['Groceries', 'Snacks', 'Restaurants'] },
     { id: 'travel', name: 'Travel', sub: ['MTA', 'Flights'] },
@@ -459,8 +460,96 @@
       cashInHandCents: 0,
       pendingIn: [],
       pendingOut: [],
-      purchases: []
+      purchases: [],
+      recurring: [],
+      recurringPosted: {}
     };
+  }
+
+  function loadCategoryConfig() {
+    try {
+      const raw = localStorage.getItem(CATEGORY_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (_) {}
+    const initial = {};
+    CATEGORIES.forEach(c => {
+      initial[c.id] = { name: c.name, sub: Array.isArray(c.sub) ? c.sub.slice() : [] };
+    });
+    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(initial));
+    return initial;
+  }
+
+  function saveCategoryConfig(cfg) {
+    try {
+      localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(cfg));
+    } catch (_) {}
+  }
+
+  let categoryConfig = loadCategoryConfig();
+
+  function categoryIds() {
+    return Object.keys(categoryConfig);
+  }
+
+  function getCategoryName(id) {
+    const entry = categoryConfig[id];
+    return entry && entry.name ? entry.name : id;
+  }
+
+  function getCategorySubcategories(id) {
+    const entry = categoryConfig[id];
+    return entry && Array.isArray(entry.sub) ? entry.sub : [];
+  }
+
+  function ensureCategoryIdExists(id) {
+    if (!id) return null;
+    if (categoryConfig[id]) return id;
+    categoryConfig[id] = { name: id, sub: [] };
+    saveCategoryConfig(categoryConfig);
+    return id;
+  }
+
+  function findCategoryIdByName(name) {
+    const target = (name || '').trim().toLowerCase();
+    if (!target) return null;
+    for (const id of Object.keys(categoryConfig)) {
+      const n = (categoryConfig[id].name || '').trim().toLowerCase();
+      if (n === target) return id;
+    }
+    return null;
+  }
+
+  function addCategoryByName(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const existingId = findCategoryIdByName(trimmed);
+    if (existingId) return existingId;
+    let baseId = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'cat';
+    let id = baseId;
+    let counter = 1;
+    while (categoryConfig[id]) {
+      id = baseId + '_' + counter++;
+    }
+    categoryConfig[id] = { name: trimmed, sub: [] };
+    saveCategoryConfig(categoryConfig);
+    return id;
+  }
+
+  function addSubcategoryToCategory(catId, subName) {
+    const trimmed = (subName || '').trim();
+    if (!trimmed || !catId) return null;
+    const entry = categoryConfig[catId];
+    if (!entry) return null;
+    const exists = entry.sub.some(s => (s || '').trim().toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      return entry.sub.find(s => (s || '').trim().toLowerCase() === trimmed.toLowerCase()) || trimmed;
+    }
+    entry.sub.push(trimmed);
+    saveCategoryConfig(categoryConfig);
+    return trimmed;
   }
 
   function getCashInHandCents() {
@@ -935,23 +1024,100 @@
     updateBodyModalOpen();
   };
 
-  // Spending: category select
+  // Spending: category select with dynamic categories
   const catSelect = document.getElementById('modalPurchaseCategory');
   const subWrap = document.getElementById('modalPurchaseSubWrap');
   const subSelect = document.getElementById('modalPurchaseSub');
-  CATEGORIES.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.name;
-    catSelect.appendChild(opt);
-  });
-  catSelect.addEventListener('change', function() {
-    const cat = CATEGORIES.find(c => c.id === this.value);
-    subWrap.classList.toggle('hidden', !cat || !cat.sub.length);
-    subSelect.innerHTML = '';
-    if (cat && cat.sub.length) {
-      cat.sub.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subSelect.appendChild(o); });
+  const ADD_CATEGORY_VALUE = '__add_category__';
+  const ADD_SUBCATEGORY_VALUE = '__add_subcategory__';
+  let lastCategoryId = null;
+  const lastSubByCategory = {};
+
+  function rebuildCategoryOptions(selectedId) {
+    catSelect.innerHTML = '';
+    const ids = categoryIds();
+    ids.forEach(id => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = getCategoryName(id);
+      catSelect.appendChild(opt);
+    });
+    const addOpt = document.createElement('option');
+    addOpt.value = ADD_CATEGORY_VALUE;
+    addOpt.textContent = '+ Add New Category…';
+    catSelect.appendChild(addOpt);
+    if (selectedId && categoryConfig[selectedId]) {
+      catSelect.value = selectedId;
+    } else if (ids.length) {
+      catSelect.value = ids[0];
     }
+    lastCategoryId = catSelect.value || null;
+  }
+
+  function rebuildSubcategoryOptions(catId, selectedSub) {
+    subSelect.innerHTML = '';
+    const subs = getCategorySubcategories(catId);
+    if (!subs.length) {
+      subWrap.classList.add('hidden');
+      return;
+    }
+    subs.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s;
+      o.textContent = s;
+      subSelect.appendChild(o);
+    });
+    const addOpt = document.createElement('option');
+    addOpt.value = ADD_SUBCATEGORY_VALUE;
+    addOpt.textContent = '+ Add Subcategory…';
+    subSelect.appendChild(addOpt);
+    if (selectedSub && subs.includes(selectedSub)) {
+      subSelect.value = selectedSub;
+    } else if (subs.length) {
+      subSelect.value = subs[0];
+    }
+    subWrap.classList.remove('hidden');
+  }
+
+  rebuildCategoryOptions(null);
+  catSelect.addEventListener('change', function() {
+    const val = this.value;
+    if (val === ADD_CATEGORY_VALUE) {
+      const input = prompt('New category name');
+      const id = addCategoryByName(input);
+      if (!id) {
+        rebuildCategoryOptions(lastCategoryId);
+        if (lastCategoryId) rebuildSubcategoryOptions(lastCategoryId, lastSubByCategory[lastCategoryId] || null);
+        return;
+      }
+      categoryConfig = loadCategoryConfig();
+      rebuildCategoryOptions(id);
+      rebuildSubcategoryOptions(id, null);
+      return;
+    }
+    lastCategoryId = val;
+    const lastSub = lastSubByCategory[val] || null;
+    rebuildSubcategoryOptions(val, lastSub);
+  });
+
+  subSelect.addEventListener('change', function() {
+    const catId = catSelect.value;
+    const val = this.value;
+    if (!catId) return;
+    if (val === ADD_SUBCATEGORY_VALUE) {
+      const input = prompt('New subcategory name');
+      const sub = addSubcategoryToCategory(catId, input);
+      if (!sub) {
+        const last = lastSubByCategory[catId] || null;
+        rebuildSubcategoryOptions(catId, last);
+        return;
+      }
+      categoryConfig = loadCategoryConfig();
+      lastSubByCategory[catId] = sub;
+      rebuildSubcategoryOptions(catId, sub);
+      return;
+    }
+    lastSubByCategory[catId] = val;
   });
 
   const applyWrap = document.getElementById('modalPurchaseApplyWrap');
@@ -1082,15 +1248,21 @@
     amountInput.value = (prefill && prefill.amountText) || '';
     dateInput.value = (prefill && prefill.dateKey) || nowKey;
 
-    if (prefill && prefill.categoryId) {
-      categoryInput.value = prefill.categoryId;
-      catSelect.dispatchEvent(new Event('change'));
-      if (prefill.subcategory && document.getElementById('modalPurchaseSub')) {
-        document.getElementById('modalPurchaseSub').value = prefill.subcategory;
+    const defaultCatIds = categoryIds();
+    let initialCatId = (prefill && prefill.categoryId) ? ensureCategoryIdExists(prefill.categoryId) : null;
+    if (!initialCatId && defaultCatIds.length) {
+      initialCatId = defaultCatIds[0];
+    }
+    rebuildCategoryOptions(initialCatId);
+    const initialSub = prefill && prefill.subcategory ? prefill.subcategory : null;
+    if (initialCatId) {
+      const subs = getCategorySubcategories(initialCatId);
+      if (subs.length) {
+        const subToSelect = initialSub && subs.includes(initialSub) ? initialSub : subs[0];
+        rebuildSubcategoryOptions(initialCatId, subToSelect);
+      } else {
+        subWrap.classList.add('hidden');
       }
-    } else {
-      categoryInput.value = 'food';
-      catSelect.dispatchEvent(new Event('change'));
     }
 
     notesInput.value = (prefill && prefill.notes) || '';
@@ -1150,8 +1322,8 @@
     const amountCents = parseCents(document.getElementById('modalPurchaseAmount').value);
     const dateISO = document.getElementById('modalPurchaseDate').value || toLocalDateKey(new Date());
     const category = document.getElementById('modalPurchaseCategory').value;
-    const cat = CATEGORIES.find(c => c.id === category);
-    const subcategory = (cat && cat.sub.length) ? document.getElementById('modalPurchaseSub').value : undefined;
+    const subs = getCategorySubcategories(category);
+    const subcategory = subs.length ? document.getElementById('modalPurchaseSub').value : undefined;
     const notes = document.getElementById('modalPurchaseNotes').value.trim() || undefined;
     const isEdit = !!editingPurchaseId;
     let applyToSnapshot = false;
@@ -1215,8 +1387,8 @@
     catTotalsEl.innerHTML = '';
     Object.keys(byKey).sort((a, b) => byKey[b].cents - byKey[a].cents).forEach(key => {
       const v = byKey[key];
-      const cat = CATEGORIES.find(c => c.id === v.category);
-      const name = (cat ? cat.name : v.category) + (v.subcategory ? ' → ' + v.subcategory : '');
+      const baseName = getCategoryName(v.category);
+      const name = baseName + (v.subcategory ? ' → ' + v.subcategory : '');
       const div = document.createElement('div');
       div.className = 'card';
       div.innerHTML = '<div class="row"><span class="name">' + escapeHtml(name) + '</span><span class="amount">' + formatCents(v.cents) + '</span></div>';
@@ -1226,20 +1398,21 @@
     // Build dataset grouped by main category for chart.
     const byMain = {};
     filtered.forEach(p => {
-      const cat = CATEGORIES.find(c => c.id === p.category);
-      const id = cat ? cat.id : p.category;
-      const name = cat ? cat.name : p.category;
+      const id = p.category;
+      const name = getCategoryName(id);
       if (!byMain[id]) byMain[id] = { id, name, cents: 0 };
       byMain[id].cents += p.amountCents;
     });
     const chartLabels = [];
     const chartValues = [];
     const chartColors = [];
+    const chartIds = [];
     Object.keys(byMain).sort((a, b) => byMain[b].cents - byMain[a].cents).forEach(id => {
       const v = byMain[id];
       chartLabels.push(v.name);
       chartValues.push(v.cents);
-      chartColors.push(CATEGORY_COLORS[id] || '#64748b');
+      chartIds.push(v.id);
+      chartColors.push(CATEGORY_COLORS[v.id] || '#64748b');
     });
     const chartContainer = document.getElementById('spendingChart');
     const chartSummaryEl = document.getElementById('spendingChartSummary');
@@ -1250,11 +1423,7 @@
     if (chartContainer && chartValues.length) {
       const total = chartValues.reduce((s, v) => s + v, 0);
       const ctx = chartContainer.getContext('2d');
-      const offsets = chartLabels.map(label => {
-        const cat = CATEGORIES.find(c => c.name === label);
-        const id = cat ? cat.id : null;
-        return activeCategoryFilter && id === activeCategoryFilter ? 12 : 0;
-      });
+      const offsets = chartIds.map(id => activeCategoryFilter && id === activeCategoryFilter ? 12 : 0);
       spendingChart = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -1285,9 +1454,7 @@
           onClick: function(evt, elements) {
             if (!elements.length) return;
             const index = elements[0].index;
-            const label = chartLabels[index];
-            const cat = CATEGORIES.find(c => c.name === label);
-            const id = cat ? cat.id : null;
+            const id = chartIds[index];
             if (!id) return;
             if (activeCategoryFilter === id) {
               activeCategoryFilter = '';
@@ -1316,8 +1483,7 @@
     listEl.innerHTML = '';
     const sorted = filtered.slice().sort((a, b) => parseLocalDateKey(b.dateISO) - parseLocalDateKey(a.dateISO));
     sorted.forEach(p => {
-      const cat = CATEGORIES.find(c => c.id === p.category);
-      const baseName = cat ? cat.name : p.category;
+      const baseName = getCategoryName(p.category);
       const catName = p.subcategory ? (baseName + ': ' + p.subcategory) : baseName;
       const div = document.createElement('div');
       div.className = 'purchase-item card';
@@ -1328,9 +1494,17 @@
         document.getElementById('modalPurchaseTitle').value = p.title;
         document.getElementById('modalPurchaseAmount').value = (p.amountCents / 100).toFixed(2);
         document.getElementById('modalPurchaseDate').value = p.dateISO.slice(0, 10);
-        document.getElementById('modalPurchaseCategory').value = p.category;
-        catSelect.dispatchEvent(new Event('change'));
-        document.getElementById('modalPurchaseSub').value = p.subcategory || '';
+        const catId = ensureCategoryIdExists(p.category);
+        rebuildCategoryOptions(catId);
+        if (catId) {
+          const subs = getCategorySubcategories(catId);
+          const sub = p.subcategory && subs.includes(p.subcategory) ? p.subcategory : (subs[0] || '');
+          if (subs.length) {
+            rebuildSubcategoryOptions(catId, sub);
+          } else {
+            subWrap.classList.add('hidden');
+          }
+        }
         document.getElementById('modalPurchaseNotes').value = p.notes || '';
         applyWrap.classList.add('hidden');
         applyToSnapshotState = false;
