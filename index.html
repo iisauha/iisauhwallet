@@ -19,6 +19,10 @@
       --muted: #94a3b8;
       --accent: #0ea5e9;
       --danger: #dc2626;
+      --green: #16a34a;
+      --green-light: rgba(22, 163, 74, 0.12);
+      --red: #dc2626;
+      --red-light: rgba(220, 38, 38, 0.12);
       --safe-bottom: env(safe-area-inset-bottom);
       --safe-top: env(safe-area-inset-top);
       --tabbar-h: 56px;
@@ -97,7 +101,12 @@
     .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
     .summary-kv .k { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
     .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; }
-    .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; color: var(--accent); }
+    .summary-kv .v.pos { color: var(--green); }
+    .summary-kv .v.neg { color: var(--red); }
+    .summary-kv.final-net-cash { border-radius: 8px; padding: 6px 8px; }
+    .summary-kv.final-net-cash.positive { background: var(--green-light); }
+    .summary-kv.final-net-cash.negative { background: var(--red-light); }
+    .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -140,7 +149,25 @@
     .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
     .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .pending-item:last-child { border-bottom: none; }
-    .pending-item .del { color: var(--danger); padding: 8px; font-size: 0.9rem; cursor: pointer; }
+    .pending-item > div:last-child { display: flex; gap: 8px; }
+    .pending-item .posted,
+    .pending-item .del {
+      min-width: 90px;
+      min-height: 32px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+    }
+    .pending-item .posted {
+      background: var(--green-light);
+      color: var(--green);
+    }
+    .pending-item .del {
+      background: var(--red-light);
+      color: var(--red);
+    }
     .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .filter-bar select { min-height: 44px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; }
     .category-block { margin-bottom: 20px; }
@@ -241,7 +268,15 @@
   </div>
 
   <div id="settingsContent" class="tab-panel">
-    <p class="section-title">Backup</p>
+    <p class="section-title">Export CSV</p>
+    <div class="settings-section">
+      <label style="display:block; font-size:0.9rem; color:var(--muted); margin-bottom:6px;">Month</label>
+      <input type="month" id="exportMonth" class="btn" style="width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:10px 14px; border-radius:10px; font-size:1rem;" />
+      <button type="button" class="btn btn-secondary" id="exportCsvBtn" style="margin-top:8px;">Export CSV</button>
+    </div>
+    <p class="section-title" style="margin-top: 24px;">Manage Categories</p>
+    <div id="manageCategories" class="settings-section"></div>
+    <p class="section-title" style="margin-top: 24px;">Backup</p>
     <div class="settings-section">
       <button type="button" class="btn btn-secondary" id="exportBtn">Export JSON</button>
       <label class="btn btn-secondary" style="display: inline-block; margin-top: 8px;">
@@ -252,8 +287,6 @@
     <div class="settings-section">
       <button type="button" class="btn btn-danger" id="resetBtn">Reset All Data</button>
     </div>
-    <p class="section-title" style="margin-top: 24px;">Manage Categories</p>
-    <div id="manageCategories" class="settings-section"></div>
   </div>
 
   <div class="tabs">
@@ -496,8 +529,6 @@
       </div>
     </div>
   </div>
-
-  <p class="footer">LedgerLite — offline. To save this to your phone, AirDrop the file and open in Safari. Add to Home Screen for app-like use.</p>
 
   <script>
   </script>
@@ -757,6 +788,17 @@
     return new Date(targetYear, targetMonth, day);
   }
 
+  function formatDisplayDate(key) {
+    const d = parseLocalDateKey(key);
+    if (isNaN(d.getTime())) return key;
+    const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+    try {
+      return d.toLocaleDateString(undefined, opts);
+    } catch (_) {
+      return key;
+    }
+  }
+
   function ensureUncategorizedCategory() {
     if (!categoryConfig.uncategorized) {
       categoryConfig.uncategorized = { name: 'Uncategorized', sub: [] };
@@ -864,13 +906,37 @@
     const netCash = bankTotal + cashInHand;
     const finalNetCash = netCash + pendingInTotal - pendingOutTotal - ccDebt + ccCredit;
 
-    document.getElementById('cashInHandAmount').textContent = formatCents(cashInHand);
-    document.getElementById('sumNetCash').textContent = formatCents(netCash);
-    document.getElementById('sumCcDebt').textContent = formatCents(ccDebt);
-    document.getElementById('sumCcCredit').textContent = formatCents(ccCredit);
-    document.getElementById('sumPendingOut').textContent = formatCents(pendingOutTotal);
-    document.getElementById('sumPendingIn').textContent = formatCents(pendingInTotal);
-    document.getElementById('sumFinalNetCash').textContent = formatCents(finalNetCash);
+    const elCash = document.getElementById('cashInHandAmount');
+    const elNet = document.getElementById('sumNetCash');
+    const elDebt = document.getElementById('sumCcDebt');
+    const elCredit = document.getElementById('sumCcCredit');
+    const elOut = document.getElementById('sumPendingOut');
+    const elIn = document.getElementById('sumPendingIn');
+    const elFinal = document.getElementById('sumFinalNetCash');
+
+    function setSignClass(el, value) {
+      if (!el) return;
+      el.classList.remove('pos', 'neg');
+      if (value > 0) el.classList.add('pos');
+      else if (value < 0) el.classList.add('neg');
+    }
+
+    if (elCash) elCash.textContent = formatCents(cashInHand);
+    if (elNet) { elNet.textContent = formatCents(netCash); setSignClass(elNet, netCash); }
+    if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, ccDebt); }
+    if (elCredit) { elCredit.textContent = formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
+    if (elOut) { elOut.textContent = formatCents(pendingOutTotal); setSignClass(elOut, pendingOutTotal); }
+    if (elIn) { elIn.textContent = formatCents(pendingInTotal); setSignClass(elIn, pendingInTotal); }
+    if (elFinal) {
+      elFinal.textContent = formatCents(finalNetCash);
+      setSignClass(elFinal, finalNetCash);
+      const row = elFinal.closest('.summary-kv.final-net-cash');
+      if (row) {
+        row.classList.remove('positive', 'negative');
+        if (finalNetCash >= 0) row.classList.add('positive');
+        else row.classList.add('negative');
+      }
+    }
   }
 
   function escapeHtml(s) {
@@ -2174,7 +2240,7 @@
       }
       data.purchases.push(purchase);
       if (splitState.enabled && inboundCents > 0) {
-        const label = 'Split reimbursement: ' + title;
+        const label = 'Venmo - \"' + title + '\"';
         const pendingId = uid();
         const pendingItem = { id: pendingId, label, amountCents: inboundCents, createdAt: now(), linkedPurchaseId: purchase.id, fromSplit: true };
         data.pendingIn.push(pendingItem);
@@ -2230,7 +2296,7 @@
     Object.keys(byKey).sort((a, b) => byKey[b].cents - byKey[a].cents).forEach(key => {
       const v = byKey[key];
       const baseName = getCategoryName(v.category);
-      const name = baseName + (v.subcategory ? ' → ' + v.subcategory : '');
+      const name = v.subcategory ? (baseName + ': ' + v.subcategory) : baseName;
       const div = document.createElement('div');
       div.className = 'card';
       div.innerHTML = '<div class="row"><span class="name">' + escapeHtml(name) + '</span><span class="amount">' + formatCents(v.cents) + '</span></div>';
@@ -2329,7 +2395,8 @@
       const catName = p.subcategory ? (baseName + ': ' + p.subcategory) : baseName;
       const div = document.createElement('div');
       div.className = 'purchase-item card';
-      div.innerHTML = '<div class="title">' + escapeHtml(p.title) + ' ' + formatCents(p.amountCents) + '</div><div class="meta">' + p.dateISO.slice(0, 10) + ' · ' + escapeHtml(catName) + '</div>';
+      const displayDate = formatDisplayDate(p.dateISO.slice(0, 10));
+      div.innerHTML = '<div class="title">' + escapeHtml(p.title) + ' ' + formatCents(p.amountCents) + '</div><div class="meta">' + escapeHtml(displayDate) + ' · ' + escapeHtml(catName) + '</div>';
       div.onclick = function() {
         editingPurchaseId = p.id;
         document.getElementById('modalPurchaseHeading').textContent = 'Edit Purchase';
@@ -2578,12 +2645,94 @@
     };
     r.readAsText(f);
   };
+  document.getElementById('exportCsvBtn').onclick = function() {
+    const monthInput = document.getElementById('exportMonth').value; // YYYY-MM
+    if (!monthInput) {
+      alert('Please select a month first.');
+      return;
+    }
+    const [yearStr, monthStr] = monthInput.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    if (!(year > 0 && month >= 1 && month <= 12)) {
+      alert('Invalid month.');
+      return;
+    }
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+    const startKey = toLocalDateKey(start);
+    const endKey = toLocalDateKey(end);
+    const rows = [];
+    const header = [
+      'date',
+      'merchant',
+      'amount',
+      'category',
+      'subcategory',
+      'notes',
+      'applyToSnapshot',
+      'paymentSource',
+      'paymentTargetName',
+      'isSplit',
+      'totalAmount',
+      'myPortion',
+      'inboundAmount'
+    ];
+    rows.push(header.join(','));
+    (data.purchases || []).forEach(p => {
+      const d = parseLocalDateKey(p.dateISO);
+      if (isNaN(d.getTime())) return;
+      const key = toLocalDateKey(d);
+      if (key < startKey || key >= endKey) return;
+      const catName = getCategoryName(p.category);
+      const subs = getCategorySubcategories(p.category);
+      const sub = p.subcategory && subs.includes(p.subcategory) ? p.subcategory : (p.subcategory || '');
+      const apply = !!p.applyToSnapshot;
+      const src = p.paymentSource || '';
+      let targetName = '';
+      if (p.paymentTargetId) {
+        const card = data.cards.find(c => c.id === p.paymentTargetId);
+        const bank = data.banks.find(b => b.id === p.paymentTargetId);
+        targetName = (card && card.name) || (bank && bank.name) || '';
+      }
+      const isSplit = !!p.isSplit;
+      const totalAmt = isSplit && typeof p.splitTotalCents === 'number' ? (p.splitTotalCents / 100).toFixed(2) : '';
+      const myPortion = typeof p.amountCents === 'number' ? (p.amountCents / 100).toFixed(2) : '';
+      const inboundAmt = isSplit && typeof p.splitInboundCents === 'number' ? (p.splitInboundCents / 100).toFixed(2) : '';
+      const fields = [
+        key,
+        (p.title || '').replace(/"/g, '""'),
+        myPortion,
+        (catName || '').replace(/"/g, '""'),
+        (sub || '').replace(/"/g, '""'),
+        (p.notes || '').replace(/"/g, '""'),
+        String(apply),
+        src,
+        targetName.replace(/"/g, '""'),
+        String(isSplit),
+        totalAmt,
+        myPortion,
+        inboundAmt
+      ].map(v => `"${v}"`);
+      rows.push(fields.join(','));
+    });
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'iisauhwallet_' + yearStr + '-' + monthStr + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   document.getElementById('resetBtn').onclick = () => confirmModal('Reset all data?', 'This cannot be undone. All banks, cards, pending items, and purchases will be cleared.', () => {
-    data = defaultData();
-    save(data);
-    renderSnapshot();
-    renderSpending();
-    renderManageCategories();
+    confirmModal('Are you super sure?', 'This will permanently delete all data.', () => {
+      data = defaultData();
+      save(data);
+      renderSnapshot();
+      renderSpending();
+      renderManageCategories();
+    });
   });
 
   let postPendingKind = null;
