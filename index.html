@@ -89,18 +89,17 @@
       left: 0;
       right: 0;
       background: var(--surface);
-      border-top: 1px solid rgba(255,255,255,0.06);
-      box-shadow: 0 -10px 24px rgba(0,0,0,0.35);
-      padding: 12px 16px;
-      padding-bottom: calc(12px + 8px);
-      z-index: 90;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
+      padding: 10px 16px;
+      padding-bottom: calc(10px + var(--safe-bottom));
+      z-index: 9999;
     }
-    .summary-compact { display: grid; gap: 10px; }
-    .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-    .summary-kv .k { color: var(--muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; }
-    .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1.6rem; font-weight: 800; }
-    .summary-kv.small .v { font-size: 1.2rem; font-weight: 700; }
-    .summary-kv.net-position .v { color: var(--accent); }
+    .summary-compact { display: grid; gap: 6px; }
+    .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-height: 0; }
+    .summary-kv .k { color: var(--muted); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em; flex-shrink: 0; }
+    .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; word-break: break-all; }
+    .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; color: var(--accent); }
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -162,9 +161,6 @@
   <div id="snapshotContent" class="tab-panel active">
     <p class="section-title">Bank Accounts</p>
     <div id="bankList"></div>
-    <button type="button" class="btn btn-dashed" id="addBankBtn">+ Add Bank Account</button>
-
-    <p class="section-title" style="margin-top: 24px;">Physical Cash in Hand</p>
     <div id="cashInHandCard" class="card">
       <div class="row"><span class="name">Physical Cash in Hand</span><span class="amount" id="cashInHandAmount">$0.00</span></div>
       <div class="btn-row">
@@ -172,6 +168,7 @@
         <button type="button" class="btn btn-secondary clear-btn" data-type="cash" data-id="cash">Clear</button>
       </div>
     </div>
+    <button type="button" class="btn btn-dashed" id="addBankBtn">+ Add Bank Account</button>
 
     <p class="section-title" style="margin-top: 24px;">Credit Cards</p>
     <div id="cardList"></div>
@@ -230,26 +227,11 @@
 
   <div id="snapshotSummary" class="summary">
     <div class="summary-compact">
-      <div class="summary-kv">
-        <span class="k">Net Cash</span>
-        <span class="v" id="sumNetCash">$0</span>
-      </div>
-      <div class="summary-kv small">
-        <span class="k">Total Current Credit Card Balance</span>
-        <span class="v" id="sumCc">$0</span>
-      </div>
-      <div class="summary-kv small">
-        <span class="k">Total Pending Outbound</span>
-        <span class="v" id="sumPendingOut">$0</span>
-      </div>
-      <div class="summary-kv small">
-        <span class="k">Total Pending Inbound</span>
-        <span class="v" id="sumPendingIn">$0</span>
-      </div>
-      <div class="summary-kv net-position">
-        <span class="k">Final Net Position</span>
-        <span class="v" id="sumNetPos">$0</span>
-      </div>
+      <div class="summary-kv"><span class="k">Net Cash</span><span class="v" id="sumNetCash">$0</span></div>
+      <div class="summary-kv"><span class="k">Total Current CC Balance</span><span class="v" id="sumCc">$0</span></div>
+      <div class="summary-kv"><span class="k">Total Pending Outbound</span><span class="v" id="sumPendingOut">$0</span></div>
+      <div class="summary-kv"><span class="k">Total Pending Inbound</span><span class="v" id="sumPendingIn">$0</span></div>
+      <div class="summary-kv final-net-cash"><span class="k">Final Net Cash</span><span class="v" id="sumFinalNetCash">$0</span></div>
     </div>
   </div>
 
@@ -374,6 +356,7 @@
   <script>
 (function() {
   const STORAGE_KEY = 'ledgerlite';
+  const CASH_STORAGE_KEY = 'snapshot_cashInHandCents';
   const CATEGORIES = [
     { id: 'food', name: 'Food', sub: ['Groceries', 'Snacks', 'Restaurants'] },
     { id: 'travel', name: 'Travel', sub: ['MTA', 'Flights'] },
@@ -413,6 +396,19 @@
     };
   }
 
+  function getCashInHandCents() {
+    const raw = localStorage.getItem(CASH_STORAGE_KEY);
+    if (raw === null) return 0;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function setCashInHandCents(cents) {
+    const n = Math.round(Number(cents)) || 0;
+    localStorage.setItem(CASH_STORAGE_KEY, String(n));
+    return n;
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -420,7 +416,11 @@
       const d = JSON.parse(raw);
       if (!d.banks || !d.banks.length) d.banks = defaultData().banks;
       if (!d.cards || !d.cards.length) d.cards = defaultData().cards;
-      if (typeof d.cashInHandCents !== 'number') d.cashInHandCents = 0;
+      if (localStorage.getItem(CASH_STORAGE_KEY) !== null) {
+        d.cashInHandCents = getCashInHandCents();
+      } else if (typeof d.cashInHandCents !== 'number') {
+        d.cashInHandCents = 0;
+      }
       if (!d.pendingIn) d.pendingIn = [];
       if (!d.pendingOut) d.pendingOut = [];
       if (!d.purchases) d.purchases = [];
@@ -533,19 +533,20 @@
     });
 
     const bankTotal = data.banks.reduce((s, b) => s + b.balanceCents, 0);
-    const cashInHand = data.cashInHandCents || 0;
+    const cashInHand = getCashInHandCents();
+    data.cashInHandCents = cashInHand;
     const ccTotal = data.cards.reduce((s, c) => s + c.balanceCents, 0);
-    const pendingInboundTotal = data.pendingIn.reduce((s, p) => s + p.amountCents, 0);
-    const pendingOutboundTotal = data.pendingOut.reduce((s, p) => s + p.amountCents, 0);
+    const pendingOutTotal = data.pendingOut.reduce((s, p) => s + p.amountCents, 0);
+    const pendingInTotal = data.pendingIn.reduce((s, p) => s + p.amountCents, 0);
     const netCash = bankTotal + cashInHand;
-    const finalNetPosition = (bankTotal + cashInHand + pendingInboundTotal) - pendingOutboundTotal - ccTotal;
+    const finalNetCash = netCash + pendingInTotal - pendingOutTotal - ccTotal;
 
     document.getElementById('cashInHandAmount').textContent = formatCents(cashInHand);
     document.getElementById('sumNetCash').textContent = formatCents(netCash);
     document.getElementById('sumCc').textContent = formatCents(ccTotal);
-    document.getElementById('sumPendingOut').textContent = formatCents(pendingOutboundTotal);
-    document.getElementById('sumPendingIn').textContent = formatCents(pendingInboundTotal);
-    document.getElementById('sumNetPos').textContent = formatCents(finalNetPosition);
+    document.getElementById('sumPendingOut').textContent = formatCents(pendingOutTotal);
+    document.getElementById('sumPendingIn').textContent = formatCents(pendingInTotal);
+    document.getElementById('sumFinalNetCash').textContent = formatCents(finalNetCash);
     syncSnapshotPadding();
   }
 
@@ -578,7 +579,7 @@
       if (btn) {
         addSetTarget = { type: btn.getAttribute('data-type'), id: btn.getAttribute('data-id') };
         if (addSetTarget.type === 'cash') {
-          document.getElementById('modalAddSetAmount').value = (data.cashInHandCents / 100).toFixed(2);
+          document.getElementById('modalAddSetAmount').value = (getCashInHandCents() / 100).toFixed(2);
         } else {
           const item = addSetTarget.type === 'bank' ? data.banks.find(x => x.id === addSetTarget.id) : data.cards.find(x => x.id === addSetTarget.id);
           document.getElementById('modalAddSetAmount').value = '';
@@ -597,8 +598,8 @@
             const c = data.cards.find(x => x.id === id);
             if (c) { c.balanceCents = 0; c.updatedAt = now(); save(data); renderSnapshot(); }
           } else if (type === 'cash') {
+            setCashInHandCents(0);
             data.cashInHandCents = 0;
-            save(data);
             renderSnapshot();
           }
         });
@@ -617,8 +618,8 @@
       const c = data.cards.find(x => x.id === addSetTarget.id);
       if (c) { c.balanceCents = useSet ? cents : c.balanceCents + cents; c.updatedAt = now(); save(data); renderSnapshot(); }
     } else if (addSetTarget.type === 'cash') {
-      data.cashInHandCents = useSet ? cents : (data.cashInHandCents || 0) + cents;
-      save(data);
+      const next = useSet ? cents : getCashInHandCents() + cents;
+      data.cashInHandCents = setCashInHandCents(next);
       renderSnapshot();
     }
     document.getElementById('modalAddSet').classList.add('hidden');
@@ -820,7 +821,8 @@
 
   // Settings
   document.getElementById('exportBtn').onclick = function() {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const exportData = { ...data, cashInHandCents: getCashInHandCents() };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'ledgerlite-backup.json';
@@ -836,7 +838,10 @@
         const imported = JSON.parse(r.result);
         if (imported.banks) data.banks = imported.banks;
         if (imported.cards) data.cards = imported.cards;
-        if (typeof imported.cashInHandCents === 'number') data.cashInHandCents = imported.cashInHandCents;
+        if (typeof imported.cashInHandCents === 'number') {
+          data.cashInHandCents = imported.cashInHandCents;
+          setCashInHandCents(imported.cashInHandCents);
+        }
         if (imported.pendingIn) data.pendingIn = imported.pendingIn;
         if (imported.pendingOut) data.pendingOut = imported.pendingOut;
         if (imported.purchases) data.purchases = imported.purchases;
