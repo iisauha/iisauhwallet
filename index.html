@@ -252,6 +252,8 @@
     <div class="settings-section">
       <button type="button" class="btn btn-danger" id="resetBtn">Reset All Data</button>
     </div>
+    <p class="section-title" style="margin-top: 24px;">Manage Categories</p>
+    <div id="manageCategories" class="settings-section"></div>
   </div>
 
   <div class="tabs">
@@ -410,6 +412,7 @@
   <div id="modalRecurring" class="modal-overlay hidden">
     <div class="modal">
       <h3 id="modalRecurringHeading">Recurring Bill</h3>
+      <p class="field hidden" id="modalRecurringError" style="color: var(--danger); font-size: 0.95rem; margin: 0 0 10px 0;"></p>
       <div class="field">
         <label>Name / Merchant</label>
         <input type="text" id="modalRecurringName" placeholder="e.g. Rent" />
@@ -578,8 +581,10 @@
   }
 
   function getCategoryName(id) {
-    const entry = categoryConfig[id];
-    return entry && entry.name ? entry.name : id;
+    const key = (id || '').trim();
+    const entry = key ? categoryConfig[key] : null;
+    if (entry && entry.name) return entry.name;
+    return 'Uncategorized';
   }
 
   function getCategorySubcategories(id) {
@@ -738,6 +743,20 @@
     const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
     const day = Math.min(baseDay, lastDay);
     return new Date(targetYear, targetMonth, day);
+  }
+
+  function ensureUncategorizedCategory() {
+    if (!categoryConfig.uncategorized) {
+      categoryConfig.uncategorized = { name: 'Uncategorized', sub: [] };
+      saveCategoryConfig(categoryConfig);
+    }
+    return 'uncategorized';
+  }
+
+  function normalizeCategoryId(id) {
+    const key = (id || '').trim();
+    if (key && categoryConfig[key]) return key;
+    return ensureUncategorizedCategory();
   }
 
   function getDateRange(filter, rangeStart, rangeEnd) {
@@ -1138,14 +1157,16 @@
     const targetWrapRec = document.getElementById('modalRecurringTargetWrap');
     const targetLabelRec = document.getElementById('modalRecurringTargetLabel');
     const targetSelRec = document.getElementById('modalRecurringTarget');
+    const errEl = document.getElementById('modalRecurringError');
 
     nameInput.value = (recurring && recurring.name) || '';
     amountInput.value = recurring ? (recurring.amountCents / 100).toFixed(2) : '';
+    if (errEl) { errEl.classList.add('hidden'); errEl.textContent = ''; }
 
     // category options (no inline add here, but dynamic list from config)
     catSel.innerHTML = '';
     const ids = categoryIds();
-    const currentCatId = recurring ? ensureCategoryIdExists(recurring.category) : (ids[0] || '');
+    const currentCatId = recurring ? normalizeCategoryId(recurring.category) : (ids[0] || ensureUncategorizedCategory());
     ids.forEach(id => {
       const o = document.createElement('option');
       o.value = id;
@@ -1154,21 +1175,33 @@
     });
     if (currentCatId) catSel.value = currentCatId;
 
-    const subs = getCategorySubcategories(catSel.value);
-    subSel.innerHTML = '';
-    if (subs.length) {
+    function rebuildRecurringSubOptions(catId, selectedSub) {
+      subSel.innerHTML = '';
+      const subs = getCategorySubcategories(catId);
+      if (!subs.length) {
+        subWrapEl.classList.add('hidden');
+        subSel.value = '';
+        return;
+      }
       subs.forEach(s => {
         const o = document.createElement('option');
         o.value = s;
         o.textContent = s;
         subSel.appendChild(o);
       });
-      const subVal = recurring && recurring.subcategory && subs.includes(recurring.subcategory) ? recurring.subcategory : subs[0];
-      subSel.value = subVal;
+      const addOpt = document.createElement('option');
+      addOpt.value = ADD_SUBCATEGORY_VALUE;
+      addOpt.textContent = '+ Add Subcategory…';
+      subSel.appendChild(addOpt);
+      if (selectedSub && subs.includes(selectedSub)) {
+        subSel.value = selectedSub;
+      } else {
+        subSel.value = subs[0];
+      }
       subWrapEl.classList.remove('hidden');
-    } else {
-      subWrapEl.classList.add('hidden');
     }
+
+    rebuildRecurringSubOptions(catSel.value, (recurring && recurring.subcategory) ? recurring.subcategory : null);
 
     notesInput.value = (recurring && recurring.notes) || '';
     freqSel.value = (recurring && recurring.frequency) || 'monthly';
@@ -1215,12 +1248,34 @@
       targetWrapRec.classList.remove('hidden');
     }
 
+    catSel.onchange = function() {
+      const catId = catSel.value;
+      rebuildRecurringSubOptions(catId, null);
+      updateRecurringSaveState();
+    };
+
+    subSel.onchange = function() {
+      const catId = catSel.value;
+      if (subSel.value === ADD_SUBCATEGORY_VALUE) {
+        const input = prompt('New subcategory name');
+        const added = addSubcategoryToCategory(catId, input);
+        if (added) {
+          categoryConfig = loadCategoryConfig();
+          rebuildRecurringSubOptions(catId, added);
+        } else {
+          rebuildRecurringSubOptions(catId, null);
+        }
+      }
+      updateRecurringSaveState();
+    };
+
     freqSel.onchange = function() {
       if (freqSel.value === 'custom') {
         everyWrap.classList.remove('hidden');
       } else {
         everyWrap.classList.add('hidden');
       }
+      updateRecurringSaveState();
     };
 
     applyCheckRec.onchange = function() {
@@ -1232,6 +1287,7 @@
         sourceSelRec.value = '';
         targetSelRec.innerHTML = '';
       }
+      updateRecurringSaveState();
     };
 
     sourceSelRec.onchange = function() {
@@ -1253,7 +1309,62 @@
         targetLabelRec.textContent = sourceSelRec.value === 'card' ? 'Select Card' : 'Select Bank';
         targetWrapRec.classList.remove('hidden');
       }
+      updateRecurringSaveState();
     };
+
+    targetSelRec.onchange = function() {
+      updateRecurringSaveState();
+    };
+
+    nameInput.oninput = amountInput.oninput = startInput.onchange = endInput.onchange = notesInput.oninput = function() {
+      updateRecurringSaveState();
+    };
+
+    function validateRecurringForm() {
+      const name = nameInput.value.trim();
+      if (!name) return { ok: false, msg: 'Name is required.' };
+      const amount = parseCents(amountInput.value);
+      if (!(amount > 0)) return { ok: false, msg: 'Amount must be greater than $0.' };
+      const catId = catSel.value;
+      if (!catId) return { ok: false, msg: 'Category is required.' };
+      const freq = freqSel.value;
+      if (!freq) return { ok: false, msg: 'Frequency is required.' };
+      if (freq === 'custom') {
+        const n = parseInt(everyInput.value || '0', 10);
+        if (!(n > 0)) return { ok: false, msg: 'Every N days must be at least 1.' };
+      }
+      const start = startInput.value;
+      if (!start) return { ok: false, msg: 'Start date is required.' };
+      if (endInput.value) {
+        const s = parseLocalDateKey(start);
+        const e = parseLocalDateKey(endInput.value);
+        if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e < s) {
+          return { ok: false, msg: 'End date must be after start date.' };
+        }
+      }
+      if (applyCheckRec.checked) {
+        const src = sourceSelRec.value;
+        if (!src) return { ok: false, msg: 'Select a payment source or disable Apply to Snapshot.' };
+        if ((src === 'card' || src === 'bank') && !targetSelRec.value) {
+          return { ok: false, msg: 'Select a specific ' + (src === 'card' ? 'card' : 'bank') + ' or choose a different source.' };
+        }
+      }
+      return { ok: true, msg: '' };
+    }
+
+    function updateRecurringSaveState() {
+      const okBtn = document.getElementById('modalRecurringOk');
+      const v = validateRecurringForm();
+      if (okBtn) okBtn.disabled = !v.ok;
+      if (errEl) {
+        if (v.ok) {
+          errEl.classList.add('hidden');
+          errEl.textContent = '';
+        }
+      }
+    }
+
+    updateRecurringSaveState();
 
     document.getElementById('modalRecurring').classList.remove('hidden');
     updateBodyModalOpen();
@@ -1269,33 +1380,83 @@
   };
 
   document.getElementById('modalRecurringOk').onclick = function() {
-    const name = document.getElementById('modalRecurringName').value.trim() || 'Recurring';
-    const amountCents = parseCents(document.getElementById('modalRecurringAmount').value);
-    const category = document.getElementById('modalRecurringCategory').value;
+    const errEl = document.getElementById('modalRecurringError');
+    const okBtn = document.getElementById('modalRecurringOk');
+    if (okBtn && okBtn.disabled) return;
+
+    const nameRaw = document.getElementById('modalRecurringName').value.trim();
+    const amountRaw = document.getElementById('modalRecurringAmount').value;
+    const amountCents = parseCents(amountRaw);
+    const categoryRaw = document.getElementById('modalRecurringCategory').value;
+    const category = normalizeCategoryId(categoryRaw);
     const subs = getCategorySubcategories(category);
-    const subcategory = subs.length ? document.getElementById('modalRecurringSub').value : undefined;
+    let subcategory = subs.length ? (document.getElementById('modalRecurringSub').value || '') : '';
+    if (subcategory === ADD_SUBCATEGORY_VALUE) subcategory = '';
     const notes = document.getElementById('modalRecurringNotes').value.trim() || undefined;
     const frequency = document.getElementById('modalRecurringFrequency').value || 'monthly';
     const everyStr = document.getElementById('modalRecurringEveryNDays').value;
     const everyNDays = frequency === 'custom' ? Math.max(1, parseInt(everyStr || '1', 10)) : undefined;
-    const startDate = document.getElementById('modalRecurringStart').value || toLocalDateKey(new Date());
+    const startDate = document.getElementById('modalRecurringStart').value;
     const endDate = document.getElementById('modalRecurringEnd').value || undefined;
     const active = document.getElementById('modalRecurringActive').checked;
     const applyToSnapshot = document.getElementById('modalRecurringApplyToSnapshot').checked;
     const paymentSource = document.getElementById('modalRecurringPaymentSource').value || undefined;
     let paymentTargetId = undefined;
     if (applyToSnapshot && (paymentSource === 'card' || paymentSource === 'bank')) {
-      const val = document.getElementById('modalRecurringPaymentTarget').value;
+      const val = document.getElementById('modalRecurringTarget').value;
       paymentTargetId = val || undefined;
     }
+
+    const failures = [];
+    if (!nameRaw) failures.push('Name is required');
+    if (!(amountCents > 0)) failures.push('Amount must be greater than $0');
+    if (!category) failures.push('Category is required');
+    if (!frequency) failures.push('Frequency is required');
+    if (!startDate) failures.push('Start date is required');
+    if (frequency === 'custom' && !(everyNDays > 0)) failures.push('Every N days must be at least 1');
+    if (endDate) {
+      const s = parseLocalDateKey(startDate);
+      const e = parseLocalDateKey(endDate);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e < s) failures.push('End date must be after start date');
+    }
+    if (applyToSnapshot) {
+      if (!paymentSource) failures.push('Payment source is required when applying to Snapshot');
+      if ((paymentSource === 'card' || paymentSource === 'bank') && !paymentTargetId) failures.push('Select a specific card/bank target');
+    }
+    if (failures.length) {
+      console.log('[recurring] validation failed:', failures);
+      if (errEl) {
+        errEl.textContent = failures[0] + '.';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const payload = {
+      id: editingRecurringId || '(new)',
+      name: nameRaw,
+      amountCents,
+      category,
+      subcategory: subcategory || undefined,
+      notes,
+      frequency,
+      everyNDays,
+      startDate,
+      endDate,
+      active,
+      applyToSnapshot,
+      paymentSource,
+      paymentTargetId
+    };
+    console.log('[recurring] saving payload:', payload);
 
     if (!editingRecurringId) {
       const r = {
         id: uid(),
-        name,
+        name: nameRaw,
         amountCents,
         category,
-        subcategory,
+        subcategory: subcategory || undefined,
         notes,
         frequency,
         everyNDays,
@@ -1310,10 +1471,10 @@
     } else {
       const r = data.recurring.find(x => x.id === editingRecurringId);
       if (r) {
-        r.name = name;
+        r.name = nameRaw;
         r.amountCents = amountCents;
         r.category = category;
-        r.subcategory = subcategory;
+        r.subcategory = subcategory || undefined;
         r.notes = notes;
         r.frequency = frequency;
         r.everyNDays = everyNDays;
@@ -1325,7 +1486,17 @@
         r.paymentTargetId = paymentTargetId;
       }
     }
-    save(data);
+    try {
+      save(data);
+      console.log('[recurring] localStorage write OK');
+    } catch (e) {
+      console.log('[recurring] localStorage write FAILED', e);
+      if (errEl) {
+        errEl.textContent = 'Could not save (localStorage write failed).';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
     document.getElementById('modalRecurring').classList.add('hidden');
     updateBodyModalOpen();
     processRecurringBillsUpToToday();
@@ -1441,7 +1612,7 @@
             title: r.name || 'Recurring',
             amountCents: typeof r.amountCents === 'number' ? r.amountCents : 0,
             dateISO: dateKey,
-            category: ensureCategoryIdExists(r.category) || r.category || 'other',
+            category: normalizeCategoryId(r.category),
             subcategory: r.subcategory || undefined,
             notes: r.notes,
             recurringId: r.id,
@@ -1573,6 +1744,7 @@
     const subs = getCategorySubcategories(catId);
     if (!subs.length) {
       subWrap.classList.add('hidden');
+      subSelect.value = '';
       return;
     }
     subs.forEach(s => {
@@ -1610,6 +1782,9 @@
       return;
     }
     lastCategoryId = val;
+    if (!getCategorySubcategories(val).length) {
+      lastSubByCategory[val] = '';
+    }
     const lastSub = lastSubByCategory[val] || null;
     rebuildSubcategoryOptions(val, lastSub);
   });
@@ -1763,7 +1938,7 @@
     dateInput.value = (prefill && prefill.dateKey) || nowKey;
 
     const defaultCatIds = categoryIds();
-    let initialCatId = (prefill && prefill.categoryId) ? ensureCategoryIdExists(prefill.categoryId) : null;
+    let initialCatId = (prefill && prefill.categoryId) ? normalizeCategoryId(prefill.categoryId) : null;
     if (!initialCatId && defaultCatIds.length) {
       initialCatId = defaultCatIds[0];
     }
@@ -1776,6 +1951,7 @@
         rebuildSubcategoryOptions(initialCatId, subToSelect);
       } else {
         subWrap.classList.add('hidden');
+        subSelect.value = '';
       }
     }
 
@@ -2008,7 +2184,7 @@
         document.getElementById('modalPurchaseTitle').value = p.title;
         document.getElementById('modalPurchaseAmount').value = (p.amountCents / 100).toFixed(2);
         document.getElementById('modalPurchaseDate').value = p.dateISO.slice(0, 10);
-        const catId = ensureCategoryIdExists(p.category);
+        const catId = normalizeCategoryId(p.category);
         rebuildCategoryOptions(catId);
         if (catId) {
           const subs = getCategorySubcategories(catId);
@@ -2017,6 +2193,7 @@
             rebuildSubcategoryOptions(catId, sub);
           } else {
             subWrap.classList.add('hidden');
+            subSelect.value = '';
           }
         }
         document.getElementById('modalPurchaseNotes').value = p.notes || '';
@@ -2086,6 +2263,125 @@
   document.getElementById('rangeStart').addEventListener('change', renderSpending);
   document.getElementById('rangeEnd').addEventListener('change', renderSpending);
 
+  function migrateCategoryReferencesAfterDelete(deletedCategoryId, deletedSubcategory) {
+    const fallback = ensureUncategorizedCategory();
+    // Purchases
+    data.purchases = (data.purchases || []).map(p => {
+      const next = { ...p };
+      if (deletedCategoryId && next.category === deletedCategoryId) {
+        next.category = fallback;
+        next.subcategory = undefined;
+      }
+      if (deletedSubcategory && next.category === deletedCategoryId && next.subcategory === deletedSubcategory) {
+        next.subcategory = undefined;
+      }
+      // If category no longer exists (e.g., previously deleted), keep UI safe
+      if (!categoryConfig[next.category]) {
+        next.category = fallback;
+        next.subcategory = undefined;
+      }
+      const subs = getCategorySubcategories(next.category);
+      if (!subs.length) next.subcategory = undefined;
+      return next;
+    });
+    // Recurring
+    data.recurring = (data.recurring || []).map(r => {
+      const next = { ...r };
+      if (deletedCategoryId && next.category === deletedCategoryId) {
+        next.category = fallback;
+        next.subcategory = undefined;
+      }
+      if (deletedSubcategory && next.category === deletedCategoryId && next.subcategory === deletedSubcategory) {
+        next.subcategory = undefined;
+      }
+      if (!categoryConfig[next.category]) {
+        next.category = fallback;
+        next.subcategory = undefined;
+      }
+      const subs = getCategorySubcategories(next.category);
+      if (!subs.length) next.subcategory = undefined;
+      return next;
+    });
+  }
+
+  function renderManageCategories() {
+    const root = document.getElementById('manageCategories');
+    if (!root) return;
+    root.innerHTML = '';
+    ensureUncategorizedCategory();
+    const ids = categoryIds().slice().sort((a, b) => getCategoryName(a).localeCompare(getCategoryName(b)));
+    ids.forEach(id => {
+      const entry = categoryConfig[id];
+      const card = document.createElement('div');
+      card.className = 'card';
+      const header = document.createElement('div');
+      header.className = 'row';
+      header.innerHTML = '<span class="name">' + escapeHtml(entry.name || id) + '</span>';
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-danger';
+      del.textContent = 'Delete';
+      del.disabled = id === 'uncategorized';
+      del.onclick = function() {
+        confirmModal('Delete category?', 'This will migrate any purchases/recurring bills using it to Uncategorized.', function() {
+          delete categoryConfig[id];
+          saveCategoryConfig(categoryConfig);
+          migrateCategoryReferencesAfterDelete(id, null);
+          save(data);
+          renderSnapshot();
+          if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+          if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
+          renderManageCategories();
+        });
+      };
+      header.appendChild(del);
+      card.appendChild(header);
+
+      const subs = Array.isArray(entry.sub) ? entry.sub.slice() : [];
+      if (subs.length) {
+        const subList = document.createElement('div');
+        subList.style.marginTop = '8px';
+        subs.forEach(s => {
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.style.marginTop = '6px';
+          const left = document.createElement('span');
+          left.style.color = 'var(--muted)';
+          left.textContent = s;
+          const subDel = document.createElement('button');
+          subDel.type = 'button';
+          subDel.className = 'btn btn-danger';
+          subDel.textContent = 'Delete';
+          subDel.onclick = function() {
+            confirmModal('Delete subcategory?', 'This will clear the subcategory on existing purchases/recurring bills.', function() {
+              entry.sub = (entry.sub || []).filter(x => x !== s);
+              saveCategoryConfig(categoryConfig);
+              migrateCategoryReferencesAfterDelete(id, s);
+              save(data);
+              renderSnapshot();
+              if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+              if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
+              renderManageCategories();
+            });
+          };
+          row.appendChild(left);
+          row.appendChild(subDel);
+          subList.appendChild(row);
+        });
+        card.appendChild(subList);
+      } else {
+        const hint = document.createElement('div');
+        hint.style.marginTop = '8px';
+        hint.style.color = 'var(--muted)';
+        hint.style.fontSize = '0.9rem';
+        hint.textContent = 'No subcategories.';
+        card.appendChild(hint);
+      }
+
+      root.appendChild(card);
+    });
+  }
+
   // Settings
   document.getElementById('exportBtn').onclick = function() {
     const exportData = { ...data, cashInHandCents: getCashInHandCents() };
@@ -2128,6 +2424,7 @@
     save(data);
     renderSnapshot();
     renderSpending();
+    renderManageCategories();
   });
 
   let postPendingKind = null;
@@ -2145,6 +2442,7 @@
 
   processRecurringBillsUpToToday();
   renderSnapshot();
+  renderManageCategories();
 
   (function checkLocalDateFilter() {
     var start = new Date(2026, 2, 1);
