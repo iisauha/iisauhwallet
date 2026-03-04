@@ -360,7 +360,9 @@
     { id: 'loan_payment', name: 'Loan Payment', sub: [] },
     { id: 'rent', name: 'Rent', sub: [] },
     { id: 'fun_money', name: 'Fun Money', sub: [] },
-    { id: 'necessities', name: 'Necessities', sub: ['Home Necessities'] }
+    { id: 'necessities', name: 'Necessities', sub: ['Home Necessities'] },
+    { id: 'utilities', name: 'Utilities', sub: ['WiFi', 'Electricity + Gas'] },
+    { id: 'subscriptions', name: 'Subscriptions', sub: [] }
   ];
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
@@ -719,11 +721,9 @@
     document.getElementById('modalPurchaseHeading').textContent = 'Add Purchase';
     document.getElementById('modalPurchaseTitle').value = '';
     document.getElementById('modalPurchaseAmount').value = '';
-    document.getElementById('modalPurchaseDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('modalPurchaseDate').value = toLocalDateKey(new Date());
     document.getElementById('modalPurchaseCategory').value = 'food';
-    document.getElementById('modalPurchaseSubWrap').classList.remove('hidden');
-    document.getElementById('modalPurchaseSub').innerHTML = '';
-    CATEGORIES[0].sub.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subSelect.appendChild(o); });
+    catSelect.dispatchEvent(new Event('change'));
     document.getElementById('modalPurchaseNotes').value = '';
     document.getElementById('modalPurchase').classList.remove('hidden');
   };
