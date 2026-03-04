@@ -1540,71 +1540,76 @@
     if (!params) return;
     if (!truthyParam(params.get('addPurchase'))) return;
     deepLinkHandled = true;
-    const prefill = { fromShortcut: true };
-    const merchantRaw = params.get('merchant');
-    const amountRaw = params.get('amount');
-    const dateRaw = params.get('date');
-    const categoryRaw = params.get('category');
-    const subcategoryRaw = params.get('subcategory');
-    const notesRaw = params.get('notes');
-    const applyRaw = params.get('applyToSnapshot');
-    const sourceRaw = params.get('paymentSource');
-    const targetIdRaw = params.get('paymentTargetId');
-    const targetNameRaw = params.get('paymentTargetName');
 
-    const clean = v => {
-      if (v == null) return '';
-      try { return decodeURIComponent(v); } catch (_) { return String(v); }
+    console.log('Deep link params:', Object.fromEntries(params.entries()));
+
+    const clean = (v) => {
+      const s = (v ?? '').trim();
+      if (!s) return '';
+      try { return decodeURIComponent(s); } catch (_) { return s; }
     };
 
-    prefill.title = clean(merchantRaw).trim();
-    prefill.amountText = clean(amountRaw).trim();
+    const merchant = clean(params.get('merchant'));
+    const amountRaw = clean(params.get('amount'));
+    const amountNum = amountRaw ? parseFloat(amountRaw.replace(/[$,\s]/g, '')) : NaN;
+    const amountText = (amountNum != null && !isNaN(amountNum)) ? (amountNum % 1 === 0 ? String(amountNum) : amountNum.toFixed(2)) : amountRaw;
+    const dateVal = clean(params.get('date'));
+    const category = clean(params.get('category'));
+    const subcategory = clean(params.get('subcategory'));
+    const notes = clean(params.get('notes'));
+    const applyToSnapshot = /^(1|true|yes|on)$/i.test(clean(params.get('applyToSnapshot')));
+    const paymentSource = clean(params.get('paymentSource')).toLowerCase();
+    const paymentTargetId = clean(params.get('paymentTargetId'));
+    const paymentTargetName = clean(params.get('paymentTargetName'));
 
-    const dateKey = clean(dateRaw).trim();
-    if (dateKey && !isNaN(parseLocalYYYYMMDD(dateKey).getTime())) {
-      prefill.dateKey = dateKey;
+    const prefill = { fromShortcut: true };
+
+    prefill.title = merchant;
+
+    prefill.amountText = amountText;
+
+    if (dateVal && /^\d{4}-\d{2}-\d{2}$/.test(dateVal) && !isNaN(parseLocalYYYYMMDD(dateVal).getTime())) {
+      prefill.dateKey = dateVal;
     }
 
-    const catNameInput = normalizeText(clean(categoryRaw));
-    if (catNameInput) {
-      const catMatch = CATEGORIES.find(c => normalizeText(c.name) === catNameInput || normalizeText(c.id) === catNameInput);
+    if (category) {
+      const catNameNorm = normalizeText(category);
+      const catMatch = CATEGORIES.find(c => normalizeText(c.name) === catNameNorm || normalizeText(c.id) === catNameNorm);
       if (catMatch) {
         prefill.categoryId = catMatch.id;
-        const subInput = normalizeText(clean(subcategoryRaw));
-        if (subInput && catMatch.sub && catMatch.sub.length) {
-          const subMatch = catMatch.sub.find(s => normalizeText(s) === subInput);
+        if (subcategory && catMatch.sub && catMatch.sub.length) {
+          const subNorm = normalizeText(subcategory);
+          const subMatch = catMatch.sub.find(s => normalizeText(s) === subNorm);
           if (subMatch) prefill.subcategory = subMatch;
         }
       }
     }
 
-    prefill.notes = clean(notesRaw).trim();
+    prefill.notes = notes;
 
-    prefill.applyToSnapshot = truthyParam(applyRaw);
+    prefill.applyToSnapshot = applyToSnapshot;
     prefill.paymentSource = '';
     prefill.paymentTargetId = '';
     prefill.snapshotNote = '';
 
-    if (prefill.applyToSnapshot) {
-      const normSource = normalizePaymentSource(clean(sourceRaw));
+    if (prefill.applyToSnapshot && (paymentSource || paymentTargetId || paymentTargetName)) {
+      const normSource = normalizePaymentSource(paymentSource);
       prefill.paymentSource = normSource;
       if (normSource === 'card' || normSource === 'bank') {
         const list = normSource === 'card' ? data.cards : data.banks;
-        const targetId = clean(targetIdRaw).trim();
-        const targetName = clean(targetNameRaw).trim();
-        if (targetId) {
-          const found = list.find(x => x.id === targetId);
+        if (paymentTargetId) {
+          const found = list.find(x => x.id === paymentTargetId);
           if (found) {
-            prefill.paymentTargetId = targetId;
+            prefill.paymentTargetId = found.id;
           } else {
             prefill.snapshotNote = 'Target not found; please choose';
           }
-        } else if (targetName) {
-          const match = matchTargetByName(list, targetName);
+        } else if (paymentTargetName) {
+          const match = matchTargetByName(list, paymentTargetName);
           prefill.paymentTargetId = match.id;
           if (match.note) prefill.snapshotNote = match.note;
         }
-      } else if (!normSource && clean(sourceRaw)) {
+      } else if (!normSource && paymentSource) {
         prefill.snapshotNote = 'Unknown payment source; please choose';
       }
     }
