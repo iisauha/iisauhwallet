@@ -84,21 +84,18 @@
     .btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
     .btn-dashed { border: 1px dashed var(--border); color: var(--muted); width: 100%; margin-top: 8px; }
     .summary {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      width: 100%;
+      margin-top: 24px;
       background: var(--surface);
-      border-top: 1px solid var(--border);
-      box-shadow: 0 -2px 12px rgba(0,0,0,0.35);
-      padding: 10px 16px;
-      padding-bottom: calc(10px + var(--tabbar-h) + var(--safe-bottom));
-      z-index: 9999;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      padding: 16px;
     }
-    .summary-compact { display: grid; gap: 6px; }
-    .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-height: 0; }
-    .summary-kv .k { color: var(--muted); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em; flex-shrink: 0; }
-    .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; word-break: break-all; }
+    .summary-compact { display: grid; gap: 12px; }
+    .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .summary-kv .k { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+    .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; }
     .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; color: var(--accent); }
     .modal-overlay {
       position: fixed;
@@ -187,6 +184,16 @@
       <button type="button" class="btn btn-dashed" id="addPendingOutBtn">+ Add item</button>
       <button type="button" class="btn btn-danger" id="clearPendingOutBtn">Clear All</button>
     </div>
+
+    <div id="snapshotSummary" class="summary">
+      <div class="summary-compact">
+        <div class="summary-kv"><span class="k">Net Cash (Bank Total + Physical Cash In Hand)</span><span class="v" id="sumNetCash">$0</span></div>
+        <div class="summary-kv"><span class="k">Total Current Credit Card Balance</span><span class="v" id="sumCc">$0</span></div>
+        <div class="summary-kv"><span class="k">Total Pending Outbound</span><span class="v" id="sumPendingOut">$0</span></div>
+        <div class="summary-kv"><span class="k">Total Pending Inbound</span><span class="v" id="sumPendingIn">$0</span></div>
+        <div class="summary-kv final-net-cash"><span class="k">Final Net Cash</span><span class="v" id="sumFinalNetCash">$0</span></div>
+      </div>
+    </div>
   </div>
 
   <div id="spendingContent" class="tab-panel">
@@ -222,16 +229,6 @@
     <p class="section-title">Danger zone</p>
     <div class="settings-section">
       <button type="button" class="btn btn-danger" id="resetBtn">Reset All Data</button>
-    </div>
-  </div>
-
-  <div id="snapshotSummary" class="summary">
-    <div class="summary-compact">
-      <div class="summary-kv"><span class="k">Net Cash</span><span class="v" id="sumNetCash">$0</span></div>
-      <div class="summary-kv"><span class="k">Total Current Credit Card Balance</span><span class="v" id="sumCc">$0</span></div>
-      <div class="summary-kv"><span class="k">Total Pending Outbound</span><span class="v" id="sumPendingOut">$0</span></div>
-      <div class="summary-kv"><span class="k">Total Pending Inbound</span><span class="v" id="sumPendingIn">$0</span></div>
-      <div class="summary-kv final-net-cash"><span class="k">Final Net Cash</span><span class="v" id="sumFinalNetCash">$0</span></div>
     </div>
   </div>
 
@@ -481,16 +478,6 @@
 
   let data = load();
 
-  function syncSnapshotPadding() {
-    const summary = document.getElementById('snapshotSummary');
-    const snap = document.getElementById('snapshotContent');
-    if (!summary || !snap) return;
-    if (summary.classList.contains('hidden')) return;
-    const h = summary.getBoundingClientRect().height;
-    // Ensure Snapshot content can't be hidden behind the fixed panel.
-    snap.style.paddingBottom = (Math.ceil(h) + 16) + 'px';
-  }
-
   function renderSnapshot() {
     const bankList = document.getElementById('bankList');
     const cardList = document.getElementById('cardList');
@@ -547,7 +534,6 @@
     document.getElementById('sumPendingOut').textContent = formatCents(pendingOutTotal);
     document.getElementById('sumPendingIn').textContent = formatCents(pendingInTotal);
     document.getElementById('sumFinalNetCash').textContent = formatCents(finalNetCash);
-    syncSnapshotPadding();
   }
 
   function escapeHtml(s) {
@@ -564,9 +550,7 @@
       document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
       this.classList.add('active');
       document.getElementById(t + 'Content').classList.add('active');
-      document.getElementById('snapshotSummary').classList.toggle('hidden', t !== 'snapshot');
       if (t === 'spending') renderSpending();
-      if (t === 'snapshot') syncSnapshotPadding();
     });
   });
 
@@ -862,7 +846,6 @@
   });
 
   renderSnapshot();
-  window.addEventListener('resize', syncSnapshotPadding);
 })();
   </script>
   <script>
