@@ -66,14 +66,24 @@
     .section-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 8px;
       font-size: 1.125rem;
       font-weight: 600;
       color: var(--muted);
       margin: 0 0 12px 0;
       cursor: pointer;
+      padding: 8px 4px;
+      border-radius: 8px;
     }
-    .section-header .chevron { font-size: 0.9rem; }
+    .section-header .chevron {
+      font-size: 0.9rem;
+      min-width: 24px;
+      text-align: center;
+    }
+    .section-header:hover {
+      background: rgba(148, 163, 184, 0.12);
+    }
     .card {
       background: var(--surface);
       border-radius: 12px;
@@ -869,24 +879,45 @@
     bankList.innerHTML = '';
     cardList.innerHTML = '';
 
-    data.banks.forEach(b => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">' + formatCents(b.balanceCents) + '</span></div>' +
-        '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="bank" data-id="' + b.id + '">Add / Set</button>' +
-        '<button type="button" class="btn btn-secondary clear-btn" data-type="bank" data-id="' + b.id + '">Clear</button>' +
-        '<button type="button" class="btn btn-delete" data-type="bank" data-id="' + b.id + '" aria-label="Delete bank account">Delete</button></div>';
-      bankList.appendChild(card);
-    });
+    const nonZeroBanks = data.banks.filter(b => Math.abs(b.balanceCents || 0) > 0);
+    const nonZeroCards = data.cards.filter(c => Math.abs(c.balanceCents || 0) > 0);
 
-    data.cards.forEach(c => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="amount">' + formatCents(c.balanceCents) + '</span></div>' +
-        '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
-        '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button></div>';
-      cardList.appendChild(card);
-    });
+    if (nonZeroBanks.length) {
+      nonZeroBanks.forEach(b => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">' + formatCents(b.balanceCents) + '</span></div>' +
+          '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="bank" data-id="' + b.id + '">Add / Set</button>' +
+          '<button type="button" class="btn btn-secondary clear-btn" data-type="bank" data-id="' + b.id + '">Clear</button>' +
+          '<button type="button" class="btn btn-delete" data-type="bank" data-id="' + b.id + '" aria-label="Delete bank account">Delete</button></div>';
+        bankList.appendChild(card);
+      });
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'card';
+      empty.style.fontSize = '0.9rem';
+      empty.style.color = 'var(--muted)';
+      empty.textContent = 'No non-zero balances to display.';
+      bankList.appendChild(empty);
+    }
+
+    if (nonZeroCards.length) {
+      nonZeroCards.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="amount">' + formatCents(c.balanceCents) + '</span></div>' +
+          '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
+          '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button></div>';
+        cardList.appendChild(card);
+      });
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'card';
+      empty.style.fontSize = '0.9rem';
+      empty.style.color = 'var(--muted)';
+      empty.textContent = 'No non-zero balances to display.';
+      cardList.appendChild(empty);
+    }
 
     const pendingInList = document.getElementById('pendingInList');
     const pendingOutList = document.getElementById('pendingOutList');
@@ -982,6 +1013,36 @@
       }
     });
   });
+
+  // Collapsible bank / card sections
+  (function setupSnapshotCollapsibles() {
+    const bankHeader = document.getElementById('bankHeader');
+    const bankList = document.getElementById('bankList');
+    const bankBtn = document.getElementById('addBankBtn');
+    const bankChevron = document.getElementById('bankChevron');
+    const cardHeader = document.getElementById('cardHeader');
+    const cardList = document.getElementById('cardList');
+    const cardBtn = document.getElementById('addCardBtn');
+    const cardChevron = document.getElementById('cardChevron');
+    if (bankHeader && bankList && bankBtn && bankChevron) {
+      let bankOpen = true;
+      bankHeader.addEventListener('click', function() {
+        bankOpen = !bankOpen;
+        bankList.style.display = bankOpen ? '' : 'none';
+        bankBtn.style.display = bankOpen ? '' : 'none';
+        bankChevron.textContent = bankOpen ? '▾' : '▸';
+      });
+    }
+    if (cardHeader && cardList && cardBtn && cardChevron) {
+      let cardOpen = true;
+      cardHeader.addEventListener('click', function() {
+        cardOpen = !cardOpen;
+        cardList.style.display = cardOpen ? '' : 'none';
+        cardBtn.style.display = cardOpen ? '' : 'none';
+        cardChevron.textContent = cardOpen ? '▾' : '▸';
+      });
+    }
+  })();
 
   // Add/Set modal state
   let addSetTarget = { type: '', id: '' };
