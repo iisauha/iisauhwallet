@@ -296,6 +296,14 @@
       <input type="month" id="exportMonth" class="btn" style="width:60%; max-width:260px; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:10px; font-size:0.95rem;" />
       <button type="button" class="btn btn-secondary" id="exportCsvBtn" style="margin-top:8px; width:100%;">Export CSV</button>
     </div>
+    <div class="settings-section">
+      <div class="section-header" id="settingsCategoriesToggle" style="margin-top: 16px;">
+        <span>Categories</span><span class="chevron" id="settingsCategoriesChevron">▾</span>
+      </div>
+      <div id="settingsCategoriesBody" style="margin-top: 8px;">
+        <button type="button" class="btn btn-secondary" id="openManageCategoriesBtn">Manage Categories</button>
+      </div>
+    </div>
     <p class="section-title" style="margin-top: 24px;">Manage Categories</p>
     <div id="manageCategories" class="settings-section"></div>
     <p class="section-title" style="margin-top: 24px;">Backup</p>
@@ -853,6 +861,11 @@
     }
   }
 
+  function csvEscape(value) {
+    const s = value == null ? '' : String(value);
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
   function ensureUncategorizedCategory() {
     if (!categoryConfig.uncategorized) {
       categoryConfig.uncategorized = { name: 'Uncategorized', sub: [] };
@@ -1251,6 +1264,8 @@
       })();
       const catName = getCategoryName(r.category);
       const activeLabel = r.active ? 'Active' : 'Paused';
+      const startDisplay = formatDisplayDate(r.startDate || todayKey);
+      const endDisplay = r.endDate ? formatDisplayDate(r.endDate) : '';
       card.innerHTML =
         '<div class="row">' +
           '<span class="name">' + escapeHtml(r.name || 'Recurring') + '</span>' +
@@ -1259,8 +1274,8 @@
         '<div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">' +
           escapeHtml(freqLabel) + ' · ' + escapeHtml(catName) +
           (r.subcategory ? ' → ' + escapeHtml(r.subcategory) : '') +
-          ' · starts ' + escapeHtml(r.startDate || todayKey) +
-          (r.endDate ? ' to ' + escapeHtml(r.endDate) : '') +
+          ' · starts ' + escapeHtml(startDisplay) +
+          (r.endDate ? ' to ' + escapeHtml(endDisplay) : '') +
         '</div>' +
         '<div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">' +
           (r.applyToSnapshot ? 'Applies to Snapshot · ' : '') +
@@ -2864,21 +2879,14 @@
     const endKey = toLocalDateKey(end);
     const rows = [];
     const header = [
-      'date',
-      'merchant',
-      'amount',
-      'category',
-      'subcategory',
-      'notes',
-      'applyToSnapshot',
-      'paymentSource',
-      'paymentTargetName',
-      'isSplit',
-      'totalAmount',
-      'myPortion',
-      'inboundAmount'
+      'Date',
+      'Title/Merchant',
+      'Category',
+      'Subcategory',
+      'Payment Method',
+      'Cost'
     ];
-    rows.push(header.join(','));
+    rows.push(header.map(csvEscape).join(','));
     (data.purchases || []).forEach(p => {
       const d = parseLocalDateKey(p.dateISO);
       if (isNaN(d.getTime())) return;
@@ -2887,33 +2895,38 @@
       const catName = getCategoryName(p.category);
       const subs = getCategorySubcategories(p.category);
       const sub = p.subcategory && subs.includes(p.subcategory) ? p.subcategory : (p.subcategory || '');
-      const apply = !!p.applyToSnapshot;
-      const src = p.paymentSource || '';
-      let targetName = '';
-      if (p.paymentTargetId) {
-        const card = data.cards.find(c => c.id === p.paymentTargetId);
-        const bank = data.banks.find(b => b.id === p.paymentTargetId);
-        targetName = (card && card.name) || (bank && bank.name) || '';
-      }
       const isSplit = !!p.isSplit;
-      const totalAmt = isSplit && typeof p.splitTotalCents === 'number' ? (p.splitTotalCents / 100).toFixed(2) : '';
-      const myPortion = typeof p.amountCents === 'number' ? (p.amountCents / 100).toFixed(2) : '';
-      const inboundAmt = isSplit && typeof p.splitInboundCents === 'number' ? (p.splitInboundCents / 100).toFixed(2) : '';
+      const costCents = typeof p.amountCents === 'number' ? p.amountCents : 0;
+      const cost = (costCents / 100).toFixed(2);
+      let src = p.paymentSource || '';
+      let targetId = p.paymentTargetId || '';
+      if (isSplit && p.splitSnapshot) {
+        if (p.splitSnapshot.paymentSource) src = p.splitSnapshot.paymentSource;
+        if (p.splitSnapshot.paymentTargetId) targetId = p.splitSnapshot.paymentTargetId;
+      }
+      let paymentMethod = '';
+      if (src === 'card' || src === 'credit_card') {
+        if (targetId) {
+          const card = data.cards.find(c => c.id === targetId);
+          paymentMethod = card ? card.name : '';
+        }
+      } else if (src === 'bank' || src === 'cash') {
+        if (targetId) {
+          const bank = data.banks.find(b => b.id === targetId);
+          paymentMethod = bank ? bank.name : '';
+        } else if (src === 'cash') {
+          const pc = findPhysicalCashBank(data);
+          paymentMethod = pc ? pc.name : 'Physical Cash';
+        }
+      }
       const fields = [
         key,
-        (p.title || '').replace(/"/g, '""'),
-        myPortion,
-        (catName || '').replace(/"/g, '""'),
-        (sub || '').replace(/"/g, '""'),
-        (p.notes || '').replace(/"/g, '""'),
-        String(apply),
-        src,
-        targetName.replace(/"/g, '""'),
-        String(isSplit),
-        totalAmt,
-        myPortion,
-        inboundAmt
-      ].map(v => `"${v}"`);
+        p.title || '',
+        catName || '',
+        sub || '',
+        paymentMethod || '',
+        cost
+      ].map(csvEscape);
       rows.push(fields.join(','));
     });
     const csv = rows.join('\n');
@@ -2924,6 +2937,26 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
+  (function setupSettingsCategoriesAccordion() {
+    const toggle = document.getElementById('settingsCategoriesToggle');
+    const body = document.getElementById('settingsCategoriesBody');
+    const chev = document.getElementById('settingsCategoriesChevron');
+    const manageBtn = document.getElementById('openManageCategoriesBtn');
+    if (!toggle || !body || !chev) return;
+    toggle.addEventListener('click', function() {
+      const isHidden = body.classList.contains('hidden');
+      body.classList.toggle('hidden', !isHidden);
+      chev.textContent = isHidden ? '▾' : '▸';
+    });
+    if (manageBtn) {
+      manageBtn.addEventListener('click', function() {
+        const section = document.getElementById('manageCategories');
+        if (section) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+  })();
 
   document.getElementById('resetBtn').onclick = () => confirmModal('Reset all data?', 'This cannot be undone. All banks, cards, pending items, and purchases will be cleared.', () => {
     confirmModal('Are you super sure?', 'This will permanently delete all data.', () => {
