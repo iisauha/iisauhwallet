@@ -1504,6 +1504,31 @@
     return '';
   }
 
+  const CARD_ALIASES = ['discover', 'amazon', 'venmo', 'citi', 'chase', 'capital one', 'robinhood', 'us bank', 'delta', 'blue cash'];
+
+  function normalizeCardName(s) {
+    return normalizeText((s || '').replace(/[.,]/g, ' '));
+  }
+
+  function matchCardByTargetName(cards, targetRaw) {
+    if (!targetRaw || !cards.length) return { matched: null, availableNames: cards.map(c => c.name) };
+    const availableNames = cards.map(c => c.name);
+    const exact = cards.filter(c => normalizeCardName(c.name) === targetRaw);
+    if (exact.length === 1) return { matched: exact[0], availableNames };
+    if (exact.length > 1) return { matched: null, availableNames };
+    const byContains = cards.filter(c => {
+      const n = normalizeCardName(c.name);
+      return n.includes(targetRaw) || targetRaw.includes(n);
+    });
+    if (byContains.length === 1) return { matched: byContains[0], availableNames };
+    if (byContains.length > 1) return { matched: null, availableNames };
+    const aliasMatch = CARD_ALIASES.includes(targetRaw)
+      ? cards.filter(c => normalizeCardName(c.name).includes(targetRaw))
+      : [];
+    if (aliasMatch.length === 1) return { matched: aliasMatch[0], availableNames };
+    return { matched: null, availableNames };
+  }
+
   function matchTargetByName(list, rawName) {
     const result = { id: '', note: '' };
     const nameNorm = normalizeText(rawName || '');
@@ -1568,7 +1593,12 @@
       paymentSource = 'cash';
     }
     const paymentTargetId = clean(params.get('paymentTargetId'));
-    const paymentTargetName = clean(params.get('paymentTargetName')).toLowerCase();
+    let paymentTargetNameRaw = params.get('paymentTargetName');
+    try {
+      paymentTargetNameRaw = (paymentTargetNameRaw != null ? decodeURIComponent(paymentTargetNameRaw) : '').trim().toLowerCase();
+    } catch (_) {
+      paymentTargetNameRaw = (paymentTargetNameRaw ?? '').trim().toLowerCase();
+    }
 
     const prefill = { fromShortcut: true };
 
@@ -1601,7 +1631,7 @@
       }
     }
 
-    if (prefill.applyToSnapshot && (paymentSource || paymentTargetId || paymentTargetName)) {
+    if (prefill.applyToSnapshot && (paymentSource || paymentTargetId || paymentTargetNameRaw)) {
       prefill.paymentSource = paymentSource || '';
       if (paymentSource === 'card' || paymentSource === 'bank') {
         const list = paymentSource === 'card' ? data.cards : data.banks;
@@ -1612,12 +1642,23 @@
           } else {
             prefill.snapshotNote = 'Target not found; please choose';
           }
-        } else if (paymentTargetName) {
-          const match = matchTargetByName(list, paymentTargetName);
-          prefill.paymentTargetId = match.id;
-          if (match.note) prefill.snapshotNote = match.note;
+        } else if (paymentTargetNameRaw) {
+          if (paymentSource === 'card') {
+            const { matched, availableNames } = matchCardByTargetName(data.cards, paymentTargetNameRaw);
+            console.log('Deep link card match:', { received: paymentTargetNameRaw, matched: matched ? matched.name : 'none', availableNames });
+            if (matched) {
+              prefill.paymentTargetId = matched.id;
+            } else {
+              prefill.snapshotNote = 'No match; please choose';
+              console.warn('Deep link paymentTargetName not found:', paymentTargetNameRaw, 'Available cards:', availableNames);
+            }
+          } else {
+            const match = matchTargetByName(list, paymentTargetNameRaw);
+            prefill.paymentTargetId = match.id;
+            if (match.note) prefill.snapshotNote = match.note;
+          }
         }
-      } else if (!paymentSource && (sourceRaw || paymentTargetName)) {
+      } else if (!paymentSource && (sourceRaw || paymentTargetNameRaw)) {
         prefill.snapshotNote = 'Unknown payment source; please choose';
       }
     }
