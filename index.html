@@ -159,6 +159,7 @@
     .spending-chart-summary { margin-top: 8px; font-size: 0.9rem; color: var(--muted); display: grid; gap: 4px; }
     #snapshotContent { padding-bottom: 24px; }
     #spendingContent { padding-bottom: 24px; }
+    #recurringContent { padding-bottom: 24px; }
   </style>
 </head>
 <body>
@@ -233,6 +234,12 @@
     <button type="button" class="btn btn-primary" id="addPurchaseBtn" style="margin-top: 16px; width: 100%;">+ Add Purchase</button>
   </div>
 
+  <div id="recurringContent" class="tab-panel">
+    <p class="section-title">Recurring Bills</p>
+    <div id="recurringList"></div>
+    <button type="button" class="btn btn-primary" id="addRecurringBtn" style="margin-top: 16px; width: 100%;">+ Add Recurring Bill</button>
+  </div>
+
   <div id="settingsContent" class="tab-panel">
     <p class="section-title">Backup</p>
     <div class="settings-section">
@@ -250,6 +257,7 @@
   <div class="tabs">
     <button type="button" class="tab active" data-tab="snapshot">Snapshot</button>
     <button type="button" class="tab" data-tab="spending">Spending</button>
+    <button type="button" class="tab" data-tab="recurring">Recurring</button>
     <button type="button" class="tab" data-tab="settings">Settings</button>
   </div>
 
@@ -395,6 +403,81 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalCardCancel">Cancel</button>
         <button type="button" class="btn btn-primary" id="modalCardOk">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalRecurring" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalRecurringHeading">Recurring Bill</h3>
+      <div class="field">
+        <label>Name / Merchant</label>
+        <input type="text" id="modalRecurringName" placeholder="e.g. Rent" />
+      </div>
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="text" id="modalRecurringAmount" inputmode="decimal" placeholder="0.00" />
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="modalRecurringCategory"></select>
+      </div>
+      <div class="field hidden" id="modalRecurringSubWrap">
+        <label>Subcategory</label>
+        <select id="modalRecurringSub"></select>
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <textarea id="modalRecurringNotes" placeholder="Optional"></textarea>
+      </div>
+      <div class="field">
+        <label>Frequency</label>
+        <select id="modalRecurringFrequency">
+          <option value="monthly">Monthly</option>
+          <option value="weekly">Weekly</option>
+          <option value="biweekly">Biweekly (every 2 weeks)</option>
+          <option value="yearly">Yearly</option>
+          <option value="custom">Custom (every N days)</option>
+        </select>
+      </div>
+      <div class="field hidden" id="modalRecurringEveryWrap">
+        <label>Every N days</label>
+        <input type="number" id="modalRecurringEveryNDays" min="1" step="1" />
+      </div>
+      <div class="field">
+        <label>Start date</label>
+        <input type="date" id="modalRecurringStart" />
+      </div>
+      <div class="field">
+        <label>End date (optional)</label>
+        <input type="date" id="modalRecurringEnd" />
+      </div>
+      <div class="field toggle-row">
+        <input type="checkbox" id="modalRecurringActive" />
+        <label for="modalRecurringActive">Active</label>
+      </div>
+      <div class="field toggle-row">
+        <input type="checkbox" id="modalRecurringApplyToSnapshot" />
+        <label for="modalRecurringApplyToSnapshot">Apply to Snapshot</label>
+      </div>
+      <div class="field hidden" id="modalRecurringApplySection">
+        <label>Payment Source</label>
+        <select id="modalRecurringPaymentSource">
+          <option value="">— Select source —</option>
+          <option value="card">Credit Card</option>
+          <option value="bank">Bank Account</option>
+          <option value="cash">Physical Cash</option>
+        </select>
+      </div>
+      <div class="field hidden" id="modalRecurringTargetWrap">
+        <label id="modalRecurringTargetLabel">Select Card / Bank</label>
+        <select id="modalRecurringTarget">
+          <option value="">— Select —</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalRecurringCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalRecurringOk">Save</button>
       </div>
     </div>
   </div>
@@ -580,6 +663,8 @@
       if (!d.pendingIn) d.pendingIn = [];
       if (!d.pendingOut) d.pendingOut = [];
       if (!d.purchases) d.purchases = [];
+      if (!Array.isArray(d.recurring)) d.recurring = [];
+      if (!d.recurringPosted || typeof d.recurringPosted !== 'object') d.recurringPosted = {};
       return d;
     } catch (_) { return defaultData(); }
   }
@@ -626,6 +711,33 @@
     const [y, m, d] = parts;
     if (isNaN(y) || isNaN(m) || isNaN(d)) return new Date(NaN);
     return new Date(y, m - 1, d);
+  }
+
+  function addDaysLocal(date, days) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + days);
+    return d;
+  }
+
+  function addMonthsPreserveDay(startDate, currentDate, months) {
+    const base = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const targetMonthIndex = currentDate.getMonth() + months;
+    const targetYear = currentDate.getFullYear() + Math.floor(targetMonthIndex / 12);
+    const targetMonth = (targetMonthIndex % 12 + 12) % 12;
+    const baseDay = base.getDate();
+    const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const day = Math.min(baseDay, lastDay);
+    return new Date(targetYear, targetMonth, day);
+  }
+
+  function addYearsPreserveDay(startDate, currentDate, years) {
+    const base = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const targetYear = currentDate.getFullYear() + years;
+    const targetMonth = base.getMonth();
+    const baseDay = base.getDate();
+    const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const day = Math.min(baseDay, lastDay);
+    return new Date(targetYear, targetMonth, day);
   }
 
   function getDateRange(filter, rangeStart, rangeEnd) {
@@ -745,6 +857,10 @@
       this.classList.add('active');
       document.getElementById(t + 'Content').classList.add('active');
       if (t === 'spending') renderSpending();
+      if (t === 'recurring') {
+        processRecurringBillsUpToToday();
+        renderRecurring();
+      }
     });
   });
 
@@ -915,6 +1031,306 @@
     return localStorage.getItem(key) || '';
   }
 
+  let editingRecurringId = null;
+
+  function renderRecurring() {
+    if (!Array.isArray(data.recurring)) data.recurring = [];
+    const list = document.getElementById('recurringList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!data.recurring.length) {
+      const empty = document.createElement('p');
+      empty.style.color = 'var(--muted)';
+      empty.textContent = 'No recurring bills yet.';
+      list.appendChild(empty);
+      return;
+    }
+    const todayKey = toLocalDateKey(new Date());
+    data.recurring.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const freqLabel = (function() {
+        if (r.frequency === 'weekly') return 'Weekly';
+        if (r.frequency === 'biweekly') return 'Biweekly';
+        if (r.frequency === 'yearly') return 'Yearly';
+        if (r.frequency === 'custom') return 'Every ' + (r.everyNDays || 1) + ' days';
+        return 'Monthly';
+      })();
+      const catName = getCategoryName(r.category);
+      const activeLabel = r.active ? 'Active' : 'Paused';
+      card.innerHTML =
+        '<div class="row">' +
+          '<span class="name">' + escapeHtml(r.name || 'Recurring') + '</span>' +
+          '<span class="amount">' + formatCents(r.amountCents || 0) + '</span>' +
+        '</div>' +
+        '<div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">' +
+          escapeHtml(freqLabel) + ' · ' + escapeHtml(catName) +
+          (r.subcategory ? ' → ' + escapeHtml(r.subcategory) : '') +
+          ' · starts ' + escapeHtml(r.startDate || todayKey) +
+          (r.endDate ? ' to ' + escapeHtml(r.endDate) : '') +
+        '</div>' +
+        '<div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">' +
+          (r.applyToSnapshot ? 'Applies to Snapshot · ' : '') +
+          activeLabel +
+        '</div>';
+      const btnRow = document.createElement('div');
+      btnRow.className = 'btn-row';
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'btn btn-secondary';
+      editBtn.textContent = 'Edit';
+      editBtn.onclick = function() {
+        openRecurringModal(r);
+      };
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'btn btn-secondary';
+      toggleBtn.textContent = r.active ? 'Pause' : 'Resume';
+      toggleBtn.onclick = function() {
+        r.active = !r.active;
+        save(data);
+        renderRecurring();
+      };
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'btn btn-danger';
+      delBtn.textContent = 'Delete';
+      delBtn.onclick = function() {
+        confirmModal('Delete recurring bill?', 'This will remove the recurring schedule. Existing posted purchases will remain.', function() {
+          const id = r.id;
+          data.recurring = data.recurring.filter(x => x.id !== id);
+          if (data.recurringPosted && typeof data.recurringPosted === 'object') {
+            Object.keys(data.recurringPosted).forEach(k => {
+              if (k.startsWith(id + ':')) delete data.recurringPosted[k];
+            });
+          }
+          save(data);
+          renderRecurring();
+        });
+      };
+      btnRow.appendChild(editBtn);
+      btnRow.appendChild(toggleBtn);
+      btnRow.appendChild(delBtn);
+      card.appendChild(btnRow);
+      list.appendChild(card);
+    });
+  }
+
+  function openRecurringModal(recurring) {
+    const isEdit = !!recurring;
+    editingRecurringId = isEdit ? recurring.id : null;
+    document.getElementById('modalRecurringHeading').textContent = isEdit ? 'Edit Recurring Bill' : 'New Recurring Bill';
+    const nameInput = document.getElementById('modalRecurringName');
+    const amountInput = document.getElementById('modalRecurringAmount');
+    const catSel = document.getElementById('modalRecurringCategory');
+    const subWrapEl = document.getElementById('modalRecurringSubWrap');
+    const subSel = document.getElementById('modalRecurringSub');
+    const notesInput = document.getElementById('modalRecurringNotes');
+    const freqSel = document.getElementById('modalRecurringFrequency');
+    const everyWrap = document.getElementById('modalRecurringEveryWrap');
+    const everyInput = document.getElementById('modalRecurringEveryNDays');
+    const startInput = document.getElementById('modalRecurringStart');
+    const endInput = document.getElementById('modalRecurringEnd');
+    const activeCheck = document.getElementById('modalRecurringActive');
+    const applyCheckRec = document.getElementById('modalRecurringApplyToSnapshot');
+    const applySectionRec = document.getElementById('modalRecurringApplySection');
+    const sourceSelRec = document.getElementById('modalRecurringPaymentSource');
+    const targetWrapRec = document.getElementById('modalRecurringTargetWrap');
+    const targetLabelRec = document.getElementById('modalRecurringTargetLabel');
+    const targetSelRec = document.getElementById('modalRecurringTarget');
+
+    nameInput.value = (recurring && recurring.name) || '';
+    amountInput.value = recurring ? (recurring.amountCents / 100).toFixed(2) : '';
+
+    // category options (no inline add here, but dynamic list from config)
+    catSel.innerHTML = '';
+    const ids = categoryIds();
+    const currentCatId = recurring ? ensureCategoryIdExists(recurring.category) : (ids[0] || '');
+    ids.forEach(id => {
+      const o = document.createElement('option');
+      o.value = id;
+      o.textContent = getCategoryName(id);
+      catSel.appendChild(o);
+    });
+    if (currentCatId) catSel.value = currentCatId;
+
+    const subs = getCategorySubcategories(catSel.value);
+    subSel.innerHTML = '';
+    if (subs.length) {
+      subs.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s;
+        o.textContent = s;
+        subSel.appendChild(o);
+      });
+      const subVal = recurring && recurring.subcategory && subs.includes(recurring.subcategory) ? recurring.subcategory : subs[0];
+      subSel.value = subVal;
+      subWrapEl.classList.remove('hidden');
+    } else {
+      subWrapEl.classList.add('hidden');
+    }
+
+    notesInput.value = (recurring && recurring.notes) || '';
+    freqSel.value = (recurring && recurring.frequency) || 'monthly';
+    if (freqSel.value === 'custom') {
+      everyWrap.classList.remove('hidden');
+      everyInput.value = recurring && recurring.everyNDays ? String(recurring.everyNDays) : '';
+    } else {
+      everyWrap.classList.add('hidden');
+      everyInput.value = '';
+    }
+
+    const todayKey = toLocalDateKey(new Date());
+    startInput.value = (recurring && recurring.startDate) || todayKey;
+    endInput.value = (recurring && recurring.endDate) || '';
+    activeCheck.checked = recurring ? !!recurring.active : true;
+
+    applyCheckRec.checked = recurring ? !!recurring.applyToSnapshot : false;
+    sourceSelRec.value = recurring && recurring.paymentSource ? recurring.paymentSource : '';
+    targetSelRec.innerHTML = '';
+    if (applyCheckRec.checked && sourceSelRec.value) {
+      applySectionRec.classList.remove('hidden');
+    } else {
+      applySectionRec.classList.add('hidden');
+    }
+    targetWrapRec.classList.add('hidden');
+    if (applyCheckRec.checked && (sourceSelRec.value === 'card' || sourceSelRec.value === 'bank')) {
+      targetSelRec.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.disabled = true;
+      placeholder.textContent = sourceSelRec.value === 'card' ? 'Select a card…' : 'Select a bank…';
+      targetSelRec.appendChild(placeholder);
+      const list = sourceSelRec.value === 'card' ? data.cards : data.banks;
+      list.forEach(item => {
+        const o = document.createElement('option');
+        o.value = item.id;
+        o.textContent = item.name;
+        targetSelRec.appendChild(o);
+      });
+      if (recurring && recurring.paymentTargetId && list.some(x => x.id === recurring.paymentTargetId)) {
+        targetSelRec.value = recurring.paymentTargetId;
+      }
+      targetLabelRec.textContent = sourceSelRec.value === 'card' ? 'Select Card' : 'Select Bank';
+      targetWrapRec.classList.remove('hidden');
+    }
+
+    freqSel.onchange = function() {
+      if (freqSel.value === 'custom') {
+        everyWrap.classList.remove('hidden');
+      } else {
+        everyWrap.classList.add('hidden');
+      }
+    };
+
+    applyCheckRec.onchange = function() {
+      if (applyCheckRec.checked) {
+        applySectionRec.classList.remove('hidden');
+      } else {
+        applySectionRec.classList.add('hidden');
+        targetWrapRec.classList.add('hidden');
+        sourceSelRec.value = '';
+        targetSelRec.innerHTML = '';
+      }
+    };
+
+    sourceSelRec.onchange = function() {
+      targetSelRec.innerHTML = '';
+      targetWrapRec.classList.add('hidden');
+      if (sourceSelRec.value === 'card' || sourceSelRec.value === 'bank') {
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.disabled = true;
+        placeholder.textContent = sourceSelRec.value === 'card' ? 'Select a card…' : 'Select a bank…';
+        targetSelRec.appendChild(placeholder);
+        const list = sourceSelRec.value === 'card' ? data.cards : data.banks;
+        list.forEach(item => {
+          const o = document.createElement('option');
+          o.value = item.id;
+          o.textContent = item.name;
+          targetSelRec.appendChild(o);
+        });
+        targetLabelRec.textContent = sourceSelRec.value === 'card' ? 'Select Card' : 'Select Bank';
+        targetWrapRec.classList.remove('hidden');
+      }
+    };
+
+    document.getElementById('modalRecurring').classList.remove('hidden');
+    updateBodyModalOpen();
+  }
+
+  document.getElementById('addRecurringBtn').onclick = function() {
+    openRecurringModal(null);
+  };
+
+  document.getElementById('modalRecurringCancel').onclick = function() {
+    document.getElementById('modalRecurring').classList.add('hidden');
+    updateBodyModalOpen();
+  };
+
+  document.getElementById('modalRecurringOk').onclick = function() {
+    const name = document.getElementById('modalRecurringName').value.trim() || 'Recurring';
+    const amountCents = parseCents(document.getElementById('modalRecurringAmount').value);
+    const category = document.getElementById('modalRecurringCategory').value;
+    const subs = getCategorySubcategories(category);
+    const subcategory = subs.length ? document.getElementById('modalRecurringSub').value : undefined;
+    const notes = document.getElementById('modalRecurringNotes').value.trim() || undefined;
+    const frequency = document.getElementById('modalRecurringFrequency').value || 'monthly';
+    const everyStr = document.getElementById('modalRecurringEveryNDays').value;
+    const everyNDays = frequency === 'custom' ? Math.max(1, parseInt(everyStr || '1', 10)) : undefined;
+    const startDate = document.getElementById('modalRecurringStart').value || toLocalDateKey(new Date());
+    const endDate = document.getElementById('modalRecurringEnd').value || undefined;
+    const active = document.getElementById('modalRecurringActive').checked;
+    const applyToSnapshot = document.getElementById('modalRecurringApplyToSnapshot').checked;
+    const paymentSource = document.getElementById('modalRecurringPaymentSource').value || undefined;
+    let paymentTargetId = undefined;
+    if (applyToSnapshot && (paymentSource === 'card' || paymentSource === 'bank')) {
+      const val = document.getElementById('modalRecurringPaymentTarget').value;
+      paymentTargetId = val || undefined;
+    }
+
+    if (!editingRecurringId) {
+      const r = {
+        id: uid(),
+        name,
+        amountCents,
+        category,
+        subcategory,
+        notes,
+        frequency,
+        everyNDays,
+        startDate,
+        endDate,
+        active,
+        applyToSnapshot,
+        paymentSource,
+        paymentTargetId
+      };
+      data.recurring.push(r);
+    } else {
+      const r = data.recurring.find(x => x.id === editingRecurringId);
+      if (r) {
+        r.name = name;
+        r.amountCents = amountCents;
+        r.category = category;
+        r.subcategory = subcategory;
+        r.notes = notes;
+        r.frequency = frequency;
+        r.everyNDays = everyNDays;
+        r.startDate = startDate;
+        r.endDate = endDate;
+        r.active = active;
+        r.applyToSnapshot = applyToSnapshot;
+        r.paymentSource = paymentSource;
+        r.paymentTargetId = paymentTargetId;
+      }
+    }
+    save(data);
+    document.getElementById('modalRecurring').classList.add('hidden');
+    updateBodyModalOpen();
+    processRecurringBillsUpToToday();
+    renderRecurring();
+  };
   function setLastPostedBankId(kind, bankId) {
     const key = kind === 'in' ? LAST_IN_BANK_KEY : LAST_OUT_BANK_KEY;
     if (bankId) localStorage.setItem(key, bankId);
@@ -969,6 +1385,104 @@
     document.getElementById('modalPostQuestion').textContent = question;
     document.getElementById('modalPost').classList.remove('hidden');
     updateBodyModalOpen();
+  }
+
+  function applyPurchaseToSnapshot(purchase) {
+    if (!purchase || !purchase.applyToSnapshot || !purchase.paymentSource) return;
+    const amount = typeof purchase.amountCents === 'number' ? purchase.amountCents : 0;
+    const src = purchase.paymentSource;
+    let targetMissing = false;
+    if ((src === 'card' || src === 'credit_card') && purchase.paymentTargetId) {
+      const card = data.cards.find(c => c.id === purchase.paymentTargetId);
+      if (card) {
+        card.balanceCents = (card.balanceCents || 0) + amount;
+        card.updatedAt = now();
+      } else {
+        targetMissing = true;
+      }
+    } else if (src === 'bank' && purchase.paymentTargetId) {
+      const bank = data.banks.find(b => b.id === purchase.paymentTargetId);
+      if (bank) {
+        bank.balanceCents = (bank.balanceCents || 0) - amount;
+        bank.updatedAt = now();
+      } else {
+        targetMissing = true;
+      }
+    } else if (src === 'cash') {
+      const next = getCashInHandCents() - amount;
+      setCashInHandCents(next);
+      data.cashInHandCents = next;
+    }
+    if (targetMissing) {
+      alert('Could not apply Snapshot update because the target account no longer exists.');
+    }
+  }
+
+  function processRecurringBillsUpToToday() {
+    if (!Array.isArray(data.recurring)) data.recurring = [];
+    if (!data.recurringPosted || typeof data.recurringPosted !== 'object') data.recurringPosted = {};
+    const todayKey = toLocalDateKey(new Date());
+    const today = parseLocalDateKey(todayKey);
+    if (isNaN(today.getTime())) return;
+    let mutated = false;
+
+    data.recurring.forEach(r => {
+      if (!r || !r.active) return;
+      const start = parseLocalDateKey(r.startDate);
+      if (isNaN(start.getTime())) return;
+      const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
+      let current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      while (current <= today && (!end || current <= end)) {
+        const dateKey = toLocalDateKey(current);
+        const regKey = (r.id || '') + ':' + dateKey;
+        if (!data.recurringPosted[regKey]) {
+          const purchase = {
+            id: uid(),
+            title: r.name || 'Recurring',
+            amountCents: typeof r.amountCents === 'number' ? r.amountCents : 0,
+            dateISO: dateKey,
+            category: ensureCategoryIdExists(r.category) || r.category || 'other',
+            subcategory: r.subcategory || undefined,
+            notes: r.notes,
+            recurringId: r.id,
+            recurringDateKey: dateKey
+          };
+          if (r.applyToSnapshot && r.paymentSource) {
+            purchase.applyToSnapshot = true;
+            purchase.paymentSource = r.paymentSource;
+            if (r.paymentTargetId) purchase.paymentTargetId = r.paymentTargetId;
+          }
+          data.purchases.push(purchase);
+          if (purchase.applyToSnapshot) {
+            applyPurchaseToSnapshot(purchase);
+          }
+          data.recurringPosted[regKey] = true;
+          mutated = true;
+        }
+
+        const freq = r.frequency || 'monthly';
+        if (freq === 'weekly') {
+          current = addDaysLocal(current, 7);
+        } else if (freq === 'biweekly') {
+          current = addDaysLocal(current, 14);
+        } else if (freq === 'yearly') {
+          current = addYearsPreserveDay(start, current, 1);
+        } else if (freq === 'custom') {
+          const n = (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1;
+          current = addDaysLocal(current, n);
+        } else {
+          current = addMonthsPreserveDay(start, current, 1);
+        }
+      }
+    });
+
+    if (mutated) {
+      save(data);
+      renderSnapshot();
+      if (document.getElementById('spendingContent').classList.contains('active')) {
+        renderSpending();
+      }
+    }
   }
 
   document.getElementById('pendingInList').addEventListener('click', function(e) {
@@ -1598,6 +2112,8 @@
         if (imported.pendingIn) data.pendingIn = imported.pendingIn;
         if (imported.pendingOut) data.pendingOut = imported.pendingOut;
         if (imported.purchases) data.purchases = imported.purchases;
+        if (Array.isArray(imported.recurring)) data.recurring = imported.recurring;
+        if (imported.recurringPosted && typeof imported.recurringPosted === 'object') data.recurringPosted = imported.recurringPosted;
         save(data);
         renderSnapshot();
         if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
@@ -1627,6 +2143,7 @@
     m.addEventListener('touchstart', function(e) { e.stopPropagation(); });
   });
 
+  processRecurringBillsUpToToday();
   renderSnapshot();
 
   (function checkLocalDateFilter() {
