@@ -195,7 +195,8 @@
     <div id="snapshotSummary" class="summary">
       <div class="summary-compact">
         <div class="summary-kv"><span class="k">Net Cash (Bank Total + Physical Cash In Hand)</span><span class="v" id="sumNetCash">$0</span></div>
-        <div class="summary-kv"><span class="k">Total Current Credit Card Balance</span><span class="v" id="sumCc">$0</span></div>
+        <div class="summary-kv"><span class="k">Total Current Credit Card Balance</span><span class="v" id="sumCcDebt">$0</span></div>
+        <div class="summary-kv"><span class="k">Credit Card Credit</span><span class="v" id="sumCcCredit">$0</span></div>
         <div class="summary-kv"><span class="k">Total Pending Outbound</span><span class="v" id="sumPendingOut">$0</span></div>
         <div class="summary-kv"><span class="k">Total Pending Inbound</span><span class="v" id="sumPendingIn">$0</span></div>
         <div class="summary-kv final-net-cash"><span class="k">Final Net Cash</span><span class="v" id="sumFinalNetCash">$0</span></div>
@@ -300,6 +301,21 @@
     </div>
   </div>
 
+  <div id="modalPost" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalPostTitle">Confirm posted</h3>
+      <p id="modalPostQuestion"></p>
+      <div class="field">
+        <label>Bank account</label>
+        <select id="modalPostBankSelect"></select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalPostCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalPostOk">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modalPurchase" class="modal-overlay hidden">
     <div class="modal">
       <h3 id="modalPurchaseHeading">Add Purchase</h3>
@@ -392,6 +408,8 @@
 (function() {
   const STORAGE_KEY = 'ledgerlite';
   const CASH_STORAGE_KEY = 'snapshot_cashInHandCents';
+  const LAST_OUT_BANK_KEY = 'snapshot_lastPostedOutboundBankId';
+  const LAST_IN_BANK_KEY = 'snapshot_lastPostedInboundBankId';
   const CATEGORIES = [
     { id: 'food', name: 'Food', sub: ['Groceries', 'Snacks', 'Restaurants'] },
     { id: 'travel', name: 'Travel', sub: ['MTA', 'Flights'] },
@@ -574,28 +592,40 @@
     data.pendingIn.forEach(p => {
       const div = document.createElement('div');
       div.className = 'pending-item';
-      div.innerHTML = '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span><button type="button" class="del" data-kind="in" data-id="' + p.id + '">Delete</button>';
+      div.innerHTML =
+        '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
+        '<div>' +
+        '<button type="button" class="posted" data-kind="in" data-id="' + p.id + '">Mark Posted</button>' +
+        '<button type="button" class="del" data-kind="in" data-id="' + p.id + '">Delete</button>' +
+        '</div>';
       pendingInList.appendChild(div);
     });
     data.pendingOut.forEach(p => {
       const div = document.createElement('div');
       div.className = 'pending-item';
-      div.innerHTML = '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span><button type="button" class="del" data-kind="out" data-id="' + p.id + '">Delete</button>';
+      div.innerHTML =
+        '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
+        '<div>' +
+        '<button type="button" class="posted" data-kind="out" data-id="' + p.id + '">Mark Posted</button>' +
+        '<button type="button" class="del" data-kind="out" data-id="' + p.id + '">Delete</button>' +
+        '</div>';
       pendingOutList.appendChild(div);
     });
 
     const bankTotal = data.banks.reduce((s, b) => s + b.balanceCents, 0);
     const cashInHand = getCashInHandCents();
     data.cashInHandCents = cashInHand;
-    const ccTotal = data.cards.reduce((s, c) => s + c.balanceCents, 0);
+    const ccDebt = data.cards.reduce((s, c) => s + Math.max(c.balanceCents || 0, 0), 0);
+    const ccCredit = data.cards.reduce((s, c) => s + Math.max(-(c.balanceCents || 0), 0), 0);
     const pendingOutTotal = data.pendingOut.reduce((s, p) => s + p.amountCents, 0);
     const pendingInTotal = data.pendingIn.reduce((s, p) => s + p.amountCents, 0);
     const netCash = bankTotal + cashInHand;
-    const finalNetCash = netCash + pendingInTotal - pendingOutTotal - ccTotal;
+    const finalNetCash = netCash + pendingInTotal - pendingOutTotal - ccDebt + ccCredit;
 
     document.getElementById('cashInHandAmount').textContent = formatCents(cashInHand);
     document.getElementById('sumNetCash').textContent = formatCents(netCash);
-    document.getElementById('sumCc').textContent = formatCents(ccTotal);
+    document.getElementById('sumCcDebt').textContent = formatCents(ccDebt);
+    document.getElementById('sumCcCredit').textContent = formatCents(ccCredit);
     document.getElementById('sumPendingOut').textContent = formatCents(pendingOutTotal);
     document.getElementById('sumPendingIn').textContent = formatCents(pendingInTotal);
     document.getElementById('sumFinalNetCash').textContent = formatCents(finalNetCash);
@@ -719,13 +749,145 @@
     updateBodyModalOpen();
   };
 
+  document.getElementById('modalPostCancel').onclick = function() {
+    document.getElementById('modalPost').classList.add('hidden');
+    postPendingKind = null;
+    postPendingId = null;
+    updateBodyModalOpen();
+  };
+
+  document.getElementById('modalPostOk').onclick = function() {
+    if (!postPendingKind || !postPendingId) {
+      document.getElementById('modalPost').classList.add('hidden');
+      updateBodyModalOpen();
+      return;
+    }
+    const kind = postPendingKind;
+    const id = postPendingId;
+    postPendingKind = null;
+    postPendingId = null;
+    const list = kind === 'in' ? data.pendingIn : data.pendingOut;
+    const idx = list.findIndex(p => p.id === id);
+    if (idx === -1) {
+      document.getElementById('modalPost').classList.add('hidden');
+      updateBodyModalOpen();
+      return;
+    }
+    const item = list[idx];
+    const amount = item.amountCents || 0;
+    const bankId = document.getElementById('modalPostBankSelect').value;
+    let targetMissing = false;
+    if (bankId) {
+      const bank = data.banks.find(b => b.id === bankId);
+      if (bank) {
+        if (kind === 'in') bank.balanceCents = (bank.balanceCents || 0) + amount;
+        else bank.balanceCents = (bank.balanceCents || 0) - amount;
+        bank.updatedAt = now();
+      } else {
+        targetMissing = true;
+      }
+    } else {
+      targetMissing = true;
+    }
+    if (kind === 'in') data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+    else data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+    if (targetMissing) {
+      alert('Could not ' + (kind === 'in' ? 'add to' : 'subtract from') + ' bank (bank not found). Pending item was removed.');
+    } else {
+      setLastPostedBankId(kind, bankId);
+    }
+    save(data);
+    renderSnapshot();
+    document.getElementById('modalPost').classList.add('hidden');
+    updateBodyModalOpen();
+  };
+
+  function getLastPostedBankId(kind) {
+    const key = kind === 'in' ? LAST_IN_BANK_KEY : LAST_OUT_BANK_KEY;
+    return localStorage.getItem(key) || '';
+  }
+
+  function setLastPostedBankId(kind, bankId) {
+    const key = kind === 'in' ? LAST_IN_BANK_KEY : LAST_OUT_BANK_KEY;
+    if (bankId) localStorage.setItem(key, bankId);
+  }
+
+  function handlePendingPosted(kind, id) {
+    const list = kind === 'in' ? data.pendingIn : data.pendingOut;
+    const idx = list.findIndex(p => p.id === id);
+    if (idx === -1) return;
+    const item = list[idx];
+    const amount = item.amountCents || 0;
+    if (!data.banks.length) {
+      // No banks to post against; just remove item.
+      if (kind === 'in') data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+      else data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+      save(data);
+      renderSnapshot();
+      return;
+    }
+    if (data.banks.length === 1) {
+      const bank = data.banks[0];
+      if (kind === 'in') bank.balanceCents = (bank.balanceCents || 0) + amount;
+      else bank.balanceCents = (bank.balanceCents || 0) - amount;
+      bank.updatedAt = now();
+      if (kind === 'in') data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+      else data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+      setLastPostedBankId(kind, bank.id);
+      save(data);
+      renderSnapshot();
+      return;
+    }
+    // Multiple banks: show selection modal.
+    postPendingKind = kind;
+    postPendingId = id;
+    const select = document.getElementById('modalPostBankSelect');
+    const lastId = getLastPostedBankId(kind);
+    select.innerHTML = '';
+    data.banks.forEach(b => {
+      const o = document.createElement('option');
+      o.value = b.id;
+      o.textContent = b.name;
+      select.appendChild(o);
+    });
+    if (lastId && data.banks.some(b => b.id === lastId)) {
+      select.value = lastId;
+    }
+    const title = kind === 'in' ? 'Confirm deposit posted' : 'Confirm payment posted';
+    const question = kind === 'in'
+      ? 'Which bank should this deposit go to?'
+      : 'Which bank should this subtract from?';
+    document.getElementById('modalPostTitle').textContent = title;
+    document.getElementById('modalPostQuestion').textContent = question;
+    document.getElementById('modalPost').classList.remove('hidden');
+    updateBodyModalOpen();
+  }
+
   document.getElementById('pendingInList').addEventListener('click', function(e) {
-    const btn = e.target.closest('.del[data-kind="in"]');
-    if (btn) { data.pendingIn = data.pendingIn.filter(p => p.id !== btn.getAttribute('data-id')); save(data); renderSnapshot(); }
+    const postedBtn = e.target.closest('.posted[data-kind=\"in\"]');
+    if (postedBtn) {
+      handlePendingPosted('in', postedBtn.getAttribute('data-id'));
+      return;
+    }
+    const delBtn = e.target.closest('.del[data-kind=\"in\"]');
+    if (delBtn) {
+      data.pendingIn = data.pendingIn.filter(p => p.id !== delBtn.getAttribute('data-id'));
+      save(data);
+      renderSnapshot();
+    }
   });
   document.getElementById('pendingOutList').addEventListener('click', function(e) {
-    const btn = e.target.closest('.del[data-kind="out"]');
-    if (btn) { data.pendingOut = data.pendingOut.filter(p => p.id !== btn.getAttribute('data-id')); save(data); renderSnapshot(); }
+    const postedBtn = e.target.closest('.posted[data-kind=\"out\"]');
+    if (postedBtn) {
+      handlePendingPosted('out', postedBtn.getAttribute('data-id'));
+      return;
+    }
+    const delBtn = e.target.closest('.del[data-kind=\"out\"]');
+    if (delBtn) {
+      data.pendingOut = data.pendingOut.filter(p => p.id !== delBtn.getAttribute('data-id'));
+      save(data);
+      renderSnapshot();
+    }
   });
 
   document.getElementById('clearPendingInBtn').onclick = () => confirmModal('Clear all pending inbound?', 'Remove all items.', () => { data.pendingIn = []; save(data); renderSnapshot(); });
@@ -1209,6 +1371,9 @@
     renderSnapshot();
     renderSpending();
   });
+
+  let postPendingKind = null;
+  let postPendingId = null;
 
   function updateBodyModalOpen() {
     const anyOpen = Array.from(document.querySelectorAll('.modal-overlay')).some(el => !el.classList.contains('hidden'));
