@@ -241,8 +241,8 @@
     <div class="section-header" id="bankHeader">
       <span>Cash — <span id="cashHeaderTotal">$0.00</span></span>
       <span style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-        <button type="button" class="icon-btn" id="zeroBalancesToggle" aria-label="Toggle zero-balance accounts" title="Toggle zero-balance accounts">
-          <span id="zeroBalancesIcon">Show $0 balances</span>
+        <button type="button" class="icon-btn" id="zeroCashToggle" aria-label="Toggle zero-balance cash items" title="Toggle zero-balance cash items">
+          <span id="zeroCashIcon">Show $0 balances</span>
         </button>
         <span class="chevron" id="bankChevron">▾</span>
       </span>
@@ -252,7 +252,12 @@
 
     <div class="section-header" id="cardHeader" style="margin-top: 24px;">
       <span>Credit Cards — <span id="cardHeaderTotal">$0.00</span></span>
-      <span class="chevron" id="cardChevron">▾</span>
+      <span style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <button type="button" class="icon-btn" id="zeroCardsToggle" aria-label="Toggle zero-balance credit cards" title="Toggle zero-balance credit cards">
+          <span id="zeroCardsIcon">Show $0 balances</span>
+        </button>
+        <span class="chevron" id="cardChevron">▾</span>
+      </span>
     </div>
     <div id="cardList"></div>
     <button type="button" class="btn btn-dashed" id="addCardBtn">+ Add Credit Card</button>
@@ -608,7 +613,9 @@
   const PHYSICAL_CASH_ID = 'physical_cash';
   const LAST_OUT_BANK_KEY = 'snapshot_lastPostedOutboundBankId';
   const LAST_IN_BANK_KEY = 'snapshot_lastPostedInboundBankId';
-  const SHOW_ZERO_BALANCES_KEY = 'ledgerlite_showZeroBalances';
+  const SHOW_ZERO_BALANCES_KEY = 'ledgerlite_showZeroBalances'; // legacy (applied to both cash + cards)
+  const SHOW_ZERO_CASH_KEY = 'ledgerlite_showZeroCashItems';
+  const SHOW_ZERO_CARDS_KEY = 'ledgerlite_showZeroCreditCards';
   const PENDING_IN_COLLAPSED_KEY = 'ledgerlite_pendingInboundCollapsed';
   const PENDING_OUT_COLLAPSED_KEY = 'ledgerlite_pendingOutboundCollapsed';
   const CATEGORY_STORAGE_KEY = 'ledgerlite_categories_v1';
@@ -958,20 +965,35 @@
   }
 
   let data = load();
-  let showZeroBalances = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
+  // Legacy single toggle used for both sections; use as default if present.
+  const legacyShowZero = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
+  let showZeroCashItems = loadBoolPref(SHOW_ZERO_CASH_KEY, legacyShowZero);
+  let showZeroCreditCards = loadBoolPref(SHOW_ZERO_CARDS_KEY, legacyShowZero);
   let pendingInboundCollapsed = loadBoolPref(PENDING_IN_COLLAPSED_KEY, false);
   let pendingOutboundCollapsed = loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false);
-  let lastHasAnyZeroBalance = false;
+  let lastHasZeroCash = false;
+  let lastHasZeroCards = false;
 
-  function updateZeroBalancesToggleText() {
-    const icon = document.getElementById('zeroBalancesIcon');
-    const btn = document.getElementById('zeroBalancesToggle');
+  function updateZeroCashToggleText() {
+    const icon = document.getElementById('zeroCashIcon');
+    const btn = document.getElementById('zeroCashToggle');
     if (!icon || !btn) return;
-    const hasAnyZero = !!lastHasAnyZeroBalance;
+    const hasAnyZero = !!lastHasZeroCash;
     let label = 'Show $0 balances';
-    if (hasAnyZero && showZeroBalances) label = 'Hide $0 balances';
+    if (hasAnyZero && showZeroCashItems) label = 'Hide $0 balances';
     icon.textContent = label;
-    btn.setAttribute('aria-pressed', showZeroBalances ? 'true' : 'false');
+    btn.setAttribute('aria-pressed', showZeroCashItems ? 'true' : 'false');
+  }
+
+  function updateZeroCardsToggleText() {
+    const icon = document.getElementById('zeroCardsIcon');
+    const btn = document.getElementById('zeroCardsToggle');
+    if (!icon || !btn) return;
+    const hasAnyZero = !!lastHasZeroCards;
+    let label = 'Show $0 balances';
+    if (hasAnyZero && showZeroCreditCards) label = 'Hide $0 balances';
+    icon.textContent = label;
+    btn.setAttribute('aria-pressed', showZeroCreditCards ? 'true' : 'false');
   }
 
   function renderSnapshot() {
@@ -983,12 +1005,12 @@
     ensurePhysicalCashBank(data);
     const sortedBanks = [...data.banks].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
     const sortedCards = [...data.cards].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
-    lastHasAnyZeroBalance =
-      sortedBanks.some(b => (b.balanceCents || 0) === 0) ||
-      sortedCards.some(c => (c.balanceCents || 0) === 0);
-    const banksToRender = showZeroBalances ? sortedBanks : sortedBanks.filter(b => (b.balanceCents || 0) !== 0);
-    const cardsToRender = showZeroBalances ? sortedCards : sortedCards.filter(c => (c.balanceCents || 0) !== 0);
-    updateZeroBalancesToggleText();
+    lastHasZeroCash = sortedBanks.some(b => (b.balanceCents || 0) === 0);
+    lastHasZeroCards = sortedCards.some(c => (c.balanceCents || 0) === 0);
+    const banksToRender = showZeroCashItems ? sortedBanks : sortedBanks.filter(b => (b.balanceCents || 0) !== 0);
+    const cardsToRender = showZeroCreditCards ? sortedCards : sortedCards.filter(c => (c.balanceCents || 0) !== 0);
+    updateZeroCashToggleText();
+    updateZeroCardsToggleText();
 
     if (banksToRender.length) {
       banksToRender.forEach(b => {
@@ -2084,16 +2106,30 @@
     document.getElementById('modalCard').classList.add('hidden');
     updateBodyModalOpen();
   };
-  (function setupZeroBalancesToggle() {
-    const btn = document.getElementById('zeroBalancesToggle');
-    const icon = document.getElementById('zeroBalancesIcon');
+  (function setupZeroCashToggle() {
+    const btn = document.getElementById('zeroCashToggle');
+    const icon = document.getElementById('zeroCashIcon');
     if (!btn || !icon) return;
-    updateZeroBalancesToggleText();
+    updateZeroCashToggleText();
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
-      showZeroBalances = !showZeroBalances;
-      try { localStorage.setItem(SHOW_ZERO_BALANCES_KEY, showZeroBalances ? '1' : '0'); } catch (_) {}
-      updateZeroBalancesToggleText();
+      showZeroCashItems = !showZeroCashItems;
+      try { localStorage.setItem(SHOW_ZERO_CASH_KEY, showZeroCashItems ? '1' : '0'); } catch (_) {}
+      updateZeroCashToggleText();
+      renderSnapshot();
+    });
+  })();
+
+  (function setupZeroCardsToggle() {
+    const btn = document.getElementById('zeroCardsToggle');
+    const icon = document.getElementById('zeroCardsIcon');
+    if (!btn || !icon) return;
+    updateZeroCardsToggleText();
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      showZeroCreditCards = !showZeroCreditCards;
+      try { localStorage.setItem(SHOW_ZERO_CARDS_KEY, showZeroCreditCards ? '1' : '0'); } catch (_) {}
+      updateZeroCardsToggleText();
       renderSnapshot();
     });
   })();
