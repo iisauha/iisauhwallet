@@ -84,6 +84,18 @@
     .section-header:hover {
       background: rgba(148, 163, 184, 0.12);
     }
+    .icon-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .icon-btn:hover {
+      background: rgba(148, 163, 184, 0.2);
+    }
     .card {
       background: var(--surface);
       border-radius: 12px;
@@ -220,7 +232,15 @@
 </head>
 <body>
   <div id="snapshotContent" class="tab-panel active">
-    <div class="section-header" id="bankHeader"><span>Cash</span><span class="chevron" id="bankChevron">▾</span></div>
+    <div class="section-header" id="bankHeader">
+      <span>Cash</span>
+      <span style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <button type="button" class="icon-btn" id="zeroBalancesToggle" aria-label="Toggle zero-balance accounts" title="Toggle zero-balance accounts">
+          <span id="zeroBalancesIcon">Hide $0</span>
+        </button>
+        <span class="chevron" id="bankChevron">▾</span>
+      </span>
+    </div>
     <div id="bankList"></div>
     <button type="button" class="btn btn-dashed" id="addBankBtn">+ Add Bank Account</button>
 
@@ -228,18 +248,28 @@
     <div id="cardList"></div>
     <button type="button" class="btn btn-dashed" id="addCardBtn">+ Add Credit Card</button>
 
-    <p class="section-title" style="margin-top: 24px;">Pending Inbound</p>
-    <div id="pendingInList"></div>
-    <div class="btn-row">
-      <button type="button" class="btn btn-dashed" id="addPendingInBtn">+ Add item</button>
-      <button type="button" class="btn btn-danger" id="clearPendingInBtn">Clear All</button>
+    <div class="section-header" id="pendingInHeader" style="margin-top: 24px;">
+      <span>Pending Inbound — <span id="pendingInHeaderTotal">$0.00</span></span>
+      <span class="chevron" id="pendingInChevron">▾</span>
+    </div>
+    <div id="pendingInSectionBody">
+      <div id="pendingInList"></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-dashed" id="addPendingInBtn">+ Add item</button>
+        <button type="button" class="btn btn-danger" id="clearPendingInBtn">Clear All</button>
+      </div>
     </div>
 
-    <p class="section-title" style="margin-top: 24px;">Pending Outbound</p>
-    <div id="pendingOutList"></div>
-    <div class="btn-row">
-      <button type="button" class="btn btn-dashed" id="addPendingOutBtn">+ Add item</button>
-      <button type="button" class="btn btn-danger" id="clearPendingOutBtn">Clear All</button>
+    <div class="section-header" id="pendingOutHeader" style="margin-top: 24px;">
+      <span>Pending Outbound — <span id="pendingOutHeaderTotal">$0.00</span></span>
+      <span class="chevron" id="pendingOutChevron">▾</span>
+    </div>
+    <div id="pendingOutSectionBody">
+      <div id="pendingOutList"></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-dashed" id="addPendingOutBtn">+ Add item</button>
+        <button type="button" class="btn btn-danger" id="clearPendingOutBtn">Clear All</button>
+      </div>
     </div>
 
     <div id="snapshotSummary" class="summary">
@@ -569,6 +599,9 @@
   const PHYSICAL_CASH_ID = 'physical_cash';
   const LAST_OUT_BANK_KEY = 'snapshot_lastPostedOutboundBankId';
   const LAST_IN_BANK_KEY = 'snapshot_lastPostedInboundBankId';
+  const SHOW_ZERO_BALANCES_KEY = 'ledgerlite_showZeroBalances';
+  const PENDING_IN_COLLAPSED_KEY = 'ledgerlite_pendingInboundCollapsed';
+  const PENDING_OUT_COLLAPSED_KEY = 'ledgerlite_pendingOutboundCollapsed';
   const CATEGORY_STORAGE_KEY = 'ledgerlite_categories_v1';
   const CATEGORIES = [
     { id: 'food', name: 'Food', sub: ['Groceries', 'Snacks', 'Restaurants'] },
@@ -868,6 +901,18 @@
     return 'uncategorized';
   }
 
+  function loadBoolPref(key, defaultValue) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return defaultValue;
+      if (raw === '1' || raw === 'true') return true;
+      if (raw === '0' || raw === 'false') return false;
+      return defaultValue;
+    } catch (_) {
+      return defaultValue;
+    }
+  }
+
   function normalizeCategoryId(id) {
     const key = (id || '').trim();
     if (key && categoryConfig[key]) return key;
@@ -904,6 +949,9 @@
   }
 
   let data = load();
+  let showZeroBalances = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
+  let pendingInboundCollapsed = loadBoolPref(PENDING_IN_COLLAPSED_KEY, false);
+  let pendingOutboundCollapsed = loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false);
 
   function renderSnapshot() {
     const bankList = document.getElementById('bankList');
@@ -912,11 +960,13 @@
     cardList.innerHTML = '';
 
     ensurePhysicalCashBank(data);
-    const nonZeroBanks = data.banks.filter(b => Math.abs(b.balanceCents || 0) > 0);
-    const nonZeroCards = data.cards.filter(c => Math.abs(c.balanceCents || 0) > 0);
+    const sortedBanks = [...data.banks].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
+    const sortedCards = [...data.cards].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
+    const banksToRender = showZeroBalances ? sortedBanks : sortedBanks.filter(b => (b.balanceCents || 0) !== 0);
+    const cardsToRender = showZeroBalances ? sortedCards : sortedCards.filter(c => (c.balanceCents || 0) !== 0);
 
-    if (nonZeroBanks.length) {
-      nonZeroBanks.forEach(b => {
+    if (banksToRender.length) {
+      banksToRender.forEach(b => {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">' + formatCents(b.balanceCents) + '</span></div>' +
@@ -935,8 +985,8 @@
       bankList.appendChild(empty);
     }
 
-    if (nonZeroCards.length) {
-      nonZeroCards.forEach(c => {
+    if (cardsToRender.length) {
+      cardsToRender.forEach(c => {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="amount">' + formatCents(c.balanceCents) + '</span></div>' +
@@ -995,6 +1045,12 @@
     const elOut = document.getElementById('sumPendingOut');
     const elIn = document.getElementById('sumPendingIn');
     const elFinal = document.getElementById('sumFinalNetCash');
+    const elPendingInHeaderTotal = document.getElementById('pendingInHeaderTotal');
+    const elPendingOutHeaderTotal = document.getElementById('pendingOutHeaderTotal');
+    const pendingInBody = document.getElementById('pendingInSectionBody');
+    const pendingOutBody = document.getElementById('pendingOutSectionBody');
+    const pendingInChevron = document.getElementById('pendingInChevron');
+    const pendingOutChevron = document.getElementById('pendingOutChevron');
 
     function setSignClass(el, value) {
       if (!el) return;
@@ -1018,6 +1074,16 @@
         if (finalNetCash >= 0) row.classList.add('positive');
         else row.classList.add('negative');
       }
+    }
+    if (elPendingInHeaderTotal) elPendingInHeaderTotal.textContent = formatCents(pendingInTotal);
+    if (elPendingOutHeaderTotal) elPendingOutHeaderTotal.textContent = formatCents(pendingOutTotal);
+    if (pendingInBody && pendingInChevron) {
+      pendingInBody.style.display = pendingInboundCollapsed ? 'none' : '';
+      pendingInChevron.textContent = pendingInboundCollapsed ? '▸' : '▾';
+    }
+    if (pendingOutBody && pendingOutChevron) {
+      pendingOutBody.style.display = pendingOutboundCollapsed ? 'none' : '';
+      pendingOutChevron.textContent = pendingOutboundCollapsed ? '▸' : '▾';
     }
   }
 
@@ -1072,6 +1138,32 @@
         cardList.style.display = cardOpen ? '' : 'none';
         cardBtn.style.display = cardOpen ? '' : 'none';
         cardChevron.textContent = cardOpen ? '▾' : '▸';
+      });
+    }
+  })();
+
+  // Pending Inbound / Outbound accordions
+  (function setupPendingAccordions() {
+    const inHeader = document.getElementById('pendingInHeader');
+    const inBody = document.getElementById('pendingInSectionBody');
+    const inChevron = document.getElementById('pendingInChevron');
+    const outHeader = document.getElementById('pendingOutHeader');
+    const outBody = document.getElementById('pendingOutSectionBody');
+    const outChevron = document.getElementById('pendingOutChevron');
+    if (inHeader && inBody && inChevron) {
+      inHeader.addEventListener('click', function() {
+        pendingInboundCollapsed = !pendingInboundCollapsed;
+        try { localStorage.setItem(PENDING_IN_COLLAPSED_KEY, pendingInboundCollapsed ? '1' : '0'); } catch (_) {}
+        inBody.style.display = pendingInboundCollapsed ? 'none' : '';
+        inChevron.textContent = pendingInboundCollapsed ? '▸' : '▾';
+      });
+    }
+    if (outHeader && outBody && outChevron) {
+      outHeader.addEventListener('click', function() {
+        pendingOutboundCollapsed = !pendingOutboundCollapsed;
+        try { localStorage.setItem(PENDING_OUT_COLLAPSED_KEY, pendingOutboundCollapsed ? '1' : '0'); } catch (_) {}
+        outBody.style.display = pendingOutboundCollapsed ? 'none' : '';
+        outChevron.textContent = pendingOutboundCollapsed ? '▸' : '▾';
       });
     }
   })();
@@ -1963,6 +2055,23 @@
     document.getElementById('modalCard').classList.add('hidden');
     updateBodyModalOpen();
   };
+  (function setupZeroBalancesToggle() {
+    const btn = document.getElementById('zeroBalancesToggle');
+    const icon = document.getElementById('zeroBalancesIcon');
+    if (!btn || !icon) return;
+    function sync() {
+      icon.textContent = showZeroBalances ? 'Show all' : 'Hide $0';
+      btn.setAttribute('aria-pressed', showZeroBalances ? 'true' : 'false');
+    }
+    sync();
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      showZeroBalances = !showZeroBalances;
+      try { localStorage.setItem(SHOW_ZERO_BALANCES_KEY, showZeroBalances ? '1' : '0'); } catch (_) {}
+      sync();
+      renderSnapshot();
+    });
+  })();
 
   // Spending: category select with dynamic categories
   const catSelect = document.getElementById('modalPurchaseCategory');
