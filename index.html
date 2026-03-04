@@ -353,6 +353,18 @@
         <label>Notes (optional)</label>
         <textarea id="modalPurchaseNotes" placeholder="Optional"></textarea>
       </div>
+      <div class="field toggle-row" id="modalPurchaseSplitWrap">
+        <input type="checkbox" id="modalPurchaseSplit" />
+        <label for="modalPurchaseSplit">Split</label>
+      </div>
+      <div class="field hidden" id="modalPurchaseSplitDetails">
+        <label>My Portion ($)</label>
+        <input type="text" id="modalPurchaseMyPortion" inputmode="decimal" placeholder="0.00" />
+        <p style="font-size: 0.9rem; color: var(--muted); margin: 6px 0 0 0;">
+          Reimbursement (Inbound): <span id="modalPurchaseReimbAmount">$0.00</span>
+        </p>
+        <p class="field hidden" id="modalPurchaseSplitError" style="color: var(--danger); font-size: 0.9rem; margin: 4px 0 0 0;"></p>
+      </div>
       <div class="field toggle-row" id="modalPurchaseApplyWrap">
         <input type="checkbox" id="modalPurchaseApplyToSnapshot" />
         <label for="modalPurchaseApplyToSnapshot">Apply to Snapshot</label>
@@ -1819,9 +1831,16 @@
   const applyError = document.getElementById('modalPurchaseApplyError');
   const modalPurchaseOkBtn = document.getElementById('modalPurchaseOk');
   const targetDebug = document.getElementById('modalPurchaseTargetDebug');
+  const splitWrap = document.getElementById('modalPurchaseSplitWrap');
+  const splitCheck = document.getElementById('modalPurchaseSplit');
+  const splitDetails = document.getElementById('modalPurchaseSplitDetails');
+  const splitMyPortionInput = document.getElementById('modalPurchaseMyPortion');
+  const splitReimbAmount = document.getElementById('modalPurchaseReimbAmount');
+  const splitError = document.getElementById('modalPurchaseSplitError');
   let applyToSnapshotState = false;
   let paymentSourceState = '';
   let paymentTargetIdState = '';
+  let splitMyPortionTouched = false;
 
   function updatePurchaseTargetDropdown() {
     const source = paymentSourceState || paymentSourceSelect.value;
@@ -1896,6 +1915,65 @@
     modalPurchaseOkBtn.disabled = on && !validateApplyToSnapshot();
   }
 
+  function getSplitState() {
+    const enabled = !!(splitCheck && splitCheck.checked);
+    const totalCents = parseCents(document.getElementById('modalPurchaseAmount').value);
+    if (!enabled) {
+      return { enabled: false, totalCents, myPortionCents: 0, inboundCents: 0, error: '' };
+    }
+    const myPortionCents = parseCents(splitMyPortionInput.value);
+    let error = '';
+    if (myPortionCents < 0) error = 'My portion cannot be negative.';
+    else if (myPortionCents > totalCents) error = 'My portion cannot exceed total amount.';
+    const inboundCents = Math.max(0, totalCents - myPortionCents);
+    return { enabled: true, totalCents, myPortionCents, inboundCents, error };
+  }
+
+  function refreshSplitUI() {
+    if (!splitCheck) return;
+    const enabled = splitCheck.checked;
+    const totalCents = parseCents(document.getElementById('modalPurchaseAmount').value);
+    if (!enabled || !totalCents) {
+      splitDetails.classList.add('hidden');
+      splitError.classList.add('hidden');
+      splitError.textContent = '';
+      if (!enabled) {
+        splitMyPortionTouched = false;
+      }
+      if (!enabled && !applyToSnapshotState) {
+        // leave Apply to Snapshot as user configured
+      }
+      splitReimbAmount.textContent = formatCents(0);
+      return;
+    }
+    splitDetails.classList.remove('hidden');
+    if (!splitMyPortionTouched) {
+      const half = Math.round(totalCents / 2);
+      splitMyPortionInput.value = (half / 100).toFixed(2);
+    }
+    const state = getSplitState();
+    splitReimbAmount.textContent = formatCents(state.inboundCents);
+    if (state.error) {
+      splitError.textContent = state.error;
+      splitError.classList.remove('hidden');
+    } else {
+      splitError.textContent = '';
+      splitError.classList.add('hidden');
+    }
+    // When split is enabled, force Apply to Snapshot on by default
+    if (!applyToSnapshotState) {
+      applyCheck.checked = true;
+      applyToSnapshotState = true;
+      updatePurchaseTargetDropdown();
+      updateApplyUI();
+    }
+    if (state.error) {
+      modalPurchaseOkBtn.disabled = true;
+    } else if (!applyToSnapshotState || validateApplyToSnapshot()) {
+      modalPurchaseOkBtn.disabled = false;
+    }
+  }
+
   applyCheck.addEventListener('change', function() {
     applyToSnapshotState = applyCheck.checked;
     if (!applyToSnapshotState) {
@@ -1921,6 +1999,27 @@
     updateTargetDebug();
     updateApplyUI();
   });
+
+  if (splitCheck && splitMyPortionInput && splitReimbAmount && splitError) {
+    splitCheck.addEventListener('change', function() {
+      if (!splitCheck.checked) {
+        splitMyPortionTouched = false;
+      }
+      refreshSplitUI();
+    });
+    document.getElementById('modalPurchaseAmount').addEventListener('input', function() {
+      if (!splitMyPortionTouched) {
+        refreshSplitUI();
+      } else {
+        // still need to revalidate with new total
+        refreshSplitUI();
+      }
+    });
+    splitMyPortionInput.addEventListener('input', function() {
+      splitMyPortionTouched = true;
+      refreshSplitUI();
+    });
+  }
 
   let editingPurchaseId = null;
   function openAddPurchaseModal(prefill) {
@@ -1956,6 +2055,16 @@
     }
 
     notesInput.value = (prefill && prefill.notes) || '';
+
+    // reset split state
+    if (splitCheck) {
+      splitCheck.checked = false;
+      splitMyPortionTouched = false;
+      if (splitMyPortionInput) splitMyPortionInput.value = '';
+      if (splitReimbAmount) splitReimbAmount.textContent = formatCents(0);
+      if (splitDetails) splitDetails.classList.add('hidden');
+      if (splitError) { splitError.classList.add('hidden'); splitError.textContent = ''; }
+    }
 
     applyWrap.classList.remove('hidden');
     applyError.classList.add('hidden');
@@ -2009,7 +2118,7 @@
   document.getElementById('modalPurchaseOk').onclick = function() {
     if (modalPurchaseOkBtn.disabled) return;
     const title = document.getElementById('modalPurchaseTitle').value.trim() || 'Purchase';
-    const amountCents = parseCents(document.getElementById('modalPurchaseAmount').value);
+    const totalCents = parseCents(document.getElementById('modalPurchaseAmount').value);
     const dateISO = document.getElementById('modalPurchaseDate').value || toLocalDateKey(new Date());
     const category = document.getElementById('modalPurchaseCategory').value;
     const subs = getCategorySubcategories(category);
@@ -2019,31 +2128,74 @@
     let applyToSnapshot = false;
     let paymentSource = null;
     let paymentTargetId = null;
+    const splitState = getSplitState();
+    if (splitState.enabled && splitState.error) {
+      refreshSplitUI();
+      return;
+    }
     if (!isEdit && applyToSnapshotState) {
       applyToSnapshot = true;
       paymentSource = paymentSourceState || paymentSourceSelect.value || null;
       paymentTargetId = (paymentSource === 'card' || paymentSource === 'bank') ? (paymentTargetIdState || null) : null;
     }
+    if (splitState.enabled) {
+      // Split implies apply-to-snapshot; enforce valid snapshot selection
+      applyToSnapshot = true;
+      if (!paymentSource) paymentSource = paymentSourceState || paymentSourceSelect.value || null;
+      if (paymentSource === 'card' || paymentSource === 'bank') {
+        if (!paymentTargetId) paymentTargetId = paymentTargetIdState || null;
+      }
+      if (!paymentSource || ((paymentSource === 'card' || paymentSource === 'bank') && !paymentTargetId)) {
+        applyError.textContent = 'Choose a payment source (and specific card/bank) when using Split.';
+        applyError.classList.remove('hidden');
+        applySection.classList.remove('hidden');
+        modalPurchaseOkBtn.disabled = true;
+        return;
+      }
+    }
+    const myPortionCents = splitState.enabled ? splitState.myPortionCents : totalCents;
+    const inboundCents = splitState.enabled ? splitState.inboundCents : 0;
     if (editingPurchaseId) {
       const p = data.purchases.find(x => x.id === editingPurchaseId);
-      if (p) { p.title = title; p.amountCents = amountCents; p.dateISO = dateISO; p.category = category; p.subcategory = subcategory; p.notes = notes; }
+      if (p) { p.title = title; p.amountCents = myPortionCents; p.dateISO = dateISO; p.category = category; p.subcategory = subcategory; p.notes = notes; }
     } else {
-      const purchase = { id: uid(), title, amountCents, dateISO, category, subcategory, notes };
+      const purchaseId = uid();
+      const purchase = { id: purchaseId, title, amountCents: myPortionCents, dateISO, category, subcategory, notes };
+      if (splitState.enabled) {
+        purchase.isSplit = true;
+        purchase.splitTotalCents = totalCents;
+        purchase.splitMyPortionCents = myPortionCents;
+        purchase.splitInboundCents = inboundCents;
+      }
       if (applyToSnapshot) {
         purchase.applyToSnapshot = true;
         purchase.paymentSource = paymentSource;
         purchase.paymentTargetId = paymentTargetId;
       }
       data.purchases.push(purchase);
-      if (applyToSnapshot && paymentSource === 'card' && paymentTargetId) {
-        const card = data.cards.find(c => c.id === paymentTargetId);
-        if (card) { card.balanceCents += amountCents; card.updatedAt = now(); }
-      } else if (applyToSnapshot && paymentSource === 'bank' && paymentTargetId) {
-        const bank = data.banks.find(b => b.id === paymentTargetId);
-        if (bank) { bank.balanceCents -= amountCents; bank.updatedAt = now(); }
-      } else if (applyToSnapshot && paymentSource === 'cash') {
-        setCashInHandCents(getCashInHandCents() - amountCents);
-        data.cashInHandCents = getCashInHandCents();
+      if (splitState.enabled && inboundCents > 0) {
+        const label = 'Split reimbursement: ' + title;
+        const pendingId = uid();
+        const pendingItem = { id: pendingId, label, amountCents: inboundCents, createdAt: now(), linkedPurchaseId: purchase.id, fromSplit: true };
+        data.pendingIn.push(pendingItem);
+        if (purchase.isSplit) purchase.splitPendingId = pendingId;
+      }
+      if (applyToSnapshot) {
+        const appliedAmount = splitState.enabled ? totalCents : myPortionCents;
+        if (purchase.isSplit) {
+          purchase.splitSnapshot = { amountCents: appliedAmount, paymentSource, paymentTargetId };
+        }
+        if (paymentSource === 'card' && paymentTargetId) {
+          const card = data.cards.find(c => c.id === paymentTargetId);
+          if (card) { card.balanceCents += appliedAmount; card.updatedAt = now(); }
+        } else if (paymentSource === 'bank' && paymentTargetId) {
+          const bank = data.banks.find(b => b.id === paymentTargetId);
+          if (bank) { bank.balanceCents -= appliedAmount; bank.updatedAt = now(); }
+        } else if (paymentSource === 'cash') {
+          const next = getCashInHandCents() - appliedAmount;
+          setCashInHandCents(next);
+          data.cashInHandCents = next;
+        }
       }
     }
     save(data);
@@ -2218,19 +2370,23 @@
           : p.title;
         confirmModal('Delete purchase?', msg, () => {
           if (applied) {
-            const amount = typeof p.amountCents === 'number' ? p.amountCents : 0;
-            const src = p.paymentSource;
+            const isSplit = !!p.isSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
+            const amount = isSplit
+              ? p.splitSnapshot.amountCents
+              : (typeof p.amountCents === 'number' ? p.amountCents : 0);
+            const src = isSplit && p.splitSnapshot.paymentSource ? p.splitSnapshot.paymentSource : p.paymentSource;
+            const targetId = isSplit && p.splitSnapshot.paymentTargetId ? p.splitSnapshot.paymentTargetId : p.paymentTargetId;
             let targetMissing = false;
-            if ((src === 'card' || src === 'credit_card') && p.paymentTargetId) {
-              const card = data.cards.find(c => c.id === p.paymentTargetId);
+            if ((src === 'card' || src === 'credit_card') && targetId) {
+              const card = data.cards.find(c => c.id === targetId);
               if (card) {
                 card.balanceCents = (card.balanceCents || 0) - amount;
                 card.updatedAt = now();
               } else {
                 targetMissing = true;
               }
-            } else if (src === 'bank' && p.paymentTargetId) {
-              const bank = data.banks.find(b => b.id === p.paymentTargetId);
+            } else if (src === 'bank' && targetId) {
+              const bank = data.banks.find(b => b.id === targetId);
               if (bank) {
                 bank.balanceCents = (bank.balanceCents || 0) + amount;
                 bank.updatedAt = now();
@@ -2245,6 +2401,9 @@
             if (targetMissing) {
               alert('Could not reverse Snapshot because the target account no longer exists.');
             }
+          }
+          if (p.isSplit && p.splitPendingId && Array.isArray(data.pendingIn)) {
+            data.pendingIn = data.pendingIn.filter(pi => pi.id !== p.splitPendingId);
           }
           data.purchases = data.purchases.filter(x => x.id !== p.id);
           save(data);
