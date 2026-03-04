@@ -103,19 +103,22 @@
       inset: 0;
       background: rgba(0,0,0,0.6);
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: center;
       z-index: 200;
-      padding: 16px;
-      padding-bottom: calc(80px + var(--safe-bottom));
+      padding: 10px;
+      padding-bottom: calc(10px + var(--safe-bottom));
     }
     .modal {
       width: 100%;
       max-width: 400px;
+      max-height: 90vh;
       background: var(--surface);
       border-radius: 16px;
       padding: 20px;
       border: 1px solid var(--border);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .modal h3 { margin: 0 0 16px 0; font-size: 1.25rem; }
     .modal .field { margin-bottom: 14px; }
@@ -151,6 +154,9 @@
     .settings-section .btn { width: 100%; margin-top: 8px; }
     .footer { margin-top: 32px; padding: 16px; font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; }
     .hidden { display: none !important; }
+    body.modal-open { overflow: hidden; }
+    .spending-chart-wrap { position: relative; width: 100%; height: 220px; }
+    .spending-chart-summary { margin-top: 8px; font-size: 0.9rem; color: var(--muted); display: grid; gap: 4px; }
     #snapshotContent { padding-bottom: 24px; }
     #spendingContent { padding-bottom: 24px; }
   </style>
@@ -209,6 +215,13 @@
         <input type="date" id="rangeStart" />
         <input type="date" id="rangeEnd" />
       </span>
+    </div>
+    <p class="section-title">Spending distribution</p>
+    <div class="card">
+      <div class="spending-chart-wrap">
+        <canvas id="spendingChart"></canvas>
+      </div>
+      <div id="spendingChartSummary" class="spending-chart-summary"></div>
     </div>
     <p class="section-title">This period total</p>
     <div class="card"><span id="periodTotal" class="amount">$0.00</span></div>
@@ -373,6 +386,9 @@
   <p class="footer">LedgerLite — offline. To save this to your phone, AirDrop the file and open in Safari. Add to Home Screen for app-like use.</p>
 
   <script>
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
 (function() {
   const STORAGE_KEY = 'ledgerlite';
   const CASH_STORAGE_KEY = 'snapshot_cashInHandCents';
@@ -386,6 +402,18 @@
     { id: 'utilities', name: 'Utilities', sub: ['WiFi', 'Electricity + Gas'] },
     { id: 'subscriptions', name: 'Subscriptions', sub: [] }
   ];
+  const CATEGORY_COLORS = {
+    food: '#FF8C42',
+    travel: '#3B82F6',
+    utilities: '#10B981',
+    rent: '#6366F1',
+    fun_money: '#F59E0B',
+    loan_payment: '#EF4444',
+    subscriptions: '#8B5CF6',
+    necessities: '#14B8A6'
+  };
+  let spendingChart = null;
+  let activeCategoryFilter = '';
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
   function now() { return new Date().toISOString(); }
@@ -607,6 +635,7 @@
         }
         document.getElementById('modalAddSetUseSet').checked = false;
         document.getElementById('modalAddSet').classList.remove('hidden');
+        updateBodyModalOpen();
       }
       if (clearBtn) {
         const type = clearBtn.getAttribute('data-type');
@@ -628,7 +657,7 @@
     });
   });
 
-  document.getElementById('modalAddSetCancel').onclick = () => document.getElementById('modalAddSet').classList.add('hidden');
+  document.getElementById('modalAddSetCancel').onclick = () => { document.getElementById('modalAddSet').classList.add('hidden'); updateBodyModalOpen(); };
   document.getElementById('modalAddSetOk').onclick = function() {
     const cents = parseCents(document.getElementById('modalAddSetAmount').value);
     const useSet = document.getElementById('modalAddSetUseSet').checked;
@@ -644,16 +673,18 @@
       renderSnapshot();
     }
     document.getElementById('modalAddSet').classList.add('hidden');
+    updateBodyModalOpen();
   };
 
   function confirmModal(title, msg, onConfirm) {
     document.getElementById('modalConfirmTitle').textContent = title;
     document.getElementById('modalConfirmMsg').textContent = msg;
     document.getElementById('modalConfirm').classList.remove('hidden');
+    updateBodyModalOpen();
     const ok = document.getElementById('modalConfirmOk');
-    ok.onclick = function() { onConfirm(); document.getElementById('modalConfirm').classList.add('hidden'); };
+    ok.onclick = function() { onConfirm(); document.getElementById('modalConfirm').classList.add('hidden'); updateBodyModalOpen(); };
   }
-  document.getElementById('modalConfirmCancel').onclick = () => document.getElementById('modalConfirm').classList.add('hidden');
+  document.getElementById('modalConfirmCancel').onclick = () => { document.getElementById('modalConfirm').classList.add('hidden'); updateBodyModalOpen(); };
 
   // Pending
   let pendingKind = 'in';
@@ -663,6 +694,7 @@
     document.getElementById('modalPendingLabel').value = '';
     document.getElementById('modalPendingAmount').value = '';
     document.getElementById('modalPending').classList.remove('hidden');
+    updateBodyModalOpen();
   };
   document.getElementById('addPendingOutBtn').onclick = function() {
     pendingKind = 'out';
@@ -670,8 +702,9 @@
     document.getElementById('modalPendingLabel').value = '';
     document.getElementById('modalPendingAmount').value = '';
     document.getElementById('modalPending').classList.remove('hidden');
+    updateBodyModalOpen();
   };
-  document.getElementById('modalPendingCancel').onclick = () => document.getElementById('modalPending').classList.add('hidden');
+  document.getElementById('modalPendingCancel').onclick = () => { document.getElementById('modalPending').classList.add('hidden'); updateBodyModalOpen(); };
   document.getElementById('modalPendingOk').onclick = function() {
     const label = document.getElementById('modalPendingLabel').value.trim() || 'Item';
     const amountCents = parseCents(document.getElementById('modalPendingAmount').value);
@@ -683,6 +716,7 @@
     save(data);
     renderSnapshot();
     document.getElementById('modalPending').classList.add('hidden');
+    updateBodyModalOpen();
   };
 
   document.getElementById('pendingInList').addEventListener('click', function(e) {
@@ -698,24 +732,26 @@
   document.getElementById('clearPendingOutBtn').onclick = () => confirmModal('Clear all pending outbound?', 'Remove all items.', () => { data.pendingOut = []; save(data); renderSnapshot(); });
 
   // Add bank / card
-  document.getElementById('addBankBtn').onclick = () => { document.getElementById('modalBankName').value = 'Bank'; document.getElementById('modalBank').classList.remove('hidden'); };
-  document.getElementById('modalBankCancel').onclick = () => document.getElementById('modalBank').classList.add('hidden');
+  document.getElementById('addBankBtn').onclick = () => { document.getElementById('modalBankName').value = 'Bank'; document.getElementById('modalBank').classList.remove('hidden'); updateBodyModalOpen(); };
+  document.getElementById('modalBankCancel').onclick = () => { document.getElementById('modalBank').classList.add('hidden'); updateBodyModalOpen(); };
   document.getElementById('modalBankOk').onclick = function() {
     const name = document.getElementById('modalBankName').value.trim() || 'Bank';
     data.banks.push({ id: uid(), name, balanceCents: 0, updatedAt: now() });
     save(data);
     renderSnapshot();
     document.getElementById('modalBank').classList.add('hidden');
+    updateBodyModalOpen();
   };
 
-  document.getElementById('addCardBtn').onclick = () => { document.getElementById('modalCardName').value = ''; document.getElementById('modalCard').classList.remove('hidden'); };
-  document.getElementById('modalCardCancel').onclick = () => document.getElementById('modalCard').classList.add('hidden');
+  document.getElementById('addCardBtn').onclick = () => { document.getElementById('modalCardName').value = ''; document.getElementById('modalCard').classList.remove('hidden'); updateBodyModalOpen(); };
+  document.getElementById('modalCardCancel').onclick = () => { document.getElementById('modalCard').classList.add('hidden'); updateBodyModalOpen(); };
   document.getElementById('modalCardOk').onclick = function() {
     const name = document.getElementById('modalCardName').value.trim() || 'Card';
     data.cards.push({ id: uid(), name, balanceCents: 0, updatedAt: now() });
     save(data);
     renderSnapshot();
     document.getElementById('modalCard').classList.add('hidden');
+    updateBodyModalOpen();
   };
 
   // Spending: category select
@@ -874,9 +910,10 @@
     updateTargetDebug();
     modalPurchaseOkBtn.disabled = false;
     document.getElementById('modalPurchase').classList.remove('hidden');
+    updateBodyModalOpen();
   };
 
-  document.getElementById('modalPurchaseCancel').onclick = () => document.getElementById('modalPurchase').classList.add('hidden');
+  document.getElementById('modalPurchaseCancel').onclick = () => { document.getElementById('modalPurchase').classList.add('hidden'); updateBodyModalOpen(); };
   document.getElementById('modalPurchaseOk').onclick = function() {
     if (modalPurchaseOkBtn.disabled) return;
     const title = document.getElementById('modalPurchaseTitle').value.trim() || 'Purchase';
@@ -921,6 +958,7 @@
     renderSpending();
     renderSnapshot();
     document.getElementById('modalPurchase').classList.add('hidden');
+    updateBodyModalOpen();
   };
 
   function renderSpending() {
@@ -931,6 +969,7 @@
     const filtered = data.purchases.filter(p => {
       const purchaseDate = parseLocalDateKey(p.dateISO);
       if (isNaN(purchaseDate.getTime())) return false;
+      if (activeCategoryFilter && p.category !== activeCategoryFilter) return false;
       return purchaseDate >= start && purchaseDate < end;
     });
     const totalCents = filtered.reduce((s, p) => s + p.amountCents, 0);
@@ -954,12 +993,102 @@
       catTotalsEl.appendChild(div);
     });
 
+    // Build dataset grouped by main category for chart.
+    const byMain = {};
+    filtered.forEach(p => {
+      const cat = CATEGORIES.find(c => c.id === p.category);
+      const id = cat ? cat.id : p.category;
+      const name = cat ? cat.name : p.category;
+      if (!byMain[id]) byMain[id] = { id, name, cents: 0 };
+      byMain[id].cents += p.amountCents;
+    });
+    const chartLabels = [];
+    const chartValues = [];
+    const chartColors = [];
+    Object.keys(byMain).sort((a, b) => byMain[b].cents - byMain[a].cents).forEach(id => {
+      const v = byMain[id];
+      chartLabels.push(v.name);
+      chartValues.push(v.cents);
+      chartColors.push(CATEGORY_COLORS[id] || '#64748b');
+    });
+    const chartContainer = document.getElementById('spendingChart');
+    const chartSummaryEl = document.getElementById('spendingChartSummary');
+    if (spendingChart) {
+      spendingChart.destroy();
+      spendingChart = null;
+    }
+    if (chartContainer && chartValues.length) {
+      const total = chartValues.reduce((s, v) => s + v, 0);
+      const ctx = chartContainer.getContext('2d');
+      const offsets = chartLabels.map(label => {
+        const cat = CATEGORIES.find(c => c.name === label);
+        const id = cat ? cat.id : null;
+        return activeCategoryFilter && id === activeCategoryFilter ? 12 : 0;
+      });
+      spendingChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            data: chartValues,
+            backgroundColor: chartColors,
+            borderColor: '#020617',
+            borderWidth: 1,
+            offset: offsets
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const value = ctx.parsed || 0;
+                  const pct = total ? ((value / total) * 100).toFixed(1) : '0.0';
+                  return ctx.label + ': ' + pct + '%';
+                }
+              }
+            }
+          },
+          onClick: function(evt, elements) {
+            if (!elements.length) return;
+            const index = elements[0].index;
+            const label = chartLabels[index];
+            const cat = CATEGORIES.find(c => c.name === label);
+            const id = cat ? cat.id : null;
+            if (!id) return;
+            if (activeCategoryFilter === id) {
+              activeCategoryFilter = '';
+            } else {
+              activeCategoryFilter = id;
+            }
+            renderSpending();
+          }
+        }
+      });
+      if (chartSummaryEl) {
+        chartSummaryEl.innerHTML = '';
+        chartLabels.forEach((label, idx) => {
+          const value = chartValues[idx];
+          const pct = total ? Math.round((value / total) * 100) : 0;
+          const row = document.createElement('div');
+          row.textContent = label + ' ' + pct + '%';
+          chartSummaryEl.appendChild(row);
+        });
+      }
+    } else if (chartSummaryEl) {
+      chartSummaryEl.innerHTML = '';
+    }
+
     const listEl = document.getElementById('purchaseList');
     listEl.innerHTML = '';
     const sorted = filtered.slice().sort((a, b) => parseLocalDateKey(b.dateISO) - parseLocalDateKey(a.dateISO));
     sorted.forEach(p => {
       const cat = CATEGORIES.find(c => c.id === p.category);
-      const catName = (cat ? cat.name : p.category) + (p.subcategory ? ' → ' + p.subcategory : '');
+      const baseName = cat ? cat.name : p.category;
+      const catName = p.subcategory ? (baseName + ': ' + p.subcategory) : baseName;
       const div = document.createElement('div');
       div.className = 'purchase-item card';
       div.innerHTML = '<div class="title">' + escapeHtml(p.title) + ' ' + formatCents(p.amountCents) + '</div><div class="meta">' + p.dateISO.slice(0, 10) + ' · ' + escapeHtml(catName) + '</div>';
@@ -1038,6 +1167,16 @@
     save(data);
     renderSnapshot();
     renderSpending();
+  });
+
+  function updateBodyModalOpen() {
+    const anyOpen = Array.from(document.querySelectorAll('.modal-overlay')).some(el => !el.classList.contains('hidden'));
+    document.body.classList.toggle('modal-open', anyOpen);
+  }
+
+  document.querySelectorAll('.modal').forEach(function(m) {
+    m.addEventListener('click', function(e) { e.stopPropagation(); });
+    m.addEventListener('touchstart', function(e) { e.stopPropagation(); });
   });
 
   renderSnapshot();
