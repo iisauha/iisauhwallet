@@ -85,14 +85,14 @@
     .btn-dashed { border: 1px dashed var(--border); color: var(--muted); width: 100%; margin-top: 8px; }
     .summary {
       position: fixed;
-      bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+      bottom: 0;
       left: 0;
       right: 0;
       background: var(--surface);
       border-top: 1px solid var(--border);
-      box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.35);
       padding: 10px 16px;
-      padding-bottom: calc(10px + var(--safe-bottom));
+      padding-bottom: calc(10px + var(--tabbar-h) + var(--safe-bottom));
       z-index: 9999;
     }
     .summary-compact { display: grid; gap: 6px; }
@@ -228,7 +228,7 @@
   <div id="snapshotSummary" class="summary">
     <div class="summary-compact">
       <div class="summary-kv"><span class="k">Net Cash</span><span class="v" id="sumNetCash">$0</span></div>
-      <div class="summary-kv"><span class="k">Total Current CC Balance</span><span class="v" id="sumCc">$0</span></div>
+      <div class="summary-kv"><span class="k">Total Current Credit Card Balance</span><span class="v" id="sumCc">$0</span></div>
       <div class="summary-kv"><span class="k">Total Pending Outbound</span><span class="v" id="sumPendingOut">$0</span></div>
       <div class="summary-kv"><span class="k">Total Pending Inbound</span><span class="v" id="sumPendingIn">$0</span></div>
       <div class="summary-kv final-net-cash"><span class="k">Final Net Cash</span><span class="v" id="sumFinalNetCash">$0</span></div>
