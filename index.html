@@ -1389,7 +1389,8 @@
       everyInput.value = '';
     }
 
-    const todayKey = toLocalDateKey(new Date());
+    const today = new Date();
+    const todayKey = toLocalDateKey(today);
     startInput.value = (recurring && recurring.startDate) || todayKey;
     endInput.value = (recurring && recurring.endDate) || '';
     activeCheck.checked = recurring ? !!recurring.active : true;
@@ -1398,6 +1399,7 @@
     if (lastDayCheck) lastDayCheck.checked = useLastDay;
     if (lastDayHint) lastDayHint.classList.toggle('hidden', !useLastDay);
     if (useLastDay) {
+      // When editing an existing last-day rule, respect its stored startDate month.
       startInput.disabled = true;
       startInput.style.opacity = '0.6';
     } else {
@@ -1503,6 +1505,31 @@
       updateRecurringSaveState();
     };
 
+    if (lastDayCheck) {
+      lastDayCheck.onchange = function() {
+        const checked = !!lastDayCheck.checked;
+        if (lastDayHint) lastDayHint.classList.toggle('hidden', !checked);
+        if (checked) {
+          // Derive effective start date as last day of the current month.
+          const nowLocal = new Date();
+          const lastOfMonth = new Date(nowLocal.getFullYear(), nowLocal.getMonth() + 1, 0);
+          const key = toLocalDateKey(lastOfMonth);
+          startInput.value = key;
+          startInput.disabled = true;
+          startInput.style.opacity = '0.6';
+          console.log('[recurring] last-day mode enabled, effectiveStartDate =', key);
+        } else {
+          startInput.disabled = false;
+          startInput.style.opacity = '';
+          if (!startInput.value) {
+            startInput.value = todayKey;
+          }
+          console.log('[recurring] last-day mode disabled, startDate =', startInput.value);
+        }
+        updateRecurringSaveState();
+      };
+    }
+
     nameInput.oninput = amountInput.oninput = startInput.onchange = endInput.onchange = notesInput.oninput = function() {
       updateRecurringSaveState();
     };
@@ -1520,8 +1547,19 @@
         const n = parseInt(everyInput.value || '0', 10);
         if (!(n > 0)) return { ok: false, msg: 'Every N days must be at least 1.' };
       }
-      const start = startInput.value;
-      if (!start) return { ok: false, msg: 'Start date is required.' };
+      const useLastDay = !!(lastDayCheck && lastDayCheck.checked);
+      let start = startInput.value;
+      if (!start) {
+        if (useLastDay) {
+          // Derive a valid start date automatically for validation when last-day mode is on.
+          const nowLocal = new Date();
+          const lastOfMonth = new Date(nowLocal.getFullYear(), nowLocal.getMonth() + 1, 0);
+          start = toLocalDateKey(lastOfMonth);
+          startInput.value = start;
+        } else {
+          return { ok: false, msg: 'Start date is required.' };
+        }
+      }
       if (endInput.value) {
         const s = parseLocalDateKey(start);
         const e = parseLocalDateKey(endInput.value);
@@ -1583,7 +1621,7 @@
     const frequency = document.getElementById('modalRecurringFrequency').value || 'monthly';
     const everyStr = document.getElementById('modalRecurringEveryNDays').value;
     const everyNDays = frequency === 'custom' ? Math.max(1, parseInt(everyStr || '1', 10)) : undefined;
-    const startDate = document.getElementById('modalRecurringStart').value;
+    let startDate = document.getElementById('modalRecurringStart').value;
     const endDate = document.getElementById('modalRecurringEnd').value || undefined;
     const active = document.getElementById('modalRecurringActive').checked;
     const applyToSnapshot = document.getElementById('modalRecurringApplyToSnapshot').checked;
@@ -1600,9 +1638,9 @@
     if (!(amountCents > 0)) failures.push('Amount must be greater than $0');
     if (!category) failures.push('Category is required');
     if (!frequency) failures.push('Frequency is required');
-    if (!startDate) failures.push('Start date is required');
+    if (!startDate && !useLastDayOfMonth) failures.push('Start date is required');
     if (frequency === 'custom' && !(everyNDays > 0)) failures.push('Every N days must be at least 1');
-    if (endDate) {
+    if (endDate && startDate) {
       const s = parseLocalDateKey(startDate);
       const e = parseLocalDateKey(endDate);
       if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e < s) failures.push('End date must be after start date');
@@ -1612,7 +1650,7 @@
       if ((paymentSource === 'card' || paymentSource === 'bank') && !paymentTargetId) failures.push('Select a specific card/bank target');
     }
     if (failures.length) {
-      console.log('[recurring] validation failed:', failures);
+      console.log('[recurring] validation failed:', { failures, useLastDayOfMonth, rawStartDate: document.getElementById('modalRecurringStart').value });
       if (errEl) {
         errEl.textContent = failures[0] + '.';
         errEl.classList.remove('hidden');
@@ -1785,6 +1823,8 @@
     if (isNaN(today.getTime())) return;
     let mutated = false;
 
+    console.log('[recurring] processing all recurring bills up to today =', todayKey);
+
     data.recurring.forEach(r => {
       if (!r || !r.active) return;
       const start = parseLocalDateKey(r.startDate);
@@ -1797,6 +1837,14 @@
       } else {
         current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       }
+      console.log('[recurring] bill start', {
+        id: r.id,
+        name: r.name,
+        startDate: r.startDate,
+        useLastDayOfMonth: !!r.useLastDayOfMonth,
+        frequency: freq,
+        effectiveFirstDue: toLocalDateKey(current)
+      });
       while (current <= today && (!end || current <= end)) {
         const dateKey = toLocalDateKey(current);
         const regKey = (r.id || '') + ':' + dateKey;
@@ -1818,11 +1866,14 @@
             if (r.paymentTargetId) purchase.paymentTargetId = r.paymentTargetId;
           }
           data.purchases.push(purchase);
+          console.log('[recurring] posting occurrence', { recurringId: r.id, dateKey, regKey, applyToSnapshot: !!purchase.applyToSnapshot });
           if (purchase.applyToSnapshot) {
             applyPurchaseToSnapshot(purchase);
           }
           data.recurringPosted[regKey] = true;
           mutated = true;
+        } else {
+          console.log('[recurring] occurrence already posted', { recurringId: r.id, dateKey, regKey });
         }
 
         if (freq === 'weekly') {
