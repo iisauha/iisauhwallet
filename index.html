@@ -745,13 +745,19 @@
   const targetSelect = document.getElementById('modalPurchaseTarget');
   const applyError = document.getElementById('modalPurchaseApplyError');
   const modalPurchaseOkBtn = document.getElementById('modalPurchaseOk');
+  let currentPaymentTargetId = '';
 
   function updatePurchaseTargetDropdown() {
     const source = paymentSourceSelect.value;
-    targetSelect.innerHTML = '<option value="">— Select —</option>';
+    targetSelect.innerHTML = '';
     targetWrap.classList.add('hidden');
     if (source === 'card') {
       targetLabel.textContent = 'Select Card';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.disabled = true;
+      placeholder.textContent = 'Select a card…';
+      targetSelect.appendChild(placeholder);
       data.cards.forEach(c => {
         const o = document.createElement('option');
         o.value = c.id;
@@ -761,6 +767,11 @@
       targetWrap.classList.remove('hidden');
     } else if (source === 'bank') {
       targetLabel.textContent = 'Select Bank';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.disabled = true;
+      placeholder.textContent = 'Select a bank…';
+      targetSelect.appendChild(placeholder);
       data.banks.forEach(b => {
         const o = document.createElement('option');
         o.value = b.id;
@@ -769,6 +780,10 @@
       });
       targetWrap.classList.remove('hidden');
     }
+    // Re-apply current selection if still present.
+    if (currentPaymentTargetId) {
+      targetSelect.value = currentPaymentTargetId;
+    }
   }
 
   function validateApplyToSnapshot() {
@@ -776,7 +791,7 @@
     const source = paymentSourceSelect.value;
     if (!source) return false;
     if (source === 'cash') return true;
-    return !!targetSelect.value;
+    return !!currentPaymentTargetId;
   }
 
   function updateApplyUI() {
@@ -787,7 +802,6 @@
       applyError.classList.add('hidden');
       applyError.textContent = '';
     } else {
-      updatePurchaseTargetDropdown();
       const valid = validateApplyToSnapshot();
       if (!valid) {
         applyError.classList.remove('hidden');
@@ -800,12 +814,23 @@
     modalPurchaseOkBtn.disabled = on && !validateApplyToSnapshot();
   }
 
-  applyCheck.addEventListener('change', updateApplyUI);
-  paymentSourceSelect.addEventListener('change', function() {
-    targetSelect.value = '';
+  applyCheck.addEventListener('change', function() {
+    if (applyCheck.checked) {
+      currentPaymentTargetId = '';
+      updatePurchaseTargetDropdown();
+    }
     updateApplyUI();
   });
-  targetSelect.addEventListener('change', updateApplyUI);
+  paymentSourceSelect.addEventListener('change', function() {
+    currentPaymentTargetId = '';
+    updatePurchaseTargetDropdown();
+    updateApplyUI();
+  });
+  targetSelect.addEventListener('change', function(e) {
+    currentPaymentTargetId = e.target.value;
+    console.log('selected card id:', e.target.value);
+    updateApplyUI();
+  });
 
   let editingPurchaseId = null;
   document.getElementById('addPurchaseBtn').onclick = function() {
@@ -820,7 +845,8 @@
     applyWrap.classList.remove('hidden');
     applyCheck.checked = false;
     paymentSourceSelect.value = '';
-    targetSelect.innerHTML = '<option value="">— Select —</option>';
+    currentPaymentTargetId = '';
+    targetSelect.innerHTML = '';
     applySection.classList.add('hidden');
     targetWrap.classList.add('hidden');
     applyError.classList.add('hidden');
@@ -842,11 +868,10 @@
     const isEdit = !!editingPurchaseId;
     let applyToSnapshot = false;
     let paymentSource = null;
-    let paymentTargetId = null;
     if (!isEdit && applyCheck.checked) {
       applyToSnapshot = true;
       paymentSource = paymentSourceSelect.value || null;
-      paymentTargetId = (paymentSource === 'card' || paymentSource === 'bank') ? targetSelect.value || null : null;
+      var paymentTargetId = (paymentSource === 'card' || paymentSource === 'bank') ? (currentPaymentTargetId || null) : null;
     }
     if (editingPurchaseId) {
       const p = data.purchases.find(x => x.id === editingPurchaseId);
