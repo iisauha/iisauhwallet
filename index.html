@@ -164,7 +164,7 @@
       background: var(--green-light);
       color: var(--green);
     }
-    .pending-item .del {
+    .del {
       background: var(--red-light);
       color: var(--red);
     }
@@ -173,7 +173,7 @@
     .category-block { margin-bottom: 20px; }
     .category-block h4 { margin: 0 0 8px 0; font-size: 1rem; color: var(--accent); }
     .category-block .sub { margin-left: 12px; color: var(--muted); font-size: 0.95rem; }
-    .purchase-item { padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .purchase-item { padding: 12px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
     .purchase-item:last-child { border-bottom: none; }
     .purchase-item .title { font-weight: 500; }
     .purchase-item .meta { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
@@ -271,8 +271,8 @@
     <p class="section-title">Export CSV</p>
     <div class="settings-section">
       <label style="display:block; font-size:0.9rem; color:var(--muted); margin-bottom:6px;">Month</label>
-      <input type="month" id="exportMonth" class="btn" style="width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:10px 14px; border-radius:10px; font-size:1rem;" />
-      <button type="button" class="btn btn-secondary" id="exportCsvBtn" style="margin-top:8px;">Export CSV</button>
+      <input type="month" id="exportMonth" class="btn" style="width:60%; max-width:260px; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:10px; font-size:0.95rem;" />
+      <button type="button" class="btn btn-secondary" id="exportCsvBtn" style="margin-top:8px; width:100%;">Export CSV</button>
     </div>
     <p class="section-title" style="margin-top: 24px;">Manage Categories</p>
     <div id="manageCategories" class="settings-section"></div>
@@ -856,7 +856,7 @@
       card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">' + formatCents(b.balanceCents) + '</span></div>' +
         '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="bank" data-id="' + b.id + '">Add / Set</button>' +
         '<button type="button" class="btn btn-secondary clear-btn" data-type="bank" data-id="' + b.id + '">Clear</button>' +
-        '<button type="button" class="del" data-type="bank" data-id="' + b.id + '" aria-label="Delete bank account">Delete</button></div>';
+        '<button type="button" class="btn del" data-type="bank" data-id="' + b.id + '" aria-label="Delete bank account">Delete</button></div>';
       bankList.appendChild(card);
     });
 
@@ -923,9 +923,9 @@
 
     if (elCash) elCash.textContent = formatCents(cashInHand);
     if (elNet) { elNet.textContent = formatCents(netCash); setSignClass(elNet, netCash); }
-    if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, ccDebt); }
+    if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, -1); }
     if (elCredit) { elCredit.textContent = formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
-    if (elOut) { elOut.textContent = formatCents(pendingOutTotal); setSignClass(elOut, pendingOutTotal); }
+    if (elOut) { elOut.textContent = formatCents(pendingOutTotal); setSignClass(elOut, -1); }
     if (elIn) { elIn.textContent = formatCents(pendingInTotal); setSignClass(elIn, pendingInTotal); }
     if (elFinal) {
       elFinal.textContent = formatCents(finalNetCash);
@@ -2429,6 +2429,7 @@
       delBtn.className = 'del';
       delBtn.textContent = 'Delete';
       delBtn.style.marginTop = '8px';
+      delBtn.style.marginRight = '4px';
       delBtn.onclick = function(ev) {
         ev.stopPropagation();
         const applied = !!p.applyToSnapshot && !!p.paymentSource;
