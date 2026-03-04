@@ -1115,7 +1115,48 @@
       delBtn.className = 'del';
       delBtn.textContent = 'Delete';
       delBtn.style.marginTop = '8px';
-      delBtn.onclick = function(ev) { ev.stopPropagation(); confirmModal('Delete purchase?', p.title, () => { data.purchases = data.purchases.filter(x => x.id !== p.id); save(data); renderSpending(); }); };
+      delBtn.onclick = function(ev) {
+        ev.stopPropagation();
+        const applied = !!p.applyToSnapshot && !!p.paymentSource;
+        const msg = applied
+          ? p.title + '\n\nDeleting will also reverse the Snapshot balance update.'
+          : p.title;
+        confirmModal('Delete purchase?', msg, () => {
+          if (applied) {
+            const amount = typeof p.amountCents === 'number' ? p.amountCents : 0;
+            const src = p.paymentSource;
+            let targetMissing = false;
+            if ((src === 'card' || src === 'credit_card') && p.paymentTargetId) {
+              const card = data.cards.find(c => c.id === p.paymentTargetId);
+              if (card) {
+                card.balanceCents = (card.balanceCents || 0) - amount;
+                card.updatedAt = now();
+              } else {
+                targetMissing = true;
+              }
+            } else if (src === 'bank' && p.paymentTargetId) {
+              const bank = data.banks.find(b => b.id === p.paymentTargetId);
+              if (bank) {
+                bank.balanceCents = (bank.balanceCents || 0) + amount;
+                bank.updatedAt = now();
+              } else {
+                targetMissing = true;
+              }
+            } else if (src === 'cash') {
+              const next = getCashInHandCents() + amount;
+              setCashInHandCents(next);
+              data.cashInHandCents = next;
+            }
+            if (targetMissing) {
+              alert('Could not reverse Snapshot because the target account no longer exists.');
+            }
+          }
+          data.purchases = data.purchases.filter(x => x.id !== p.id);
+          save(data);
+          renderSpending();
+          renderSnapshot();
+        });
+      };
       div.appendChild(delBtn);
       listEl.appendChild(div);
     });
