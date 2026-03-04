@@ -84,6 +84,12 @@
     .section-header:hover {
       background: rgba(148, 163, 184, 0.12);
     }
+    #bankHeader,
+    #cardHeader {
+      font-size: 1.2rem;
+      padding: 12px 8px;
+      min-height: 52px;
+    }
     .icon-btn {
       border: none;
       background: transparent;
@@ -233,10 +239,10 @@
 <body>
   <div id="snapshotContent" class="tab-panel active">
     <div class="section-header" id="bankHeader">
-      <span>Cash</span>
+      <span>Cash — <span id="cashHeaderTotal">$0.00</span></span>
       <span style="margin-left:auto; display:flex; align-items:center; gap:8px;">
         <button type="button" class="icon-btn" id="zeroBalancesToggle" aria-label="Toggle zero-balance accounts" title="Toggle zero-balance accounts">
-          <span id="zeroBalancesIcon">Hide $0</span>
+          <span id="zeroBalancesIcon">Show $0 balances</span>
         </button>
         <span class="chevron" id="bankChevron">▾</span>
       </span>
@@ -244,7 +250,10 @@
     <div id="bankList"></div>
     <button type="button" class="btn btn-dashed" id="addBankBtn">+ Add Bank Account</button>
 
-    <div class="section-header" id="cardHeader" style="margin-top: 24px;"><span>Credit Cards</span><span class="chevron" id="cardChevron">▾</span></div>
+    <div class="section-header" id="cardHeader" style="margin-top: 24px;">
+      <span>Credit Cards — <span id="cardHeaderTotal">$0.00</span></span>
+      <span class="chevron" id="cardChevron">▾</span>
+    </div>
     <div id="cardList"></div>
     <button type="button" class="btn btn-dashed" id="addCardBtn">+ Add Credit Card</button>
 
@@ -952,6 +961,18 @@
   let showZeroBalances = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
   let pendingInboundCollapsed = loadBoolPref(PENDING_IN_COLLAPSED_KEY, false);
   let pendingOutboundCollapsed = loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false);
+  let lastHasAnyZeroBalance = false;
+
+  function updateZeroBalancesToggleText() {
+    const icon = document.getElementById('zeroBalancesIcon');
+    const btn = document.getElementById('zeroBalancesToggle');
+    if (!icon || !btn) return;
+    const hasAnyZero = !!lastHasAnyZeroBalance;
+    let label = 'Show $0 balances';
+    if (hasAnyZero && showZeroBalances) label = 'Hide $0 balances';
+    icon.textContent = label;
+    btn.setAttribute('aria-pressed', showZeroBalances ? 'true' : 'false');
+  }
 
   function renderSnapshot() {
     const bankList = document.getElementById('bankList');
@@ -962,8 +983,12 @@
     ensurePhysicalCashBank(data);
     const sortedBanks = [...data.banks].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
     const sortedCards = [...data.cards].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
+    lastHasAnyZeroBalance =
+      sortedBanks.some(b => (b.balanceCents || 0) === 0) ||
+      sortedCards.some(c => (c.balanceCents || 0) === 0);
     const banksToRender = showZeroBalances ? sortedBanks : sortedBanks.filter(b => (b.balanceCents || 0) !== 0);
     const cardsToRender = showZeroBalances ? sortedCards : sortedCards.filter(c => (c.balanceCents || 0) !== 0);
+    updateZeroBalancesToggleText();
 
     if (banksToRender.length) {
       banksToRender.forEach(b => {
@@ -1039,6 +1064,8 @@
     const finalNetCash = netCash + pendingInTotal - pendingOutTotal - ccDebt + ccCredit;
 
     const elCash = document.getElementById('cashInHandAmount');
+    const elCashHeaderTotal = document.getElementById('cashHeaderTotal');
+    const elCardHeaderTotal = document.getElementById('cardHeaderTotal');
     const elNet = document.getElementById('sumNetCash');
     const elDebt = document.getElementById('sumCcDebt');
     const elCredit = document.getElementById('sumCcCredit');
@@ -1060,6 +1087,8 @@
     }
 
     if (elCash) elCash.textContent = formatCents(findPhysicalCashBank(data) ? findPhysicalCashBank(data).balanceCents : 0);
+    if (elCashHeaderTotal) elCashHeaderTotal.textContent = formatCents(netCash);
+    if (elCardHeaderTotal) elCardHeaderTotal.textContent = formatCents(ccDebt);
     if (elNet) { elNet.textContent = formatCents(netCash); setSignClass(elNet, netCash); }
     if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, -1); }
     if (elCredit) { elCredit.textContent = formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
@@ -2059,16 +2088,12 @@
     const btn = document.getElementById('zeroBalancesToggle');
     const icon = document.getElementById('zeroBalancesIcon');
     if (!btn || !icon) return;
-    function sync() {
-      icon.textContent = showZeroBalances ? 'Show all' : 'Hide $0';
-      btn.setAttribute('aria-pressed', showZeroBalances ? 'true' : 'false');
-    }
-    sync();
+    updateZeroBalancesToggleText();
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       showZeroBalances = !showZeroBalances;
       try { localStorage.setItem(SHOW_ZERO_BALANCES_KEY, showZeroBalances ? '1' : '0'); } catch (_) {}
-      sync();
+      updateZeroBalancesToggleText();
       renderSnapshot();
     });
   })();
