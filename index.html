@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0b0b0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>LedgerLite</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #0ea5e9;
+      --danger: #dc2626;
+      --safe-bottom: env(safe-area-inset-bottom);
+      --safe-top: env(safe-area-inset-top);
+      --tabbar-h: 56px;
+    }
+    html { -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding-top: var(--safe-top);
+      padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+    }
+    .tabs {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding-bottom: var(--safe-bottom);
+      z-index: 100;
+    }
+    .tab {
+      flex: 1;
+      padding: 14px 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab.active { color: var(--accent); }
+    .tab-panel { display: none; padding: 16px; padding-bottom: 24px; }
+    .tab-panel.active { display: block; }
+    .section-title { font-size: 1.125rem; font-weight: 600; color: var(--muted); margin: 0 0 12px 0; }
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+    }
+    .row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .row .name { font-weight: 600; flex: 1; min-width: 0; }
+    .row .amount { font-variant-numeric: tabular-nums; font-size: 1.1rem; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+    .btn {
+      min-height: 44px;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary { background: var(--accent); color: white; flex: 1; }
+    .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
+    .btn-dashed { border: 1px dashed var(--border); color: var(--muted); width: 100%; margin-top: 8px; }
+    .summary {
+      position: fixed;
+      bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 -10px 24px rgba(0,0,0,0.35);
+      padding: 12px 16px;
+      padding-bottom: calc(12px + 8px);
+      z-index: 90;
+    }
+    .summary-compact { display: grid; gap: 10px; }
+    .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .summary-kv .k { color: var(--muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; }
+    .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1.6rem; font-weight: 800; }
+    .summary-kv.small .v { font-size: 1.2rem; font-weight: 700; }
+    .summary-kv.net-position .v { color: var(--accent); }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 200;
+      padding: 16px;
+      padding-bottom: calc(80px + var(--safe-bottom));
+    }
+    .modal {
+      width: 100%;
+      max-width: 400px;
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .modal h3 { margin: 0 0 16px 0; font-size: 1.25rem; }
+    .modal .field { margin-bottom: 14px; }
+    .modal label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+    .modal input, .modal select, .modal textarea {
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 14px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+    }
+    .modal textarea { min-height: 80px; resize: vertical; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-actions .btn { flex: 1; }
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+    .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+    .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .pending-item:last-child { border-bottom: none; }
+    .pending-item .del { color: var(--danger); padding: 8px; font-size: 0.9rem; cursor: pointer; }
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .filter-bar select { min-height: 44px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; }
+    .category-block { margin-bottom: 20px; }
+    .category-block h4 { margin: 0 0 8px 0; font-size: 1rem; color: var(--accent); }
+    .category-block .sub { margin-left: 12px; color: var(--muted); font-size: 0.95rem; }
+    .purchase-item { padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .purchase-item:last-child { border-bottom: none; }
+    .purchase-item .title { font-weight: 500; }
+    .purchase-item .meta { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+    .settings-section { margin-bottom: 24px; }
+    .settings-section .btn { width: 100%; margin-top: 8px; }
+    .footer { margin-top: 32px; padding: 16px; font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; }
+    .hidden { display: none !important; }
+    #snapshotContent { padding-bottom: 24px; }
+    #spendingContent { padding-bottom: 24px; }
+  </style>
+</head>
+<body>
+  <div id="snapshotContent" class="tab-panel active">
+    <p class="section-title">Bank Accounts</p>
+    <div id="bankList"></div>
+    <button type="button" class="btn btn-dashed" id="addBankBtn">+ Add Bank Account</button>
+
+    <p class="section-title" style="margin-top: 24px;">Physical Cash in Hand</p>
+    <div id="cashInHandCard" class="card">
+      <div class="row"><span class="name">Physical Cash in Hand</span><span class="amount" id="cashInHandAmount">$0.00</span></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary addset-btn" data-type="cash" data-id="cash">Add / Set</button>
+        <button type="button" class="btn btn-secondary clear-btn" data-type="cash" data-id="cash">Clear</button>
+      </div>
+    </div>
+
+    <p class="section-title" style="margin-top: 24px;">Credit Cards</p>
+    <div id="cardList"></div>
+    <button type="button" class="btn btn-dashed" id="addCardBtn">+ Add Credit Card</button>
+
+    <p class="section-title" style="margin-top: 24px;">Pending Inbound</p>
+    <div id="pendingInList"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-dashed" id="addPendingInBtn">+ Add item</button>
+      <button type="button" class="btn btn-danger" id="clearPendingInBtn">Clear All</button>
+    </div>
+
+    <p class="section-title" style="margin-top: 24px;">Pending Outbound</p>
+    <div id="pendingOutList"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-dashed" id="addPendingOutBtn">+ Add item</button>
+      <button type="button" class="btn btn-danger" id="clearPendingOutBtn">Clear All</button>
+    </div>
+  </div>
+
+  <div id="spendingContent" class="tab-panel">
+    <div class="filter-bar">
+      <select id="spendingFilter">
+        <option value="this_month">This Month</option>
+        <option value="last_month">Last Month</option>
+        <option value="all_time">All Time</option>
+        <option value="custom">Custom</option>
+      </select>
+      <span id="customRangeSpan" class="hidden">
+        <input type="date" id="rangeStart" />
+        <input type="date" id="rangeEnd" />
+      </span>
+    </div>
+    <p class="section-title">This period total</p>
+    <div class="card"><span id="periodTotal" class="amount">$0.00</span></div>
+    <p class="section-title">By category</p>
+    <div id="categoryTotals"></div>
+    <p class="section-title">Purchases</p>
+    <div id="purchaseList"></div>
+    <button type="button" class="btn btn-primary" id="addPurchaseBtn" style="margin-top: 16px; width: 100%;">+ Add Purchase</button>
+  </div>
+
+  <div id="settingsContent" class="tab-panel">
+    <p class="section-title">Backup</p>
+    <div class="settings-section">
+      <button type="button" class="btn btn-secondary" id="exportBtn">Export JSON</button>
+      <label class="btn btn-secondary" style="display: inline-block; margin-top: 8px;">
+        Import JSON <input type="file" id="importFile" accept=".json,application/json" style="display: none;" />
+      </label>
+    </div>
+    <p class="section-title">Danger zone</p>
+    <div class="settings-section">
+      <button type="button" class="btn btn-danger" id="resetBtn">Reset All Data</button>
+    </div>
+  </div>
+
+  <div id="snapshotSummary" class="summary">
+    <div class="summary-compact">
+      <div class="summary-kv">
+        <span class="k">Net Cash</span>
+        <span class="v" id="sumNetCash">$0</span>
+      </div>
+      <div class="summary-kv small">
+        <span class="k">Total Current Credit Card Balance</span>
+        <span class="v" id="sumCc">$0</span>
+      </div>
+      <div class="summary-kv small">
+        <span class="k">Total Pending Outbound</span>
+        <span class="v" id="sumPendingOut">$0</span>
+      </div>
+      <div class="summary-kv small">
+        <span class="k">Total Pending Inbound</span>
+        <span class="v" id="sumPendingIn">$0</span>
+      </div>
+      <div class="summary-kv net-position">
+        <span class="k">Final Net Position</span>
+        <span class="v" id="sumNetPos">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab active" data-tab="snapshot">Snapshot</button>
+    <button type="button" class="tab" data-tab="spending">Spending</button>
+    <button type="button" class="tab" data-tab="settings">Settings</button>
+  </div>
+
+  <!-- Modals (hidden until opened) -->
+  <div id="modalAddSet" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalAddSetTitle">Amount</h3>
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="text" id="modalAddSetAmount" inputmode="decimal" placeholder="0.00" />
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="modalAddSetUseSet" />
+        <label for="modalAddSetUseSet">Set (replace value)</label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalAddSetCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalAddSetOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalConfirm" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalConfirmTitle">Confirm</h3>
+      <p id="modalConfirmMsg"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalConfirmCancel">Cancel</button>
+        <button type="button" class="btn btn-primary btn-danger" id="modalConfirmOk">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalPending" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalPendingTitle">Add pending item</h3>
+      <div class="field">
+        <label>Label</label>
+        <input type="text" id="modalPendingLabel" placeholder="e.g. Venmo" />
+      </div>
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="text" id="modalPendingAmount" inputmode="decimal" placeholder="0.00" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalPendingCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalPendingOk">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalPurchase" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalPurchaseHeading">Add Purchase</h3>
+      <div class="field">
+        <label>Title / Merchant</label>
+        <input type="text" id="modalPurchaseTitle" placeholder="e.g. Coffee shop" />
+      </div>
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="text" id="modalPurchaseAmount" inputmode="decimal" placeholder="0.00" />
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="modalPurchaseDate" />
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="modalPurchaseCategory"></select>
+      </div>
+      <div class="field hidden" id="modalPurchaseSubWrap">
+        <label>Subcategory</label>
+        <select id="modalPurchaseSub"></select>
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <textarea id="modalPurchaseNotes" placeholder="Optional"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalPurchaseCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalPurchaseOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalBank" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>New bank account</h3>
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="modalBankName" placeholder="Bank" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalBankCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalBankOk">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalCard" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>New credit card</h3>
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="modalCardName" placeholder="Card 1" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalCardCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalCardOk">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer">LedgerLite — offline. To save this to your phone, AirDrop the file and open in Safari. Add to Home Screen for app-like use.</p>
+
+  <script>
+(function() {
+  const STORAGE_KEY = 'ledgerlite';
+  const CATEGORIES = [
+    { id: 'food', name: 'Food', sub: ['Groceries', 'Snacks', 'Restaurants'] },
+    { id: 'travel', name: 'Travel', sub: ['MTA', 'Flights'] },
+    { id: 'loan_payment', name: 'Loan Payment', sub: [] },
+    { id: 'rent', name: 'Rent', sub: [] },
+    { id: 'fun_money', name: 'Fun Money', sub: [] },
+    { id: 'necessities', name: 'Necessities', sub: ['Home Necessities'] }
+  ];
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+  function now() { return new Date().toISOString(); }
+
+  const DEFAULT_CARD_NAMES = [
+    'Amex Delta Gold',
+    'Amex Blue Cash Preferred',
+    'US Bank Altitude Reserve',
+    'Robinhood Gold Card',
+    'Capital One Quicksilver',
+    'Discover',
+    'Citi Custom Cash',
+    'Chase Freedom Unlimited',
+    'Venmo Visa',
+    'Amazon Store Card',
+  ];
+
+  function defaultData() {
+    const banks = [{ id: uid(), name: 'Bank', balanceCents: 0, updatedAt: now() }];
+    const cards = [];
+    for (const name of DEFAULT_CARD_NAMES) cards.push({ id: uid(), name, balanceCents: 0, updatedAt: now() });
+    return {
+      banks,
+      cards,
+      cashInHandCents: 0,
+      pendingIn: [],
+      pendingOut: [],
+      purchases: []
+    };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultData();
+      const d = JSON.parse(raw);
+      if (!d.banks || !d.banks.length) d.banks = defaultData().banks;
+      if (!d.cards || !d.cards.length) d.cards = defaultData().cards;
+      if (typeof d.cashInHandCents !== 'number') d.cashInHandCents = 0;
+      if (!d.pendingIn) d.pendingIn = [];
+      if (!d.pendingOut) d.pendingOut = [];
+      if (!d.purchases) d.purchases = [];
+      return d;
+    } catch (_) { return defaultData(); }
+  }
+
+  function save(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function formatCents(c) {
+    const n = Number(c);
+    if (isNaN(n)) return '$0.00';
+    return '$' + (n / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  function parseCents(s) {
+    if (typeof s !== 'string') return 0;
+    const cleaned = s.replace(/[$,]/g, '').trim();
+    if (!cleaned) return 0;
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return 0;
+    return Math.round(num * 100);
+  }
+
+  function getDateRange(filter, rangeStart, rangeEnd) {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    let start = new Date(today);
+    start.setHours(0, 0, 0, 0);
+    if (filter === 'this_month') {
+      start.setDate(1);
+      return { start, end: today };
+    }
+    if (filter === 'last_month') {
+      start.setMonth(start.getMonth() - 1);
+      start.setDate(1);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+    if (filter === 'custom' && rangeStart && rangeEnd) {
+      start = new Date(rangeStart);
+      const end = new Date(rangeEnd);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+    if (filter === 'all_time') {
+      start = new Date(2000, 0, 1);
+      return { start, end: today };
+    }
+    start.setDate(1);
+    return { start, end: today };
+  }
+
+  let data = load();
+
+  function syncSnapshotPadding() {
+    const summary = document.getElementById('snapshotSummary');
+    const snap = document.getElementById('snapshotContent');
+    if (!summary || !snap) return;
+    if (summary.classList.contains('hidden')) return;
+    const h = summary.getBoundingClientRect().height;
+    // Ensure Snapshot content can't be hidden behind the fixed panel.
+    snap.style.paddingBottom = (Math.ceil(h) + 16) + 'px';
+  }
+
+  function renderSnapshot() {
+    const bankList = document.getElementById('bankList');
+    const cardList = document.getElementById('cardList');
+    bankList.innerHTML = '';
+    cardList.innerHTML = '';
+
+    data.banks.forEach(b => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">' + formatCents(b.balanceCents) + '</span></div>' +
+        '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="bank" data-id="' + b.id + '">Add / Set</button>' +
+        '<button type="button" class="btn btn-secondary clear-btn" data-type="bank" data-id="' + b.id + '">Clear</button></div>';
+      bankList.appendChild(card);
+    });
+
+    data.cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="amount">' + formatCents(c.balanceCents) + '</span></div>' +
+        '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
+        '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button></div>';
+      cardList.appendChild(card);
+    });
+
+    const pendingInList = document.getElementById('pendingInList');
+    const pendingOutList = document.getElementById('pendingOutList');
+    pendingInList.innerHTML = '';
+    pendingOutList.innerHTML = '';
+    data.pendingIn.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'pending-item';
+      div.innerHTML = '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span><button type="button" class="del" data-kind="in" data-id="' + p.id + '">Delete</button>';
+      pendingInList.appendChild(div);
+    });
+    data.pendingOut.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'pending-item';
+      div.innerHTML = '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span><button type="button" class="del" data-kind="out" data-id="' + p.id + '">Delete</button>';
+      pendingOutList.appendChild(div);
+    });
+
+    const bankTotal = data.banks.reduce((s, b) => s + b.balanceCents, 0);
+    const cashInHand = data.cashInHandCents || 0;
+    const ccTotal = data.cards.reduce((s, c) => s + c.balanceCents, 0);
+    const pendingInboundTotal = data.pendingIn.reduce((s, p) => s + p.amountCents, 0);
+    const pendingOutboundTotal = data.pendingOut.reduce((s, p) => s + p.amountCents, 0);
+    const netCash = bankTotal + cashInHand;
+    const finalNetPosition = (bankTotal + cashInHand + pendingInboundTotal) - pendingOutboundTotal - ccTotal;
+
+    document.getElementById('cashInHandAmount').textContent = formatCents(cashInHand);
+    document.getElementById('sumNetCash').textContent = formatCents(netCash);
+    document.getElementById('sumCc').textContent = formatCents(ccTotal);
+    document.getElementById('sumPendingOut').textContent = formatCents(pendingOutboundTotal);
+    document.getElementById('sumPendingIn').textContent = formatCents(pendingInboundTotal);
+    document.getElementById('sumNetPos').textContent = formatCents(finalNetPosition);
+    syncSnapshotPadding();
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  // Tab switch
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      const t = this.getAttribute('data-tab');
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById(t + 'Content').classList.add('active');
+      document.getElementById('snapshotSummary').classList.toggle('hidden', t !== 'snapshot');
+      if (t === 'spending') renderSpending();
+      if (t === 'snapshot') syncSnapshotPadding();
+    });
+  });
+
+  // Add/Set modal state
+  let addSetTarget = { type: '', id: '' };
+  document.querySelectorAll('#bankList, #cardList, #cashInHandCard').forEach(container => {
+    container.addEventListener('click', function(e) {
+      const btn = e.target.closest('.addset-btn');
+      const clearBtn = e.target.closest('.clear-btn');
+      if (btn) {
+        addSetTarget = { type: btn.getAttribute('data-type'), id: btn.getAttribute('data-id') };
+        if (addSetTarget.type === 'cash') {
+          document.getElementById('modalAddSetAmount').value = (data.cashInHandCents / 100).toFixed(2);
+        } else {
+          const item = addSetTarget.type === 'bank' ? data.banks.find(x => x.id === addSetTarget.id) : data.cards.find(x => x.id === addSetTarget.id);
+          document.getElementById('modalAddSetAmount').value = '';
+        }
+        document.getElementById('modalAddSetUseSet').checked = false;
+        document.getElementById('modalAddSet').classList.remove('hidden');
+      }
+      if (clearBtn) {
+        const type = clearBtn.getAttribute('data-type');
+        const id = clearBtn.getAttribute('data-id');
+        confirmModal('Clear balance?', 'Set this balance to $0.', function() {
+          if (type === 'bank') {
+            const b = data.banks.find(x => x.id === id);
+            if (b) { b.balanceCents = 0; b.updatedAt = now(); save(data); renderSnapshot(); }
+          } else if (type === 'card') {
+            const c = data.cards.find(x => x.id === id);
+            if (c) { c.balanceCents = 0; c.updatedAt = now(); save(data); renderSnapshot(); }
+          } else if (type === 'cash') {
+            data.cashInHandCents = 0;
+            save(data);
+            renderSnapshot();
+          }
+        });
+      }
+    });
+  });
+
+  document.getElementById('modalAddSetCancel').onclick = () => document.getElementById('modalAddSet').classList.add('hidden');
+  document.getElementById('modalAddSetOk').onclick = function() {
+    const cents = parseCents(document.getElementById('modalAddSetAmount').value);
+    const useSet = document.getElementById('modalAddSetUseSet').checked;
+    if (addSetTarget.type === 'bank') {
+      const b = data.banks.find(x => x.id === addSetTarget.id);
+      if (b) { b.balanceCents = useSet ? cents : b.balanceCents + cents; b.updatedAt = now(); save(data); renderSnapshot(); }
+    } else if (addSetTarget.type === 'card') {
+      const c = data.cards.find(x => x.id === addSetTarget.id);
+      if (c) { c.balanceCents = useSet ? cents : c.balanceCents + cents; c.updatedAt = now(); save(data); renderSnapshot(); }
+    } else if (addSetTarget.type === 'cash') {
+      data.cashInHandCents = useSet ? cents : (data.cashInHandCents || 0) + cents;
+      save(data);
+      renderSnapshot();
+    }
+    document.getElementById('modalAddSet').classList.add('hidden');
+  };
+
+  function confirmModal(title, msg, onConfirm) {
+    document.getElementById('modalConfirmTitle').textContent = title;
+    document.getElementById('modalConfirmMsg').textContent = msg;
+    document.getElementById('modalConfirm').classList.remove('hidden');
+    const ok = document.getElementById('modalConfirmOk');
+    ok.onclick = function() { onConfirm(); document.getElementById('modalConfirm').classList.add('hidden'); };
+  }
+  document.getElementById('modalConfirmCancel').onclick = () => document.getElementById('modalConfirm').classList.add('hidden');
+
+  // Pending
+  let pendingKind = 'in';
+  document.getElementById('addPendingInBtn').onclick = function() {
+    pendingKind = 'in';
+    document.getElementById('modalPendingTitle').textContent = 'Add pending inbound';
+    document.getElementById('modalPendingLabel').value = '';
+    document.getElementById('modalPendingAmount').value = '';
+    document.getElementById('modalPending').classList.remove('hidden');
+  };
+  document.getElementById('addPendingOutBtn').onclick = function() {
+    pendingKind = 'out';
+    document.getElementById('modalPendingTitle').textContent = 'Add pending outbound';
+    document.getElementById('modalPendingLabel').value = '';
+    document.getElementById('modalPendingAmount').value = '';
+    document.getElementById('modalPending').classList.remove('hidden');
+  };
+  document.getElementById('modalPendingCancel').onclick = () => document.getElementById('modalPending').classList.add('hidden');
+  document.getElementById('modalPendingOk').onclick = function() {
+    const label = document.getElementById('modalPendingLabel').value.trim() || 'Item';
+    const amountCents = parseCents(document.getElementById('modalPendingAmount').value);
+    if (pendingKind === 'in') {
+      data.pendingIn.push({ id: uid(), label, amountCents, createdAt: now() });
+    } else {
+      data.pendingOut.push({ id: uid(), label, amountCents, createdAt: now() });
+    }
+    save(data);
+    renderSnapshot();
+    document.getElementById('modalPending').classList.add('hidden');
+  };
+
+  document.getElementById('pendingInList').addEventListener('click', function(e) {
+    const btn = e.target.closest('.del[data-kind="in"]');
+    if (btn) { data.pendingIn = data.pendingIn.filter(p => p.id !== btn.getAttribute('data-id')); save(data); renderSnapshot(); }
+  });
+  document.getElementById('pendingOutList').addEventListener('click', function(e) {
+    const btn = e.target.closest('.del[data-kind="out"]');
+    if (btn) { data.pendingOut = data.pendingOut.filter(p => p.id !== btn.getAttribute('data-id')); save(data); renderSnapshot(); }
+  });
+
+  document.getElementById('clearPendingInBtn').onclick = () => confirmModal('Clear all pending inbound?', 'Remove all items.', () => { data.pendingIn = []; save(data); renderSnapshot(); });
+  document.getElementById('clearPendingOutBtn').onclick = () => confirmModal('Clear all pending outbound?', 'Remove all items.', () => { data.pendingOut = []; save(data); renderSnapshot(); });
+
+  // Add bank / card
+  document.getElementById('addBankBtn').onclick = () => { document.getElementById('modalBankName').value = 'Bank'; document.getElementById('modalBank').classList.remove('hidden'); };
+  document.getElementById('modalBankCancel').onclick = () => document.getElementById('modalBank').classList.add('hidden');
+  document.getElementById('modalBankOk').onclick = function() {
+    const name = document.getElementById('modalBankName').value.trim() || 'Bank';
+    data.banks.push({ id: uid(), name, balanceCents: 0, updatedAt: now() });
+    save(data);
+    renderSnapshot();
+    document.getElementById('modalBank').classList.add('hidden');
+  };
+
+  document.getElementById('addCardBtn').onclick = () => { document.getElementById('modalCardName').value = ''; document.getElementById('modalCard').classList.remove('hidden'); };
+  document.getElementById('modalCardCancel').onclick = () => document.getElementById('modalCard').classList.add('hidden');
+  document.getElementById('modalCardOk').onclick = function() {
+    const name = document.getElementById('modalCardName').value.trim() || 'Card';
+    data.cards.push({ id: uid(), name, balanceCents: 0, updatedAt: now() });
+    save(data);
+    renderSnapshot();
+    document.getElementById('modalCard').classList.add('hidden');
+  };
+
+  // Spending: category select
+  const catSelect = document.getElementById('modalPurchaseCategory');
+  const subWrap = document.getElementById('modalPurchaseSubWrap');
+  const subSelect = document.getElementById('modalPurchaseSub');
+  CATEGORIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    catSelect.appendChild(opt);
+  });
+  catSelect.addEventListener('change', function() {
+    const cat = CATEGORIES.find(c => c.id === this.value);
+    subWrap.classList.toggle('hidden', !cat || !cat.sub.length);
+    subSelect.innerHTML = '';
+    if (cat && cat.sub.length) {
+      cat.sub.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subSelect.appendChild(o); });
+    }
+  });
+
+  let editingPurchaseId = null;
+  document.getElementById('addPurchaseBtn').onclick = function() {
+    editingPurchaseId = null;
+    document.getElementById('modalPurchaseHeading').textContent = 'Add Purchase';
+    document.getElementById('modalPurchaseTitle').value = '';
+    document.getElementById('modalPurchaseAmount').value = '';
+    document.getElementById('modalPurchaseDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('modalPurchaseCategory').value = 'food';
+    document.getElementById('modalPurchaseSubWrap').classList.remove('hidden');
+    document.getElementById('modalPurchaseSub').innerHTML = '';
+    CATEGORIES[0].sub.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subSelect.appendChild(o); });
+    document.getElementById('modalPurchaseNotes').value = '';
+    document.getElementById('modalPurchase').classList.remove('hidden');
+  };
+
+  document.getElementById('modalPurchaseCancel').onclick = () => document.getElementById('modalPurchase').classList.add('hidden');
+  document.getElementById('modalPurchaseOk').onclick = function() {
+    const title = document.getElementById('modalPurchaseTitle').value.trim() || 'Purchase';
+    const amountCents = parseCents(document.getElementById('modalPurchaseAmount').value);
+    const dateISO = document.getElementById('modalPurchaseDate').value || new Date().toISOString().slice(0, 10);
+    const category = document.getElementById('modalPurchaseCategory').value;
+    const cat = CATEGORIES.find(c => c.id === category);
+    const subcategory = (cat && cat.sub.length) ? document.getElementById('modalPurchaseSub').value : undefined;
+    const notes = document.getElementById('modalPurchaseNotes').value.trim() || undefined;
+    if (editingPurchaseId) {
+      const p = data.purchases.find(x => x.id === editingPurchaseId);
+      if (p) { p.title = title; p.amountCents = amountCents; p.dateISO = dateISO; p.category = category; p.subcategory = subcategory; p.notes = notes; }
+    } else {
+      data.purchases.push({ id: uid(), title, amountCents, dateISO, category, subcategory, notes });
+    }
+    save(data);
+    renderSpending();
+    document.getElementById('modalPurchase').classList.add('hidden');
+  };
+
+  function renderSpending() {
+    const filter = document.getElementById('spendingFilter').value;
+    const rangeStart = document.getElementById('rangeStart').value;
+    const rangeEnd = document.getElementById('rangeEnd').value;
+    const { start, end } = getDateRange(filter, rangeStart, rangeEnd);
+    const filtered = data.purchases.filter(p => {
+      const d = new Date(p.dateISO);
+      return d >= start && d <= end;
+    });
+    const totalCents = filtered.reduce((s, p) => s + p.amountCents, 0);
+    document.getElementById('periodTotal').textContent = formatCents(totalCents);
+
+    const byKey = {};
+    filtered.forEach(p => {
+      const key = p.subcategory ? p.category + ':' + p.subcategory : p.category;
+      if (!byKey[key]) byKey[key] = { category: p.category, subcategory: p.subcategory, cents: 0 };
+      byKey[key].cents += p.amountCents;
+    });
+    const catTotalsEl = document.getElementById('categoryTotals');
+    catTotalsEl.innerHTML = '';
+    Object.keys(byKey).sort((a, b) => byKey[b].cents - byKey[a].cents).forEach(key => {
+      const v = byKey[key];
+      const cat = CATEGORIES.find(c => c.id === v.category);
+      const name = (cat ? cat.name : v.category) + (v.subcategory ? ' → ' + v.subcategory : '');
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = '<div class="row"><span class="name">' + escapeHtml(name) + '</span><span class="amount">' + formatCents(v.cents) + '</span></div>';
+      catTotalsEl.appendChild(div);
+    });
+
+    const listEl = document.getElementById('purchaseList');
+    listEl.innerHTML = '';
+    const sorted = filtered.slice().sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+    sorted.forEach(p => {
+      const cat = CATEGORIES.find(c => c.id === p.category);
+      const catName = (cat ? cat.name : p.category) + (p.subcategory ? ' → ' + p.subcategory : '');
+      const div = document.createElement('div');
+      div.className = 'purchase-item card';
+      div.innerHTML = '<div class="title">' + escapeHtml(p.title) + ' ' + formatCents(p.amountCents) + '</div><div class="meta">' + p.dateISO.slice(0, 10) + ' · ' + escapeHtml(catName) + '</div>';
+      div.onclick = function() {
+        editingPurchaseId = p.id;
+        document.getElementById('modalPurchaseHeading').textContent = 'Edit Purchase';
+        document.getElementById('modalPurchaseTitle').value = p.title;
+        document.getElementById('modalPurchaseAmount').value = (p.amountCents / 100).toFixed(2);
+        document.getElementById('modalPurchaseDate').value = p.dateISO.slice(0, 10);
+        document.getElementById('modalPurchaseCategory').value = p.category;
+        catSelect.dispatchEvent(new Event('change'));
+        document.getElementById('modalPurchaseSub').value = p.subcategory || '';
+        document.getElementById('modalPurchaseNotes').value = p.notes || '';
+        document.getElementById('modalPurchase').classList.remove('hidden');
+      };
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'del';
+      delBtn.textContent = 'Delete';
+      delBtn.style.marginTop = '8px';
+      delBtn.onclick = function(ev) { ev.stopPropagation(); confirmModal('Delete purchase?', p.title, () => { data.purchases = data.purchases.filter(x => x.id !== p.id); save(data); renderSpending(); }); };
+      div.appendChild(delBtn);
+      listEl.appendChild(div);
+    });
+
+    document.getElementById('customRangeSpan').classList.toggle('hidden', filter !== 'custom');
+  }
+
+  document.getElementById('spendingFilter').addEventListener('change', renderSpending);
+  document.getElementById('rangeStart').addEventListener('change', renderSpending);
+  document.getElementById('rangeEnd').addEventListener('change', renderSpending);
+
+  // Settings
+  document.getElementById('exportBtn').onclick = function() {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ledgerlite-backup.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  document.getElementById('importFile').onchange = function(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = function() {
+      try {
+        const imported = JSON.parse(r.result);
+        if (imported.banks) data.banks = imported.banks;
+        if (imported.cards) data.cards = imported.cards;
+        if (typeof imported.cashInHandCents === 'number') data.cashInHandCents = imported.cashInHandCents;
+        if (imported.pendingIn) data.pendingIn = imported.pendingIn;
+        if (imported.pendingOut) data.pendingOut = imported.pendingOut;
+        if (imported.purchases) data.purchases = imported.purchases;
+        save(data);
+        renderSnapshot();
+        if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+        alert('Import done.');
+      } catch (_) { alert('Invalid JSON.'); }
+      e.target.value = '';
+    };
+    r.readAsText(f);
+  };
+  document.getElementById('resetBtn').onclick = () => confirmModal('Reset all data?', 'This cannot be undone. All banks, cards, pending items, and purchases will be cleared.', () => {
+    data = defaultData();
+    save(data);
+    renderSnapshot();
+    renderSpending();
+  });
+
+  renderSnapshot();
+  window.addEventListener('resize', syncSnapshotPadding);
+})();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(console.warn);
+      });
+    }
+  </script>
+</body>
+</html>
