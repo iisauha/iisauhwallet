@@ -1496,11 +1496,11 @@
   renderSnapshot();
 
   function normalizePaymentSource(src) {
-    const v = normalizeText(src || '');
-    if (!v) return '';
-    if (v === 'credit_card' || v === 'credit card' || v === 'card' || v === 'cc') return 'card';
-    if (v === 'bank' || v === 'bank account' || v === 'checking') return 'bank';
-    if (v === 'cash' || v === 'physical cash') return 'cash';
+    const sourceRaw = (typeof src === 'string' ? src : '').trim().toLowerCase();
+    if (!sourceRaw) return '';
+    if (['credit_card', 'credit card', 'credit', 'card', 'cc'].includes(sourceRaw)) return 'card';
+    if (['bank', 'checking', 'account', 'bank account'].includes(sourceRaw)) return 'bank';
+    if (['cash', 'physical cash'].includes(sourceRaw)) return 'cash';
     return '';
   }
 
@@ -1551,30 +1551,46 @@
 
     const merchant = clean(params.get('merchant'));
     const amountRaw = clean(params.get('amount'));
-    const amountNum = amountRaw ? parseFloat(amountRaw.replace(/[$,\s]/g, '')) : NaN;
-    const amountText = (amountNum != null && !isNaN(amountNum)) ? (amountNum % 1 === 0 ? String(amountNum) : amountNum.toFixed(2)) : amountRaw;
+    const amount = amountRaw ? parseFloat(amountRaw.replace(/[$,]/g, '')) : null;
+    const amountText = (amount != null && !isNaN(amount)) ? (amount % 1 === 0 ? String(amount) : amount.toFixed(2)) : amountRaw;
     const dateVal = clean(params.get('date'));
     const category = clean(params.get('category'));
     const subcategory = clean(params.get('subcategory'));
     const notes = clean(params.get('notes'));
     const applyToSnapshot = /^(1|true|yes|on)$/i.test(clean(params.get('applyToSnapshot')));
-    const paymentSource = clean(params.get('paymentSource')).toLowerCase();
+    const sourceRaw = clean(params.get('paymentSource')).toLowerCase();
+    let paymentSource = null;
+    if (['credit_card', 'credit card', 'credit', 'card', 'cc'].includes(sourceRaw)) {
+      paymentSource = 'card';
+    } else if (['bank', 'checking', 'account', 'bank account'].includes(sourceRaw)) {
+      paymentSource = 'bank';
+    } else if (['cash', 'physical cash'].includes(sourceRaw)) {
+      paymentSource = 'cash';
+    }
     const paymentTargetId = clean(params.get('paymentTargetId'));
-    const paymentTargetName = clean(params.get('paymentTargetName'));
+    const paymentTargetName = clean(params.get('paymentTargetName')).toLowerCase();
 
     const prefill = { fromShortcut: true };
 
     prefill.title = merchant;
-
     prefill.amountText = amountText;
+    prefill.notes = notes;
+    prefill.applyToSnapshot = applyToSnapshot;
+    prefill.paymentSource = paymentSource || '';
+    prefill.paymentTargetId = '';
+    prefill.snapshotNote = '';
 
     if (dateVal && /^\d{4}-\d{2}-\d{2}$/.test(dateVal) && !isNaN(parseLocalYYYYMMDD(dateVal).getTime())) {
       prefill.dateKey = dateVal;
     }
 
     if (category) {
-      const catNameNorm = normalizeText(category);
-      const catMatch = CATEGORIES.find(c => normalizeText(c.name) === catNameNorm || normalizeText(c.id) === catNameNorm);
+      const catNorm = normalizeText(category);
+      const catMatch = CATEGORIES.find(c =>
+        normalizeText(c.name) === catNorm ||
+        normalizeText(c.id) === catNorm ||
+        normalizeText((c.id || '').replace(/_/g, ' ')) === catNorm
+      );
       if (catMatch) {
         prefill.categoryId = catMatch.id;
         if (subcategory && catMatch.sub && catMatch.sub.length) {
@@ -1585,18 +1601,10 @@
       }
     }
 
-    prefill.notes = notes;
-
-    prefill.applyToSnapshot = applyToSnapshot;
-    prefill.paymentSource = '';
-    prefill.paymentTargetId = '';
-    prefill.snapshotNote = '';
-
     if (prefill.applyToSnapshot && (paymentSource || paymentTargetId || paymentTargetName)) {
-      const normSource = normalizePaymentSource(paymentSource);
-      prefill.paymentSource = normSource;
-      if (normSource === 'card' || normSource === 'bank') {
-        const list = normSource === 'card' ? data.cards : data.banks;
+      prefill.paymentSource = paymentSource || '';
+      if (paymentSource === 'card' || paymentSource === 'bank') {
+        const list = paymentSource === 'card' ? data.cards : data.banks;
         if (paymentTargetId) {
           const found = list.find(x => x.id === paymentTargetId);
           if (found) {
@@ -1609,7 +1617,7 @@
           prefill.paymentTargetId = match.id;
           if (match.note) prefill.snapshotNote = match.note;
         }
-      } else if (!normSource && paymentSource) {
+      } else if (!paymentSource && (sourceRaw || paymentTargetName)) {
         prefill.snapshotNote = 'Unknown payment source; please choose';
       }
     }
