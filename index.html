@@ -333,6 +333,7 @@
           <option value="">— Select —</option>
         </select>
       </div>
+      <p class="field" id="modalPurchaseTargetDebug" style="font-size: 0.85rem; color: var(--muted); margin: 4px 0 0 0;">Selected card id: (none)</p>
       <p class="field hidden" id="modalPurchaseApplyError" style="color: var(--danger); font-size: 0.9rem; margin: 0;"></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalPurchaseCancel">Cancel</button>
@@ -745,10 +746,13 @@
   const targetSelect = document.getElementById('modalPurchaseTarget');
   const applyError = document.getElementById('modalPurchaseApplyError');
   const modalPurchaseOkBtn = document.getElementById('modalPurchaseOk');
-  let currentPaymentTargetId = '';
+  const targetDebug = document.getElementById('modalPurchaseTargetDebug');
+  let applyToSnapshotState = false;
+  let paymentSourceState = '';
+  let paymentTargetIdState = '';
 
   function updatePurchaseTargetDropdown() {
-    const source = paymentSourceSelect.value;
+    const source = paymentSourceState || paymentSourceSelect.value;
     targetSelect.innerHTML = '';
     targetWrap.classList.add('hidden');
     if (source === 'card') {
@@ -781,21 +785,27 @@
       targetWrap.classList.remove('hidden');
     }
     // Re-apply current selection if still present.
-    if (currentPaymentTargetId) {
-      targetSelect.value = currentPaymentTargetId;
+    if (paymentTargetIdState) {
+      targetSelect.value = paymentTargetIdState;
     }
   }
 
+  function updateTargetDebug() {
+    if (!targetDebug) return;
+    const idText = paymentTargetIdState || '(none)';
+    targetDebug.textContent = 'Selected card id: ' + idText;
+  }
+
   function validateApplyToSnapshot() {
-    if (!applyCheck.checked) return true;
-    const source = paymentSourceSelect.value;
+    if (!applyToSnapshotState) return true;
+    const source = paymentSourceState || paymentSourceSelect.value;
     if (!source) return false;
     if (source === 'cash') return true;
-    return !!currentPaymentTargetId;
+    return !!paymentTargetIdState;
   }
 
   function updateApplyUI() {
-    const on = applyCheck.checked;
+    const on = applyToSnapshotState;
     applySection.classList.toggle('hidden', !on);
     if (!on) {
       targetWrap.classList.add('hidden');
@@ -815,20 +825,28 @@
   }
 
   applyCheck.addEventListener('change', function() {
-    if (applyCheck.checked) {
-      currentPaymentTargetId = '';
+    applyToSnapshotState = applyCheck.checked;
+    if (!applyToSnapshotState) {
+      paymentTargetIdState = '';
+      updateTargetDebug();
+    } else {
       updatePurchaseTargetDropdown();
     }
     updateApplyUI();
   });
   paymentSourceSelect.addEventListener('change', function() {
-    currentPaymentTargetId = '';
+    paymentSourceState = paymentSourceSelect.value;
+    if (paymentSourceState !== 'card' && paymentSourceState !== 'bank') {
+      paymentTargetIdState = '';
+    }
     updatePurchaseTargetDropdown();
+    updateTargetDebug();
     updateApplyUI();
   });
   targetSelect.addEventListener('change', function(e) {
-    currentPaymentTargetId = e.target.value;
-    console.log('selected card id:', e.target.value);
+    paymentTargetIdState = e.target.value;
+    console.log('card changed ->', paymentTargetIdState);
+    updateTargetDebug();
     updateApplyUI();
   });
 
@@ -844,13 +862,16 @@
     document.getElementById('modalPurchaseNotes').value = '';
     applyWrap.classList.remove('hidden');
     applyCheck.checked = false;
+    applyToSnapshotState = false;
     paymentSourceSelect.value = '';
-    currentPaymentTargetId = '';
+    paymentSourceState = '';
+    paymentTargetIdState = '';
     targetSelect.innerHTML = '';
     applySection.classList.add('hidden');
     targetWrap.classList.add('hidden');
     applyError.classList.add('hidden');
     applyError.textContent = '';
+    updateTargetDebug();
     modalPurchaseOkBtn.disabled = false;
     document.getElementById('modalPurchase').classList.remove('hidden');
   };
@@ -868,10 +889,11 @@
     const isEdit = !!editingPurchaseId;
     let applyToSnapshot = false;
     let paymentSource = null;
-    if (!isEdit && applyCheck.checked) {
+    let paymentTargetId = null;
+    if (!isEdit && applyToSnapshotState) {
       applyToSnapshot = true;
-      paymentSource = paymentSourceSelect.value || null;
-      var paymentTargetId = (paymentSource === 'card' || paymentSource === 'bank') ? (currentPaymentTargetId || null) : null;
+      paymentSource = paymentSourceState || paymentSourceSelect.value || null;
+      paymentTargetId = (paymentSource === 'card' || paymentSource === 'bank') ? (paymentTargetIdState || null) : null;
     }
     if (editingPurchaseId) {
       const p = data.purchases.find(x => x.id === editingPurchaseId);
@@ -952,6 +974,10 @@
         document.getElementById('modalPurchaseSub').value = p.subcategory || '';
         document.getElementById('modalPurchaseNotes').value = p.notes || '';
         applyWrap.classList.add('hidden');
+        applyToSnapshotState = false;
+        paymentSourceState = '';
+        paymentTargetIdState = '';
+        updateTargetDebug();
         modalPurchaseOkBtn.disabled = false;
         document.getElementById('modalPurchase').classList.remove('hidden');
       };
