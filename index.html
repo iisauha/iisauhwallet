@@ -319,6 +319,7 @@
   <div id="modalPurchase" class="modal-overlay hidden">
     <div class="modal">
       <h3 id="modalPurchaseHeading">Add Purchase</h3>
+      <p class="field hidden" id="modalPurchasePrefillBanner" style="font-size: 0.9rem; color: var(--accent); margin: 0 0 8px 0;">Prefilled from Shortcut</p>
       <div class="field">
         <label>Title / Merchant</label>
         <input type="text" id="modalPurchaseTitle" placeholder="e.g. Coffee shop" />
@@ -432,6 +433,7 @@
   };
   let spendingChart = null;
   let activeCategoryFilter = '';
+  let deepLinkHandled = false;
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
   function now() { return new Date().toISOString(); }
@@ -514,6 +516,15 @@
     return Math.round(num * 100);
   }
 
+  function normalizeText(str) {
+    if (typeof str !== 'string') return '';
+    return str.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function parseMoneyToCents(str) {
+    return parseCents(typeof str === 'string' ? str : '');
+  }
+
   function toLocalDateKey(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -528,6 +539,35 @@
     const [y, m, d] = parts;
     if (isNaN(y) || isNaN(m) || isNaN(d)) return new Date(NaN);
     return new Date(y, m - 1, d);
+  }
+
+  function parseLocalYYYYMMDD(key) {
+    if (typeof key !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return new Date(NaN);
+    return parseLocalDateKey(key);
+  }
+
+  function truthyParam(v) {
+    if (typeof v !== 'string') return false;
+    const n = normalizeText(v);
+    return n === '1' || n === 'true' || n === 'yes' || n === 'on';
+  }
+
+  function getDeepLinkParams() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const hash = window.location.hash || '';
+      const idx = hash.indexOf('?');
+      if (idx !== -1) {
+        const hashQuery = hash.slice(idx + 1);
+        const hashParams = new URLSearchParams(hashQuery);
+        hashParams.forEach((value, key) => {
+          params.set(key, value);
+        });
+      }
+      return params;
+    } catch (_) {
+      return new URLSearchParams();
+    }
   }
 
   function getDateRange(filter, rangeStart, rangeEnd) {
@@ -945,6 +985,7 @@
   const applyError = document.getElementById('modalPurchaseApplyError');
   const modalPurchaseOkBtn = document.getElementById('modalPurchaseOk');
   const targetDebug = document.getElementById('modalPurchaseTargetDebug');
+  const prefillBanner = document.getElementById('modalPurchasePrefillBanner');
   let applyToSnapshotState = false;
   let paymentSourceState = '';
   let paymentTargetIdState = '';
@@ -1049,33 +1090,99 @@
   });
 
   let editingPurchaseId = null;
-  document.getElementById('addPurchaseBtn').onclick = function() {
+  function openAddPurchaseModal(prefill) {
     editingPurchaseId = null;
     document.getElementById('modalPurchaseHeading').textContent = 'Add Purchase';
-    document.getElementById('modalPurchaseTitle').value = '';
-    document.getElementById('modalPurchaseAmount').value = '';
-    document.getElementById('modalPurchaseDate').value = toLocalDateKey(new Date());
-    document.getElementById('modalPurchaseCategory').value = 'food';
-    catSelect.dispatchEvent(new Event('change'));
-    document.getElementById('modalPurchaseNotes').value = '';
+    const titleInput = document.getElementById('modalPurchaseTitle');
+    const amountInput = document.getElementById('modalPurchaseAmount');
+    const dateInput = document.getElementById('modalPurchaseDate');
+    const categoryInput = document.getElementById('modalPurchaseCategory');
+    const notesInput = document.getElementById('modalPurchaseNotes');
+    const nowKey = toLocalDateKey(new Date());
+    const fromShortcut = prefill && prefill.fromShortcut;
+
+    titleInput.value = (prefill && prefill.title) || '';
+    amountInput.value = (prefill && prefill.amountText) || '';
+    dateInput.value = (prefill && prefill.dateKey) || nowKey;
+
+    if (prefill && prefill.categoryId) {
+      categoryInput.value = prefill.categoryId;
+      catSelect.dispatchEvent(new Event('change'));
+      if (prefill.subcategory && document.getElementById('modalPurchaseSub')) {
+        document.getElementById('modalPurchaseSub').value = prefill.subcategory;
+      }
+    } else {
+      categoryInput.value = 'food';
+      catSelect.dispatchEvent(new Event('change'));
+    }
+
+    notesInput.value = (prefill && prefill.notes) || '';
+
     applyWrap.classList.remove('hidden');
-    applyCheck.checked = false;
-    applyToSnapshotState = false;
-    paymentSourceSelect.value = '';
-    paymentSourceState = '';
-    paymentTargetIdState = '';
-    targetSelect.innerHTML = '';
-    applySection.classList.add('hidden');
-    targetWrap.classList.add('hidden');
     applyError.classList.add('hidden');
     applyError.textContent = '';
-    updateTargetDebug();
+    if (prefill && prefill.applyToSnapshot) {
+      applyCheck.checked = true;
+      applyToSnapshotState = true;
+      paymentSourceState = prefill.paymentSource || '';
+      paymentSourceSelect.value = paymentSourceState || '';
+      paymentTargetIdState = prefill.paymentTargetId || '';
+      updatePurchaseTargetDropdown();
+      updateTargetDebug();
+      updateApplyUI();
+      if (prefill.snapshotNote) {
+        applyError.textContent = prefill.snapshotNote;
+        applyError.classList.remove('hidden');
+      }
+    } else {
+      applyCheck.checked = false;
+      applyToSnapshotState = false;
+      paymentSourceSelect.value = '';
+      paymentSourceState = '';
+      paymentTargetIdState = '';
+      targetSelect.innerHTML = '';
+      applySection.classList.add('hidden');
+      targetWrap.classList.add('hidden');
+      updateTargetDebug();
+      updateApplyUI();
+    }
+
+    if (prefillBanner) {
+      prefillBanner.classList.toggle('hidden', !fromShortcut);
+    }
+
     modalPurchaseOkBtn.disabled = false;
     document.getElementById('modalPurchase').classList.remove('hidden');
     updateBodyModalOpen();
+
+    if (prefill && prefill.focusId) {
+      const el = document.getElementById(prefill.focusId);
+      if (el && typeof el.focus === 'function') {
+        setTimeout(() => el.focus(), 0);
+      }
+    }
+  }
+
+  document.getElementById('addPurchaseBtn').onclick = function() {
+    openAddPurchaseModal(null);
   };
 
-  document.getElementById('modalPurchaseCancel').onclick = () => { document.getElementById('modalPurchase').classList.add('hidden'); updateBodyModalOpen(); };
+  function clearDeepLinkParamsFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+      url.search = '';
+      if (url.hash && url.hash.includes('?')) {
+        url.hash = url.hash.split('?')[0];
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch (_) {}
+  }
+
+  document.getElementById('modalPurchaseCancel').onclick = () => {
+    document.getElementById('modalPurchase').classList.add('hidden');
+    updateBodyModalOpen();
+    clearDeepLinkParamsFromUrl();
+  };
   document.getElementById('modalPurchaseOk').onclick = function() {
     if (modalPurchaseOkBtn.disabled) return;
     const title = document.getElementById('modalPurchaseTitle').value.trim() || 'Purchase';
@@ -1121,6 +1228,7 @@
     renderSnapshot();
     document.getElementById('modalPurchase').classList.add('hidden');
     updateBodyModalOpen();
+    clearDeepLinkParamsFromUrl();
   };
 
   function renderSpending() {
@@ -1386,6 +1494,135 @@
   });
 
   renderSnapshot();
+
+  function normalizePaymentSource(src) {
+    const v = normalizeText(src || '');
+    if (!v) return '';
+    if (v === 'credit_card' || v === 'credit card' || v === 'card' || v === 'cc') return 'card';
+    if (v === 'bank' || v === 'bank account' || v === 'checking') return 'bank';
+    if (v === 'cash' || v === 'physical cash') return 'cash';
+    return '';
+  }
+
+  function matchTargetByName(list, rawName) {
+    const result = { id: '', note: '' };
+    const nameNorm = normalizeText(rawName || '');
+    if (!nameNorm) return result;
+    const simplify = s => normalizeText((s || '').replace(/[.,]/g, ' '));
+    const exactMatches = list.filter(x => simplify(x.name) === nameNorm);
+    if (exactMatches.length === 1) {
+      result.id = exactMatches[0].id;
+      return result;
+    }
+    if (exactMatches.length > 1) {
+      result.note = 'Multiple matches; please choose';
+      return result;
+    }
+    const containsMatches = list.filter(x => {
+      const n = simplify(x.name);
+      return n.includes(nameNorm) || nameNorm.includes(n);
+    });
+    if (containsMatches.length === 1) {
+      result.id = containsMatches[0].id;
+      return result;
+    }
+    if (containsMatches.length > 1) {
+      result.note = 'Multiple matches; please choose';
+      return result;
+    }
+    result.note = 'No match; please choose';
+    return result;
+  }
+
+  function handleDeepLinkAddPurchase() {
+    if (deepLinkHandled) return;
+    const params = getDeepLinkParams();
+    if (!params) return;
+    if (!truthyParam(params.get('addPurchase'))) return;
+    deepLinkHandled = true;
+    const prefill = { fromShortcut: true };
+    const merchantRaw = params.get('merchant');
+    const amountRaw = params.get('amount');
+    const dateRaw = params.get('date');
+    const categoryRaw = params.get('category');
+    const subcategoryRaw = params.get('subcategory');
+    const notesRaw = params.get('notes');
+    const applyRaw = params.get('applyToSnapshot');
+    const sourceRaw = params.get('paymentSource');
+    const targetIdRaw = params.get('paymentTargetId');
+    const targetNameRaw = params.get('paymentTargetName');
+
+    const clean = v => {
+      if (v == null) return '';
+      try { return decodeURIComponent(v); } catch (_) { return String(v); }
+    };
+
+    prefill.title = clean(merchantRaw).trim();
+    prefill.amountText = clean(amountRaw).trim();
+
+    const dateKey = clean(dateRaw).trim();
+    if (dateKey && !isNaN(parseLocalYYYYMMDD(dateKey).getTime())) {
+      prefill.dateKey = dateKey;
+    }
+
+    const catNameInput = normalizeText(clean(categoryRaw));
+    if (catNameInput) {
+      const catMatch = CATEGORIES.find(c => normalizeText(c.name) === catNameInput || normalizeText(c.id) === catNameInput);
+      if (catMatch) {
+        prefill.categoryId = catMatch.id;
+        const subInput = normalizeText(clean(subcategoryRaw));
+        if (subInput && catMatch.sub && catMatch.sub.length) {
+          const subMatch = catMatch.sub.find(s => normalizeText(s) === subInput);
+          if (subMatch) prefill.subcategory = subMatch;
+        }
+      }
+    }
+
+    prefill.notes = clean(notesRaw).trim();
+
+    prefill.applyToSnapshot = truthyParam(applyRaw);
+    prefill.paymentSource = '';
+    prefill.paymentTargetId = '';
+    prefill.snapshotNote = '';
+
+    if (prefill.applyToSnapshot) {
+      const normSource = normalizePaymentSource(clean(sourceRaw));
+      prefill.paymentSource = normSource;
+      if (normSource === 'card' || normSource === 'bank') {
+        const list = normSource === 'card' ? data.cards : data.banks;
+        const targetId = clean(targetIdRaw).trim();
+        const targetName = clean(targetNameRaw).trim();
+        if (targetId) {
+          const found = list.find(x => x.id === targetId);
+          if (found) {
+            prefill.paymentTargetId = targetId;
+          } else {
+            prefill.snapshotNote = 'Target not found; please choose';
+          }
+        } else if (targetName) {
+          const match = matchTargetByName(list, targetName);
+          prefill.paymentTargetId = match.id;
+          if (match.note) prefill.snapshotNote = match.note;
+        }
+      } else if (!normSource && clean(sourceRaw)) {
+        prefill.snapshotNote = 'Unknown payment source; please choose';
+      }
+    }
+
+    if (!prefill.title) {
+      prefill.focusId = 'modalPurchaseTitle';
+    } else if (!prefill.amountText) {
+      prefill.focusId = 'modalPurchaseAmount';
+    }
+
+    const spendingTab = document.querySelector('.tab[data-tab="spending"]');
+    if (spendingTab && !spendingTab.classList.contains('active')) {
+      spendingTab.click();
+    }
+    setTimeout(() => openAddPurchaseModal(prefill), 0);
+  }
+
+  handleDeepLinkAddPurchase();
 
   (function checkLocalDateFilter() {
     var start = new Date(2026, 2, 1);
