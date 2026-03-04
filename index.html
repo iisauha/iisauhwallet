@@ -444,36 +444,49 @@
     return Math.round(num * 100);
   }
 
+  function toLocalDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+
+  function parseLocalDateKey(key) {
+    if (typeof key !== 'string' || !key) return new Date(NaN);
+    const parts = key.split('-').map(Number);
+    if (parts.length !== 3) return new Date(NaN);
+    const [y, m, d] = parts;
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return new Date(NaN);
+    return new Date(y, m - 1, d);
+  }
+
   function getDateRange(filter, rangeStart, rangeEnd) {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    let start = new Date(today);
-    start.setHours(0, 0, 0, 0);
+    const now = new Date();
+    let start, end;
     if (filter === 'this_month') {
-      start.setDate(1);
-      return { start, end: today };
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return { start, end };
     }
     if (filter === 'last_month') {
-      start.setMonth(start.getMonth() - 1);
-      start.setDate(1);
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + 1);
-      end.setDate(0);
-      end.setHours(23, 59, 59, 999);
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 1);
       return { start, end };
     }
     if (filter === 'custom' && rangeStart && rangeEnd) {
-      start = new Date(rangeStart);
-      const end = new Date(rangeEnd);
-      end.setHours(23, 59, 59, 999);
+      start = parseLocalDateKey(rangeStart);
+      end = parseLocalDateKey(rangeEnd);
+      end.setDate(end.getDate() + 1);
       return { start, end };
     }
     if (filter === 'all_time') {
       start = new Date(2000, 0, 1);
-      return { start, end: today };
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      return { start, end };
     }
-    start.setDate(1);
-    return { start, end: today };
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return { start, end };
   }
 
   let data = load();
@@ -741,8 +754,9 @@
     const rangeEnd = document.getElementById('rangeEnd').value;
     const { start, end } = getDateRange(filter, rangeStart, rangeEnd);
     const filtered = data.purchases.filter(p => {
-      const d = new Date(p.dateISO);
-      return d >= start && d <= end;
+      const purchaseDate = parseLocalDateKey(p.dateISO);
+      if (isNaN(purchaseDate.getTime())) return false;
+      return purchaseDate >= start && purchaseDate < end;
     });
     const totalCents = filtered.reduce((s, p) => s + p.amountCents, 0);
     document.getElementById('periodTotal').textContent = formatCents(totalCents);
@@ -767,7 +781,7 @@
 
     const listEl = document.getElementById('purchaseList');
     listEl.innerHTML = '';
-    const sorted = filtered.slice().sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+    const sorted = filtered.slice().sort((a, b) => parseLocalDateKey(b.dateISO) - parseLocalDateKey(a.dateISO));
     sorted.forEach(p => {
       const cat = CATEGORIES.find(c => c.id === p.category);
       const catName = (cat ? cat.name : p.category) + (p.subcategory ? ' → ' + p.subcategory : '');
@@ -846,6 +860,14 @@
   });
 
   renderSnapshot();
+
+  (function checkLocalDateFilter() {
+    var start = new Date(2026, 2, 1);
+    var end = new Date(2026, 3, 1);
+    var purchaseDate = parseLocalDateKey('2026-03-01');
+    var inThisMonth = purchaseDate >= start && purchaseDate < end;
+    if (!inThisMonth) console.error('Spending filter bug: dateKey "2026-03-01" should be in This Month (March 2026)');
+  })();
 })();
   </script>
   <script>
