@@ -138,9 +138,69 @@
     .modal-actions .btn { flex: 1; }
     .toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
     .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
-    .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .pending-item {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      touch-action: pan-y;
+    }
     .pending-item:last-child { border-bottom: none; }
-    .pending-item .del { color: var(--danger); padding: 8px; font-size: 0.9rem; cursor: pointer; }
+    .pending-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 0;
+      background: transparent;
+      transition: transform 0.18s ease-out;
+    }
+    .pending-item.swipe-open .pending-main {
+      transform: translateX(-80px);
+    }
+    .pending-label {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    .pending-actions-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pending-delete {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--danger);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .row-overflow {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 999px;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .row-overflow { opacity: 0.7; }
+      .pending-item:hover .row-overflow { opacity: 1; }
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .row-overflow { display: none; }
+    }
     .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .filter-bar select { min-height: 44px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; }
     .category-block { margin-bottom: 20px; }
@@ -601,23 +661,35 @@
     data.pendingIn.forEach(p => {
       const div = document.createElement('div');
       div.className = 'pending-item';
+      div.setAttribute('data-kind', 'in');
+      div.setAttribute('data-id', p.id);
       div.innerHTML =
-        '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
-        '<div>' +
-        '<button type="button" class="posted" data-kind="in" data-id="' + p.id + '">Mark Posted</button>' +
-        '<button type="button" class="del" data-kind="in" data-id="' + p.id + '">Delete</button>' +
-        '</div>';
+        '<div class="pending-main">' +
+          '<span class="pending-label">' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
+          '<div class="pending-actions-inline">' +
+            '<button type="button" class="posted" data-kind="in" data-id="' + p.id + '">Mark Posted</button>' +
+            '<button type="button" class="row-overflow" aria-label="More actions" data-kind="in" data-id="' + p.id + '">\u22ee</button>' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="pending-delete" data-kind="in" data-id="' + p.id + '" aria-label="Delete pending inbound item">Delete</button>';
+      attachSwipeToRow(div);
       pendingInList.appendChild(div);
     });
     data.pendingOut.forEach(p => {
       const div = document.createElement('div');
       div.className = 'pending-item';
+      div.setAttribute('data-kind', 'out');
+      div.setAttribute('data-id', p.id);
       div.innerHTML =
-        '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
-        '<div>' +
-        '<button type="button" class="posted" data-kind="out" data-id="' + p.id + '">Mark Posted</button>' +
-        '<button type="button" class="del" data-kind="out" data-id="' + p.id + '">Delete</button>' +
-        '</div>';
+        '<div class="pending-main">' +
+          '<span class="pending-label">' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
+          '<div class="pending-actions-inline">' +
+            '<button type="button" class="posted" data-kind="out" data-id="' + p.id + '">Mark Posted</button>' +
+            '<button type="button" class="row-overflow" aria-label="More actions" data-kind="out" data-id="' + p.id + '">\u22ee</button>' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="pending-delete" data-kind="out" data-id="' + p.id + '" aria-label="Delete pending outbound item">Delete</button>';
+      attachSwipeToRow(div);
       pendingOutList.appendChild(div);
     });
 
@@ -872,28 +944,108 @@
     updateBodyModalOpen();
   }
 
+  // Swipe-to-delete for pending items
+  let openSwipeRow = null;
+
+  function setSwipeOpen(row, open) {
+    if (!row) return;
+    if (open) {
+      if (openSwipeRow && openSwipeRow !== row) {
+        openSwipeRow.classList.remove('swipe-open');
+      }
+      row.classList.add('swipe-open');
+      openSwipeRow = row;
+    } else {
+      row.classList.remove('swipe-open');
+      if (openSwipeRow === row) openSwipeRow = null;
+    }
+  }
+
+  function attachSwipeToRow(row) {
+    let startX = 0;
+    let startY = 0;
+    let active = false;
+
+    row.addEventListener('touchstart', function(e) {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      active = true;
+    }, { passive: true });
+
+    row.addEventListener('touchmove', function(e) {
+      if (!active) return;
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dx) < 35 || Math.abs(dx) <= Math.abs(dy)) return;
+      if (dx < 0) {
+        setSwipeOpen(row, true);
+      } else if (dx > 0 && row.classList.contains('swipe-open')) {
+        setSwipeOpen(row, false);
+      }
+    }, { passive: true });
+
+    row.addEventListener('touchend', function() {
+      active = false;
+    });
+    row.addEventListener('touchcancel', function() {
+      active = false;
+    });
+  }
+
+  // Close open swipe row when tapping outside
+  document.addEventListener('click', function(e) {
+    if (!openSwipeRow) return;
+    if (!e.target.closest('.pending-item')) {
+      setSwipeOpen(openSwipeRow, false);
+    }
+  });
+
   document.getElementById('pendingInList').addEventListener('click', function(e) {
     const postedBtn = e.target.closest('.posted[data-kind=\"in\"]');
+    const overflowBtn = e.target.closest('.row-overflow[data-kind=\"in\"]');
+    const deleteBtn = e.target.closest('.pending-delete[data-kind=\"in\"]');
     if (postedBtn) {
       handlePendingPosted('in', postedBtn.getAttribute('data-id'));
       return;
     }
-    const delBtn = e.target.closest('.del[data-kind=\"in\"]');
-    if (delBtn) {
-      data.pendingIn = data.pendingIn.filter(p => p.id !== delBtn.getAttribute('data-id'));
+    if (overflowBtn) {
+      const row = overflowBtn.closest('.pending-item');
+      if (row) {
+        const isOpen = row.classList.contains('swipe-open');
+        setSwipeOpen(row, !isOpen);
+      }
+      return;
+    }
+    if (deleteBtn) {
+      const id = deleteBtn.getAttribute('data-id');
+      data.pendingIn = data.pendingIn.filter(p => p.id !== id);
       save(data);
       renderSnapshot();
     }
   });
   document.getElementById('pendingOutList').addEventListener('click', function(e) {
     const postedBtn = e.target.closest('.posted[data-kind=\"out\"]');
+    const overflowBtn = e.target.closest('.row-overflow[data-kind=\"out\"]');
+    const deleteBtn = e.target.closest('.pending-delete[data-kind=\"out\"]');
     if (postedBtn) {
       handlePendingPosted('out', postedBtn.getAttribute('data-id'));
       return;
     }
-    const delBtn = e.target.closest('.del[data-kind=\"out\"]');
-    if (delBtn) {
-      data.pendingOut = data.pendingOut.filter(p => p.id !== delBtn.getAttribute('data-id'));
+    if (overflowBtn) {
+      const row = overflowBtn.closest('.pending-item');
+      if (row) {
+        const isOpen = row.classList.contains('swipe-open');
+        setSwipeOpen(row, !isOpen);
+      }
+      return;
+    }
+    if (deleteBtn) {
+      const id = deleteBtn.getAttribute('data-id');
+      data.pendingOut = data.pendingOut.filter(p => p.id !== id);
       save(data);
       renderSnapshot();
     }
