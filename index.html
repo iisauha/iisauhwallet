@@ -5138,48 +5138,73 @@
       console.log('[resume] refreshing snapshot, source=', source);
     }
     try {
+      // Reload core state from storage
       data = load();
       ensurePhysicalCashBank(data);
-      renderSnapshot();
-      if (document.getElementById('spendingContent').classList.contains('active') && typeof renderSpending === 'function') {
-        renderSpending();
-      }
-      if (document.getElementById('upcomingContent').classList.contains('active') && typeof renderUpcomingCashflow === 'function') {
-        renderUpcomingCashflow();
-      }
-      if (document.getElementById('recurringContent').classList.contains('active') && typeof renderRecurring === 'function') {
-        renderRecurring();
-      }
+
+      // Refresh other global state that can become stale after reload
+      (function refreshInMemoryState() {
+        const legacy = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
+        showZeroCashItems = loadBoolPref(SHOW_ZERO_CASH_KEY, legacy);
+        showZeroCreditCards = loadBoolPref(SHOW_ZERO_CARDS_KEY, legacy);
+        pendingInboundCollapsed = loadBoolPref(PENDING_IN_COLLAPSED_KEY, false);
+        pendingOutboundCollapsed = loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false);
+        expectedCosts = loadExpectedCosts();
+        expectedIncome = loadExpectedIncome();
+        upcomingWindowPref = loadUpcomingWindowPreference();
+        categoryConfig = loadCategoryConfig();
+      })();
+
+      // Render after DOM is ready using double rAF for PWA robustness
       requestAnimationFrame(function() {
-        var el = document.getElementById('snapshotSummary');
-        if (el) el.offsetHeight;
+        requestAnimationFrame(function() {
+          renderSnapshot();
+          if (document.getElementById('spendingContent').classList.contains('active') && typeof renderSpending === 'function') {
+            renderSpending();
+          }
+          if (document.getElementById('upcomingContent').classList.contains('active') && typeof renderUpcomingCashflow === 'function') {
+            renderUpcomingCashflow();
+          }
+          if (document.getElementById('recurringContent').classList.contains('active') && typeof renderRecurring === 'function') {
+            renderRecurring();
+          }
+          var el = document.getElementById('snapshotSummary');
+          if (el) el.offsetHeight;
+        });
       });
     } catch (err) {
       if (typeof console !== 'undefined' && console.error) console.error('Rehydrate snapshot error:', err);
     }
   }
+
+  function initApp(reason) {
+    rehydrateAndRender(reason);
+  }
   function wireResumeRefreshOnce() {
     if (window.__resumeWired) return;
     window.__resumeWired = true;
+    document.addEventListener('DOMContentLoaded', function() {
+      initApp('domcontentloaded');
+    });
     window.addEventListener('pageshow', function(e) {
       if (DEBUG_RESUME && typeof console !== 'undefined' && console.log) {
         console.log('[resume] pageshow persisted=', !!(e && e.persisted));
       }
-      rehydrateAndRender('pageshow');
+      initApp('pageshow');
     });
     document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible') {
         if (DEBUG_RESUME && typeof console !== 'undefined' && console.log) {
           console.log('[resume] visibility=', document.visibilityState);
         }
-        rehydrateAndRender('visibilitychange');
+        initApp('visible');
       }
     });
     window.addEventListener('focus', function() {
       if (DEBUG_RESUME && typeof console !== 'undefined' && console.log) {
         console.log('[resume] focus');
       }
-      rehydrateAndRender('focus');
+      initApp('focus');
     });
   }
 
