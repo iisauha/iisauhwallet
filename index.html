@@ -1709,6 +1709,9 @@
       if (t === 'upcoming') {
         renderUpcomingCashflow();
       }
+      if (t === 'settings' && typeof ensureManageCategoriesWired === 'function') {
+        ensureManageCategoriesWired();
+      }
     });
   });
 
@@ -4901,10 +4904,10 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  // Manage Categories: open as modal. Assign to window first so inline onclick works; then attach direct + delegated listeners so tap always fires on iOS PWA.
-  var DEBUG_MANAGE_CAT = false; // Phase 1 diagnosis: set true to log element/handler/fire
+  // Manage Categories: open modal with category list + delete. Wire button when Settings tab is shown so tap always works on iOS PWA.
+  var DEBUG_MANAGE_CAT = false;
   function openManageCategories() {
-    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] openManageCategories called');
+    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] handler fired');
     var overlay = document.getElementById('modalManageCategories');
     var body = document.getElementById('manageCategoriesModalBody');
     if (!overlay || !body) return;
@@ -4918,32 +4921,37 @@
     updateBodyModalOpen();
   }
   window.openManageCategories = openManageCategories;
-  var manageCatBtn = document.getElementById('manageCategoriesBtn');
-  if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] button exists at init:', !!manageCatBtn);
-  if (manageCatBtn) {
-    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] attaching direct click+touchend to button');
-    manageCatBtn.addEventListener('click', function(e) { e.preventDefault(); openManageCategories(); });
-    manageCatBtn.addEventListener('touchend', function(e) {
+  function ensureManageCategoriesWired() {
+    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] settings tab shown');
+    var btn = document.getElementById('manageCategoriesBtn');
+    if (!btn) return;
+    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] button found');
+    if (btn._manageCatWired) return;
+    btn._manageCatWired = true;
+    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] handler attached');
+    btn.addEventListener('click', function(e) {
       e.preventDefault();
+      e.stopPropagation();
+      openManageCategories();
+    });
+    btn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
       openManageCategories();
     }, { passive: false });
   }
+  ensureManageCategoriesWired();
   var modalCloseEl = document.getElementById('modalManageCategoriesClose');
   var modalOverlayEl = document.getElementById('modalManageCategories');
-  if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] modal close exists:', !!modalCloseEl, 'overlay exists:', !!modalOverlayEl);
   if (modalCloseEl) modalCloseEl.addEventListener('click', closeManageCategoriesModal);
   if (modalOverlayEl) modalOverlayEl.addEventListener('click', function(e) {
     if (e.target === this) closeManageCategoriesModal();
   });
   document.body.addEventListener('click', function(e) {
-    if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) {
-      if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] body click delegation fired');
-      openManageCategories();
-    }
+    if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) openManageCategories();
   });
   document.body.addEventListener('touchend', function(e) {
     if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) {
-      if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] body touchend delegation fired');
       e.preventDefault();
       openManageCategories();
     }
