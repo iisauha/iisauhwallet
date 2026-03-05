@@ -47,17 +47,25 @@
       border-top: 1px solid var(--border);
       padding-bottom: var(--safe-bottom);
       z-index: 100;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
     }
+    .tabs::-webkit-scrollbar { display: none; }
     .tab {
-      flex: 1;
-      padding: 14px 8px;
-      font-size: 1rem;
+      flex: 0 0 auto;
+      min-width: max-content;
+      padding: 12px 10px;
+      font-size: 0.9rem;
       font-weight: 500;
       background: none;
       border: none;
       color: var(--muted);
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
+      scroll-snap-align: start;
     }
     .tab.active { color: var(--accent); }
     .tab-panel { display: none; padding: 16px; padding-bottom: 24px; }
@@ -147,6 +155,13 @@
     .summary-kv.final-net-cash.positive { background: var(--green-light); }
     .summary-kv.final-net-cash.negative { background: var(--red-light); }
     .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
+    .amount-credit { color: var(--green); font-weight: 600; }
+    .upcoming-summary-bottom { margin-bottom: 24px; }
+    .upcoming-income-amount { color: var(--green); font-weight: 600; }
+    .upcoming-cost-amount { color: var(--red); font-weight: 600; }
+    .upcoming-status-ok { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(22, 163, 74, 0.2); color: var(--green); font-size: 0.85rem; }
+    .upcoming-status-warn { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(220, 38, 38, 0.2); color: var(--red); font-size: 0.85rem; }
+    .upcoming-risk-msg { background: var(--red-light); color: var(--red); }
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -291,7 +306,7 @@
       <div class="summary-compact">
         <div class="summary-kv"><span class="k">Net Cash (Cash Total)</span><span class="v" id="sumNetCash">$0</span></div>
         <div class="summary-kv"><span class="k">Total Current Credit Card Balance</span><span class="v" id="sumCcDebt">$0</span></div>
-        <div class="summary-kv"><span class="k">Credit Card Credit</span><span class="v" id="sumCcCredit">$0</span></div>
+        <div class="summary-kv" id="sumCcCreditRow"><span class="k">Credit Card Credit</span><span class="v" id="sumCcCredit">$0</span></div>
         <div class="summary-kv"><span class="k">Total Pending Outbound</span><span class="v" id="sumPendingOut">$0</span></div>
         <div class="summary-kv"><span class="k">Total Pending Inbound</span><span class="v" id="sumPendingIn">$0</span></div>
         <div class="summary-kv final-net-cash"><span class="k">Final Net Cash</span><span class="v" id="sumFinalNetCash">$0</span></div>
@@ -349,14 +364,14 @@
         <input type="number" id="upcomingCustomDays" min="1" max="365" placeholder="Days" style="width:80px; padding:8px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text);" />
       </div>
     </div>
-    <div id="upcomingSummary" class="card" style="margin-top:16px;"></div>
-    <p id="upcomingRiskMsg" class="hidden" style="margin-top:12px; padding:12px; border-radius:10px; background:var(--red-light); color:var(--red); font-weight:500;"></p>
-    <p class="section-title" style="margin-top:24px;">Expected Costs</p>
-    <div id="upcomingCostsList"></div>
-    <button type="button" class="btn btn-dashed" id="addExpectedCostBtn" style="margin-top:8px;">+ Add expected cost</button>
     <p class="section-title" style="margin-top:24px;">Expected Income</p>
     <div id="upcomingIncomeList"></div>
     <button type="button" class="btn btn-dashed" id="addExpectedIncomeBtn" style="margin-top:8px;">+ Add expected income</button>
+    <p class="section-title" style="margin-top:24px;">Expected Costs</p>
+    <div id="upcomingCostsList"></div>
+    <button type="button" class="btn btn-dashed" id="addExpectedCostBtn" style="margin-top:8px;">+ Add expected cost</button>
+    <p id="upcomingRiskMsg" class="hidden upcoming-risk-msg" style="margin-top:16px; padding:12px; border-radius:10px; font-weight:500;"></p>
+    <div id="upcomingSummary" class="card upcoming-summary-bottom" style="margin-top:24px;"></div>
   </div>
 
   <div id="settingsContent" class="tab-panel">
@@ -1331,9 +1346,14 @@
       cardsToRender.forEach(c => {
         const card = document.createElement('div');
         card.className = 'card';
-        card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="amount">' + formatCents(c.balanceCents) + '</span></div>' +
+        const bal = c.balanceCents || 0;
+        const isCredit = bal < 0;
+        const amountClass = isCredit ? 'amount amount-credit' : 'amount';
+        const amountLabel = isCredit ? formatCents(bal) + ' (Credit)' : formatCents(bal);
+        card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="' + amountClass + '">' + amountLabel + '</span></div>' +
           '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
-          '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button></div>';
+          '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button>' +
+          '<button type="button" class="btn btn-delete" data-type="card" data-id="' + c.id + '" aria-label="Delete credit card">Delete</button></div>';
         cardList.appendChild(card);
       });
     } else {
@@ -1408,7 +1428,9 @@
     if (elCardHeaderTotal) elCardHeaderTotal.textContent = formatCents(ccDebt);
     if (elNet) { elNet.textContent = formatCents(netCash); setSignClass(elNet, netCash); }
     if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, -1); }
-    if (elCredit) { elCredit.textContent = formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
+    const sumCcCreditRow = document.getElementById('sumCcCreditRow');
+    if (sumCcCreditRow) sumCcCreditRow.style.display = ccCredit > 0 ? '' : 'none';
+    if (elCredit) { elCredit.textContent = (ccCredit > 0 ? '+' : '') + formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
     if (elOut) { elOut.textContent = formatCents(pendingOutTotal); setSignClass(elOut, -1); }
     if (elIn) { elIn.textContent = formatCents(pendingInTotal); setSignClass(elIn, pendingInTotal); }
     if (elFinal) {
@@ -1447,6 +1469,7 @@
       document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
       this.classList.add('active');
       document.getElementById(t + 'Content').classList.add('active');
+      this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       if (t === 'spending') {
         spendingShowLimit = 5;
         renderSpending();
@@ -1662,7 +1685,8 @@
     container.addEventListener('click', function(e) {
       const btn = e.target.closest('.addset-btn');
       const clearBtn = e.target.closest('.clear-btn');
-      const delBtn = e.target.closest('.btn-delete[data-type="bank"]');
+      const delBankBtn = e.target.closest('.btn-delete[data-type="bank"]');
+      const delCardBtn = e.target.closest('.btn-delete[data-type="card"]');
       if (btn) {
         addSetTarget = { type: btn.getAttribute('data-type'), id: btn.getAttribute('data-id') };
         document.getElementById('modalAddSetAmount').value = '';
@@ -1681,16 +1705,26 @@
             const c = data.cards.find(x => x.id === id);
             if (c) { c.balanceCents = 0; c.updatedAt = now(); save(data); renderSnapshot(); }
           }
-        });
+        }, 'Clear');
       }
-      if (delBtn) {
-        const id = delBtn.getAttribute('data-id');
-        confirmModal('Delete bank account?', 'This will remove the bank account from Snapshot.', function() {
+      if (delBankBtn) {
+        const id = delBankBtn.getAttribute('data-id');
+        const bank = data.banks.find(x => x.id === id);
+        confirmModal('Delete bank account?', (bank ? 'Remove "' + escapeHtml(bank.name) + '" from Snapshot.' : 'This will remove the bank account from Snapshot.'), function() {
           data.banks = data.banks.filter(b => b.id !== id);
           ensurePhysicalCashBank(data);
           save(data);
           renderSnapshot();
-        });
+        }, 'Delete');
+      }
+      if (delCardBtn) {
+        const id = delCardBtn.getAttribute('data-id');
+        const card = data.cards.find(x => x.id === id);
+        confirmModal('Delete credit card?', (card ? 'Remove "' + escapeHtml(card.name) + '" from Snapshot.' : 'This will remove the credit card from Snapshot.'), function() {
+          data.cards = data.cards.filter(c => c.id !== id);
+          save(data);
+          renderSnapshot();
+        }, 'Delete');
       }
     });
   });
@@ -1710,15 +1744,50 @@
     updateBodyModalOpen();
   };
 
-  function confirmModal(title, msg, onConfirm) {
-    document.getElementById('modalConfirmTitle').textContent = title;
-    document.getElementById('modalConfirmMsg').textContent = msg;
-    document.getElementById('modalConfirm').classList.remove('hidden');
+  function confirmAction(opts) {
+    const title = (opts && opts.title) || 'Confirm';
+    const message = (opts && opts.message) || '';
+    const confirmText = (opts && opts.confirmText) || 'Confirm';
+    const modalEl = document.getElementById('modalConfirm');
+    const titleEl = document.getElementById('modalConfirmTitle');
+    const msgEl = document.getElementById('modalConfirmMsg');
+    const cancelBtn = document.getElementById('modalConfirmCancel');
+    const okBtn = document.getElementById('modalConfirmOk');
+    if (!modalEl || !titleEl || !msgEl || !okBtn) return Promise.reject();
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+    okBtn.textContent = confirmText;
+    modalEl.classList.remove('hidden');
     updateBodyModalOpen();
-    const ok = document.getElementById('modalConfirmOk');
-    ok.onclick = function() { onConfirm(); document.getElementById('modalConfirm').classList.add('hidden'); updateBodyModalOpen(); };
+    return new Promise(function(resolve, reject) {
+      function close(cancelled) {
+        modalEl.classList.add('hidden');
+        document.removeEventListener('keydown', onKey);
+        modalEl.removeEventListener('click', onOverlayClick);
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+        updateBodyModalOpen();
+        if (cancelled) reject(); else resolve();
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); close(true); }
+      }
+      function onOverlayClick(e) {
+        if (e.target === modalEl) close(true);
+      }
+      document.addEventListener('keydown', onKey);
+      modalEl.addEventListener('click', onOverlayClick);
+      cancelBtn.onclick = () => close(true);
+      okBtn.onclick = () => close(false);
+    });
   }
-  document.getElementById('modalConfirmCancel').onclick = () => { document.getElementById('modalConfirm').classList.add('hidden'); updateBodyModalOpen(); };
+  function confirmModal(title, msg, onConfirm, confirmText) {
+    confirmAction({ title, message: msg, confirmText: confirmText || 'Confirm' }).then(() => { if (onConfirm) onConfirm(); }).catch(() => {});
+  }
+  document.getElementById('modalConfirmCancel').onclick = () => {
+    const modalEl = document.getElementById('modalConfirm');
+    if (modalEl) { modalEl.classList.add('hidden'); updateBodyModalOpen(); }
+  };
 
   // Pending
   let pendingKind = 'in';
@@ -1888,7 +1957,7 @@
           }
           save(data);
           renderRecurring();
-        });
+        }, 'Delete');
       };
       btnRow.appendChild(editBtn);
       btnRow.appendChild(toggleBtn);
@@ -2630,15 +2699,16 @@
 
     const summaryEl = document.getElementById('upcomingSummary');
     if (summaryEl) {
+      const netCashClass = netCash >= 0 ? 'v pos' : 'v neg';
       summaryEl.innerHTML =
-        '<div class="summary-kv"><span class="k">Current Net Cash</span><span class="v">' + formatCents(netCash) + '</span></div>' +
-        '<div class="summary-kv"><span class="k">Expected Costs (next ' + windowDays + ' days)</span><span class="v">' + formatCents(totalExpectedCostsCents) + '</span></div>' +
-        '<div class="summary-kv"><span class="k">Expected Income</span><span class="v">' + formatCents(totalExpectedIncomeCents) + '</span></div>' +
-        '<div class="summary-kv final-net-cash"><span class="k">Projected Balance</span><span class="v" id="upcomingProjectedVal">' + formatCents(projectedBalance) + '</span></div>';
+        '<div class="summary-kv"><span class="k">Current Net Cash</span><span class="' + netCashClass + '">' + formatCents(netCash) + '</span></div>' +
+        '<div class="summary-kv"><span class="k">Expected Income</span><span class="v pos">' + formatCents(totalExpectedIncomeCents) + '</span></div>' +
+        '<div class="summary-kv"><span class="k">Expected Costs (next ' + windowDays + ' days)</span><span class="v neg">' + formatCents(totalExpectedCostsCents) + '</span></div>' +
+        '<div class="summary-kv final-net-cash' + (projectedBalance >= 0 ? ' positive' : ' negative') + '"><span class="k">Projected Balance</span><span class="v" id="upcomingProjectedVal">' + formatCents(projectedBalance) + '</span></div>';
       const pv = document.getElementById('upcomingProjectedVal');
       if (pv) {
-        pv.classList.remove('positive', 'negative');
-        pv.classList.add(projectedBalance >= 0 ? 'positive' : 'negative');
+        pv.classList.remove('positive', 'negative', 'pos', 'neg');
+        pv.classList.add(projectedBalance >= 0 ? 'positive' : 'negative', projectedBalance >= 0 ? 'pos' : 'neg');
       }
     }
 
@@ -2712,19 +2782,20 @@
       allCostItems.forEach(item => {
         const mid = item.minCents != null && item.maxCents != null
           ? Math.round((item.minCents + item.maxCents) / 2) : item.amountCents;
-        const runBefore = runningBefore(item.dateKey);
+        const runBefore = runningBefore(item);
         const ok = runBefore >= mid;
         const amountStr = item.minCents != null && item.maxCents != null
           ? formatCents(item.minCents) + ' – ' + formatCents(item.maxCents)
           : formatCents(item.amountCents);
+        const statusClass = ok ? 'upcoming-status-ok' : 'upcoming-status-warn';
         const statusStr = ok ? '✔ Should be OK to pay' : '⚠ Might require additional funds';
         const div = document.createElement('div');
         div.className = 'card';
         div.style.marginBottom = '8px';
         div.innerHTML =
-          '<div class="row"><span class="name">' + escapeHtml(item.title) + '</span><span class="amount">' + amountStr + '</span></div>' +
+          '<div class="row"><span class="name">' + escapeHtml(item.title) + '</span><span class="amount upcoming-cost-amount">' + amountStr + '</span></div>' +
           '<div style="font-size:0.85rem;color:var(--muted);">Due in ' + (item.days != null ? item.days + ' days' : '—') + ' · ' + (item.dateKey ? formatDisplayDate(item.dateKey) : '') + '</div>' +
-          '<div style="font-size:0.85rem;margin-top:4px;">Status: ' + statusStr + '</div>' +
+          '<div style="font-size:0.85rem;margin-top:6px;">Status: <span class="' + statusClass + '">' + statusStr + '</span></div>' +
           (item.type === 'manual' ? '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-cost" style="margin-right:8px;" data-expected-cost-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-cost-id="' + escapeHtml(item.id) + '">Delete</button></div>' : '');
         costsListEl.appendChild(div);
       });
@@ -2745,7 +2816,7 @@
         div.className = 'card';
         div.style.marginBottom = '8px';
         div.innerHTML =
-          '<div class="row"><span class="name">' + escapeHtml(item.title || 'Income') + '</span><span class="amount">' + formatCents(item.amountCents || 0) + '</span></div>' +
+          '<div class="row"><span class="name">' + escapeHtml(item.title || 'Income') + '</span><span class="amount upcoming-income-amount">' + formatCents(item.amountCents || 0) + '</span></div>' +
           '<div style="font-size:0.85rem;color:var(--muted);">In ' + (days != null ? days + ' days' : '—') + ' · ' + (item.expectedDate ? formatDisplayDate(item.expectedDate) : '') + '</div>' +
           '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-income" style="margin-right:8px;" data-expected-income-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-income-id="' + escapeHtml(item.id) + '">Delete</button></div>';
         incomeListEl.appendChild(div);
@@ -2761,13 +2832,17 @@
       if (item) openExpectedCostModal(item);
       return;
     }
-    const costDel = e.target.closest('[data-expected-cost-id]');
-    if (costDel && !e.target.closest('.edit-expected-cost')) {
+    const costDel = e.target.closest('.btn-delete[data-expected-cost-id]');
+    if (costDel) {
       e.preventDefault();
       const id = costDel.getAttribute('data-expected-cost-id');
-      expectedCosts = expectedCosts.filter(c => c.id !== id);
-      saveExpectedCosts(expectedCosts);
-      renderUpcomingCashflow();
+      const item = expectedCosts.find(c => c.id === id);
+      const msg = item ? ((item.title || 'Expected cost') + ' ' + formatCents(item.amountCents || 0)) : 'this expected cost';
+      confirmModal('Delete expected cost?', 'Remove ' + escapeHtml(msg) + '?', function() {
+        expectedCosts = expectedCosts.filter(c => c.id !== id);
+        saveExpectedCosts(expectedCosts);
+        renderUpcomingCashflow();
+      }, 'Delete');
       return;
     }
     const incomeEdit = e.target.closest('.edit-expected-income');
@@ -2777,13 +2852,17 @@
       if (item) openExpectedIncomeModal(item);
       return;
     }
-    const incomeDel = e.target.closest('[data-expected-income-id]');
-    if (incomeDel && !e.target.closest('.edit-expected-income')) {
+    const incomeDel = e.target.closest('.btn-delete[data-expected-income-id]');
+    if (incomeDel) {
       e.preventDefault();
       const id = incomeDel.getAttribute('data-expected-income-id');
-      expectedIncome = expectedIncome.filter(i => i.id !== id);
-      saveExpectedIncome(expectedIncome);
-      renderUpcomingCashflow();
+      const item = expectedIncome.find(i => i.id === id);
+      const msg = item ? ((item.title || 'Income') + ' ' + formatCents(item.amountCents || 0)) : 'this expected income';
+      confirmModal('Delete expected income?', 'Remove ' + escapeHtml(msg) + '?', function() {
+        expectedIncome = expectedIncome.filter(i => i.id !== id);
+        saveExpectedIncome(expectedIncome);
+        renderUpcomingCashflow();
+      }, 'Delete');
     }
   });
 
@@ -2795,9 +2874,14 @@
     }
     const delBtn = e.target.closest('.btn-delete[data-kind=\"in\"]');
     if (delBtn) {
-      data.pendingIn = data.pendingIn.filter(p => p.id !== delBtn.getAttribute('data-id'));
-      save(data);
-      renderSnapshot();
+      const id = delBtn.getAttribute('data-id');
+      const item = data.pendingIn.find(p => p.id === id);
+      const msg = item ? (escapeHtml(item.label) + ' ' + formatCents(item.amountCents)) : 'this item';
+      confirmModal('Delete pending inbound?', 'Remove ' + msg + '?', function() {
+        data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+        save(data);
+        renderSnapshot();
+      }, 'Delete');
     }
   });
   document.getElementById('pendingOutList').addEventListener('click', function(e) {
@@ -2808,14 +2892,19 @@
     }
     const delBtn = e.target.closest('.btn-delete[data-kind=\"out\"]');
     if (delBtn) {
-      data.pendingOut = data.pendingOut.filter(p => p.id !== delBtn.getAttribute('data-id'));
-      save(data);
-      renderSnapshot();
+      const id = delBtn.getAttribute('data-id');
+      const item = data.pendingOut.find(p => p.id === id);
+      const msg = item ? (escapeHtml(item.label) + ' ' + formatCents(item.amountCents)) : 'this item';
+      confirmModal('Delete pending outbound?', 'Remove ' + msg + '?', function() {
+        data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+        save(data);
+        renderSnapshot();
+      }, 'Delete');
     }
   });
 
-  document.getElementById('clearPendingInBtn').onclick = () => confirmModal('Clear all pending inbound?', 'Remove all items.', () => { data.pendingIn = []; save(data); renderSnapshot(); });
-  document.getElementById('clearPendingOutBtn').onclick = () => confirmModal('Clear all pending outbound?', 'Remove all items.', () => { data.pendingOut = []; save(data); renderSnapshot(); });
+  document.getElementById('clearPendingInBtn').onclick = () => confirmModal('Clear all pending inbound?', 'Remove all items.', () => { data.pendingIn = []; save(data); renderSnapshot(); }, 'Clear');
+  document.getElementById('clearPendingOutBtn').onclick = () => confirmModal('Clear all pending outbound?', 'Remove all items.', () => { data.pendingOut = []; save(data); renderSnapshot(); }, 'Clear');
 
   // Add bank / card
   document.getElementById('addBankBtn').onclick = () => { document.getElementById('modalBankName').value = 'Bank'; document.getElementById('modalBank').classList.remove('hidden'); updateBodyModalOpen(); };
@@ -3571,7 +3660,7 @@
           save(data);
           renderSpending();
           renderSnapshot();
-        });
+        }, 'Delete');
       };
       div.appendChild(delBtn);
       listEl.appendChild(div);
@@ -3677,7 +3766,7 @@
           if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
           if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
           renderManageCategories();
-        });
+        }, 'Delete');
       };
       header.appendChild(del);
       card.appendChild(header);
@@ -3707,7 +3796,7 @@
               if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
               if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
               renderManageCategories();
-            });
+            }, 'Delete');
           };
           row.appendChild(left);
           row.appendChild(subDel);
@@ -3861,8 +3950,8 @@
       renderSnapshot();
       renderSpending();
       renderManageCategories();
-    });
-  });
+    }, 'Reset All');
+  }, 'Clear');
 
   let postPendingKind = null;
   let postPendingId = null;
