@@ -42,13 +42,13 @@ export function SpendingPage() {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [openAdd, setOpenAdd] = useState(false);
-  const [editingPurchase, setEditingPurchase] = useState<any | null>(null);
   const [view, setView] = useState<BreakdownView>('category');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
   const [purchasesCollapsed, setPurchasesCollapsed] = useState<boolean>(true);
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
+  const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -151,6 +151,24 @@ export function SpendingPage() {
   );
   const hasMorePurchases = sortedPurchases.length > 5;
   const visiblePurchases = showAllPurchases ? sortedPurchases : sortedPurchases.slice(0, 5);
+
+  const getPurchaseUiId = (p: any) => {
+    if (p.id) return String(p.id);
+    const parts = [
+      String(p.dateISO || ''),
+      String(p.title || ''),
+      String(p.amountCents || 0),
+      String(p.category || ''),
+      String(p.subcategory || '')
+    ];
+    return parts.join('|');
+  };
+
+  const editingPurchase = useMemo(() => {
+    if (!editingPurchaseKey) return null;
+    const list: any[] = data.purchases || [];
+    return list.find((p) => getPurchaseUiId(p) === editingPurchaseKey) || null;
+  }, [editingPurchaseKey, data.purchases]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -262,8 +280,10 @@ export function SpendingPage() {
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          {visiblePurchases.map((p: any) => (
-            <div className="card" key={p.id}>
+          {visiblePurchases.map((p: any) => {
+            const uiId = getPurchaseUiId(p);
+            return (
+            <div className="card" key={uiId}>
               <div className="row">
                 <span className="name">{p.title || 'Purchase'}</span>
                 <span className="amount">{formatCents(p.amountCents || 0)}</span>
@@ -280,7 +300,7 @@ export function SpendingPage() {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => {
-                    setEditingPurchase(p);
+                    setEditingPurchaseKey(uiId);
                     setOpenAdd(true);
                   }}
                 >
@@ -295,7 +315,7 @@ export function SpendingPage() {
                 </button>
               </div>
             </div>
-          ))}
+          )})}
           {!showAllPurchases && hasMorePurchases ? (
             <div style={{ textAlign: 'center', marginTop: 8 }}>
               <button
@@ -315,14 +335,18 @@ export function SpendingPage() {
         className="btn btn-add"
         style={{ marginTop: 16, width: '100%' }}
         onClick={() => {
-          setEditingPurchase(null);
+          setEditingPurchaseKey(null);
           setOpenAdd(true);
         }}
       >
         + Add Purchase
       </button>
 
-      <AddPurchaseModal open={openAdd} onClose={() => setOpenAdd(false)} purchase={editingPurchase} />
+      <AddPurchaseModal
+        open={openAdd}
+        onClose={() => setOpenAdd(false)}
+        purchaseKey={editingPurchase ? getPurchaseUiId(editingPurchase) : null}
+      />
 
       {confirmDelete ? (
         <div className="modal-overlay">

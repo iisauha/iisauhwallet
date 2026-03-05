@@ -13,7 +13,7 @@ function todayKey() {
   return `${y}-${m}-${dd}`;
 }
 
-export function AddPurchaseModal(props: { open: boolean; onClose: () => void; purchase?: any }) {
+export function AddPurchaseModal(props: { open: boolean; onClose: () => void; purchaseKey?: string | null }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -32,22 +32,49 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void; pu
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
-  const isEditing = !!props.purchase;
+  const getPurchaseUiId = (p: any) => {
+    if (p.id) return String(p.id);
+    const parts = [
+      String(p.dateISO || ''),
+      String(p.title || ''),
+      String(p.amountCents || 0),
+      String(p.category || ''),
+      String(p.subcategory || '')
+    ];
+    return parts.join('|');
+  };
 
-  // Refill form when opening or when purchase changes.
+  const currentPurchase = useMemo(() => {
+    if (!props.purchaseKey) return null;
+    const list: any[] = data.purchases || [];
+    return list.find((p) => getPurchaseUiId(p) === props.purchaseKey) || null;
+  }, [props.purchaseKey, data.purchases]);
+
+  const isEditing = !!currentPurchase;
+
   if (!props.open) return null;
 
-  if (props.purchase && !title && !amount && !notes && !isSplit && !applyToSnapshot) {
-    const p: any = props.purchase;
+  // Prefill when opening for edit.
+  if (currentPurchase && !title && !amount && !notes && !isSplit && !applyToSnapshot) {
+    const p: any = currentPurchase;
     setTitle(p.title || '');
-    setAmount(((p.amountCents || 0) / 100).toFixed(2));
+    const isSplitPurchase =
+      !!p.isSplit || typeof p.splitTotalCents === 'number' || typeof p.originalTotal === 'number';
+    const totalCentsRaw =
+      typeof p.originalTotal === 'number'
+        ? p.originalTotal
+        : typeof p.splitTotalCents === 'number'
+          ? p.splitTotalCents
+          : p.amountCents || 0;
+    const portionCentsRaw =
+      typeof p.splitMyPortionCents === 'number' ? p.splitMyPortionCents : p.amountCents || 0;
+    setAmount(((isSplitPurchase ? totalCentsRaw : p.amountCents || 0) / 100).toFixed(2));
+    setMyPortion(isSplitPurchase ? (portionCentsRaw / 100).toFixed(2) : '');
+    setIsSplit(isSplitPurchase);
     setDateISO(p.dateISO || todayKey());
     setCategory(p.category || 'food');
     setSubcategory(p.subcategory || '');
     setNotes(p.notes || '');
-    const split = !!p.isSplit && typeof p.splitMyPortionCents === 'number';
-    setIsSplit(split);
-    setMyPortion(split ? ((p.splitMyPortionCents || 0) / 100).toFixed(2) : '');
     setApplyToSnapshot(!!p.applyToSnapshot);
     setPaymentSource((p.paymentSource as any) || '');
     setPaymentTargetId(p.paymentTargetId || '');
@@ -223,6 +250,7 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void; pu
                 purchase.splitTotalCents = totalCents;
                 purchase.splitMyPortionCents = myPortionCents;
                 purchase.splitInboundCents = inboundCents;
+                purchase.originalTotal = totalCents;
               }
               if (applyToSnapshot) {
                 const appliedAmount = isSplit ? totalCents : myPortionCents;
@@ -233,8 +261,8 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void; pu
                   purchase.splitSnapshot = { amountCents: appliedAmount, paymentSource: purchase.paymentSource, paymentTargetId: purchase.paymentTargetId };
                 }
               }
-              if (isEditing && props.purchase) {
-                actions.updatePurchase(props.purchase.id, purchase);
+              if (isEditing && currentPurchase && currentPurchase.id) {
+                actions.updatePurchase(currentPurchase.id, purchase);
               } else {
                 actions.addPurchase(purchase);
               }

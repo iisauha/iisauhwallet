@@ -76,6 +76,7 @@ export interface Purchase {
   splitInboundCents?: number;
   splitPendingId?: string;
   splitSnapshot?: PurchaseSplitSnapshot;
+  originalTotal?: number;
 
   applyToSnapshot?: boolean;
   paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card';
