@@ -110,31 +110,16 @@ export function UpcomingPage() {
         </Select>
       </div>
 
-      <div className="card">
-        <div className="summary-kv">
-          <span className="k">Current Net Cash</span>
-          <span className="v pos">{formatCents(totals.finalNetCashCents)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k">Expected costs in window</span>
-          <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k">Expected income in window</span>
-          <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k">Projected balance</span>
-          <span className={projectedBalanceCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(projectedBalanceCents)}</span>
-        </div>
-        <div style={{ marginTop: 10 }}>
-          <span className={statusOk ? 'upcoming-status-ok' : 'upcoming-status-warn'}>
-            {statusOk ? 'OK to pay' : 'May require additional funds'}
-          </span>
-        </div>
-      </div>
-
-      <p className="section-title" style={{ marginTop: 24 }}>
+      <p
+        className="section-title"
+        style={{
+          marginTop: 24,
+          background: 'var(--green-light)',
+          color: 'var(--green)',
+          padding: '6px 10px',
+          borderRadius: 10
+        }}
+      >
         Expected Income
       </p>
       {incomeInWindow.map((i) => (
@@ -210,7 +195,16 @@ export function UpcomingPage() {
         + Add expected income
       </button>
 
-      <p className="section-title" style={{ marginTop: 24 }}>
+      <p
+        className="section-title"
+        style={{
+          marginTop: 24,
+          background: 'var(--red-light)',
+          color: 'var(--red)',
+          padding: '6px 10px',
+          borderRadius: 10
+        }}
+      >
         Expected Costs
       </p>
       {costsInWindow.map((c) => (
@@ -291,6 +285,30 @@ export function UpcomingPage() {
       >
         + Add expected cost
       </button>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <div className="summary-kv">
+          <span className="k">Current Net Cash</span>
+          <span className="v pos">{formatCents(totals.finalNetCashCents)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k">Expected costs in window</span>
+          <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k">Expected income in window</span>
+          <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k">Projected balance</span>
+          <span className={projectedBalanceCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(projectedBalanceCents)}</span>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <span className={statusOk ? 'upcoming-status-ok' : 'upcoming-status-warn'}>
+            {statusOk ? 'OK to pay' : 'May require additional funds'}
+          </span>
+        </div>
+      </div>
 
       {modal.type === 'add-expected' ? (
         <div className="modal-overlay">

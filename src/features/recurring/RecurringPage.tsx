@@ -59,7 +59,17 @@ export function RecurringPage() {
   return (
     <div className="tab-panel active" id="recurringContent">
       <p className="section-title">Recurring Items</p>
-      <p className="section-title" style={{ marginTop: 16, fontSize: '1rem' }}>
+      <p
+        className="section-title"
+        style={{
+          marginTop: 16,
+          fontSize: '1rem',
+          background: 'var(--green-light)',
+          color: 'var(--green)',
+          padding: '6px 10px',
+          borderRadius: 10
+        }}
+      >
         Recurring Income
       </p>
       {income.map((r: any) => (
@@ -83,7 +93,17 @@ export function RecurringPage() {
         </div>
       ))}
 
-      <p className="section-title" style={{ marginTop: 24, fontSize: '1rem' }}>
+      <p
+        className="section-title"
+        style={{
+          marginTop: 24,
+          fontSize: '1rem',
+          background: 'var(--red-light)',
+          color: 'var(--red)',
+          padding: '6px 10px',
+          borderRadius: 10
+        }}
+      >
         Recurring Expenses
       </p>
       {expensesByCategory.map(([catId, items]) => {

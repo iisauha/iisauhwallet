@@ -3,6 +3,7 @@ import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { loadSubTracker, saveSubTracker, uid, type SubTrackerEntry, type SubTrackerTier } from '../../state/storage';
 import { Select } from '../../ui/Select';
+import { Modal } from '../../ui/Modal';
 
 function todayKey() {
   const d = new Date();
@@ -51,6 +52,9 @@ export function SubTrackerPage() {
   const [monthsWindow, setMonthsWindow] = useState('3');
   const [tierTarget, setTierTarget] = useState('');
   const [tierReward, setTierReward] = useState('');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
+  const [draftSpendCents, setDraftSpendCents] = useState(0);
 
   const cardNameById = useMemo(() => new Map(cards.map((c) => [c.id, c.name || 'Card'])), [cards]);
 
@@ -69,7 +73,150 @@ export function SubTrackerPage() {
     <div className="tab-panel active" id="subTrackerContent">
       <p className="section-title">SUB Tracker</p>
 
-      <div className="card">
+      <button
+        type="button"
+        className="btn btn-add"
+        style={{ width: '100%', marginBottom: 16 }}
+        onClick={() => {
+          setCardMode('card');
+          setCardId(cards[0]?.id || '');
+          setManualName('');
+          setStartDate(todayKey());
+          setUseDeadlineDate(true);
+          setDeadlineDate(todayKey());
+          setMonthsWindow('3');
+          setTierTarget('');
+          setTierReward('');
+          setConfirmDelete(null);
+          setEditorEntryId(null);
+          setEditorOpen(true);
+        }}
+      >
+        + Add tracked card
+      </button>
+
+      {entries.map((e) => {
+        const name = entryDisplayName(e);
+        const start = toDate(e.startDate);
+        const deadline = e.deadlineDate ? toDate(e.deadlineDate) : e.monthsWindow ? toDate(addMonthsFromStart(e.startDate, e.monthsWindow)) : new Date(NaN);
+        const now = new Date();
+        const spendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
+
+        const daysRemaining = Number.isNaN(deadline.getTime()) ? null : Math.ceil((deadline.getTime() - now.getTime()) / 86400000);
+        const elapsedDays = Number.isNaN(start.getTime()) ? null : Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86400000));
+
+        const tiers = Array.isArray(e.tiers) ? e.tiers.slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0)) : [];
+        const nextTier = tiers.find((t) => spendCents < (t.spendTargetCents || 0)) || tiers[tiers.length - 1] || null;
+        const remainingCents = nextTier ? Math.max(0, (nextTier.spendTargetCents || 0) - spendCents) : 0;
+        const monthsRemaining = daysRemaining == null ? null : Math.max(0.01, daysRemaining / 30.44);
+        const monthsSinceStart = elapsedDays == null ? null : Math.max(0.01, elapsedDays / 30.44);
+
+        const requiredPace = monthsRemaining == null ? null : remainingCents / monthsRemaining;
+        const actualPace = monthsSinceStart == null ? null : spendCents / monthsSinceStart;
+        const onPace = requiredPace == null || actualPace == null ? true : actualPace >= requiredPace;
+
+        const nextTarget = nextTier ? nextTier.spendTargetCents || 0 : 0;
+
+        return (
+          <div className="card" key={e.id}>
+            <div className="row">
+              <span className="name">{name}</span>
+              <span className="amount">{formatCents(spendCents)}</span>
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 4 }}>
+              {nextTier
+                ? `Next tier: ${formatCents(nextTarget)} (${nextTier.rewardText || 'Bonus'}) • Remaining: ${formatCents(remainingCents)}`
+                : 'No tiers configured'}
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 4 }}>
+              Pace: {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))}/mo required`} •{' '}
+              {actualPace == null ? '—' : `${formatCents(Math.round(actualPace))}/mo yours`} •{' '}
+              {daysRemaining != null ? `~${Math.max(0, daysRemaining)} days remaining` : 'Deadline unknown'}
+            </div>
+            <div className="btn-row" style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  // Open edit modal with this entry's values.
+                  const ref = e.cardRef;
+                  if (ref.type === 'card') {
+                    setCardMode('card');
+                    setCardId(ref.cardId);
+                    setManualName('');
+                  } else {
+                    setCardMode('manual');
+                    setManualName(ref.name || '');
+                    setCardId(cards[0]?.id || '');
+                  }
+                  setStartDate(e.startDate || todayKey());
+                  if (e.deadlineDate) {
+                    setUseDeadlineDate(true);
+                    setDeadlineDate(e.deadlineDate);
+                  } else {
+                    setUseDeadlineDate(false);
+                    setMonthsWindow(String(e.monthsWindow || '3'));
+                    setDeadlineDate(todayKey());
+                  }
+                  const firstTier = (e.tiers || [])[0];
+                  setTierTarget(firstTier ? (firstTier.spendTargetCents / 100).toFixed(2) : '');
+                  setTierReward(firstTier?.rewardText || '');
+                  setEditorEntryId(e.id);
+                  setEditorOpen(true);
+                }}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => setConfirmDelete({ kind: 'entry', entryId: e.id, label: name })}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      {confirmDelete ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Are you sure you want to delete this?</h3>
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{confirmDelete.label}</p>
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  if (confirmDelete.kind === 'entry') {
+                    persist({ version: 1, entries: entries.filter((x) => x.id !== confirmDelete.entryId) });
+                  } else {
+                    persist({
+                      version: 1,
+                      entries: entries.map((x) =>
+                        x.id === confirmDelete.entryId ? { ...x, tiers: (x.tiers || []).filter((t) => t.id !== confirmDelete.tierId) } : x
+                      )
+                    });
+                  }
+                  setConfirmDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <Modal
+        open={editorOpen}
+        title={editorEntryId ? 'Edit tracked card' : 'Add tracked card'}
+        onClose={() => setEditorOpen(false)}
+      >
         <div className="field">
           <label>Card</label>
           <Select
@@ -132,6 +279,29 @@ export function SubTrackerPage() {
           <label htmlFor="subUseDeadline">Use a deadline date (otherwise use months window)</label>
         </div>
 
+        <div className="field">
+          <label>Spent so far ($)</label>
+          <input
+            className="ll-control"
+            value={(editorEntryId
+              ? (entries.find((x) => x.id === editorEntryId)?.spendCents || 0) / 100
+              : 0
+            ).toFixed(2)}
+            onChange={(ev) => {
+              const nextAmount = parseCents(ev.target.value);
+              if (editorEntryId) {
+                const updatedEntries = entries.map((x) =>
+                  x.id === editorEntryId ? { ...x, spendCents: nextAmount, updatedAt: new Date().toISOString() } : x
+                );
+                persist({ version: 1, entries: updatedEntries });
+              } else {
+                setDraftSpendCents(nextAmount);
+              }
+            }}
+            inputMode="decimal"
+          />
+        </div>
+
         <div style={{ display: 'flex', gap: 10 }}>
           <div className="field" style={{ flex: 1 }}>
             <label>Tier spend target ($)</label>
@@ -154,201 +324,60 @@ export function SubTrackerPage() {
           </div>
         </div>
 
-        <div className="btn-row" style={{ marginTop: 0 }}>
+        <div className="btn-row">
+          <button type="button" className="btn btn-secondary" onClick={() => setEditorOpen(false)}>
+            Cancel
+          </button>
           <button
             type="button"
-            className="btn btn-add"
+            className="btn btn-secondary"
             onClick={() => {
               const targetCents = parseCents(tierTarget);
               if (!(targetCents > 0)) return;
               const rewardText = (tierReward || '').trim() || 'Bonus';
-              const entryId = uid();
-              const tier: SubTrackerTier = { id: uid(), spendTargetCents: targetCents, rewardText };
-              const entry: SubTrackerEntry = {
-                id: entryId,
-                cardRef: cardMode === 'card' ? { type: 'card', cardId } : { type: 'manual', name: manualName.trim() || 'Card' },
-                startDate: startDate || todayKey(),
-                deadlineDate: useDeadlineDate ? deadlineDate || todayKey() : undefined,
-                monthsWindow: useDeadlineDate ? undefined : Math.max(1, parseInt(monthsWindow || '1', 10) || 1),
-                tiers: [tier],
-                spendCents: 0,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              };
-              persist({ version: 1, entries: [entry, ...entries] });
-              setTierTarget('');
-              setTierReward('');
+              if (editorEntryId) {
+                // Editing top-level fields and first tier.
+                const updatedEntries = entries.map((x) => {
+                  if (x.id !== editorEntryId) return x;
+                  const existingTiers = x.tiers || [];
+                  const first = existingTiers[0];
+                  const updatedFirst: SubTrackerTier = first
+                    ? { ...first, spendTargetCents: targetCents, rewardText }
+                    : { id: uid(), spendTargetCents: targetCents, rewardText };
+                  const newTiers = [updatedFirst, ...existingTiers.slice(1)];
+                  return {
+                    ...x,
+                    cardRef: cardMode === 'card' ? { type: 'card', cardId } : { type: 'manual', name: manualName.trim() || 'Card' },
+                    startDate: startDate || todayKey(),
+                    deadlineDate: useDeadlineDate ? deadlineDate || todayKey() : undefined,
+                    monthsWindow: useDeadlineDate ? undefined : Math.max(1, parseInt(monthsWindow || '1', 10) || 1),
+                    tiers: newTiers,
+                    updatedAt: new Date().toISOString()
+                  };
+                });
+                persist({ version: 1, entries: updatedEntries });
+              } else {
+                const tier: SubTrackerTier = { id: uid(), spendTargetCents: targetCents, rewardText };
+                const entry: SubTrackerEntry = {
+                  id: uid(),
+                  cardRef: cardMode === 'card' ? { type: 'card', cardId } : { type: 'manual', name: manualName.trim() || 'Card' },
+                  startDate: startDate || todayKey(),
+                  deadlineDate: useDeadlineDate ? deadlineDate || todayKey() : undefined,
+                  monthsWindow: useDeadlineDate ? undefined : Math.max(1, parseInt(monthsWindow || '1', 10) || 1),
+                  tiers: [tier],
+                  spendCents: draftSpendCents,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                };
+                persist({ version: 1, entries: [entry, ...entries] });
+              }
+              setEditorOpen(false);
             }}
           >
-            + Add tracked card
+            Save
           </button>
         </div>
-      </div>
-
-      {entries.map((e) => {
-        const name = entryDisplayName(e);
-        const start = toDate(e.startDate);
-        const deadline = e.deadlineDate ? toDate(e.deadlineDate) : e.monthsWindow ? toDate(addMonthsFromStart(e.startDate, e.monthsWindow)) : new Date(NaN);
-        const now = new Date();
-        const spendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
-
-        const daysRemaining = Number.isNaN(deadline.getTime()) ? null : Math.ceil((deadline.getTime() - now.getTime()) / 86400000);
-        const elapsedDays = Number.isNaN(start.getTime()) ? null : Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86400000));
-
-        const tiers = Array.isArray(e.tiers) ? e.tiers.slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0)) : [];
-        const nextTier = tiers.find((t) => spendCents < (t.spendTargetCents || 0)) || tiers[tiers.length - 1] || null;
-
-        const remainingCents = nextTier ? Math.max(0, (nextTier.spendTargetCents || 0) - spendCents) : 0;
-        const monthsRemaining = daysRemaining == null ? null : Math.max(0.01, daysRemaining / 30.44);
-        const monthsSinceStart = elapsedDays == null ? null : Math.max(0.01, elapsedDays / 30.44);
-
-        const requiredPace = monthsRemaining == null ? null : remainingCents / monthsRemaining;
-        const actualPace = monthsSinceStart == null ? null : spendCents / monthsSinceStart;
-        const onPace = requiredPace == null || actualPace == null ? true : actualPace >= requiredPace;
-
-        return (
-          <div className="card" key={e.id}>
-            <div className="row">
-              <span className="name">{name}</span>
-              <span className="amount">{formatCents(spendCents)}</span>
-            </div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-              Start {formatLongLocalDate(e.startDate)}
-              {e.deadlineDate ? ` • Deadline ${formatLongLocalDate(e.deadlineDate)}` : e.monthsWindow ? ` • Window ${e.monthsWindow} mo` : ''}
-              {daysRemaining != null ? ` • ~${Math.max(0, daysRemaining)} days remaining` : ''}
-            </div>
-
-            <div className="field" style={{ marginTop: 10 }}>
-              <label>Spent so far ($)</label>
-              <input
-                className="ll-control"
-                value={(spendCents / 100).toFixed(2)}
-                onChange={(ev) => {
-                  const nextAmount = parseCents(ev.target.value);
-                  const updatedEntries = entries.map((x) =>
-                    x.id === e.id ? { ...x, spendCents: nextAmount, updatedAt: new Date().toISOString() } : x
-                  );
-                  persist({ version: 1, entries: updatedEntries });
-                }}
-                inputMode="decimal"
-              />
-            </div>
-
-            <div className="card" style={{ marginTop: 10, marginBottom: 0, background: 'rgba(148, 163, 184, 0.06)' }}>
-              <div className="row">
-                <span className="name" style={{ fontWeight: 600 }}>
-                  Pace
-                </span>
-                <span className="amount" style={{ fontSize: '1rem', color: onPace ? 'var(--green)' : 'var(--red)' }}>
-                  {onPace ? 'On pace' : 'Behind'}
-                </span>
-              </div>
-              <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-                <div className="row" style={{ fontSize: '0.95rem' }}>
-                  <span style={{ color: 'var(--muted)' }}>Required pace</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))} / month`}
-                  </span>
-                </div>
-                <div className="row" style={{ fontSize: '0.95rem' }}>
-                  <span style={{ color: 'var(--muted)' }}>Your pace</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {actualPace == null ? '—' : `${formatCents(Math.round(actualPace))} / month`}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600, marginBottom: 8 }}>Tiers</div>
-              {tiers.length ? (
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {tiers.map((t) => {
-                    const target = t.spendTargetCents || 0;
-                    const pct = target > 0 ? clamp(spendCents / target, 0, 1) : 0;
-                    const remaining = Math.max(0, target - spendCents);
-                    return (
-                      <div key={t.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                        <div className="row">
-                          <span className="name" style={{ fontWeight: 600 }}>
-                            {formatCents(Math.min(spendCents, target))} / {formatCents(target)}
-                          </span>
-                          <span style={{ color: 'var(--muted)' }}>{t.rewardText || 'Bonus'}</span>
-                        </div>
-                        <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>Remaining: {formatCents(remaining)}</div>
-                        <div className="ll-progress" style={{ marginTop: 8 }}>
-                          <div className="ll-progress-bar" style={{ width: `${Math.round(pct * 100)}%` }} />
-                        </div>
-                        <div className="btn-row" style={{ marginTop: 8 }}>
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            onClick={() =>
-                              setConfirmDelete({
-                                kind: 'tier',
-                                entryId: e.id,
-                                tierId: t.id,
-                                label: `${name} → ${formatCents(target)} (${t.rewardText || 'Bonus'})`
-                              })
-                            }
-                          >
-                            Delete tier
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={{ color: 'var(--muted)' }}>No tiers.</div>
-              )}
-            </div>
-
-            <div className="btn-row" style={{ marginTop: 12 }}>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={() => setConfirmDelete({ kind: 'entry', entryId: e.id, label: name })}
-              >
-                Delete tracked card
-              </button>
-            </div>
-          </div>
-        );
-      })}
-
-      {confirmDelete ? (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Are you sure you want to delete this?</h3>
-            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{confirmDelete.label}</p>
-            <div className="btn-row">
-              <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={() => {
-                  if (confirmDelete.kind === 'entry') {
-                    persist({ version: 1, entries: entries.filter((x) => x.id !== confirmDelete.entryId) });
-                  } else {
-                    persist({
-                      version: 1,
-                      entries: entries.map((x) =>
-                        x.id === confirmDelete.entryId ? { ...x, tiers: (x.tiers || []).filter((t) => t.id !== confirmDelete.tierId) } : x
-                      )
-                    });
-                  }
-                  setConfirmDelete(null);
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      </Modal>
     </div>
   );
 }
