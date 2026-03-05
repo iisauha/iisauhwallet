@@ -427,7 +427,7 @@
     </div>
     <p class="section-title" style="margin-top: 24px;">Categories</p>
     <div class="settings-section">
-      <button type="button" class="btn btn-secondary" id="manageCategoriesBtn" style="width: 100%;">Manage Categories</button>
+      <button type="button" class="btn btn-secondary" id="manageCategoriesBtn" style="width: 100%;" onclick="window.openManageCategories && window.openManageCategories();">Manage Categories</button>
     </div>
     <div id="manageCategories" class="settings-section hidden"></div>
     <p class="section-title" style="margin-top: 24px;">Backup</p>
@@ -824,6 +824,16 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalExpectedIncomeCancel">Cancel</button>
         <button type="button" class="btn btn-secondary" id="modalExpectedIncomeOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalManageCategories" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Manage Categories</h3>
+      <div id="manageCategoriesModalBody" style="max-height:60vh; overflow-y: auto; margin-bottom: 16px;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalManageCategoriesClose">Close</button>
       </div>
     </div>
   </div>
@@ -4685,8 +4695,8 @@
     });
   }
 
-  function renderManageCategories() {
-    const root = document.getElementById('manageCategories');
+  function renderManageCategories(optionalRoot) {
+    const root = optionalRoot || document.getElementById('manageCategories');
     if (!root) return;
     root.innerHTML = '';
     ensureUncategorizedCategory();
@@ -4712,7 +4722,7 @@
           renderSnapshot();
           if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
           if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
-          renderManageCategories();
+          renderManageCategories(root);
         }, 'Delete');
       };
       header.appendChild(del);
@@ -4742,7 +4752,7 @@
               renderSnapshot();
               if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
               if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
-              renderManageCategories();
+              renderManageCategories(root);
             }, 'Delete');
           };
           row.appendChild(left);
@@ -4878,14 +4888,25 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  // Manage Categories: use delegation + touch so it works reliably on iOS PWA (button may not receive direct click when Settings tab was not visible at init)
+  // Manage Categories: open as modal so tap always works (no dependency on Settings tab DOM). Handler attached via onclick + delegation.
   function openManageCategories() {
-    var body = document.getElementById('manageCategories');
-    if (!body) return;
-    renderManageCategories();
-    body.classList.remove('hidden');
-    body.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    var overlay = document.getElementById('modalManageCategories');
+    var body = document.getElementById('manageCategoriesModalBody');
+    if (!overlay || !body) return;
+    renderManageCategories(body);
+    overlay.classList.remove('hidden');
+    updateBodyModalOpen();
   }
+  function closeManageCategoriesModal() {
+    var overlay = document.getElementById('modalManageCategories');
+    if (overlay) overlay.classList.add('hidden');
+    updateBodyModalOpen();
+  }
+  window.openManageCategories = openManageCategories;
+  document.getElementById('modalManageCategoriesClose').addEventListener('click', closeManageCategoriesModal);
+  document.getElementById('modalManageCategories').addEventListener('click', function(e) {
+    if (e.target === this) closeManageCategoriesModal();
+  });
   document.body.addEventListener('click', function(e) {
     if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) openManageCategories();
   });
@@ -4919,28 +4940,22 @@
     m.addEventListener('touchstart', function(e) { e.stopPropagation(); });
   });
 
-  // Issue 1 root cause: On iOS Home Screen PWA resume, (1) pageshow with ev.persisted is not always fired when restoring from background, and (2) even when rehydrate ran, the DOM sometimes did not repaint until user interaction. Fix: run rehydrate on every pageshow (not only persisted), keep visibilitychange + focus, and force a reflow after render so the browser repaints snapshot totals.
+  // Snapshot auto-refresh on iOS PWA resume: run rehydrate on pageshow, visibilitychange, focus. No "run once" guard on rerender.
   var lastRehydrateAt = 0;
-  var REHYDRATE_DEBOUNCE_MS = 400;
-  var REHYDRATE_DEBUG = false; // set true to log lifecycle events (console only)
-  function rehydrateAndRender(source) {
+  var REHYDRATE_DEBOUNCE_MS = 350;
+  function rehydrateAndRenderSnapshot() {
     var now = (typeof Date.now === 'function') ? Date.now() : 0;
     if (now - lastRehydrateAt < REHYDRATE_DEBOUNCE_MS) return;
     lastRehydrateAt = now;
-    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] ran, source=' + source);
     try {
       data = load();
       renderSnapshot();
-      renderSpending();
-      renderRecurring();
-      renderUpcomingCashflow();
-      renderManageCategories();
       requestAnimationFrame(function() {
         var el = document.getElementById('snapshotSummary');
         if (el) el.offsetHeight;
       });
     } catch (err) {
-      if (typeof console !== 'undefined' && console.error) console.error('Rehydrate error:', err);
+      if (typeof console !== 'undefined' && console.error) console.error('Rehydrate snapshot error:', err);
     }
   }
 
@@ -4948,18 +4963,14 @@
   renderSnapshot();
   renderManageCategories();
 
-  window.addEventListener('pageshow', function(ev) {
-    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] pageshow persisted=' + !!ev.persisted);
-    rehydrateAndRender('pageshow');
+  window.addEventListener('pageshow', function() {
+    rehydrateAndRenderSnapshot();
   });
   document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState !== 'visible') return;
-    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] visibilitychange visible');
-    rehydrateAndRender('visibilitychange');
+    if (document.visibilityState === 'visible') rehydrateAndRenderSnapshot();
   });
   window.addEventListener('focus', function() {
-    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] focus');
-    rehydrateAndRender('focus');
+    rehydrateAndRenderSnapshot();
   });
 
   (function checkLocalDateFilter() {
