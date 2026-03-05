@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { SnapshotPage } from './features/snapshot/SnapshotPage';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'settings';
 
@@ -6,7 +7,7 @@ export function App() {
   const [tab, setTab] = useState<TabKey>('snapshot');
 
   const content = useMemo(() => {
-    if (tab === 'snapshot') return <div className="tab-panel active">Snapshot (milestone B)</div>;
+    if (tab === 'snapshot') return <SnapshotPage />;
     if (tab === 'spending') return <div className="tab-panel active">Spending (coming next)</div>;
     if (tab === 'recurring') return <div className="tab-panel active">Recurring (coming next)</div>;
     if (tab === 'upcoming') return <div className="tab-panel active">Upcoming (coming next)</div>;
