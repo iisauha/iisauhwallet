@@ -86,15 +86,32 @@ export function SnapshotPage() {
         <>
           <div>
             {visibleBanks.map((b) => (
-              <div key={b.id}>
-                <div onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}>
+              <div className="card ll-account-card" key={b.id}>
+                <button
+                  type="button"
+                  className="ll-card-button"
+                  onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+                >
                   <BankAccountCard bank={b} />
-                </div>
-                {b.type !== 'physical_cash' ? (
-                  <div className="btn-row" style={{ marginTop: -2, marginBottom: 10 }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}>
-                      Add / Set
-                    </button>
+                </button>
+                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+                  >
+                    Add / Set
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      actions.updateBankBalance(b.id, 0, 'set');
+                    }}
+                  >
+                    Clear
+                  </button>
+                  {b.type !== 'physical_cash' ? (
                     <button
                       type="button"
                       className="btn btn-danger"
@@ -104,8 +121,8 @@ export function SnapshotPage() {
                     >
                       Delete
                     </button>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>
@@ -137,13 +154,30 @@ export function SnapshotPage() {
         <>
           <div>
             {visibleCards.map((c) => (
-              <div key={c.id}>
-                <div onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}>
+              <div className="card ll-account-card" key={c.id}>
+                <button
+                  type="button"
+                  className="ll-card-button"
+                  onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
+                >
                   <CreditCardCard card={c} />
-                </div>
-                <div className="btn-row" style={{ marginTop: -2, marginBottom: 10 }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}>
+                </button>
+                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
+                  >
                     Add / Set
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      actions.updateCardBalance(c.id, 0, 'set');
+                    }}
+                  >
+                    Clear
                   </button>
                   <button
                     type="button"

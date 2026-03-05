@@ -5,11 +5,9 @@ export function AccountCard(props: { name: string; amountCents: number; kind: 'b
   const amount = props.amountCents;
   const cls = amount < 0 ? 'amount amount-credit' : 'amount';
   return (
-    <div className="card">
-      <div className="row">
-        <span className="name">{props.name}</span>
-        <span className={cls}>{formatCents(amount)}</span>
-      </div>
+    <div className="row ll-account-row">
+      <span className="name">{props.name}</span>
+      <span className={cls}>{formatCents(amount)}</span>
     </div>
   );
 }
