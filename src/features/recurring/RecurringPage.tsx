@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { parseCents } from '../../state/calc';
+import { formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
 import { Select } from '../../ui/Select';
-import { SwipeRow } from '../../ui/SwipeRow';
 
 export function RecurringPage() {
   const data = useLedgerStore((s) => s.data);
@@ -45,6 +44,16 @@ export function RecurringPage() {
   const recurring = (data as any).recurring || [];
   const income = recurring.filter((r: any) => r.type === 'income');
   const expenses = recurring.filter((r: any) => (r.type || 'expense') !== 'income');
+  const expensesByCategory = useMemo(() => {
+    const map = new Map<string, any[]>();
+    expenses.forEach((r: any) => {
+      const cat = (r.category || 'uncategorized') as string;
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(r);
+    });
+    return Array.from(map.entries());
+  }, [expenses]);
+  const [expensesCollapsed, setExpensesCollapsed] = useState<Record<string, boolean>>({});
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
   return (
@@ -54,44 +63,71 @@ export function RecurringPage() {
         Recurring Income
       </p>
       {income.map((r: any) => (
-        <SwipeRow
-          key={r.id}
-          id={`recurring:${r.id}`}
-          onDeleteRequested={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring income' })}
-        >
-          <div className="card">
-            <div className="row">
-              <span className="name">{r.name || 'Income'}</span>
-              <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
-            </div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-              {r.frequency || 'monthly'} • start {r.startDate}
-            </div>
+        <div className="card" key={r.id}>
+          <div className="row">
+            <span className="name">{r.name || 'Income'}</span>
+            <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
           </div>
-        </SwipeRow>
+          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+            {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
+          </div>
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring income' })}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       ))}
 
       <p className="section-title" style={{ marginTop: 24, fontSize: '1rem' }}>
         Recurring Expenses
       </p>
-      {expenses.map((r: any) => (
-        <SwipeRow
-          key={r.id}
-          id={`recurring:${r.id}`}
-          onDeleteRequested={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring' })}
-        >
-          <div className="card">
-            <div className="row">
-              <span className="name">{r.name || 'Expense'}</span>
-              <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+      {expensesByCategory.map(([catId, items]) => {
+        const headerLabel = getCategoryName(cfg, catId);
+        const collapsed = expensesCollapsed[catId] ?? true;
+        return (
+          <div key={catId} style={{ marginBottom: 8 }}>
+            <div
+              className="section-header"
+              onClick={() => setExpensesCollapsed((prev) => ({ ...prev, [catId]: !collapsed }))}
+            >
+              <span className="section-header-left">
+                {headerLabel} — <span>{items.length} item{items.length === 1 ? '' : 's'}</span>
+              </span>
+              <span className="chevron">{collapsed ? '▸' : '▾'}</span>
             </div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-              {getCategoryName(cfg, r.category || 'uncategorized')} • {r.frequency || 'monthly'} • start {r.startDate}{' '}
-              {r.autoPay ? '• autopay' : ''}
-            </div>
+            {!collapsed ? (
+              <>
+                {items.map((r: any) => (
+                  <div className="card" key={r.id}>
+                    <div className="row">
+                      <span className="name">{r.name || 'Expense'}</span>
+                      <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+                    </div>
+                    <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                      {getCategoryName(cfg, r.category || 'uncategorized')} • {r.frequency || 'monthly'} • start{' '}
+                      {formatLongLocalDate(r.startDate)} {r.autoPay ? '• autopay' : ''}
+                    </div>
+                    <div className="btn-row">
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring' })}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : null}
           </div>
-        </SwipeRow>
-      ))}
+        );
+      })}
 
       <button type="button" className="btn btn-add" style={{ marginTop: 16, width: '100%' }} onClick={() => setOpen(true)}>
         + Add Recurring Item

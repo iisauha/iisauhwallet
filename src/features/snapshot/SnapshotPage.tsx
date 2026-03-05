@@ -4,7 +4,6 @@ import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from 
 import { useLedgerStore } from '../../state/store';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref } from '../../state/storage';
 import { Select } from '../../ui/Select';
-import { SwipeRow } from '../../ui/SwipeRow';
 import { BankAccountCard, CreditCardCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 
@@ -87,71 +86,48 @@ export function SnapshotPage() {
         <>
           <div>
             {visibleBanks.map((b) => (
-              b.type !== 'physical_cash' ? (
-                <SwipeRow
-                  key={b.id}
-                  id={`bank:${b.id}`}
-                  onDeleteRequested={() =>
-                    openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deleteBankAccount(b.id))
-                  }
+              <div className="card ll-account-card" key={b.id}>
+                <button
+                  type="button"
+                  className="ll-card-button"
+                  onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
                 >
-                  <div className="card ll-account-card">
-                    <button
-                      type="button"
-                      className="ll-card-button"
-                      onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
-                    >
-                      <BankAccountCard bank={b} />
-                    </button>
-                    <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
-                      >
-                        Add / Set
-                      </button>
-                      <button
-                        type="button"
-                        className="btn clear-btn"
-                        onClick={() => {
-                          actions.updateBankBalance(b.id, 0, 'set');
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-                </SwipeRow>
-              ) : (
-                <div className="card ll-account-card" key={b.id}>
+                  <BankAccountCard bank={b} />
+                </button>
+                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                   <button
                     type="button"
-                    className="ll-card-button"
+                    className="btn btn-secondary"
                     onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
                   >
-                    <BankAccountCard bank={b} />
+                    Add / Set
                   </button>
-                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                  <button
+                    type="button"
+                    className="btn clear-btn"
+                    onClick={() => {
+                      actions.updateBankBalance(b.id, 0, 'set');
+                    }}
+                  >
+                    Clear
+                  </button>
+                  {b.type !== 'physical_cash' ? (
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+                      className="btn btn-danger"
+                      onClick={() =>
+                        openConfirm(
+                          'Are you sure you want to delete this?',
+                          'Are you sure you want to delete this?',
+                          () => actions.deleteBankAccount(b.id)
+                        )
+                      }
                     >
-                      Add / Set
+                      Delete
                     </button>
-                    <button
-                      type="button"
-                      className="btn clear-btn"
-                      onClick={() => {
-                        actions.updateBankBalance(b.id, 0, 'set');
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
+                  ) : null}
                 </div>
-              )
+              </div>
             ))}
           </div>
           <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })}>
@@ -182,41 +158,46 @@ export function SnapshotPage() {
         <>
           <div>
             {visibleCards.map((c) => (
-              <SwipeRow
-                key={c.id}
-                id={`card:${c.id}`}
-                onDeleteRequested={() =>
-                  openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deleteCreditCard(c.id))
-                }
-              >
-                <div className="card ll-account-card">
+              <div className="card ll-account-card" key={c.id}>
+                <button
+                  type="button"
+                  className="ll-card-button"
+                  onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
+                >
+                  <CreditCardCard card={c} />
+                </button>
+                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                   <button
                     type="button"
-                    className="ll-card-button"
+                    className="btn btn-secondary"
                     onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
                   >
-                    <CreditCardCard card={c} />
+                    Add / Set
                   </button>
-                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                    >
-                      Add / Set
-                    </button>
-                    <button
-                      type="button"
-                      className="btn clear-btn"
-                      onClick={() => {
-                        actions.updateCardBalance(c.id, 0, 'set');
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="btn clear-btn"
+                    onClick={() => {
+                      actions.updateCardBalance(c.id, 0, 'set');
+                    }}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() =>
+                      openConfirm(
+                        'Are you sure you want to delete this?',
+                        'Are you sure you want to delete this?',
+                        () => actions.deleteCreditCard(c.id)
+                      )
+                    }
+                  >
+                    Delete
+                  </button>
                 </div>
-              </SwipeRow>
+              </div>
             ))}
           </div>
           <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })}>

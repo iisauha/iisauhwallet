@@ -40,6 +40,13 @@ export function sumPendingInCents(pendingIn: PendingInboundItem[]): number {
   return (pendingIn || []).reduce((s, p) => s + (p.amountCents || 0), 0);
 }
 
+export function formatLongLocalDate(dateISO: string): string {
+  if (!dateISO) return '';
+  const d = new Date(dateISO + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return dateISO;
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 // IMPORTANT: matches legacy snapshotNeedsPaint expectedFinal formula exactly.
 export function calcFinalNetCashCents(data: LedgerData): {
   bankTotalCents: number;

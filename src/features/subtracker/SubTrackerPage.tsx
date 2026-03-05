@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
-import { formatCents, parseCents } from '../../state/calc';
+import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { loadSubTracker, saveSubTracker, uid, type SubTrackerEntry, type SubTrackerTier } from '../../state/storage';
 import { Select } from '../../ui/Select';
-import { SwipeRow } from '../../ui/SwipeRow';
 
 function todayKey() {
   const d = new Date();
@@ -96,7 +95,12 @@ export function SubTrackerPage() {
           {cardMode === 'manual' ? (
             <div className="field" style={{ marginTop: 10 }}>
               <label>Manual card name</label>
-              <input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="e.g. Chase Sapphire Preferred" />
+              <input
+                className="ll-control"
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                placeholder="e.g. Chase Sapphire Preferred"
+              />
             </div>
           ) : null}
         </div>
@@ -104,14 +108,21 @@ export function SubTrackerPage() {
         <div style={{ display: 'flex', gap: 10 }}>
           <div className="field" style={{ flex: 1 }}>
             <label>Start date</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <input className="ll-control" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div className="field" style={{ flex: 1 }}>
             <label>{useDeadlineDate ? 'Deadline date' : 'Months window'}</label>
             {useDeadlineDate ? (
-              <input type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} />
+              <input className="ll-control" type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} />
             ) : (
-              <input type="number" min={1} step={1} value={monthsWindow} onChange={(e) => setMonthsWindow(e.target.value)} />
+              <input
+                className="ll-control"
+                type="number"
+                min={1}
+                step={1}
+                value={monthsWindow}
+                onChange={(e) => setMonthsWindow(e.target.value)}
+              />
             )}
           </div>
         </div>
@@ -124,11 +135,22 @@ export function SubTrackerPage() {
         <div style={{ display: 'flex', gap: 10 }}>
           <div className="field" style={{ flex: 1 }}>
             <label>Tier spend target ($)</label>
-            <input value={tierTarget} onChange={(e) => setTierTarget(e.target.value)} inputMode="decimal" placeholder="e.g. 3000" />
+            <input
+              className="ll-control"
+              value={tierTarget}
+              onChange={(e) => setTierTarget(e.target.value)}
+              inputMode="decimal"
+              placeholder="e.g. 3000"
+            />
           </div>
           <div className="field" style={{ flex: 1 }}>
             <label>Tier reward text</label>
-            <input value={tierReward} onChange={(e) => setTierReward(e.target.value)} placeholder="e.g. 90k miles" />
+            <input
+              className="ll-control"
+              value={tierReward}
+              onChange={(e) => setTierReward(e.target.value)}
+              placeholder="e.g. 90k miles"
+            />
           </div>
         </div>
 
@@ -185,81 +207,113 @@ export function SubTrackerPage() {
         const onPace = requiredPace == null || actualPace == null ? true : actualPace >= requiredPace;
 
         return (
-          <SwipeRow key={e.id} id={`sub-entry:${e.id}`} onDeleteRequested={() => setConfirmDelete({ kind: 'entry', entryId: e.id, label: name })}>
-            <div className="card">
+          <div className="card" key={e.id}>
+            <div className="row">
+              <span className="name">{name}</span>
+              <span className="amount">{formatCents(spendCents)}</span>
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+              Start {formatLongLocalDate(e.startDate)}
+              {e.deadlineDate ? ` • Deadline ${formatLongLocalDate(e.deadlineDate)}` : e.monthsWindow ? ` • Window ${e.monthsWindow} mo` : ''}
+              {daysRemaining != null ? ` • ~${Math.max(0, daysRemaining)} days remaining` : ''}
+            </div>
+
+            <div className="field" style={{ marginTop: 10 }}>
+              <label>Spent so far ($)</label>
+              <input
+                className="ll-control"
+                value={(spendCents / 100).toFixed(2)}
+                onChange={(ev) => {
+                  const nextAmount = parseCents(ev.target.value);
+                  const updatedEntries = entries.map((x) =>
+                    x.id === e.id ? { ...x, spendCents: nextAmount, updatedAt: new Date().toISOString() } : x
+                  );
+                  persist({ version: 1, entries: updatedEntries });
+                }}
+                inputMode="decimal"
+              />
+            </div>
+
+            <div className="card" style={{ marginTop: 10, marginBottom: 0, background: 'rgba(148, 163, 184, 0.06)' }}>
               <div className="row">
-                <span className="name">{name}</span>
-                <span className="amount">{formatCents(spendCents)}</span>
+                <span className="name" style={{ fontWeight: 600 }}>
+                  Pace
+                </span>
+                <span className="amount" style={{ fontSize: '1rem', color: onPace ? 'var(--green)' : 'var(--red)' }}>
+                  {onPace ? 'On pace' : 'Behind'}
+                </span>
               </div>
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-                Start {e.startDate}
-                {e.deadlineDate ? ` • Deadline ${e.deadlineDate}` : e.monthsWindow ? ` • Window ${e.monthsWindow} mo` : ''}
-                {daysRemaining != null ? ` • ~${Math.max(0, daysRemaining)} days remaining` : ''}
-              </div>
-
-              <div className="card" style={{ marginTop: 10, marginBottom: 0, background: 'rgba(148, 163, 184, 0.06)' }}>
-                <div className="row">
-                  <span className="name" style={{ fontWeight: 600 }}>
-                    Pace
-                  </span>
-                  <span className="amount" style={{ fontSize: '1rem', color: onPace ? 'var(--green)' : 'var(--red)' }}>
-                    {onPace ? 'On pace' : 'Behind'}
+              <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                <div className="row" style={{ fontSize: '0.95rem' }}>
+                  <span style={{ color: 'var(--muted)' }}>Required pace</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))} / month`}
                   </span>
                 </div>
-                <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-                  <div className="row" style={{ fontSize: '0.95rem' }}>
-                    <span style={{ color: 'var(--muted)' }}>Required pace</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))} / month`}
-                    </span>
-                  </div>
-                  <div className="row" style={{ fontSize: '0.95rem' }}>
-                    <span style={{ color: 'var(--muted)' }}>Your pace</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {actualPace == null ? '—' : `${formatCents(Math.round(actualPace))} / month`}
-                    </span>
-                  </div>
+                <div className="row" style={{ fontSize: '0.95rem' }}>
+                  <span style={{ color: 'var(--muted)' }}>Your pace</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {actualPace == null ? '—' : `${formatCents(Math.round(actualPace))} / month`}
+                  </span>
                 </div>
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600, marginBottom: 8 }}>Tiers</div>
-                {tiers.length ? (
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    {tiers.map((t) => {
-                      const target = t.spendTargetCents || 0;
-                      const pct = target > 0 ? clamp(spendCents / target, 0, 1) : 0;
-                      const remaining = Math.max(0, target - spendCents);
-                      return (
-                        <SwipeRow
-                          key={t.id}
-                          id={`sub-tier:${e.id}:${t.id}`}
-                          onDeleteRequested={() =>
-                            setConfirmDelete({ kind: 'tier', entryId: e.id, tierId: t.id, label: `${name} → ${formatCents(target)} (${t.rewardText || 'Bonus'})` })
-                          }
-                        >
-                          <div style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                            <div className="row">
-                              <span className="name" style={{ fontWeight: 600 }}>
-                                {formatCents(Math.min(spendCents, target))} / {formatCents(target)}
-                              </span>
-                              <span style={{ color: 'var(--muted)' }}>{t.rewardText || 'Bonus'}</span>
-                            </div>
-                            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>Remaining: {formatCents(remaining)}</div>
-                            <div className="ll-progress" style={{ marginTop: 8 }}>
-                              <div className="ll-progress-bar" style={{ width: `${Math.round(pct * 100)}%` }} />
-                            </div>
-                          </div>
-                        </SwipeRow>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ color: 'var(--muted)' }}>No tiers.</div>
-                )}
               </div>
             </div>
-          </SwipeRow>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600, marginBottom: 8 }}>Tiers</div>
+              {tiers.length ? (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {tiers.map((t) => {
+                    const target = t.spendTargetCents || 0;
+                    const pct = target > 0 ? clamp(spendCents / target, 0, 1) : 0;
+                    const remaining = Math.max(0, target - spendCents);
+                    return (
+                      <div key={t.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                        <div className="row">
+                          <span className="name" style={{ fontWeight: 600 }}>
+                            {formatCents(Math.min(spendCents, target))} / {formatCents(target)}
+                          </span>
+                          <span style={{ color: 'var(--muted)' }}>{t.rewardText || 'Bonus'}</span>
+                        </div>
+                        <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>Remaining: {formatCents(remaining)}</div>
+                        <div className="ll-progress" style={{ marginTop: 8 }}>
+                          <div className="ll-progress-bar" style={{ width: `${Math.round(pct * 100)}%` }} />
+                        </div>
+                        <div className="btn-row" style={{ marginTop: 8 }}>
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            onClick={() =>
+                              setConfirmDelete({
+                                kind: 'tier',
+                                entryId: e.id,
+                                tierId: t.id,
+                                label: `${name} → ${formatCents(target)} (${t.rewardText || 'Bonus'})`
+                              })
+                            }
+                          >
+                            Delete tier
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--muted)' }}>No tiers.</div>
+              )}
+            </div>
+
+            <div className="btn-row" style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => setConfirmDelete({ kind: 'entry', entryId: e.id, label: name })}
+              >
+                Delete tracked card
+              </button>
+            </div>
+          </div>
         );
       })}
 

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatCents } from '../../state/calc';
+import { formatCents, formatLongLocalDate } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, loadCategoryConfig } from '../../state/storage';
 import { Select } from '../../ui/Select';
 import { AddPurchaseModal } from './AddPurchaseModal';
 import { getCategoryColor, renderSpendingPieChart } from './charts';
-import { SwipeRow } from '../../ui/SwipeRow';
 
 type FilterKey = 'this_month' | 'last_month' | 'all_time' | 'custom';
 type BreakdownView = 'category' | 'card';
@@ -33,13 +32,6 @@ function hexToRgba(hex: string, alpha: number) {
   const g = parseInt(full.slice(2, 4), 16);
   const b = parseInt(full.slice(4, 6), 16);
   return `rgba(${Number.isFinite(r) ? r : 100}, ${Number.isFinite(g) ? g : 116}, ${Number.isFinite(b) ? b : 139}, ${alpha})`;
-}
-
-function formatLongLocalDate(dateISO: string) {
-  if (!dateISO) return '';
-  const d = new Date(dateISO + 'T00:00:00');
-  if (Number.isNaN(d.getTime())) return dateISO;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 export function SpendingPage() {
@@ -255,21 +247,28 @@ export function SpendingPage() {
           .slice()
           .sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || ''))
           .map((p: any) => (
-            <SwipeRow key={p.id} id={`purchase:${p.id}`} onDeleteRequested={() => setConfirmDelete({ id: p.id, label: p.title || 'Purchase' })}>
-              <div className="card">
-                <div className="row">
-                  <span className="name">{p.title || 'Purchase'}</span>
-                  <span className="amount">{formatCents(p.amountCents || 0)}</span>
-                </div>
-                <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-                  {formatLongLocalDate(p.dateISO || '')} •{' '}
-                  <span style={{ color: getCategoryColor(p.category || 'uncategorized'), fontWeight: 600 }}>
-                    {getCategoryName(cfg, p.category || 'uncategorized')}
-                  </span>
-                  {p.subcategory ? <span> • {p.subcategory}</span> : null}
-                </div>
+            <div className="card" key={p.id}>
+              <div className="row">
+                <span className="name">{p.title || 'Purchase'}</span>
+                <span className="amount">{formatCents(p.amountCents || 0)}</span>
               </div>
-            </SwipeRow>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                {formatLongLocalDate(p.dateISO || '')} •{' '}
+                <span style={{ color: getCategoryColor(p.category || 'uncategorized'), fontWeight: 600 }}>
+                  {getCategoryName(cfg, p.category || 'uncategorized')}
+                </span>
+                {p.subcategory ? <span> • {p.subcategory}</span> : null}
+              </div>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => setConfirmDelete({ id: p.id, label: p.title || 'Purchase' })}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           ))}
       </div>
 

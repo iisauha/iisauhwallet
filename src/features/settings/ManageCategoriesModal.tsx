@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import type { CategoryConfig } from '../../state/models';
-import { SwipeRow } from '../../ui/SwipeRow';
 
 export function ManageCategoriesModal(props: {
   open: boolean;
@@ -72,25 +71,39 @@ export function ManageCategoriesModal(props: {
           {Object.keys(cfg)
             .sort((a, b) => (cfg[a]?.name || a).localeCompare(cfg[b]?.name || b))
             .map((id) => (
-              <SwipeRow key={id} id={`category:${id}`} onDeleteRequested={() => setConfirmDelete({ kind: 'category', catId: id, label: cfg[id]?.name || id })}>
-                <div className="card">
-                  <div className="row">
-                    <span className="name">{cfg[id]?.name || id}</span>
-                  </div>
+              <div className="card" key={id}>
+                <div className="row">
+                  <span className="name">{cfg[id]?.name || id}</span>
+                  <button
+                    type="button"
+                    className="btn-delete"
+                    onClick={() => setConfirmDelete({ kind: 'category', catId: id, label: cfg[id]?.name || id })}
+                  >
+                    Delete
+                  </button>
+                </div>
                 <div style={{ marginTop: 10 }}>
                   <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600 }}>Subcategories</div>
                   {(cfg[id]?.sub || []).length ? (
                     <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
                       {(cfg[id]?.sub || []).map((s) => (
-                        <SwipeRow
-                          key={s}
-                          id={`subcategory:${id}:${s}`}
-                          onDeleteRequested={() => setConfirmDelete({ kind: 'subcategory', catId: id, sub: s, label: `${cfg[id]?.name || id} → ${s}` })}
-                        >
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                            <span style={{ color: 'var(--muted)', flex: 1 }}>{s}</span>
-                          </div>
-                        </SwipeRow>
+                        <div key={s} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                          <span style={{ color: 'var(--muted)', flex: 1 }}>{s}</span>
+                          <button
+                            type="button"
+                            className="btn-delete"
+                            onClick={() =>
+                              setConfirmDelete({
+                                kind: 'subcategory',
+                                catId: id,
+                                sub: s,
+                                label: `${cfg[id]?.name || id} → ${s}`
+                              })
+                            }
+                          >
+                            Delete
+                          </button>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -115,8 +128,7 @@ export function ManageCategoriesModal(props: {
                     + Add subcategory
                   </button>
                 </div>
-                </div>
-              </SwipeRow>
+              </div>
             ))}
         </div>
 
