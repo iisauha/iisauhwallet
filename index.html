@@ -1664,9 +1664,41 @@
     btn.setAttribute('aria-pressed', showZeroCreditCards ? 'true' : 'false');
   }
 
+  function snapshotNeedsPaint() {
+    const elFinal = document.getElementById('sumFinalNetCash');
+    if (!elFinal) return true;
+    const ui = (elFinal.textContent || '').trim();
+    const bankTotal = data.banks.reduce((s, b) => s + (b.balanceCents || 0), 0);
+    const ccDebt = data.cards.reduce((s, c) => s + Math.max(c.balanceCents || 0, 0), 0);
+    const ccCredit = data.cards.reduce((s, c) => s + Math.max(-(c.balanceCents || 0), 0), 0);
+    const pendingOut = data.pendingOut.reduce((s, p) => s + (p.amountCents || 0), 0);
+    const pendingIn = data.pendingIn.reduce((s, p) => s + (p.amountCents || 0), 0);
+    const expectedFinal = bankTotal + pendingIn - pendingOut - ccDebt + ccCredit;
+    const expectedText = formatCents(expectedFinal);
+    return ui !== expectedText;
+  }
+
+  function requestRenderSnapshot(reason) {
+    let tries = 0;
+    const delays = [0, 25, 60, 120, 250, 500, 900];
+    function attempt() {
+      tries++;
+      try { data = load(); } catch (_) {}
+      const ok = renderSnapshot();
+      if (!ok) return scheduleNext();
+      if (snapshotNeedsPaint() && tries < delays.length) return scheduleNext();
+    }
+    function scheduleNext() {
+      const d = delays[Math.min(tries, delays.length - 1)];
+      setTimeout(attempt, d);
+    }
+    scheduleNext();
+  }
+
   function renderSnapshot() {
     const bankList = document.getElementById('bankList');
     const cardList = document.getElementById('cardList');
+    if (!bankList || !cardList) return false;
     bankList.innerHTML = '';
     cardList.innerHTML = '';
 
@@ -1829,6 +1861,8 @@
       pendingOutBody.style.display = pendingOutboundCollapsed ? 'none' : '';
       pendingOutChevron.textContent = pendingOutboundCollapsed ? '▸' : '▾';
     }
+
+    return true;
   }
 
   function escapeHtml(s) {
@@ -3899,7 +3933,7 @@
       showZeroCashItems = !showZeroCashItems;
       try { localStorage.setItem(SHOW_ZERO_CASH_KEY, showZeroCashItems ? '1' : '0'); } catch (_) {}
       updateZeroCashToggleText();
-      renderSnapshot();
+      requestRenderSnapshot('toggle-cash');
     });
   })();
 
@@ -3913,7 +3947,7 @@
       showZeroCreditCards = !showZeroCreditCards;
       try { localStorage.setItem(SHOW_ZERO_CARDS_KEY, showZeroCreditCards ? '1' : '0'); } catch (_) {}
       updateZeroCardsToggleText();
-      renderSnapshot();
+      requestRenderSnapshot('toggle-card');
     });
   })();
 
@@ -5131,54 +5165,12 @@
   var lastRehydrateAt = 0;
   var REHYDRATE_DEBOUNCE_MS = 300;
   function rehydrateAndRender(source) {
-    var now = (typeof Date.now === 'function') ? Date.now() : 0;
-    if (now - lastRehydrateAt < REHYDRATE_DEBOUNCE_MS) return;
-    lastRehydrateAt = now;
-    if (DEBUG_RESUME && typeof console !== 'undefined' && console.log) {
-      console.log('[resume] refreshing snapshot, source=', source);
-    }
-    try {
-      // Reload core state from storage
-      data = load();
-      ensurePhysicalCashBank(data);
-
-      // Refresh other global state that can become stale after reload
-      (function refreshInMemoryState() {
-        const legacy = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
-        showZeroCashItems = loadBoolPref(SHOW_ZERO_CASH_KEY, legacy);
-        showZeroCreditCards = loadBoolPref(SHOW_ZERO_CARDS_KEY, legacy);
-        pendingInboundCollapsed = loadBoolPref(PENDING_IN_COLLAPSED_KEY, false);
-        pendingOutboundCollapsed = loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false);
-        expectedCosts = loadExpectedCosts();
-        expectedIncome = loadExpectedIncome();
-        upcomingWindowPref = loadUpcomingWindowPreference();
-        categoryConfig = loadCategoryConfig();
-      })();
-
-      // Render after DOM is ready using double rAF for PWA robustness
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          renderSnapshot();
-          if (document.getElementById('spendingContent').classList.contains('active') && typeof renderSpending === 'function') {
-            renderSpending();
-          }
-          if (document.getElementById('upcomingContent').classList.contains('active') && typeof renderUpcomingCashflow === 'function') {
-            renderUpcomingCashflow();
-          }
-          if (document.getElementById('recurringContent').classList.contains('active') && typeof renderRecurring === 'function') {
-            renderRecurring();
-          }
-          var el = document.getElementById('snapshotSummary');
-          if (el) el.offsetHeight;
-        });
-      });
-    } catch (err) {
-      if (typeof console !== 'undefined' && console.error) console.error('Rehydrate snapshot error:', err);
-    }
+    // Keep for backward compatibility if called elsewhere; delegate to watchdog.
+    requestRenderSnapshot(source);
   }
 
   function initApp(reason) {
-    rehydrateAndRender(reason);
+    requestRenderSnapshot(reason);
   }
   function wireResumeRefreshOnce() {
     if (window.__resumeWired) return;
