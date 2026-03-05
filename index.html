@@ -1324,6 +1324,153 @@
     return '"' + s.replace(/"/g, '""') + '"';
   }
 
+  // DEBUG: toggle for export troubleshooting
+  const DEBUG_EXPORT = false;
+
+  function safeJsonParse(maybeJson) {
+    if (typeof maybeJson !== 'string') return { ok: false, value: maybeJson };
+    const s = maybeJson.trim();
+    if (!s) return { ok: true, value: '' };
+    // Try JSON parse only when it looks like JSON
+    const first = s[0];
+    if (first !== '{' && first !== '[' && first !== '"' && first !== '-' && (first < '0' || first > '9')) {
+      return { ok: true, value: maybeJson };
+    }
+    try {
+      return { ok: true, value: JSON.parse(s) };
+    } catch (_) {
+      return { ok: true, value: maybeJson };
+    }
+  }
+
+  function buildLocalStorageExportPayload() {
+    const payload = {
+      version: 'iisauhwallet-backup-v1',
+      exportedAt: new Date().toISOString(),
+      data: {}
+    };
+
+    // Include all keys that belong to this app.
+    const allow = new Set([
+      STORAGE_KEY,
+      CASH_STORAGE_KEY,
+      LAST_OUT_BANK_KEY,
+      LAST_IN_BANK_KEY,
+      BACKUP_BEFORE_COLOR_UPDATE_KEY,
+      SHOW_ZERO_BALANCES_KEY,
+      SHOW_ZERO_CASH_KEY,
+      SHOW_ZERO_CARDS_KEY,
+      PENDING_IN_COLLAPSED_KEY,
+      PENDING_OUT_COLLAPSED_KEY,
+      CATEGORY_STORAGE_KEY,
+      CATEGORY_COLOR_MAP_KEY,
+      EXPECTED_COSTS_KEY,
+      EXPECTED_INCOME_KEY,
+      UPCOMING_WINDOW_KEY,
+    ]);
+
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        // Always include any ledgerlite* key, plus explicitly-allowed keys.
+        if (k.startsWith('ledgerlite') || allow.has(k) || k.includes('snapshot_') || k.includes('expected') || k.includes('upcoming')) {
+          const v = localStorage.getItem(k);
+          payload.data[k] = safeJsonParse(v).value;
+        }
+      }
+    } catch (_) {
+      // If localStorage enumeration fails, fall back to explicit known keys.
+      allow.forEach((k) => {
+        try {
+          const v = localStorage.getItem(k);
+          if (v !== null) payload.data[k] = safeJsonParse(v).value;
+        } catch (_) {}
+      });
+    }
+
+    return payload;
+  }
+
+  function downloadJsonFile(filename, text) {
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function exportJsonBackup() {
+    const payload = buildLocalStorageExportPayload();
+    const text = JSON.stringify(payload, null, 2);
+    const ts = payload.exportedAt.replace(/[:.]/g, '-');
+    const filename = `iisauhwallet-backup-${ts}.json`;
+
+    if (DEBUG_EXPORT) {
+      try {
+        console.log('[export] click');
+        console.log('[export] keys:', Object.keys(payload.data || {}).length);
+      } catch (_) {}
+    }
+
+    // 1) Try share sheet on platforms that support it (best for iOS PWA).
+    try {
+      if (navigator.share) {
+        const file = new File([text], filename, { type: 'application/json' });
+        await navigator.share({ files: [file], title: 'Backup', text: 'iisauhwallet backup' });
+        if (DEBUG_EXPORT) console.log('[export] method: share');
+        return;
+      }
+    } catch (e) {
+      if (DEBUG_EXPORT) console.log('[export] share failed', e);
+    }
+
+    // 2) Fallback: open JSON in a new tab for copy/save (works everywhere).
+    try {
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.open();
+        w.document.write('<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; padding:16px;">' + escapeHtml(text) + '</pre>');
+        w.document.close();
+        if (DEBUG_EXPORT) console.log('[export] method: newtab');
+        return;
+      }
+    } catch (e) {
+      if (DEBUG_EXPORT) console.log('[export] newtab failed', e);
+    }
+
+    // 3) Last resort: try direct download (best for desktop).
+    try {
+      downloadJsonFile(filename, text);
+      if (DEBUG_EXPORT) console.log('[export] method: download');
+      return;
+    } catch (e) {
+      if (DEBUG_EXPORT) console.log('[export] download failed', e);
+    }
+
+    alert('Export failed on this device. Try again or use Safari (not Home Screen) to export.');
+  }
+
+  function wireExportJsonButton() {
+    if (window.__iisauh_export_wired) return;
+    window.__iisauh_export_wired = true;
+    const btn = document.getElementById('exportBtn');
+    if (!btn) {
+      if (DEBUG_EXPORT) console.log('[export] exportBtn not found');
+      return;
+    }
+    btn.addEventListener('click', function() {
+      exportJsonBackup();
+    });
+    if (DEBUG_EXPORT) console.log('[export] wired');
+  }
+
+  window.__exportJsonBackup = exportJsonBackup;
+
   // Category color map: single source of truth shared by pie chart + lists.
   function loadCategoryColorMap() {
     // Start with default colors for built-in categories.
@@ -1776,6 +1923,9 @@
     document.getElementById('modalExpectedIncome').classList.remove('hidden');
     updateBodyModalOpen();
   }
+
+  // Wire export JSON button (debug-safe)
+  wireExportJsonButton();
 
   document.getElementById('addExpectedCostBtn').onclick = function() {
     openExpectedCostModal(null);
@@ -4758,81 +4908,6 @@
     });
   }
 
-  // Settings: Export JSON — full backup of all relevant localStorage (read-only).
-  var DEBUG_EXPORT = false;
-  document.getElementById('exportBtn').onclick = function() {
-    try {
-      var now = new Date();
-      var iso = now.toISOString();
-      var datePart = iso.slice(0, 10);
-      var timePart = iso.slice(11, 16).replace(':', '');
-      var dataObj = {};
-      var knownKeys = {};
-      [STORAGE_KEY, CATEGORY_STORAGE_KEY, CATEGORY_COLOR_MAP_KEY, EXPECTED_COSTS_KEY, EXPECTED_INCOME_KEY, UPCOMING_WINDOW_KEY, BACKUP_BEFORE_COLOR_UPDATE_KEY, SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CASH_KEY, SHOW_ZERO_CARDS_KEY, PENDING_IN_COLLAPSED_KEY, PENDING_OUT_COLLAPSED_KEY, LAST_OUT_BANK_KEY, LAST_IN_BANK_KEY].forEach(function(k) {
-        if (k) knownKeys[k] = true;
-      });
-      for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (!k) continue;
-        if (k.indexOf('ledgerlite') === 0 || knownKeys[k]) {
-          var raw = localStorage.getItem(k);
-          var parsed;
-          try {
-            parsed = JSON.parse(raw);
-          } catch (_) {
-            parsed = raw;
-          }
-          dataObj[k] = parsed;
-        }
-      }
-      var payload = { version: 'iisauhwallet-backup-v1', exportedAt: iso, data: dataObj };
-      if (DEBUG_EXPORT && typeof console !== 'undefined' && console.log) {
-        console.log('[export] click');
-        console.log('[export] keys:', Object.keys(payload.data).length);
-      }
-      var json = JSON.stringify(payload, null, 2);
-      var method = 'download';
-      var filename = 'iisauhwallet-backup-' + datePart + '-' + timePart + '.json';
-      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && typeof File !== 'undefined') {
-        try {
-          var file = new File([json], filename, { type: 'application/json' });
-          if (navigator.canShare({ files: [file] })) {
-            method = 'share';
-            navigator.share({ files: [file], title: 'LedgerLite backup', text: 'LedgerLite backup' }).catch(function() {});
-          }
-        } catch (_) {
-          // fall back to download/newtab below
-        }
-      }
-      if (method === 'download') {
-        if (typeof document !== 'undefined' && document.body) {
-          var blob = new Blob([json], { type: 'application/json' });
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
-        } else {
-          method = 'newtab';
-        }
-      }
-      if (method === 'newtab') {
-        var encoded = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
-        if (typeof window !== 'undefined' && window.open) {
-          window.open(encoded, '_blank');
-        }
-      }
-      if (DEBUG_EXPORT && typeof console !== 'undefined' && console.log) {
-        console.log('[export] method:', method);
-      }
-    } catch (err) {
-      if (typeof console !== 'undefined' && console.error) console.error('Export error:', err);
-      alert('Export failed. Try again.');
-    }
-  };
   document.getElementById('importFile').onchange = function(e) {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
@@ -5055,7 +5130,7 @@
   var DEBUG_RESUME = false;
   var lastRehydrateAt = 0;
   var REHYDRATE_DEBOUNCE_MS = 300;
-  function rehydrateAndRenderSnapshot(source, evt) {
+  function rehydrateAndRender(source) {
     var now = (typeof Date.now === 'function') ? Date.now() : 0;
     if (now - lastRehydrateAt < REHYDRATE_DEBOUNCE_MS) return;
     lastRehydrateAt = now;
@@ -5064,14 +5139,17 @@
     }
     try {
       data = load();
-      categoryConfig = loadCategoryConfig();
-      expectedCosts = loadExpectedCosts();
-      expectedIncome = loadExpectedIncome();
-      upcomingWindowPref = loadUpcomingWindowPreference();
+      ensurePhysicalCashBank(data);
       renderSnapshot();
-      if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
-      if (document.getElementById('upcomingContent').classList.contains('active')) renderUpcomingCashflow();
-      if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
+      if (document.getElementById('spendingContent').classList.contains('active') && typeof renderSpending === 'function') {
+        renderSpending();
+      }
+      if (document.getElementById('upcomingContent').classList.contains('active') && typeof renderUpcomingCashflow === 'function') {
+        renderUpcomingCashflow();
+      }
+      if (document.getElementById('recurringContent').classList.contains('active') && typeof renderRecurring === 'function') {
+        renderRecurring();
+      }
       requestAnimationFrame(function() {
         var el = document.getElementById('snapshotSummary');
         if (el) el.offsetHeight;
@@ -5087,21 +5165,21 @@
       if (DEBUG_RESUME && typeof console !== 'undefined' && console.log) {
         console.log('[resume] pageshow persisted=', !!(e && e.persisted));
       }
-      rehydrateAndRenderSnapshot('pageshow', e);
+      rehydrateAndRender('pageshow');
     });
     document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible') {
         if (DEBUG_RESUME && typeof console !== 'undefined' && console.log) {
           console.log('[resume] visibility=', document.visibilityState);
         }
-        rehydrateAndRenderSnapshot('visibilitychange');
+        rehydrateAndRender('visibilitychange');
       }
     });
     window.addEventListener('focus', function() {
       if (DEBUG_RESUME && typeof console !== 'undefined' && console.log) {
         console.log('[resume] focus');
       }
-      rehydrateAndRenderSnapshot('focus');
+      rehydrateAndRender('focus');
     });
   }
 
@@ -5109,6 +5187,7 @@
   renderSnapshot();
   renderManageCategories();
   wireResumeRefreshOnce();
+  wireExportJsonButton();
 
   (function checkLocalDateFilter() {
     var start = new Date(2026, 2, 1);
