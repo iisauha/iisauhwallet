@@ -2657,7 +2657,7 @@
       }
       return;
     }
-    if (kind === 'in' && (item.depositTo === 'card') && item.targetCardId) {
+    if (kind === 'in' && item.isRefund && item.targetCardId) {
       const card = data.cards.find(c => c.id === item.targetCardId);
       if (card) {
         card.balanceCents = (card.balanceCents || 0) - amount;
