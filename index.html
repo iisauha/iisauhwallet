@@ -2632,6 +2632,12 @@
     if (idx === -1) return;
     const item = list[idx];
     const amount = item.amountCents || 0;
+    const regKey = (item.recurringId && item.recurringDateKey) ? (item.recurringId + ':' + item.recurringDateKey) : null;
+    function markRecurringHandled() {
+      if (!regKey) return;
+      if (!data.recurringPosted || typeof data.recurringPosted !== 'object') data.recurringPosted = {};
+      data.recurringPosted[regKey] = true;
+    }
 
     if (kind === 'in' && item.targetBankId) {
       const bank = data.banks.find(b => b.id === item.targetBankId);
@@ -2639,6 +2645,7 @@
         bank.balanceCents = (bank.balanceCents || 0) + amount;
         bank.updatedAt = now();
         data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+        if (item.recurringId) markRecurringHandled();
         if (!item.recurringId) setLastPostedBankId('in', bank.id);
         save(data);
         renderSnapshot();
@@ -2656,6 +2663,7 @@
         card.balanceCents = (card.balanceCents || 0) - amount;
         card.updatedAt = now();
         data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+        if (item.recurringId) markRecurringHandled();
         save(data);
         renderSnapshot();
       } else {
@@ -2687,6 +2695,7 @@
       data.purchases.push(purchase);
       applyPurchaseToSnapshot(purchase);
       data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+      markRecurringHandled();
       save(data);
       renderSnapshot();
       if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
@@ -2949,7 +2958,9 @@
       }
       while (current <= endDate && (!end || current <= end)) {
         const dateKey = toLocalDateKey(current);
-        if (dateKey >= todayKey && dateKey <= endKey) {
+        const regKey = (r.id || '') + ':' + dateKey;
+        const handled = !!(data.recurringPosted && data.recurringPosted[regKey]);
+        if (!handled && dateKey >= todayKey && dateKey <= endKey) {
           pushOccurrence(dateKey);
         }
         advance();
@@ -3010,7 +3021,9 @@
       }
       while (current <= endDate && (!end || current <= end)) {
         const dateKey = toLocalDateKey(current);
-        if (dateKey >= todayKey && dateKey <= endKey) {
+        const regKey = (r.id || '') + ':' + dateKey;
+        const handled = !!(data.recurringPosted && data.recurringPosted[regKey]);
+        if (!handled && dateKey >= todayKey && dateKey <= endKey) {
           pushIncome(dateKey);
         }
         advanceIncome();
@@ -3274,8 +3287,6 @@
             subcategory: r.subcategory,
             notes: r.notes
           });
-          if (!data.recurringPosted) data.recurringPosted = {};
-          data.recurringPosted[r.id + ':' + dateKey] = true;
           save(data);
           renderSnapshot();
           renderUpcomingCashflow();
@@ -3304,8 +3315,6 @@
             recurringId: r.id,
             recurringDateKey: dateKey
           });
-          if (!data.recurringPosted) data.recurringPosted = {};
-          data.recurringPosted[r.id + ':' + dateKey] = true;
           save(data);
           renderSnapshot();
           renderUpcomingCashflow();
