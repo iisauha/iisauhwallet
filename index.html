@@ -289,7 +289,7 @@
     <div class="section-header" id="bankHeader">
       <span class="section-header-left">Cash — <span id="cashHeaderTotal">$0.00</span>
         <button type="button" class="icon-btn" id="zeroCashToggle" aria-label="Toggle zero-balance cash items" title="Toggle zero-balance cash items">
-          <span id="zeroCashIcon">Show $0 balances</span>
+          <span id="zeroCashIcon">Show $0 cash</span>
         </button>
       </span>
       <span class="chevron" id="bankChevron">▾</span>
@@ -1489,8 +1489,8 @@
     const btn = document.getElementById('zeroCashToggle');
     if (!icon || !btn) return;
     const hasAnyZero = !!lastHasZeroCash;
-    let label = 'Show $0 balances';
-    if (hasAnyZero && showZeroCashItems) label = 'Hide $0 balances';
+    let label = 'Show $0 cash';
+    if (hasAnyZero && showZeroCashItems) label = 'Hide $0 cash';
     icon.textContent = label;
     btn.setAttribute('aria-pressed', showZeroCashItems ? 'true' : 'false');
   }
@@ -4878,16 +4878,23 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  (function setupManageCategoriesButton() {
-    const btn = document.getElementById('manageCategoriesBtn');
-    const body = document.getElementById('manageCategories');
-    if (!btn || !body) return;
-    btn.addEventListener('click', function() {
-      renderManageCategories();
-      body.classList.remove('hidden');
-      body.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-  })();
+  // Manage Categories: use delegation + touch so it works reliably on iOS PWA (button may not receive direct click when Settings tab was not visible at init)
+  function openManageCategories() {
+    var body = document.getElementById('manageCategories');
+    if (!body) return;
+    renderManageCategories();
+    body.classList.remove('hidden');
+    body.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  document.body.addEventListener('click', function(e) {
+    if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) openManageCategories();
+  });
+  document.body.addEventListener('touchend', function(e) {
+    if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) {
+      e.preventDefault();
+      openManageCategories();
+    }
+  }, { passive: false });
 
   document.getElementById('resetBtn').onclick = () => confirmModal('Reset all data?', 'This cannot be undone. All banks, cards, pending items, and purchases will be cleared.', () => {
     confirmModal('Are you super sure?', 'This will permanently delete all data.', () => {
@@ -4912,12 +4919,15 @@
     m.addEventListener('touchstart', function(e) { e.stopPropagation(); });
   });
 
+  // Issue 1 root cause: On iOS Home Screen PWA resume, (1) pageshow with ev.persisted is not always fired when restoring from background, and (2) even when rehydrate ran, the DOM sometimes did not repaint until user interaction. Fix: run rehydrate on every pageshow (not only persisted), keep visibilitychange + focus, and force a reflow after render so the browser repaints snapshot totals.
   var lastRehydrateAt = 0;
   var REHYDRATE_DEBOUNCE_MS = 400;
-  function rehydrateAndRender() {
+  var REHYDRATE_DEBUG = false; // set true to log lifecycle events (console only)
+  function rehydrateAndRender(source) {
     var now = (typeof Date.now === 'function') ? Date.now() : 0;
     if (now - lastRehydrateAt < REHYDRATE_DEBOUNCE_MS) return;
     lastRehydrateAt = now;
+    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] ran, source=' + source);
     try {
       data = load();
       renderSnapshot();
@@ -4925,6 +4935,10 @@
       renderRecurring();
       renderUpcomingCashflow();
       renderManageCategories();
+      requestAnimationFrame(function() {
+        var el = document.getElementById('snapshotSummary');
+        if (el) el.offsetHeight;
+      });
     } catch (err) {
       if (typeof console !== 'undefined' && console.error) console.error('Rehydrate error:', err);
     }
@@ -4935,13 +4949,17 @@
   renderManageCategories();
 
   window.addEventListener('pageshow', function(ev) {
-    if (ev.persisted) rehydrateAndRender();
+    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] pageshow persisted=' + !!ev.persisted);
+    rehydrateAndRender('pageshow');
   });
   document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'visible') rehydrateAndRender();
+    if (document.visibilityState !== 'visible') return;
+    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] visibilitychange visible');
+    rehydrateAndRender('visibilitychange');
   });
   window.addEventListener('focus', function() {
-    rehydrateAndRender();
+    if (REHYDRATE_DEBUG && typeof console !== 'undefined' && console.log) console.log('[rehydrate] focus');
+    rehydrateAndRender('focus');
   });
 
   (function checkLocalDateFilter() {
