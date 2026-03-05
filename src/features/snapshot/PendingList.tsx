@@ -5,7 +5,12 @@ function escapeText(s: string): string {
   return s;
 }
 
-export function PendingInboundList(props: { data: LedgerData; items: PendingInboundItem[] }) {
+export function PendingInboundList(props: {
+  data: LedgerData;
+  items: PendingInboundItem[];
+  onPosted?: (id: string) => void;
+  onDelete?: (id: string) => void;
+}) {
   return (
     <div>
       {props.items.map((p) => {
@@ -21,7 +26,14 @@ export function PendingInboundList(props: { data: LedgerData; items: PendingInbo
               {isRefund ? ' — ' : null}
               {escapeText(label.replace(/^Refund —\s*/, ''))}
             </span>
-            <span />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-secondary posted" onClick={() => props.onPosted?.(p.id)}>
+                Posted
+              </button>
+              <button type="button" className="btn-delete" onClick={() => props.onDelete?.(p.id)}>
+                Delete
+              </button>
+            </div>
           </div>
         );
       })}
@@ -29,7 +41,12 @@ export function PendingInboundList(props: { data: LedgerData; items: PendingInbo
   );
 }
 
-export function PendingOutboundList(props: { data: LedgerData; items: PendingOutboundItem[] }) {
+export function PendingOutboundList(props: {
+  data: LedgerData;
+  items: PendingOutboundItem[];
+  onPosted?: (id: string) => void;
+  onDelete?: (id: string) => void;
+}) {
   return (
     <div>
       {props.items.map((p) => {
@@ -51,7 +68,14 @@ export function PendingOutboundList(props: { data: LedgerData; items: PendingOut
               {isCcPay ? ' ' : null}
               {escapeText(label.replace(/^CC Payment\s*/, ''))}
             </span>
-            <span />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-secondary posted" onClick={() => props.onPosted?.(p.id)}>
+                Posted
+              </button>
+              <button type="button" className="btn-delete" onClick={() => props.onDelete?.(p.id)}>
+                Delete
+              </button>
+            </div>
           </div>
         );
       })}

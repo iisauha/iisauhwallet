@@ -1,21 +1,32 @@
 import {
   CASH_STORAGE_KEY,
+  CATEGORY_COLOR_MAP_KEY,
   CATEGORY_STORAGE_KEY,
   EXPECTED_COSTS_KEY,
   EXPECTED_INCOME_KEY,
+  LAST_IN_BANK_KEY,
+  LAST_OUT_BANK_KEY,
+  PENDING_IN_COLLAPSED_KEY,
+  PENDING_OUT_COLLAPSED_KEY,
   PHYSICAL_CASH_ID,
+  SHOW_ZERO_BALANCES_KEY,
+  SHOW_ZERO_CARDS_KEY,
+  SHOW_ZERO_CASH_KEY,
   STORAGE_KEY,
   UPCOMING_WINDOW_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
-function uid(): string {
-  // Same shape as legacy: Date.now().toString(36) + Math.random().toString(36).slice(2)
+function now(): string {
+  return new Date().toISOString();
+}
+
+export function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-function now(): string {
-  return new Date().toISOString();
+export function nowIso(): string {
+  return now();
 }
 
 const DEFAULT_CARD_NAMES = [
@@ -74,6 +85,40 @@ function ensurePhysicalCashBank(d: LedgerData) {
     if (typeof pc.balanceCents !== 'number') pc.balanceCents = 0;
   }
   return pc;
+}
+
+export function loadBoolPref(key: string, defaultValue: boolean): boolean {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return defaultValue;
+    if (raw === '1' || raw === 'true') return true;
+    if (raw === '0' || raw === 'false') return false;
+    return defaultValue;
+  } catch (_) {
+    return defaultValue;
+  }
+}
+
+export function saveBoolPref(key: string, value: boolean) {
+  try {
+    localStorage.setItem(key, value ? '1' : '0');
+  } catch (_) {}
+}
+
+export function getLastPostedBankId(kind: 'in' | 'out'): string {
+  const key = kind === 'in' ? LAST_IN_BANK_KEY : LAST_OUT_BANK_KEY;
+  try {
+    return localStorage.getItem(key) || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+export function setLastPostedBankId(kind: 'in' | 'out', bankId: string) {
+  const key = kind === 'in' ? LAST_IN_BANK_KEY : LAST_OUT_BANK_KEY;
+  try {
+    if (bankId) localStorage.setItem(key, bankId);
+  } catch (_) {}
 }
 
 function migrateLegacyCashIntoBanksInMemory(d: LedgerData) {
@@ -142,13 +187,31 @@ function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {
 }
 
 export function exportJSON(): string {
-  // Mirrors legacy behavior: enumerate localStorage keys and include known/allowed ones.
-  const allow = new Set<string>([STORAGE_KEY, CATEGORY_STORAGE_KEY, EXPECTED_COSTS_KEY, EXPECTED_INCOME_KEY, UPCOMING_WINDOW_KEY]);
-  const payload: { version: 1; exportedAt: string; data: Record<string, unknown> } = {
-    version: 1,
+  // Mirrors legacy buildLocalStorageExportPayload() exactly (structure + allow list).
+  const payload: { version: string; exportedAt: string; data: Record<string, unknown> } = {
+    version: 'iisauhwallet-backup-v1',
     exportedAt: new Date().toISOString(),
     data: {}
   };
+
+  const allow = new Set<string>([
+    STORAGE_KEY,
+    CASH_STORAGE_KEY,
+    LAST_OUT_BANK_KEY,
+    LAST_IN_BANK_KEY,
+    // BACKUP_BEFORE_COLOR_UPDATE_KEY intentionally not used by React app, but still exported for compatibility
+    'ledgerlite_backup_before_color_update',
+    SHOW_ZERO_BALANCES_KEY,
+    SHOW_ZERO_CASH_KEY,
+    SHOW_ZERO_CARDS_KEY,
+    PENDING_IN_COLLAPSED_KEY,
+    PENDING_OUT_COLLAPSED_KEY,
+    CATEGORY_STORAGE_KEY,
+    CATEGORY_COLOR_MAP_KEY,
+    EXPECTED_COSTS_KEY,
+    EXPECTED_INCOME_KEY,
+    UPCOMING_WINDOW_KEY
+  ]);
 
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -175,11 +238,35 @@ export function exportJSON(): string {
 
 export function importJSON(jsonText: string) {
   const parsed = JSON.parse(jsonText) as any;
-  const data = parsed && parsed.data && typeof parsed.data === 'object' ? (parsed.data as Record<string, unknown>) : null;
-  if (!data) throw new Error('Invalid import format');
-  Object.entries(data).forEach(([k, v]) => {
-    localStorage.setItem(k, JSON.stringify(v));
-  });
+
+  // Format A: full localStorage export payload (exportJSON()).
+  if (parsed && parsed.version === 'iisauhwallet-backup-v1' && parsed.data && typeof parsed.data === 'object') {
+    const data = parsed.data as Record<string, unknown>;
+    Object.entries(data).forEach(([k, v]) => {
+      // Restore strings verbatim; everything else JSON-stringified (matching localStorage storage format).
+      if (typeof v === 'string') localStorage.setItem(k, v);
+      else localStorage.setItem(k, JSON.stringify(v));
+    });
+    return;
+  }
+
+  // Format B: legacy importFile handler expects a plain "data" object (banks/cards/pending/purchases/recurring...).
+  // We merge into STORAGE_KEY only, preserving any other keys.
+  if (parsed && typeof parsed === 'object') {
+    const current = loadData();
+    const next: LedgerData = { ...current };
+    if (Array.isArray(parsed.banks)) (next as any).banks = parsed.banks;
+    if (Array.isArray(parsed.cards)) (next as any).cards = parsed.cards;
+    if (Array.isArray(parsed.pendingIn)) (next as any).pendingIn = parsed.pendingIn;
+    if (Array.isArray(parsed.pendingOut)) (next as any).pendingOut = parsed.pendingOut;
+    if (Array.isArray(parsed.purchases)) (next as any).purchases = parsed.purchases;
+    if (Array.isArray(parsed.recurring)) (next as any).recurring = parsed.recurring;
+    if (parsed.recurringPosted && typeof parsed.recurringPosted === 'object') (next as any).recurringPosted = parsed.recurringPosted;
+    saveData(next);
+    return;
+  }
+
+  throw new Error('Invalid import format');
 }
 
 export function loadCategoryConfig(): CategoryConfig {

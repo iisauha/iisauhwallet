@@ -24,10 +24,16 @@ export interface PendingInboundItem {
   id: string;
   label: string;
   amountCents: number;
+  targetBankId?: string;
   isRefund?: boolean;
   depositTo?: PendingDepositTo;
   targetCardId?: string;
+  linkedPurchaseId?: string;
+  splitRecurringPurchaseId?: string;
+  fromSplit?: boolean;
   createdAt?: IsoDateTime;
+  recurringId?: string;
+  recurringDateKey?: string;
 }
 
 export interface PendingOutboundItem {
@@ -38,23 +44,45 @@ export interface PendingOutboundItem {
   sourceBankId?: string;
   targetCardId?: string;
   createdAt?: IsoDateTime;
+  recurringId?: string;
+  recurringDateKey?: string;
+  paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card';
+  paymentTargetId?: string;
+  splitTotalCents?: number;
+  myPortionCents?: number;
+  category?: string;
+  subcategory?: string;
+  notes?: string;
+}
+
+export interface PurchaseSplitSnapshot {
+  amountCents: number;
+  paymentSource: string;
+  paymentTargetId: string;
 }
 
 export interface Purchase {
   id: string;
   title: string;
   amountCents: number;
-  date: string; // YYYY-MM-DD
-  categoryId?: string;
+  dateISO: string; // YYYY-MM-DD
+  category?: string;
   subcategory?: string;
   notes?: string;
-  split?: boolean;
-  myPortionCents?: number;
-  reimbAmountCents?: number;
+
+  isSplit?: boolean;
+  splitTotalCents?: number;
+  splitMyPortionCents?: number;
+  splitInboundCents?: number;
+  splitPendingId?: string;
+  splitSnapshot?: PurchaseSplitSnapshot;
+
   applyToSnapshot?: boolean;
-  paymentSource?: 'card' | 'bank';
-  targetId?: string;
-  createdAt?: IsoDateTime;
+  paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card';
+  paymentTargetId?: string;
+
+  recurringId?: string;
+  recurringDateKey?: string;
 }
 
 export type RecurringType = 'expense' | 'income';
@@ -67,26 +95,25 @@ export interface RecurringItem {
   amountCents: number;
   expectedMinCents?: number;
   expectedMaxCents?: number;
-  split?: boolean;
+  isSplit?: boolean;
   myPortionCents?: number;
-  categoryId?: string;
+  category?: string;
   subcategory?: string;
   notes?: string;
   frequency: RecurringFrequency;
   everyNDays?: number;
+  intervalDays?: number;
   startDate: string; // YYYY-MM-DD
   useLastDayOfMonth?: boolean;
   endDate?: string; // YYYY-MM-DD
   active?: boolean;
   autoPay?: boolean;
   paymentSource?: 'card' | 'bank';
-  targetId?: string;
-  incomeBankId?: string;
-  createdAt?: IsoDateTime;
-  updatedAt?: IsoDateTime;
+  paymentTargetId?: string;
+  applyToSnapshot?: boolean;
 }
 
-export type RecurringPostedMap = Record<string, string>; // recurringId -> lastPostedDateKey
+export type RecurringPostedMap = Record<string, any>;
 
 export interface LedgerData {
   banks: BankAccount[];

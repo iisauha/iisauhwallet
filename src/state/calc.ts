@@ -11,6 +11,15 @@ export function formatCents(c: number): string {
   );
 }
 
+export function parseCents(s: string): number {
+  if (typeof s !== 'string') return 0;
+  const cleaned = s.replace(/[$,]/g, '').trim();
+  if (!cleaned) return 0;
+  const num = parseFloat(cleaned);
+  if (Number.isNaN(num)) return 0;
+  return Math.round(num * 100);
+}
+
 export function sumBankTotalCents(data: LedgerData): number {
   return (data.banks || []).reduce((s, b) => s + (b.balanceCents || 0), 0);
 }

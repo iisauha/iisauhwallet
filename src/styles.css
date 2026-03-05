@@ -103,3 +103,82 @@ body {
 .pending-ccpay-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; }
 .pending-refund-badge { background: var(--green-light); color: var(--green); }
 .pending-ccpay-badge { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+
+.btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.btn {
+  min-height: 44px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
+.btn-add { background: rgba(59, 130, 246, 0.2); color: #2563EB; }
+.btn-add:hover { background: rgba(59, 130, 246, 0.3); }
+.clear-btn { background: var(--red-light) !important; color: var(--red) !important; border: 1px solid var(--red) !important; }
+.btn-delete {
+  min-width: 90px;
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--red);
+  background: var(--red-light);
+  color: var(--red);
+  cursor: pointer;
+}
+.btn-delete:hover { background: rgba(220, 38, 38, 0.25); }
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.icon-btn:hover { background: rgba(148, 163, 184, 0.2); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 10px;
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+.modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.modal h3 { margin: 0 0 16px 0; font-size: 1.25rem; }
+.modal .field { margin-bottom: 14px; }
+.modal label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+.modal input, .modal select, .modal textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
