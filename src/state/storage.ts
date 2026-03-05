@@ -4,6 +4,7 @@ import {
   CATEGORY_STORAGE_KEY,
   EXPECTED_COSTS_KEY,
   EXPECTED_INCOME_KEY,
+  INVESTING_KEY,
   LAST_ADJUSTMENTS_KEY,
   LAST_IN_BANK_KEY,
   LAST_OUT_BANK_KEY,
@@ -469,6 +470,55 @@ export function loadLastAdjustments(): LastAdjustmentsMap {
 export function saveLastAdjustments(map: LastAdjustmentsMap) {
   try {
     localStorage.setItem(LAST_ADJUSTMENTS_KEY, JSON.stringify(map || {}));
+  } catch (_) {}
+}
+
+export type InvestingAccountType = 'hysa' | 'roth' | 'k401' | 'general';
+
+export type InvestingAccountBase = {
+  id: string;
+  type: InvestingAccountType;
+  name: string;
+  balanceCents: number;
+};
+
+export type HysaAccount = InvestingAccountBase & {
+  type: 'hysa';
+  interestRate: number; // APY percent
+  lastAccruedAt: number; // timestamp ms
+};
+
+export type OtherInvestAccount = InvestingAccountBase & {
+  type: 'roth' | 'k401' | 'general';
+};
+
+export type InvestingAccount = HysaAccount | OtherInvestAccount;
+
+export type InvestingState = {
+  version: 1;
+  accounts: InvestingAccount[];
+};
+
+export function loadInvesting(): InvestingState {
+  try {
+    const raw = localStorage.getItem(INVESTING_KEY);
+    if (!raw) return { version: 1, accounts: [] };
+    const parsed = JSON.parse(raw) as any;
+    if (parsed && Array.isArray(parsed.accounts)) {
+      return { version: 1, accounts: parsed.accounts as InvestingAccount[] };
+    }
+    if (Array.isArray(parsed)) {
+      return { version: 1, accounts: parsed as InvestingAccount[] };
+    }
+    return { version: 1, accounts: [] };
+  } catch (_) {
+    return { version: 1, accounts: [] };
+  }
+}
+
+export function saveInvesting(state: InvestingState) {
+  try {
+    localStorage.setItem(INVESTING_KEY, JSON.stringify(state));
   } catch (_) {}
 }
 

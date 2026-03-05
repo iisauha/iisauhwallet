@@ -4,9 +4,10 @@ import { SpendingPage } from './features/spending/SpendingPage';
 import { RecurringPage } from './features/recurring/RecurringPage';
 import { UpcomingPage } from './features/upcoming/UpcomingPage';
 import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
+import { InvestingPage } from './features/investing/InvestingPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 
-type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'settings';
+type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
 
 export function App() {
   const [tab, setTab] = useState<TabKey>('snapshot');
@@ -17,6 +18,7 @@ export function App() {
     if (tab === 'recurring') return <RecurringPage />;
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'subtracker') return <SubTrackerPage />;
+    if (tab === 'investing') return <InvestingPage />;
     return <SettingsPage />;
   }, [tab]);
 
@@ -38,6 +40,9 @@ export function App() {
         </button>
         <button type="button" className={tab === 'subtracker' ? 'tab active' : 'tab'} onClick={() => setTab('subtracker')}>
           SUB Tracker
+        </button>
+        <button type="button" className={tab === 'investing' ? 'tab active' : 'tab'} onClick={() => setTab('investing')}>
+          Investing
         </button>
         <button type="button" className={tab === 'settings' ? 'tab active' : 'tab'} onClick={() => setTab('settings')}>
           Settings

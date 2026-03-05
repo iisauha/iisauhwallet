@@ -34,6 +34,7 @@ export interface PendingInboundItem {
   createdAt?: IsoDateTime;
   recurringId?: string;
   recurringDateKey?: string;
+  meta?: PendingTransferMeta;
 }
 
 export interface PendingOutboundItem {
@@ -53,6 +54,13 @@ export interface PendingOutboundItem {
   category?: string;
   subcategory?: string;
   notes?: string;
+  meta?: PendingTransferMeta;
+}
+
+export interface PendingTransferMeta {
+  kind?: string;
+  investingType?: 'hysa' | 'general';
+  investingAccountId?: string;
 }
 
 export interface PurchaseSplitSnapshot {
