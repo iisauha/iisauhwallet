@@ -109,8 +109,6 @@ export function InvestingPage() {
     const preTaxPctGross = pct(preTaxInvestCents, grossIncomeCents);
     const postTaxPctNet = pct(postTaxInvestCents, netIncomeCents);
     const totalInvestCents = preTaxInvestCents + postTaxInvestCents;
-    const totalPctGross = pct(totalInvestCents, grossIncomeCents);
-    const totalPctNet = pct(totalInvestCents, netIncomeCents);
 
     return {
       incomeMarkedCount,
@@ -120,9 +118,7 @@ export function InvestingPage() {
       postTaxInvestCents,
       totalInvestCents,
       preTaxPctGross,
-      postTaxPctNet,
-      totalPctGross,
-      totalPctNet
+      postTaxPctNet
     };
   }, [data, cfg]);
 
@@ -380,7 +376,7 @@ export function InvestingPage() {
                 <div className="card ll-account-card" key={a.id}>
                   <div className="row ll-account-row">
                     <span className="name bank-card-name">{a.name}</span>
-                    <span className="amount">{formatCents(a.balanceCents || 0)}</span>
+                    <span className="amount amount-pos">{formatCents(a.balanceCents || 0)}</span>
                   </div>
                   {a.type === 'hysa' ? (
                     (() => {
@@ -479,7 +475,7 @@ export function InvestingPage() {
       {renderSection('401(k)', 'k401', k401Accounts, 'k401')}
       {renderSection('General Investing', 'general', generalAccounts, 'general')}
 
-      <div className="card investing-contrib-card" style={{ marginTop: 24 }}>
+      <div className="card" style={{ marginTop: 24 }}>
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
           Investing Contribution
         </p>
@@ -520,7 +516,7 @@ export function InvestingPage() {
               <span className="v">
                 {formatCents(contribution.totalInvestCents)}{' '}
                 <span style={{ color: 'var(--muted)', fontSize: '0.85rem', display: 'block' }}>
-                  {contribution.totalPctGross.toFixed(1)}% of gross • {contribution.totalPctNet.toFixed(1)}% of net
+                  {(contribution.preTaxPctGross + contribution.postTaxPctNet).toFixed(1)}%
                 </span>
               </span>
             </div>
@@ -528,26 +524,29 @@ export function InvestingPage() {
         )}
       </div>
 
-      <div className="card investing-summary-card" style={{ marginTop: 16 }}>
+      <div className="card" style={{ marginTop: 16 }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
+          Investing Summary
+        </p>
         <div className="summary-kv">
-          <span className="k">Total HYSA</span>
-          <span className="v">{formatCents(totals.totalHYSA)}</span>
+          <span className="k" style={{ color: 'var(--green)' }}>Total HYSA</span>
+          <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Total Roth IRA</span>
-          <span className="v">{formatCents(totals.totalRoth)}</span>
+          <span className="k" style={{ color: 'var(--green)' }}>Total Roth IRA</span>
+          <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Total 401(k)</span>
-          <span className="v">{formatCents(totals.total401k)}</span>
+          <span className="k" style={{ color: 'var(--green)' }}>Total 401(k)</span>
+          <span className="v amount-pos">{formatCents(totals.total401k)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Total General Investing</span>
-          <span className="v">{formatCents(totals.totalGeneral)}</span>
+          <span className="k" style={{ color: 'var(--green)' }}>Total General Investing</span>
+          <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Total Investing</span>
-          <span className="v">{formatCents(totals.totalAll)}</span>
+          <span className="k" style={{ color: 'var(--green)' }}>Total Investing</span>
+          <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
         </div>
       </div>
 
