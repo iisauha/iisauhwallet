@@ -137,7 +137,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         }
       }
 
-      // SUB tracker (new feature): track spend on applied card purchases (uses user's portion, not split total).
+      // SUB tracker: track spend on applied card purchases (uses user's portion, not split total),
+      // and guard against double counting by tracking applied purchase IDs.
       try {
         const isCard = p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
         const delta = typeof p.amountCents === 'number' ? p.amountCents : 0;
@@ -156,9 +157,16 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
                   ? normalize(ref.name) && normalize(ref.name) === normalize(cardName)
                   : false;
             if (!matches) return e;
+            const applied: string[] = Array.isArray(e.appliedPurchaseIds) ? e.appliedPurchaseIds : [];
+            if (applied.includes(id)) return e;
             const nextSpend = (typeof e.spendCents === 'number' ? e.spendCents : 0) + delta;
             changed = true;
-            return { ...e, spendCents: nextSpend, updatedAt: nowIso() };
+            return {
+              ...e,
+              spendCents: nextSpend,
+              appliedPurchaseIds: [...applied, id],
+              updatedAt: nowIso()
+            };
           });
           if (changed) saveSubTracker({ version: 1, entries });
         }
@@ -201,7 +209,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         next.pendingIn = next.pendingIn.filter((pi: any) => pi.id !== p.splitPendingId);
       }
 
-      // SUB tracker rollback (new feature) when deleting a tracked purchase.
+      // SUB tracker rollback when deleting a tracked purchase.
       try {
         const isCard = p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
         const delta = typeof p.amountCents === 'number' ? p.amountCents : 0;
@@ -220,10 +228,17 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
                   ? normalize(ref.name) && normalize(ref.name) === normalize(cardName)
                   : false;
             if (!matches) return e;
+            const applied: string[] = Array.isArray(e.appliedPurchaseIds) ? e.appliedPurchaseIds : [];
+            if (!applied.includes(id)) return e;
             const prev = typeof e.spendCents === 'number' ? e.spendCents : 0;
             const nextSpend = Math.max(0, prev - delta);
             changed = true;
-            return { ...e, spendCents: nextSpend, updatedAt: nowIso() };
+            return {
+              ...e,
+              spendCents: nextSpend,
+              appliedPurchaseIds: applied.filter((pid) => pid !== id),
+              updatedAt: nowIso()
+            };
           });
           if (changed) saveSubTracker({ version: 1, entries });
         }

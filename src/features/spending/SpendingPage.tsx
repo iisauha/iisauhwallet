@@ -46,6 +46,8 @@ export function SpendingPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
+  const [purchasesCollapsed, setPurchasesCollapsed] = useState<boolean>(true);
+  const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -139,6 +141,16 @@ export function SpendingPage() {
       .sort((a, b) => b.amountCents - a.amountCents);
   }, [filteredPurchases, data.banks, data.cards]);
 
+  const sortedPurchases = useMemo(
+    () =>
+      filteredPurchases
+        .slice()
+        .sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || '')),
+    [filteredPurchases]
+  );
+  const hasMorePurchases = sortedPurchases.length > 5;
+  const visiblePurchases = showAllPurchases ? sortedPurchases : sortedPurchases.slice(0, 5);
+
   useEffect(() => {
     if (!canvasRef.current) return;
     if (view !== 'category') return;
@@ -212,9 +224,14 @@ export function SpendingPage() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px 0' }}>
-        <p className="section-title" style={{ margin: 0, flex: 1 }}>
-          Purchases
-        </p>
+        <div
+          className="section-header"
+          style={{ margin: 0, padding: '4px 8px', flex: 1 }}
+          onClick={() => setPurchasesCollapsed((v) => !v)}
+        >
+          <span className="section-header-left">Purchases</span>
+          <span className="chevron">{purchasesCollapsed ? '▸' : '▾'}</span>
+        </div>
         <button
           type="button"
           className="icon-btn"
@@ -242,11 +259,9 @@ export function SpendingPage() {
           </button>
         </div>
       ) : null}
-      <div>
-        {filteredPurchases
-          .slice()
-          .sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || ''))
-          .map((p: any) => (
+      {!purchasesCollapsed ? (
+        <div>
+          {visiblePurchases.map((p: any) => (
             <div className="card" key={p.id}>
               <div className="row">
                 <span className="name">{p.title || 'Purchase'}</span>
@@ -270,7 +285,19 @@ export function SpendingPage() {
               </div>
             </div>
           ))}
-      </div>
+          {!showAllPurchases && hasMorePurchases ? (
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowAllPurchases(true)}
+              >
+                See more
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <button type="button" className="btn btn-add" style={{ marginTop: 16, width: '100%' }} onClick={() => setOpenAdd(true)}>
         + Add Purchase

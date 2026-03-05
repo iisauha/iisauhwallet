@@ -85,50 +85,54 @@ export function SnapshotPage() {
       {!cashCollapsed ? (
         <>
           <div>
-            {visibleBanks.map((b) => (
-              <div className="card ll-account-card" key={b.id}>
-                <button
-                  type="button"
-                  className="ll-card-button"
-                  onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
-                >
-                  <BankAccountCard bank={b} />
-                </button>
-                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+            {visibleBanks.map((b) => {
+              const positive = (b.balanceCents || 0) >= 0;
+              const cardClass = positive ? 'card ll-account-card bank-positive' : 'card ll-account-card';
+              return (
+                <div className={cardClass} key={b.id}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="ll-card-button"
                     onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
                   >
-                    Add / Set
+                    <BankAccountCard bank={b} />
                   </button>
-                  <button
-                    type="button"
-                    className="btn clear-btn"
-                    onClick={() => {
-                      actions.updateBankBalance(b.id, 0, 'set');
-                    }}
-                  >
-                    Clear
-                  </button>
-                  {b.type !== 'physical_cash' ? (
+                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                     <button
                       type="button"
-                      className="btn btn-danger"
-                      onClick={() =>
-                        openConfirm(
-                          'Are you sure you want to delete this?',
-                          'Are you sure you want to delete this?',
-                          () => actions.deleteBankAccount(b.id)
-                        )
-                      }
+                      className="btn btn-secondary"
+                      onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
                     >
-                      Delete
+                      Add / Set
                     </button>
-                  ) : null}
+                    <button
+                      type="button"
+                      className="btn clear-btn"
+                      onClick={() => {
+                        actions.updateBankBalance(b.id, 0, 'set');
+                      }}
+                    >
+                      Clear
+                    </button>
+                    {b.type !== 'physical_cash' ? (
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() =>
+                          openConfirm(
+                            'Are you sure you want to delete this?',
+                            'Are you sure you want to delete this?',
+                            () => actions.deleteBankAccount(b.id)
+                          )
+                        }
+                      >
+                        Delete
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })}>
             + Add Bank Account
@@ -157,48 +161,53 @@ export function SnapshotPage() {
       {!cardsCollapsed ? (
         <>
           <div>
-            {visibleCards.map((c) => (
-              <div className="card ll-account-card" key={c.id}>
-                <button
-                  type="button"
-                  className="ll-card-button"
-                  onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                >
-                  <CreditCardCard card={c} />
-                </button>
-                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+            {visibleCards.map((c) => {
+              const amt = c.balanceCents || 0;
+              const cardClass =
+                amt > 0 ? 'card ll-account-card card-debt' : amt < 0 ? 'card ll-account-card card-credit' : 'card ll-account-card';
+              return (
+                <div className={cardClass} key={c.id}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="ll-card-button"
                     onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
                   >
-                    Add / Set
+                    <CreditCardCard card={c} />
                   </button>
-                  <button
-                    type="button"
-                    className="btn clear-btn"
-                    onClick={() => {
-                      actions.updateCardBalance(c.id, 0, 'set');
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() =>
-                      openConfirm(
-                        'Are you sure you want to delete this?',
-                        'Are you sure you want to delete this?',
-                        () => actions.deleteCreditCard(c.id)
-                      )
-                    }
-                  >
-                    Delete
-                  </button>
+                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
+                    >
+                      Add / Set
+                    </button>
+                    <button
+                      type="button"
+                      className="btn clear-btn"
+                      onClick={() => {
+                        actions.updateCardBalance(c.id, 0, 'set');
+                      }}
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() =>
+                        openConfirm(
+                          'Are you sure you want to delete this?',
+                          'Are you sure you want to delete this?',
+                          () => actions.deleteCreditCard(c.id)
+                        )
+                      }
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })}>
             + Add Credit Card
@@ -220,7 +229,7 @@ export function SnapshotPage() {
         <span className="chevron">{pendingInCollapsed ? '▸' : '▾'}</span>
       </div>
       {!pendingInCollapsed ? (
-        <>
+        <div className="pending-inbound-wrapper">
           <PendingInboundList
             data={data}
             items={data.pendingIn || []}
@@ -235,7 +244,7 @@ export function SnapshotPage() {
               Clear All
             </button>
           </div>
-        </>
+        </div>
       ) : null}
 
       <div
@@ -252,7 +261,7 @@ export function SnapshotPage() {
         <span className="chevron">{pendingOutCollapsed ? '▸' : '▾'}</span>
       </div>
       {!pendingOutCollapsed ? (
-        <>
+        <div className="pending-outbound-wrapper">
           <PendingOutboundList
             data={data}
             items={data.pendingOut || []}
@@ -267,7 +276,7 @@ export function SnapshotPage() {
               Clear All
             </button>
           </div>
-        </>
+        </div>
       ) : null}
 
       <div className="summary" id="snapshotSummary">

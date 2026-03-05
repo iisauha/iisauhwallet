@@ -54,7 +54,7 @@ export function SubTrackerPage() {
   const [tierReward, setTierReward] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
-  const [draftSpendCents, setDraftSpendCents] = useState(0);
+  const [spentInput, setSpentInput] = useState<string>('0.00');
 
   const cardNameById = useMemo(() => new Map(cards.map((c) => [c.id, c.name || 'Card'])), [cards]);
 
@@ -72,28 +72,6 @@ export function SubTrackerPage() {
   return (
     <div className="tab-panel active" id="subTrackerContent">
       <p className="section-title">SUB Tracker</p>
-
-      <button
-        type="button"
-        className="btn btn-add"
-        style={{ width: '100%', marginBottom: 16 }}
-        onClick={() => {
-          setCardMode('card');
-          setCardId(cards[0]?.id || '');
-          setManualName('');
-          setStartDate(todayKey());
-          setUseDeadlineDate(true);
-          setDeadlineDate(todayKey());
-          setMonthsWindow('3');
-          setTierTarget('');
-          setTierReward('');
-          setConfirmDelete(null);
-          setEditorEntryId(null);
-          setEditorOpen(true);
-        }}
-      >
-        + Add tracked card
-      </button>
 
       {entries.map((e) => {
         const name = entryDisplayName(e);
@@ -175,6 +153,43 @@ export function SubTrackerPage() {
                 Delete
               </button>
             </div>
+            <div className="btn-row" style={{ marginTop: 4 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const current = (e.spendCents || 0) / 100;
+                  const v = window.prompt('Set spent so far ($)', current.toFixed(2));
+                  if (v == null) return;
+                  const cents = parseCents(v);
+                  if (!(cents >= 0)) return;
+                  const updated = entries.map((x) =>
+                    x.id === e.id ? { ...x, spendCents: cents, updatedAt: new Date().toISOString() } : x
+                  );
+                  persist({ version: 1, entries: updated });
+                }}
+              >
+                Set
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const v = window.prompt('Add to spent so far ($)', '0.00');
+                  if (v == null) return;
+                  const delta = parseCents(v);
+                  if (!(delta > 0)) return;
+                  const updated = entries.map((x) => {
+                    if (x.id !== e.id) return x;
+                    const prev = typeof x.spendCents === 'number' ? x.spendCents : 0;
+                    return { ...x, spendCents: prev + delta, updatedAt: new Date().toISOString() };
+                  });
+                  persist({ version: 1, entries: updated });
+                }}
+              >
+                Add
+              </button>
+            </div>
           </div>
         );
       })}
@@ -211,6 +226,29 @@ export function SubTrackerPage() {
           </div>
         </div>
       ) : null}
+
+      <button
+        type="button"
+        className="btn btn-add"
+        style={{ width: '100%', marginTop: 16 }}
+        onClick={() => {
+          setCardMode('card');
+          setCardId(cards[0]?.id || '');
+          setManualName('');
+          setStartDate(todayKey());
+          setUseDeadlineDate(true);
+          setDeadlineDate(todayKey());
+          setMonthsWindow('3');
+          setTierTarget('');
+          setTierReward('');
+          setSpentInput('0.00');
+          setConfirmDelete(null);
+          setEditorEntryId(null);
+          setEditorOpen(true);
+        }}
+      >
+        + Add tracked card
+      </button>
 
       <Modal
         open={editorOpen}
@@ -283,21 +321,8 @@ export function SubTrackerPage() {
           <label>Spent so far ($)</label>
           <input
             className="ll-control"
-            value={(editorEntryId
-              ? (entries.find((x) => x.id === editorEntryId)?.spendCents || 0) / 100
-              : 0
-            ).toFixed(2)}
-            onChange={(ev) => {
-              const nextAmount = parseCents(ev.target.value);
-              if (editorEntryId) {
-                const updatedEntries = entries.map((x) =>
-                  x.id === editorEntryId ? { ...x, spendCents: nextAmount, updatedAt: new Date().toISOString() } : x
-                );
-                persist({ version: 1, entries: updatedEntries });
-              } else {
-                setDraftSpendCents(nextAmount);
-              }
-            }}
+            value={spentInput}
+            onChange={(ev) => setSpentInput(ev.target.value)}
             inputMode="decimal"
           />
         </div>
@@ -335,6 +360,8 @@ export function SubTrackerPage() {
               const targetCents = parseCents(tierTarget);
               if (!(targetCents > 0)) return;
               const rewardText = (tierReward || '').trim() || 'Bonus';
+              const spentCents = parseCents(spentInput);
+              if (!(spentCents >= 0)) return;
               if (editorEntryId) {
                 // Editing top-level fields and first tier.
                 const updatedEntries = entries.map((x) => {
@@ -352,6 +379,7 @@ export function SubTrackerPage() {
                     deadlineDate: useDeadlineDate ? deadlineDate || todayKey() : undefined,
                     monthsWindow: useDeadlineDate ? undefined : Math.max(1, parseInt(monthsWindow || '1', 10) || 1),
                     tiers: newTiers,
+                    spendCents: spentCents,
                     updatedAt: new Date().toISOString()
                   };
                 });
@@ -365,7 +393,7 @@ export function SubTrackerPage() {
                   deadlineDate: useDeadlineDate ? deadlineDate || todayKey() : undefined,
                   monthsWindow: useDeadlineDate ? undefined : Math.max(1, parseInt(monthsWindow || '1', 10) || 1),
                   tiers: [tier],
-                  spendCents: draftSpendCents,
+                  spendCents: spentCents,
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 };

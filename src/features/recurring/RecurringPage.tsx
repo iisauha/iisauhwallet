@@ -54,44 +54,51 @@ export function RecurringPage() {
     return Array.from(map.entries());
   }, [expenses]);
   const [expensesCollapsed, setExpensesCollapsed] = useState<Record<string, boolean>>({});
+  const [incomeCollapsed, setIncomeCollapsed] = useState<boolean>(true);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
   return (
     <div className="tab-panel active" id="recurringContent">
       <p className="section-title">Recurring Items</p>
-      <p
-        className="section-title"
+      <div
+        className="section-header"
         style={{
           marginTop: 16,
           fontSize: '1rem',
           background: 'var(--green-light)',
-          color: 'var(--green)',
-          padding: '6px 10px',
           borderRadius: 10
         }}
+        onClick={() => setIncomeCollapsed((v) => !v)}
       >
-        Recurring Income
-      </p>
-      {income.map((r: any) => (
-        <div className="card" key={r.id}>
-          <div className="row">
-            <span className="name">{r.name || 'Income'}</span>
-            <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
-          </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-            {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
-          </div>
-          <div className="btn-row">
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring income' })}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      ))}
+        <span className="section-header-left" style={{ color: 'var(--green)' }}>
+          Recurring Income
+        </span>
+        <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
+      </div>
+      {!incomeCollapsed ? (
+        <>
+          {income.map((r: any) => (
+            <div className="card" key={r.id}>
+              <div className="row">
+                <span className="name">{r.name || 'Income'}</span>
+                <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
+              </div>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring income' })}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
+      ) : null}
 
       <p
         className="section-title"

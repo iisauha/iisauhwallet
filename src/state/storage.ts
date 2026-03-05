@@ -412,6 +412,7 @@ export type SubTrackerEntry = {
   monthsWindow?: number;
   tiers: SubTrackerTier[];
   spendCents: number;
+  appliedPurchaseIds?: string[];
   createdAt?: string;
   updatedAt?: string;
 };

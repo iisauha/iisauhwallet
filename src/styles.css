@@ -143,6 +143,26 @@ body {
 .pending-refund-badge { background: var(--green-light); color: var(--green); }
 .pending-ccpay-badge { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
 
+.ll-account-card.bank-positive {
+  background: var(--green-light);
+}
+.ll-account-card.card-debt {
+  background: var(--red-light);
+}
+.ll-account-card.card-credit {
+  background: var(--green-light);
+}
+.pending-inbound-wrapper .pending-item {
+  background: var(--green-light);
+  border-radius: 10px;
+  padding-inline: 10px;
+}
+.pending-outbound-wrapper .pending-item {
+  background: var(--red-light);
+  border-radius: 10px;
+  padding-inline: 10px;
+}
+
 .ll-swipe-row {
   position: relative;
   overflow: hidden;

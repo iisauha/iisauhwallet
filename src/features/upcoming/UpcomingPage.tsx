@@ -76,6 +76,8 @@ export function UpcomingPage() {
 
   const projectedBalanceCents = totals.finalNetCashCents - totalExpectedCostsCents + totalExpectedIncomeCents;
   const statusOk = projectedBalanceCents >= 0;
+  const [incomeCollapsed, setIncomeCollapsed] = useState(true);
+  const [costsCollapsed, setCostsCollapsed] = useState(true);
 
   const today = todayKey();
   function formatDaysLeft(dateISO: string) {
@@ -110,126 +112,187 @@ export function UpcomingPage() {
         </Select>
       </div>
 
-      <p
-        className="section-title"
-        style={{
-          marginTop: 24,
-          background: 'var(--green-light)',
-          color: 'var(--green)',
-          padding: '6px 10px',
-          borderRadius: 10
-        }}
+      <div
+        className="section-header"
+        style={{ marginTop: 24, background: 'var(--green-light)', borderRadius: 10 }}
+        onClick={() => setIncomeCollapsed((v) => !v)}
       >
-        Expected Income
-      </p>
-      {incomeInWindow.map((i) => (
-        <div className="card" key={i.id}>
-          <div className="row">
-            <span className="name">{i.title}</span>
-            <span className="amount">{formatCents(i.amountCents || 0)}</span>
-          </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(i.expectedDate)}</div>
-          <div className="btn-row">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                actions.addPendingInbound({ label: i.title, amountCents: i.amountCents || 0, depositTo: 'bank' });
-                const next = expectedIncome.map((x) => (x.id === i.id ? { ...x, status: 'moved_to_pending' as const } : x));
-                setExpectedIncome(next);
-                saveExpectedIncome(next);
-              }}
-            >
-              Move to Pending Inbound
-            </button>
-          </div>
-        </div>
-      ))}
-      {recurringIncome.map((i) => (
-        <div className="card" key={i.id}>
-          <div className="row">
-            <span className="name">{i.title}</span>
-            <span className="amount">{formatCents(i.amountCents || 0)}</span>
-          </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{i.expectedDate} • From recurring</div>
-          {!i.autoPay ? (
-            <div className="btn-row">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  actions.addPendingInbound({
-                    label: i.title,
-                    amountCents: i.amountCents || 0,
-                    depositTo: 'bank',
-                    targetBankId: i.paymentTargetId || undefined,
-                    recurringId: i.recurringId,
-                    recurringDateKey: i.expectedDate
-                  });
-                }}
-              >
-                Move to Pending Inbound
-              </button>
+        <span className="section-header-left" style={{ color: 'var(--green)' }}>
+          Expected Income
+        </span>
+        <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
+      </div>
+      {!incomeCollapsed ? (
+        <>
+          {incomeInWindow.map((i) => (
+            <div className="card" key={i.id}>
+              <div className="row">
+                <span className="name">{i.title}</span>
+                <span className="amount">{formatCents(i.amountCents || 0)}</span>
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(i.expectedDate)}</div>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    actions.addPendingInbound({ label: i.title, amountCents: i.amountCents || 0, depositTo: 'bank' });
+                    const next = expectedIncome.map((x) => (x.id === i.id ? { ...x, status: 'moved_to_pending' as const } : x));
+                    setExpectedIncome(next);
+                    saveExpectedIncome(next);
+                  }}
+                >
+                  Move to Pending Inbound
+                </button>
+              </div>
             </div>
-          ) : null}
-        </div>
-      ))}
-      <button
-        type="button"
-        className="btn btn-add"
-        onClick={() => {
-          setModal({
-            type: 'add-expected',
-            kind: 'income',
-            title: '',
-            date: todayKey(),
-            notes: '',
-            useRange: false,
-            amount: '',
-            minAmount: '',
-            maxAmount: ''
-          });
-        }}
-        style={{ marginTop: 8 }}
-      >
-        + Add expected income
-      </button>
+          ))}
+          {recurringIncome.map((i) => (
+            <div className="card" key={i.id}>
+              <div className="row">
+                <span className="name">{i.title}</span>
+                <span className="amount">{formatCents(i.amountCents || 0)}</span>
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                {formatDaysLeft(i.expectedDate)} • From recurring
+              </div>
+              {!i.autoPay ? (
+                <div className="btn-row">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      actions.addPendingInbound({
+                        label: i.title,
+                        amountCents: i.amountCents || 0,
+                        depositTo: 'bank',
+                        targetBankId: i.paymentTargetId || undefined,
+                        recurringId: i.recurringId,
+                        recurringDateKey: i.expectedDate
+                      });
+                    }}
+                  >
+                    Move to Pending Inbound
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn btn-add"
+            onClick={() => {
+              setModal({
+                type: 'add-expected',
+                kind: 'income',
+                title: '',
+                date: todayKey(),
+                notes: '',
+                useRange: false,
+                amount: '',
+                minAmount: '',
+                maxAmount: ''
+              });
+            }}
+            style={{ marginTop: 8 }}
+          >
+            + Add expected income
+          </button>
+        </>
+      ) : null}
 
-      <p
-        className="section-title"
-        style={{
-          marginTop: 24,
-          background: 'var(--red-light)',
-          color: 'var(--red)',
-          padding: '6px 10px',
-          borderRadius: 10
-        }}
+      <div
+        className="section-header"
+        style={{ marginTop: 24, background: 'var(--red-light)', borderRadius: 10 }}
+        onClick={() => setCostsCollapsed((v) => !v)}
       >
-        Expected Costs
-      </p>
-      {costsInWindow.map((c) => (
-        <div className="card" key={c.id}>
-          <div className="row">
-            <span className="name">{c.title}</span>
-            <span className="amount">{formatCents(c.amountCents || 0)}</span>
-          </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(c.expectedDate)}</div>
-          <div className="btn-row">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                actions.addPendingOutbound({ label: c.title, amountCents: c.amountCents || 0 });
-                const next = expectedCosts.map((x) => (x.id === c.id ? { ...x, status: 'moved_to_pending' as const } : x));
-                setExpectedCosts(next);
-                saveExpectedCosts(next);
-              }}
-            >
-              Move to Pending Outbound
-            </button>
-          </div>
-        </div>
-      ))}
+        <span className="section-header-left" style={{ color: 'var(--red)' }}>
+          Expected Costs
+        </span>
+        <span className="chevron">{costsCollapsed ? '▸' : '▾'}</span>
+      </div>
+      {!costsCollapsed ? (
+        <>
+          {costsInWindow.map((c) => (
+            <div className="card" key={c.id}>
+              <div className="row">
+                <span className="name">{c.title}</span>
+                <span className="amount">{formatCents(c.amountCents || 0)}</span>
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(c.expectedDate)}</div>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    actions.addPendingOutbound({ label: c.title, amountCents: c.amountCents || 0 });
+                    const next = expectedCosts.map((x) => (x.id === c.id ? { ...x, status: 'moved_to_pending' as const } : x));
+                    setExpectedCosts(next);
+                    saveExpectedCosts(next);
+                  }}
+                >
+                  Move to Pending Outbound
+                </button>
+              </div>
+            </div>
+          ))}
+          {recurringCosts.map((c) => (
+            <div className="card" key={c.recurringId + ':' + c.dateKey}>
+              <div className="row">
+                <span className="name">{c.recurringName}</span>
+                <span className="amount">{formatCents(c.amountCents || 0)}</span>
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                {formatDaysLeft(c.dateKey)} • From recurring
+              </div>
+              {!c.autoPay ? (
+                <div className="btn-row">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      actions.addPendingOutbound({
+                        label: c.recurringName,
+                        amountCents: c.amountCents || 0,
+                        recurringId: c.recurringId,
+                        recurringDateKey: c.dateKey,
+                        paymentSource: c.paymentSource as any,
+                        paymentTargetId: c.paymentTargetId,
+                        splitTotalCents: c.isSplit ? c.fullAmountCents : undefined,
+                        myPortionCents: c.isSplit ? c.amountCents : undefined,
+                        category: c.category,
+                        subcategory: c.subcategory
+                      });
+                    }}
+                  >
+                    Move to Pending Outbound
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn btn-add"
+            onClick={() => {
+              setModal({
+                type: 'add-expected',
+                kind: 'cost',
+                title: '',
+                date: todayKey(),
+                notes: '',
+                useRange: false,
+                amount: '',
+                minAmount: '',
+                maxAmount: ''
+              });
+            }}
+            style={{ marginTop: 8 }}
+          >
+            + Add expected cost
+          </button>
+        </>
+      ) : null}
       {recurringCosts.map((c) => (
         <div className="card" key={c.recurringId + ':' + c.dateKey}>
           <div className="row">

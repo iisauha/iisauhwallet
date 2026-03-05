@@ -3,7 +3,8 @@ import { formatCents } from '../../state/calc';
 
 export function AccountCard(props: { name: string; amountCents: number; kind: 'bank' | 'card' }) {
   const amount = props.amountCents;
-  const cls = amount < 0 ? 'amount amount-credit' : 'amount';
+  const isCredit = amount < 0;
+  const cls = isCredit ? 'amount amount-credit' : 'amount';
   return (
     <div className="row ll-account-row">
       <span className="name">{props.name}</span>
