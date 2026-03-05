@@ -23,6 +23,8 @@
       --green-light: rgba(22, 163, 74, 0.12);
       --red: #dc2626;
       --red-light: rgba(220, 38, 38, 0.12);
+      --orange: #ea580c;
+      --orange-light: rgba(234, 88, 12, 0.15);
       --safe-bottom: env(safe-area-inset-bottom);
       --safe-top: env(safe-area-inset-top);
       --tabbar-h: 56px;
@@ -133,7 +135,7 @@
     }
     .btn-primary { background: var(--accent); color: white; flex: 1; }
     .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-    .clear-btn { background: transparent !important; color: var(--red) !important; border-color: var(--red) !important; }
+    .clear-btn { background: var(--red-light) !important; color: var(--red) !important; border: 1px solid var(--red) !important; }
     .btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
     .btn-dashed { border: 1px dashed var(--border); color: var(--muted); width: 100%; margin-top: 8px; background: var(--surface); }
     .summary {
@@ -235,7 +237,8 @@
       cursor: pointer;
     }
     .pending-item .posted {
-      background: var(--green-light);
+      border: 1px solid var(--green);
+      background: #fff;
       color: var(--green);
     }
     .btn-delete {
@@ -244,12 +247,18 @@
       padding: 6px 12px;
       font-size: 0.9rem;
       border-radius: 8px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--muted);
+      border: 1px solid var(--red);
+      background: var(--red-light);
+      color: var(--red);
       cursor: pointer;
     }
-    .btn-delete:hover { background: rgba(148, 163, 184, 0.1); color: var(--text); }
+    .btn-delete:hover { background: rgba(220, 38, 38, 0.25); color: var(--red); }
+    .btn-pause {
+      border: 1px solid var(--orange);
+      background: var(--orange-light);
+      color: var(--orange);
+    }
+    .btn-pause:hover { background: rgba(234, 88, 12, 0.25); }
     .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .filter-bar select { min-height: 44px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; }
     .category-block { margin-bottom: 20px; }
@@ -306,7 +315,7 @@
       <div id="pendingInList"></div>
       <div class="btn-row">
         <button type="button" class="btn btn-add" id="addPendingInBtn">+ Add item</button>
-        <button type="button" class="btn btn-secondary" id="clearPendingInBtn">Clear All</button>
+        <button type="button" class="btn clear-btn" id="clearPendingInBtn">Clear All</button>
       </div>
     </div>
 
@@ -318,7 +327,7 @@
       <div id="pendingOutList"></div>
       <div class="btn-row">
         <button type="button" class="btn btn-add" id="addPendingOutBtn">+ Add item</button>
-        <button type="button" class="btn btn-secondary" id="clearPendingOutBtn">Clear All</button>
+        <button type="button" class="btn clear-btn" id="clearPendingOutBtn">Clear All</button>
       </div>
     </div>
 
@@ -365,7 +374,6 @@
     <div id="spendingSearchWrap" class="hidden" style="margin-bottom:12px;">
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <input type="text" id="spendingSearchInput" placeholder="Search purchases…" style="flex:1; min-width:120px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:0.95rem;" />
-        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--muted); white-space:nowrap;"><input type="checkbox" id="spendingSearchRegex" /> Regex</label>
       </div>
       <p id="spendingSearchError" class="hidden" style="font-size:0.8rem; color:var(--red); margin:4px 0 0 0;"></p>
     </div>
@@ -2273,7 +2281,7 @@
       editBtn.onclick = function() { openRecurringModal(r); };
       const toggleBtn = document.createElement('button');
       toggleBtn.type = 'button';
-      toggleBtn.className = 'btn btn-secondary';
+      toggleBtn.className = 'btn btn-pause';
       toggleBtn.textContent = r.active ? 'Pause' : 'Resume';
       toggleBtn.onclick = function() {
         r.active = !r.active;
@@ -4564,7 +4572,8 @@
     spendingSearchQuery = this.value;
     renderSpending();
   });
-  document.getElementById('spendingSearchRegex').addEventListener('change', function() {
+  var spendingSearchRegexEl = document.getElementById('spendingSearchRegex');
+  if (spendingSearchRegexEl) spendingSearchRegexEl.addEventListener('change', function() {
     spendingSearchRegexMode = !!this.checked;
     renderSpending();
   });
