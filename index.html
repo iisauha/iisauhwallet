@@ -447,6 +447,17 @@
         <label>Amount ($)</label>
         <input type="text" id="modalPendingAmount" inputmode="decimal" placeholder="0.00" />
       </div>
+      <div id="modalPendingDepositToWrap" class="field hidden">
+        <label>Deposit To</label>
+        <select id="modalPendingDepositTo" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; width:100%;">
+          <option value="bank">Bank</option>
+          <option value="card">Credit Card</option>
+        </select>
+        <div id="modalPendingCardWrap" class="hidden" style="margin-top:8px;">
+          <label style="font-size:0.9rem; color:var(--muted);">Card</label>
+          <select id="modalPendingCardSelect" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; width:100%; margin-top:4px;"></select>
+        </div>
+      </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalPendingCancel">Cancel</button>
         <button type="button" class="btn btn-primary" id="modalPendingOk">Add</button>
@@ -1796,6 +1807,18 @@
     document.getElementById('modalPendingTitle').textContent = 'Add pending inbound';
     document.getElementById('modalPendingLabel').value = '';
     document.getElementById('modalPendingAmount').value = '';
+    document.getElementById('modalPendingDepositToWrap').classList.remove('hidden');
+    document.getElementById('modalPendingDepositTo').value = 'bank';
+    const cardWrap = document.getElementById('modalPendingCardWrap');
+    const cardSel = document.getElementById('modalPendingCardSelect');
+    cardWrap.classList.add('hidden');
+    cardSel.innerHTML = '';
+    (data.cards || []).forEach(function(c) {
+      const o = document.createElement('option');
+      o.value = c.id;
+      o.textContent = c.name || 'Card';
+      cardSel.appendChild(o);
+    });
     document.getElementById('modalPending').classList.remove('hidden');
     updateBodyModalOpen();
   };
@@ -1804,15 +1827,22 @@
     document.getElementById('modalPendingTitle').textContent = 'Add pending outbound';
     document.getElementById('modalPendingLabel').value = '';
     document.getElementById('modalPendingAmount').value = '';
+    document.getElementById('modalPendingDepositToWrap').classList.add('hidden');
     document.getElementById('modalPending').classList.remove('hidden');
     updateBodyModalOpen();
   };
+  document.getElementById('modalPendingDepositTo').addEventListener('change', function() {
+    const isCard = this.value === 'card';
+    document.getElementById('modalPendingCardWrap').classList.toggle('hidden', !isCard);
+  });
   document.getElementById('modalPendingCancel').onclick = () => { document.getElementById('modalPending').classList.add('hidden'); updateBodyModalOpen(); };
   document.getElementById('modalPendingOk').onclick = function() {
     const label = document.getElementById('modalPendingLabel').value.trim() || 'Item';
     const amountCents = parseCents(document.getElementById('modalPendingAmount').value);
     if (pendingKind === 'in') {
-      data.pendingIn.push({ id: uid(), label, amountCents, createdAt: now() });
+      const depositTo = document.getElementById('modalPendingDepositTo').value || 'bank';
+      const targetCardId = depositTo === 'card' ? (document.getElementById('modalPendingCardSelect').value || null) : null;
+      data.pendingIn.push({ id: uid(), label, amountCents, createdAt: now(), depositTo: depositTo, targetCardId: targetCardId || undefined });
     } else {
       data.pendingOut.push({ id: uid(), label, amountCents, createdAt: now() });
     }
@@ -2414,6 +2444,22 @@
     if (idx === -1) return;
     const item = list[idx];
     const amount = item.amountCents || 0;
+    if (kind === 'in' && (item.depositTo === 'card') && item.targetCardId) {
+      const card = data.cards.find(c => c.id === item.targetCardId);
+      if (card) {
+        card.balanceCents = (card.balanceCents || 0) - amount;
+        card.updatedAt = now();
+        data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+        save(data);
+        renderSnapshot();
+      } else {
+        data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+        save(data);
+        renderSnapshot();
+        alert('Credit card no longer exists. Pending item was removed.');
+      }
+      return;
+    }
     if (!data.banks.length) {
       // No banks to post against; just remove item.
       if (kind === 'in') data.pendingIn = data.pendingIn.filter(p => p.id !== id);
@@ -2671,7 +2717,12 @@
     const endKey = toLocalDateKey(endDate);
 
     ensurePhysicalCashBank(data);
-    const netCash = data.banks.reduce((s, b) => s + (b.balanceCents || 0), 0);
+    const bankTotal = data.banks.reduce((s, b) => s + (b.balanceCents || 0), 0);
+    const ccDebt = data.cards.reduce((s, c) => s + Math.max(c.balanceCents || 0, 0), 0);
+    const ccCredit = data.cards.reduce((s, c) => s + Math.max(-(c.balanceCents || 0), 0), 0);
+    const pendingInTotal = data.pendingIn.reduce((s, p) => s + (p.amountCents || 0), 0);
+    const pendingOutTotal = data.pendingOut.reduce((s, p) => s + (p.amountCents || 0), 0);
+    const finalNetCash = bankTotal + pendingInTotal - pendingOutTotal - ccDebt + ccCredit;
 
     const recurringItems = getRecurringOccurrencesInWindow(windowDays);
     const manualCostsInWindow = expectedCosts.filter(c => c.expectedDate >= todayKey && c.expectedDate <= endKey);
@@ -2695,13 +2746,13 @@
     });
 
     const totalExpectedIncomeCents = incomeInWindow.reduce((s, i) => s + (i.amountCents || 0), 0);
-    const projectedBalance = netCash - totalExpectedCostsCents + totalExpectedIncomeCents;
+    const projectedBalance = finalNetCash - totalExpectedCostsCents + totalExpectedIncomeCents;
 
     const summaryEl = document.getElementById('upcomingSummary');
     if (summaryEl) {
-      const netCashClass = netCash >= 0 ? 'v pos' : 'v neg';
+      const netCashClass = finalNetCash >= 0 ? 'v pos' : 'v neg';
       summaryEl.innerHTML =
-        '<div class="summary-kv"><span class="k">Current Net Cash</span><span class="' + netCashClass + '">' + formatCents(netCash) + '</span></div>' +
+        '<div class="summary-kv"><span class="k">Current Net Cash</span><span class="' + netCashClass + '">' + formatCents(finalNetCash) + '</span></div>' +
         '<div class="summary-kv"><span class="k">Expected Income</span><span class="v pos">' + formatCents(totalExpectedIncomeCents) + '</span></div>' +
         '<div class="summary-kv"><span class="k">Expected Costs (next ' + windowDays + ' days)</span><span class="v neg">' + formatCents(totalExpectedCostsCents) + '</span></div>' +
         '<div class="summary-kv final-net-cash' + (projectedBalance >= 0 ? ' positive' : ' negative') + '"><span class="k">Projected Balance</span><span class="v" id="upcomingProjectedVal">' + formatCents(projectedBalance) + '</span></div>';
@@ -2762,7 +2813,7 @@
       costsByDate[d].push(c);
     });
     const allDates = [...new Set([...Object.keys(incomeByDate), ...Object.keys(costsByDate)])].sort();
-    let runningBalance = netCash;
+    let runningBalance = finalNetCash;
     const runningBeforeByItemId = {};
     allDates.forEach(dateKey => {
       runningBalance += incomeByDate[dateKey] || 0;
@@ -2773,7 +2824,7 @@
       });
     });
     function runningBefore(item) {
-      return runningBeforeByItemId[item.id] != null ? runningBeforeByItemId[item.id] : netCash;
+      return runningBeforeByItemId[item.id] != null ? runningBeforeByItemId[item.id] : finalNetCash;
     }
 
     const costsListEl = document.getElementById('upcomingCostsList');
