@@ -4,6 +4,7 @@ import {
   CATEGORY_STORAGE_KEY,
   EXPECTED_COSTS_KEY,
   EXPECTED_INCOME_KEY,
+  LAST_ADJUSTMENTS_KEY,
   LAST_IN_BANK_KEY,
   LAST_OUT_BANK_KEY,
   PENDING_IN_COLLAPSED_KEY,
@@ -441,6 +442,33 @@ export function saveUpcomingWindowPreference(pref: { days: number }) {
   try {
     const merged = { ...loadUpcomingWindowPreference(), ...pref };
     localStorage.setItem(UPCOMING_WINDOW_KEY, JSON.stringify(merged));
+  } catch (_) {}
+}
+
+export type LastAdjustmentsMap = Record<string, number>;
+
+export function loadLastAdjustments(): LastAdjustmentsMap {
+  try {
+    const raw = localStorage.getItem(LAST_ADJUSTMENTS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    const result: LastAdjustmentsMap = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof k === 'string') {
+        const n = typeof v === 'number' ? v : typeof v === 'string' ? parseInt(v, 10) : NaN;
+        if (!Number.isNaN(n) && n >= 0) result[k] = n;
+      }
+    }
+    return result;
+  } catch (_) {
+    return {};
+  }
+}
+
+export function saveLastAdjustments(map: LastAdjustmentsMap) {
+  try {
+    localStorage.setItem(LAST_ADJUSTMENTS_KEY, JSON.stringify(map || {}));
   } catch (_) {}
 }
 

@@ -6,8 +6,10 @@ import {
   loadExpectedCosts,
   loadExpectedIncome,
   loadUpcomingWindowPreference,
+  loadLastAdjustments,
   saveExpectedCosts,
   saveExpectedIncome,
+  saveLastAdjustments,
   saveUpcomingWindowPreference,
   uid
 } from '../../state/storage';
@@ -28,6 +30,7 @@ export function UpcomingPage() {
   const [windowDays, setWindowDays] = useState(() => loadUpcomingWindowPreference().days);
   const [expectedCosts, setExpectedCosts] = useState(() => loadExpectedCosts());
   const [expectedIncome, setExpectedIncome] = useState(() => loadExpectedIncome());
+  const [lastAdjustments, setLastAdjustments] = useState(() => loadLastAdjustments());
   const [modal, setModal] = useState<
     | { type: 'none' }
     | {
@@ -192,18 +195,19 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => {
-                    const initialCents = i.amountCents || 0;
-                    setModal({
-                      type: 'adjust-amount',
-                      direction: 'in',
-                      label: i.title,
-                      originalCents: initialCents,
-                      amount: (initialCents / 100).toFixed(2),
-                      error: null,
-                      source: { kind: 'expected-income', id: i.id }
-                    });
-                  }}
+                    onClick={() => {
+                      const initialCents = i.amountCents || 0;
+                      const last = lastAdjustments[i.id];
+                      setModal({
+                        type: 'adjust-amount',
+                        direction: 'in',
+                        label: i.title,
+                        originalCents: initialCents,
+                        amount: (initialCents / 100).toFixed(2),
+                        error: null,
+                        source: { kind: 'expected-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
+                      } as any);
+                    }}
                 >
                   Move to Pending Inbound
                 </button>
@@ -228,6 +232,7 @@ export function UpcomingPage() {
                     className="btn btn-secondary"
                     onClick={() => {
                       const initialCents = i.amountCents || 0;
+                      const last = lastAdjustments[i.id];
                       setModal({
                         type: 'adjust-amount',
                         direction: 'in',
@@ -235,8 +240,8 @@ export function UpcomingPage() {
                         originalCents: initialCents,
                         amount: (initialCents / 100).toFixed(2),
                         error: null,
-                        source: { kind: 'recurring-income', id: i.id }
-                      });
+                        source: { kind: 'recurring-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
+                      } as any);
                     }}
                   >
                     Move to Pending Inbound
@@ -293,18 +298,19 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => {
-                    const initialCents = c.amountCents || 0;
-                    setModal({
-                      type: 'adjust-amount',
-                      direction: 'out',
-                      label: c.title,
-                      originalCents: initialCents,
-                      amount: (initialCents / 100).toFixed(2),
-                      error: null,
-                      source: { kind: 'expected-cost', id: c.id }
-                    });
-                  }}
+                    onClick={() => {
+                      const initialCents = c.amountCents || 0;
+                      const last = lastAdjustments[c.id];
+                      setModal({
+                        type: 'adjust-amount',
+                        direction: 'out',
+                        label: c.title,
+                        originalCents: initialCents,
+                        amount: (initialCents / 100).toFixed(2),
+                        error: null,
+                        source: { kind: 'expected-cost', id: c.id, lastCents: typeof last === 'number' ? last : undefined }
+                      } as any);
+                    }}
                 >
                   Move to Pending Outbound
                 </button>
@@ -329,6 +335,8 @@ export function UpcomingPage() {
                     className="btn btn-secondary"
                     onClick={() => {
                       const initialCents = c.amountCents || 0;
+                      const key = `${c.recurringId}:${c.dateKey}`;
+                      const last = lastAdjustments[key];
                       setModal({
                         type: 'adjust-amount',
                         direction: 'out',
@@ -336,8 +344,13 @@ export function UpcomingPage() {
                         originalCents: initialCents,
                         amount: (initialCents / 100).toFixed(2),
                         error: null,
-                        source: { kind: 'recurring-cost', recurringId: c.recurringId, dateKey: c.dateKey }
-                      });
+                        source: {
+                          kind: 'recurring-cost',
+                          recurringId: c.recurringId,
+                          dateKey: c.dateKey,
+                          lastCents: typeof last === 'number' ? last : undefined
+                        }
+                      } as any);
                     }}
                   >
                     Move to Pending Outbound
@@ -513,7 +526,18 @@ export function UpcomingPage() {
           <div className="modal">
             <h3>Adjust amount?</h3>
             <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-              You estimated a value of {formatCents(modal.originalCents)}. Would you like to adjust it before moving to Pending?
+              {(() => {
+                const m: any = modal;
+                const hasLast = typeof m.source?.lastCents === 'number';
+                if (!hasLast) {
+                  return `You estimated a value of ${formatCents(modal.originalCents)}. Would you like to adjust it before moving to Pending?`;
+                }
+                return `You estimated a value of ${formatCents(
+                  modal.originalCents
+                )}. Last time you adjusted this to ${formatCents(
+                  m.source.lastCents
+                )}. Would you like to use that value again?`;
+              })()}
             </p>
             <div className="field">
               <label>Amount ($)</label>
@@ -535,7 +559,33 @@ export function UpcomingPage() {
                 <div style={{ color: 'var(--red)', fontSize: '0.8rem', marginTop: 4 }}>{modal.error}</div>
               ) : null}
             </div>
-            <div className="btn-row">
+            <div className="btn-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              {typeof (modal as any).source?.lastCents === 'number' ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const m: any = modal;
+                      const last = m.source.lastCents as number;
+                      setModal({ ...m, amount: (last / 100).toFixed(2), error: null });
+                    }}
+                  >
+                    Use {formatCents((modal as any).source.lastCents)}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const m: any = modal;
+                      setModal({ ...m, amount: (m.originalCents / 100).toFixed(2), error: null });
+                    }}
+                  >
+                    Edit manually
+                  </button>
+                </>
+              ) : null}
+              <span style={{ flex: 1 }} />
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -551,7 +601,8 @@ export function UpcomingPage() {
                   const cents = parseCents((modal as any).amount || '0');
                   if (Number.isNaN(cents) || cents < 0) return;
 
-                  const source: any = (modal as any).source;
+                  const m: any = modal;
+                  const source: any = m.source;
 
                   if (source.kind === 'expected-income') {
                     const item = (expectedIncome as any[]).find((x) => x.id === source.id);
@@ -604,6 +655,21 @@ export function UpcomingPage() {
                       });
                     }
                   }
+
+                  // persist last adjustment for this item
+                  try {
+                    let key: string | null = null;
+                    if (source.kind === 'expected-income' || source.kind === 'recurring-income' || source.kind === 'expected-cost') {
+                      key = source.id;
+                    } else if (source.kind === 'recurring-cost') {
+                      key = `${source.recurringId}:${source.dateKey}`;
+                    }
+                    if (key) {
+                      const nextMap = { ...lastAdjustments, [key]: cents };
+                      setLastAdjustments(nextMap);
+                      saveLastAdjustments(nextMap);
+                    }
+                  } catch (_) {}
 
                   setModal({ type: 'none' });
                 }}

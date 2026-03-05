@@ -20,6 +20,7 @@ export const CATEGORY_COLOR_MAP_KEY = 'categoryColorMap_v1';
 export const EXPECTED_COSTS_KEY = 'expectedCosts_v1';
 export const EXPECTED_INCOME_KEY = 'expectedIncome_v1';
 export const UPCOMING_WINDOW_KEY = 'upcomingCashflow_window_v1';
+export const LAST_ADJUSTMENTS_KEY = 'ledgerlite_lastAdjustments';
 
 export const PHYSICAL_CASH_ID = 'physical_cash';
 
