@@ -161,6 +161,8 @@
     .upcoming-cost-amount { color: var(--red); font-weight: 600; }
     .upcoming-status-ok { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(22, 163, 74, 0.2); color: var(--green); font-size: 0.85rem; }
     .upcoming-status-warn { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(220, 38, 38, 0.2); color: var(--red); font-size: 0.85rem; }
+    .upcoming-overdue-cost { background: rgba(220, 38, 38, 0.08); border-radius: 10px; }
+    .upcoming-overdue-income { background: rgba(22, 163, 74, 0.08); border-radius: 10px; }
     .upcoming-risk-msg { background: var(--red-light); color: var(--red); }
     .modal-overlay {
       position: fixed;
@@ -645,7 +647,7 @@
           <option value="weekly">Weekly</option>
           <option value="biweekly">Biweekly (every 2 weeks)</option>
           <option value="yearly">Yearly</option>
-          <option value="custom">Custom (every N days)</option>
+          <option value="every_n_days">Custom (every N days)</option>
         </select>
       </div>
       <div class="field hidden" id="modalRecurringEveryWrap">
@@ -1031,7 +1033,8 @@
       const raw = localStorage.getItem(EXPECTED_COSTS_KEY);
       if (raw == null) return [];
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      const arr = Array.isArray(parsed) ? parsed : [];
+      return arr.map(function(c) { return Object.assign({}, c, { status: c.status || 'expected' }); });
     } catch (_) {
       return [];
     }
@@ -1048,7 +1051,8 @@
       const raw = localStorage.getItem(EXPECTED_INCOME_KEY);
       if (raw == null) return [];
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      const arr = Array.isArray(parsed) ? parsed : [];
+      return arr.map(function(i) { return Object.assign({}, i, { status: i.status || 'expected' }); });
     } catch (_) {
       return [];
     }
@@ -1634,7 +1638,9 @@
         amountCents: amountCents || 0,
         minCents,
         maxCents,
-        notes
+        notes,
+        status: 'expected',
+        createdAt: now()
       });
     }
     saveExpectedCosts(expectedCosts);
@@ -1670,7 +1676,9 @@
         title,
         expectedDate,
         amountCents: amountCents || 0,
-        notes
+        notes,
+        status: 'expected',
+        createdAt: now()
       });
     }
     saveExpectedIncome(expectedIncome);
@@ -2009,11 +2017,11 @@
       const card = document.createElement('div');
       card.className = 'card';
       const freqLabel = (function() {
-        if (r.frequency === 'weekly') return 'Weekly';
-        if (r.frequency === 'biweekly') return 'Biweekly';
-        if (r.frequency === 'yearly') return 'Yearly';
-        if (r.frequency === 'custom') return 'Every ' + (r.everyNDays || 1) + ' days';
-        return 'Monthly';
+      if (r.frequency === 'weekly') return 'Weekly';
+      if (r.frequency === 'biweekly') return 'Biweekly';
+      if (r.frequency === 'yearly') return 'Yearly';
+      if (r.frequency === 'custom' || r.frequency === 'every_n_days') return 'Every ' + ((typeof r.intervalDays === 'number' && r.intervalDays > 0) ? r.intervalDays : (r.everyNDays || 1)) + ' days';
+      return 'Monthly';
       })();
       const isIncome = r.type === 'income';
       const catName = isIncome ? '' : getCategoryName(r.category || '');
@@ -2187,10 +2195,11 @@
     rebuildRecurringSubOptions(catSel.value, (recurring && recurring.subcategory) ? recurring.subcategory : null);
 
     notesInput.value = (recurring && recurring.notes) || '';
-    freqSel.value = (recurring && recurring.frequency) || 'monthly';
-    if (freqSel.value === 'custom') {
+    freqSel.value = (recurring && (recurring.frequency === 'every_n_days' || recurring.frequency === 'custom')) ? 'every_n_days' : ((recurring && recurring.frequency) || 'monthly');
+    if (freqSel.value === 'every_n_days') {
       everyWrap.classList.remove('hidden');
-      everyInput.value = recurring && recurring.everyNDays ? String(recurring.everyNDays) : '';
+      const n = recurring && (typeof recurring.intervalDays === 'number' ? recurring.intervalDays : recurring.everyNDays);
+      everyInput.value = n > 0 ? String(n) : '';
     } else {
       everyWrap.classList.add('hidden');
       everyInput.value = '';
@@ -2301,7 +2310,7 @@
     };
 
     freqSel.onchange = function() {
-      if (freqSel.value === 'custom') {
+      if (freqSel.value === 'every_n_days') {
         everyWrap.classList.remove('hidden');
       } else {
         everyWrap.classList.add('hidden');
@@ -2363,6 +2372,7 @@
     nameInput.oninput = amountInput.oninput = startInput.onchange = endInput.onchange = notesInput.oninput = function() {
       updateRecurringSaveState();
     };
+    if (everyInput) everyInput.oninput = updateRecurringSaveState;
 
     function validateRecurringForm() {
       const name = nameInput.value.trim();
@@ -2374,7 +2384,7 @@
       if (!isIncomeType && !catId) return { ok: false, msg: 'Category is required.' };
       const freq = freqSel.value;
       if (!freq) return { ok: false, msg: 'Frequency is required.' };
-      if (freq === 'custom') {
+      if (freq === 'every_n_days') {
         const n = parseInt(everyInput.value || '0', 10);
         if (!(n > 0)) return { ok: false, msg: 'Every N days must be at least 1.' };
       }
@@ -2462,7 +2472,9 @@
     const notes = document.getElementById('modalRecurringNotes').value.trim() || undefined;
     const frequency = document.getElementById('modalRecurringFrequency').value || 'monthly';
     const everyStr = document.getElementById('modalRecurringEveryNDays').value;
-    const everyNDays = frequency === 'custom' ? Math.max(1, parseInt(everyStr || '1', 10)) : undefined;
+    const isEveryNDays = (frequency === 'every_n_days' || frequency === 'custom');
+    const everyNDays = isEveryNDays ? Math.max(1, parseInt(everyStr || '0', 10)) : undefined;
+    const intervalDays = isEveryNDays && everyNDays > 0 ? everyNDays : undefined;
     let startDate = document.getElementById('modalRecurringStart').value;
     const endDate = document.getElementById('modalRecurringEnd').value || undefined;
     const active = document.getElementById('modalRecurringActive').checked;
@@ -2498,7 +2510,7 @@
     if (recType !== 'income' && !category) failures.push('Category is required');
     if (!frequency) failures.push('Frequency is required');
     if (!startDate && !useLastDayOfMonth) failures.push('Start date is required');
-    if (frequency === 'custom' && !(everyNDays > 0)) failures.push('Every N days must be at least 1');
+    if ((frequency === 'every_n_days' || frequency === 'custom') && !(everyNDays > 0)) failures.push('Every N days must be at least 1');
     if (endDate && startDate) {
       const s = parseLocalDateKey(startDate);
       const e = parseLocalDateKey(endDate);
@@ -2522,8 +2534,9 @@
       category: recType === 'income' ? undefined : category,
       subcategory: recType === 'income' ? undefined : (subcategory || undefined),
       notes,
-      frequency,
+      frequency: (frequency === 'custom') ? 'every_n_days' : frequency,
       everyNDays,
+      intervalDays,
       startDate,
       endDate,
       active,
@@ -2548,8 +2561,9 @@
         category: recType === 'income' ? undefined : category,
         subcategory: recType === 'income' ? undefined : (subcategory || undefined),
         notes,
-        frequency,
+        frequency: (frequency === 'custom') ? 'every_n_days' : frequency,
         everyNDays,
+        intervalDays,
         startDate,
         endDate,
         active,
@@ -2573,8 +2587,9 @@
         r.category = recType === 'income' ? undefined : category;
         r.subcategory = recType === 'income' ? undefined : (subcategory || undefined);
         r.notes = notes;
-        r.frequency = frequency;
+        r.frequency = (frequency === 'custom') ? 'every_n_days' : frequency;
         r.everyNDays = everyNDays;
+        r.intervalDays = intervalDays;
         r.startDate = startDate;
         r.endDate = endDate;
         r.active = active;
@@ -2791,27 +2806,16 @@
             : (typeof r.amountCents === 'number' ? r.amountCents : 0);
 
           if (recType === 'income') {
-            if (r.applyToSnapshot && r.paymentTargetId) {
+            if (autoPay && r.applyToSnapshot && r.paymentTargetId) {
               const bank = data.banks.find(b => b.id === r.paymentTargetId);
-              if (autoPay && bank) {
+              if (bank) {
                 bank.balanceCents = (bank.balanceCents || 0) + fullAmountCents;
                 bank.updatedAt = now();
-              } else if (!autoPay) {
-                data.pendingIn.push({
-                  id: uid(),
-                  label: (r.name || 'Recurring income'),
-                  amountCents: fullAmountCents,
-                  createdAt: now(),
-                  depositTo: 'bank',
-                  targetBankId: r.paymentTargetId,
-                  recurringId: r.id,
-                  recurringDateKey: dateKey
-                });
+                data.recurringPosted[regKey] = true;
+                mutated = true;
+                console.log('[recurring] income occurrence (autopay)', { recurringId: r.id, dateKey, regKey });
               }
             }
-            data.recurringPosted[regKey] = true;
-            mutated = true;
-            console.log('[recurring] income occurrence', { recurringId: r.id, dateKey, regKey, autoPay });
           } else {
             const isSplit = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
             const myPortionCents = isSplit ? r.myPortionCents : fullAmountCents;
@@ -2846,34 +2850,6 @@
               data.recurringPosted[regKey] = true;
               mutated = true;
               console.log('[recurring] posting occurrence (autopay)', { recurringId: r.id, dateKey, regKey, isSplit });
-            } else if (r.applyToSnapshot && r.paymentSource && r.paymentTargetId) {
-              data.pendingOut.push({
-                id: uid(),
-                label: r.name || 'Recurring',
-                amountCents: fullAmountCents,
-                createdAt: now(),
-                recurringId: r.id,
-                recurringDateKey: dateKey,
-                paymentSource: r.paymentSource,
-                paymentTargetId: r.paymentTargetId,
-                splitTotalCents: isSplit ? fullAmountCents : undefined,
-                myPortionCents: isSplit ? myPortionCents : undefined,
-                category: r.category,
-                subcategory: r.subcategory,
-                notes: r.notes
-              });
-              if (isSplit && fullAmountCents > myPortionCents) {
-                data.pendingIn.push({
-                  id: uid(),
-                  label: 'Reimbursement: ' + (r.name || 'Recurring'),
-                  amountCents: fullAmountCents - myPortionCents,
-                  createdAt: now(),
-                  recurringOutboundId: data.pendingOut[data.pendingOut.length - 1].id
-                });
-              }
-              data.recurringPosted[regKey] = true;
-              mutated = true;
-              console.log('[recurring] pending outbound created', { recurringId: r.id, dateKey, regKey, isSplit });
             }
           }
         } else {
@@ -2886,8 +2862,8 @@
           current = addDaysLocal(current, 14);
         } else if (freq === 'yearly') {
           current = addYearsPreserveDay(start, current, 1);
-        } else if (freq === 'custom') {
-          const n = (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1;
+        } else if (freq === 'custom' || freq === 'every_n_days') {
+          const n = (typeof r.intervalDays === 'number' && r.intervalDays > 0) ? r.intervalDays : ((typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1);
           current = addDaysLocal(current, n);
         } else if (freq === 'monthly' && r.useLastDayOfMonth) {
           current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
@@ -2906,6 +2882,9 @@
     }
   }
 
+  function recurringIntervalDays(r) {
+    return (typeof r.intervalDays === 'number' && r.intervalDays > 0) ? r.intervalDays : ((typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1);
+  }
   function getRecurringOccurrencesInWindow(windowDays) {
     const today = new Date();
     const todayKey = toLocalDateKey(today);
@@ -2920,61 +2899,60 @@
       if (isNaN(start.getTime())) return;
       const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
       const freq = r.frequency || 'monthly';
+      const nDays = (freq === 'custom' || freq === 'every_n_days') ? recurringIntervalDays(r) : 0;
       let current;
       if (freq === 'monthly' && r.useLastDayOfMonth) {
         current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
       } else {
         current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       }
+      function advance() {
+        if (freq === 'weekly') current = addDaysLocal(current, 7);
+        else if (freq === 'biweekly') current = addDaysLocal(current, 14);
+        else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
+        else if (freq === 'custom' || freq === 'every_n_days') current = addDaysLocal(current, nDays);
+        else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+        else current = addMonthsPreserveDay(start, current, 1);
+      }
+      function pushOccurrence(dateKey) {
+        const isSplitRec = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
+        const fullAmount = (r.expectedMinCents != null && r.expectedMaxCents != null)
+          ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+          : (typeof r.amountCents === 'number' ? r.amountCents : 0);
+        const amountCents = isSplitRec ? r.myPortionCents : fullAmount;
+        const minCents = isSplitRec ? null : (typeof r.expectedMinCents === 'number' ? r.expectedMinCents : null);
+        const maxCents = isSplitRec ? null : (typeof r.expectedMaxCents === 'number' ? r.expectedMaxCents : null);
+        result.push({
+          dateKey,
+          amountCents,
+          minCents,
+          maxCents,
+          recurringId: r.id,
+          recurringName: r.name || 'Recurring',
+          autoPay: !!r.autoPay,
+          paymentSource: r.paymentSource,
+          paymentTargetId: r.paymentTargetId,
+          category: r.category,
+          subcategory: r.subcategory,
+          isSplit: isSplitRec,
+          myPortionCents: isSplitRec ? r.myPortionCents : null,
+          fullAmountCents: (r.expectedMinCents != null && r.expectedMaxCents != null) ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2) : (typeof r.amountCents === 'number' ? r.amountCents : 0)
+        });
+      }
       while (current < today && (!end || current <= end)) {
-        if (freq === 'weekly') {
-          current = addDaysLocal(current, 7);
-        } else if (freq === 'biweekly') {
-          current = addDaysLocal(current, 14);
-        } else if (freq === 'yearly') {
-          current = addYearsPreserveDay(start, current, 1);
-        } else if (freq === 'custom') {
-          const n = (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1;
-          current = addDaysLocal(current, n);
-        } else if (freq === 'monthly' && r.useLastDayOfMonth) {
-          current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
-        } else {
-          current = addMonthsPreserveDay(start, current, 1);
+        const dateKey = toLocalDateKey(current);
+        const regKey = (r.id || '') + ':' + dateKey;
+        if (!r.autoPay && !(data.recurringPosted && data.recurringPosted[regKey]) && dateKey < todayKey) {
+          pushOccurrence(dateKey);
         }
+        advance();
       }
       while (current <= endDate && (!end || current <= end)) {
         const dateKey = toLocalDateKey(current);
         if (dateKey >= todayKey && dateKey <= endKey) {
-          const isSplitRec = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
-          const fullAmount = (r.expectedMinCents != null && r.expectedMaxCents != null)
-            ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
-            : (typeof r.amountCents === 'number' ? r.amountCents : 0);
-          const amountCents = isSplitRec ? r.myPortionCents : fullAmount;
-          const minCents = isSplitRec ? null : (typeof r.expectedMinCents === 'number' ? r.expectedMinCents : null);
-          const maxCents = isSplitRec ? null : (typeof r.expectedMaxCents === 'number' ? r.expectedMaxCents : null);
-          result.push({
-            dateKey,
-            amountCents,
-            minCents,
-            maxCents,
-            recurringId: r.id,
-            recurringName: r.name || 'Recurring'
-          });
+          pushOccurrence(dateKey);
         }
-        if (freq === 'weekly') {
-          current = addDaysLocal(current, 7);
-        } else if (freq === 'biweekly') {
-          current = addDaysLocal(current, 14);
-        } else if (freq === 'yearly') {
-          current = addYearsPreserveDay(start, current, 1);
-        } else if (freq === 'custom') {
-          const n = (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1;
-          current = addDaysLocal(current, n);
-        } else if (freq === 'monthly' && r.useLastDayOfMonth) {
-          current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
-        } else {
-          current = addMonthsPreserveDay(start, current, 1);
-        }
+        advance();
       }
     });
     return result;
@@ -2993,39 +2971,49 @@
       if (isNaN(start.getTime())) return;
       const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
       const freq = r.frequency || 'monthly';
+      const nDays = (freq === 'custom' || freq === 'every_n_days') ? recurringIntervalDays(r) : 0;
       let current;
       if (freq === 'monthly' && r.useLastDayOfMonth) {
         current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
       } else {
         current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       }
-      while (current < today && (!end || current <= end)) {
+      function advanceIncome() {
         if (freq === 'weekly') current = addDaysLocal(current, 7);
         else if (freq === 'biweekly') current = addDaysLocal(current, 14);
         else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
-        else if (freq === 'custom') current = addDaysLocal(current, (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1);
+        else if (freq === 'custom' || freq === 'every_n_days') current = addDaysLocal(current, nDays);
         else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
         else current = addMonthsPreserveDay(start, current, 1);
+      }
+      const amountCents = (r.expectedMinCents != null && r.expectedMaxCents != null)
+        ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+        : (typeof r.amountCents === 'number' ? r.amountCents : 0);
+      function pushIncome(dateKey) {
+        result.push({
+          id: 'rec:' + r.id + ':' + dateKey,
+          expectedDate: dateKey,
+          amountCents,
+          title: r.name || 'Recurring income',
+          autoPay: !!r.autoPay,
+          paymentTargetId: r.paymentTargetId,
+          recurringId: r.id
+        });
+      }
+      while (current < today && (!end || current <= end)) {
+        const dateKey = toLocalDateKey(current);
+        const regKey = (r.id || '') + ':' + dateKey;
+        if (!r.autoPay && !(data.recurringPosted && data.recurringPosted[regKey]) && dateKey < todayKey) {
+          pushIncome(dateKey);
+        }
+        advanceIncome();
       }
       while (current <= endDate && (!end || current <= end)) {
         const dateKey = toLocalDateKey(current);
         if (dateKey >= todayKey && dateKey <= endKey) {
-          const amountCents = (r.expectedMinCents != null && r.expectedMaxCents != null)
-            ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
-            : (typeof r.amountCents === 'number' ? r.amountCents : 0);
-          result.push({
-            id: 'rec:' + r.id + ':' + dateKey,
-            expectedDate: dateKey,
-            amountCents,
-            title: r.name || 'Recurring income'
-          });
+          pushIncome(dateKey);
         }
-        if (freq === 'weekly') current = addDaysLocal(current, 7);
-        else if (freq === 'biweekly') current = addDaysLocal(current, 14);
-        else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
-        else if (freq === 'custom') current = addDaysLocal(current, (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1);
-        else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
-        else current = addMonthsPreserveDay(start, current, 1);
+        advanceIncome();
       }
     });
     return result;
@@ -3067,8 +3055,12 @@
     const finalNetCash = bankTotal + pendingInTotal - pendingOutTotal - ccDebt + ccCredit;
 
     const recurringItems = getRecurringOccurrencesInWindow(windowDays);
-    const manualCostsInWindow = expectedCosts.filter(c => c.expectedDate >= todayKey && c.expectedDate <= endKey);
-    const manualIncomeInWindow = expectedIncome.filter(i => i.expectedDate >= todayKey && i.expectedDate <= endKey);
+    const manualCostsInWindow = expectedCosts.filter(function(c) {
+      return (c.status === 'expected' || c.status == null) && c.expectedDate && c.expectedDate <= endKey;
+    });
+    const manualIncomeInWindow = expectedIncome.filter(function(i) {
+      return (i.status === 'expected' || i.status == null) && i.expectedDate && i.expectedDate <= endKey;
+    });
     const recurringIncomeInWindow = getRecurringIncomeOccurrencesInWindow(windowDays);
     const incomeInWindow = manualIncomeInWindow.concat(recurringIncomeInWindow);
 
@@ -3123,12 +3115,21 @@
       allCostItems.push({
         type: 'recurring',
         id: o.recurringId + ':' + o.dateKey,
+        recurringId: o.recurringId,
         title: o.recurringName,
         dateKey: o.dateKey,
         amountCents: o.amountCents,
         minCents: o.minCents,
         maxCents: o.maxCents,
-        days: daysFromToday(o.dateKey)
+        days: daysFromToday(o.dateKey),
+        autoPay: o.autoPay,
+        paymentSource: o.paymentSource,
+        paymentTargetId: o.paymentTargetId,
+        category: o.category,
+        subcategory: o.subcategory,
+        isSplit: o.isSplit,
+        myPortionCents: o.myPortionCents,
+        fullAmountCents: o.fullAmountCents
       });
     });
     manualCostsInWindow.forEach(c => {
@@ -3184,14 +3185,20 @@
           : formatCents(item.amountCents);
         const statusClass = ok ? 'upcoming-status-ok' : 'upcoming-status-warn';
         const statusStr = ok ? '✔ Should be OK to pay' : '⚠ Might require additional funds';
+        const overdue = item.days != null && item.days < 0;
+        const dueLabel = overdue ? 'Due very soon!' : (item.days != null ? 'Due in ' + item.days + ' days' : '—');
+        const showMoveOut = item.type === 'manual' || (item.type === 'recurring' && !item.autoPay);
+        const moveOutBtn = showMoveOut ? '<button type="button" class="btn btn-secondary move-to-pending-out" style="margin-right:8px;" data-cost-id="' + escapeHtml(item.id) + '" data-cost-type="' + escapeHtml(item.type || '') + '" data-date-key="' + escapeHtml(item.dateKey || '') + '" data-recurring-id="' + escapeHtml(item.recurringId || '') + '">Move to Pending Outbound</button>' : '';
+        const manualActions = item.type === 'manual' ? '<button type="button" class="btn btn-secondary edit-expected-cost" style="margin-right:8px;" data-expected-cost-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-cost-id="' + escapeHtml(item.id) + '">Delete</button>' : '';
+        const actionsRow = (moveOutBtn || manualActions) ? '<div style="margin-top:8px;">' + moveOutBtn + manualActions + '</div>' : '';
         const div = document.createElement('div');
-        div.className = 'card';
+        div.className = 'card' + (overdue ? ' upcoming-overdue-cost' : '');
         div.style.marginBottom = '8px';
         div.innerHTML =
           '<div class="row"><span class="name">' + escapeHtml(item.title) + '</span><span class="amount upcoming-cost-amount">' + amountStr + '</span></div>' +
-          '<div style="font-size:0.85rem;color:var(--muted);">Due in ' + (item.days != null ? item.days + ' days' : '—') + ' · ' + (item.dateKey ? formatDisplayDate(item.dateKey) : '') + '</div>' +
+          '<div style="font-size:0.85rem;color:var(--muted);">' + dueLabel + ' · ' + (item.dateKey ? formatDisplayDate(item.dateKey) : '') + '</div>' +
           '<div style="font-size:0.85rem;margin-top:6px;">Status: <span class="' + statusClass + '">' + statusStr + '</span></div>' +
-          (item.type === 'manual' ? '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-cost" style="margin-right:8px;" data-expected-cost-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-cost-id="' + escapeHtml(item.id) + '">Delete</button></div>' : '');
+          actionsRow;
         costsListEl.appendChild(div);
       });
       if (allCostItems.length === 0) {
@@ -3208,15 +3215,19 @@
       incomeInWindow.forEach(item => {
         const days = daysFromToday(item.expectedDate);
         const isRecurring = typeof item.id === 'string' && item.id.indexOf('rec:') === 0;
+        const overdue = days != null && days < 0;
+        const dueLabel = overdue ? 'Due very soon!' : (days != null ? 'In ' + days + ' days' : '—');
+        const showMoveIn = !isRecurring || !item.autoPay;
+        const moveInBtn = showMoveIn ? '<button type="button" class="btn btn-secondary move-to-pending-in" style="margin-right:8px;" data-income-id="' + escapeHtml(item.id) + '" data-income-recurring="' + (isRecurring ? '1' : '0') + '" data-date-key="' + escapeHtml(item.expectedDate || '') + '" data-recurring-id="' + escapeHtml(item.recurringId || '') + '" data-payment-target-id="' + escapeHtml(item.paymentTargetId || '') + '">Move to Pending Inbound</button>' : '';
         const actionsHtml = isRecurring
-          ? '<div style="font-size:0.8rem;color:var(--muted);margin-top:6px;">From recurring</div>'
-          : '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-income" style="margin-right:8px;" data-expected-income-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-income-id="' + escapeHtml(item.id) + '">Delete</button></div>';
+          ? '<div style="margin-top:8px;">' + moveInBtn + '<span style="font-size:0.8rem;color:var(--muted);">From recurring</span></div>'
+          : '<div style="margin-top:8px;">' + moveInBtn + '<button type="button" class="btn btn-secondary edit-expected-income" style="margin-right:8px;" data-expected-income-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-income-id="' + escapeHtml(item.id) + '">Delete</button></div>';
         const div = document.createElement('div');
-        div.className = 'card';
+        div.className = 'card' + (overdue ? ' upcoming-overdue-income' : '');
         div.style.marginBottom = '8px';
         div.innerHTML =
           '<div class="row"><span class="name">' + escapeHtml(item.title || 'Income') + '</span><span class="amount upcoming-income-amount">' + formatCents(item.amountCents || 0) + '</span></div>' +
-          '<div style="font-size:0.85rem;color:var(--muted);">In ' + (days != null ? days + ' days' : '—') + ' · ' + (item.expectedDate ? formatDisplayDate(item.expectedDate) : '') + '</div>' +
+          '<div style="font-size:0.85rem;color:var(--muted);">' + dueLabel + ' · ' + (item.expectedDate ? formatDisplayDate(item.expectedDate) : '') + '</div>' +
           actionsHtml;
         incomeListEl.appendChild(div);
       });
@@ -3224,6 +3235,100 @@
   }
 
   document.getElementById('upcomingContent').addEventListener('click', function(e) {
+    const moveOut = e.target.closest('.move-to-pending-out');
+    if (moveOut) {
+      const id = moveOut.getAttribute('data-cost-id');
+      const costType = moveOut.getAttribute('data-cost-type');
+      const dateKey = moveOut.getAttribute('data-date-key');
+      const recurringId = moveOut.getAttribute('data-recurring-id');
+      if (costType === 'manual') {
+        const c = expectedCosts.find(function(x) { return x.id === id; });
+        if (c) {
+          const amountCents = c.amountCents || 0;
+          const label = c.title || 'Expected cost';
+          data.pendingOut.push({ id: uid(), label: label, amountCents: amountCents, createdAt: now() });
+          c.status = 'moved_to_pending';
+          saveExpectedCosts(expectedCosts);
+          save(data);
+          renderSnapshot();
+          renderUpcomingCashflow();
+        }
+      } else if (recurringId && dateKey) {
+        const r = data.recurring.find(function(x) { return x.id === recurringId; });
+        if (r) {
+          const isSplit = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
+          const fullAmountCents = (r.expectedMinCents != null && r.expectedMaxCents != null) ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2) : (typeof r.amountCents === 'number' ? r.amountCents : 0);
+          const myPortionCents = isSplit ? r.myPortionCents : fullAmountCents;
+          data.pendingOut.push({
+            id: uid(),
+            label: r.name || 'Recurring',
+            amountCents: myPortionCents,
+            createdAt: now(),
+            recurringId: r.id,
+            recurringDateKey: dateKey,
+            paymentSource: r.paymentSource,
+            paymentTargetId: r.paymentTargetId,
+            splitTotalCents: isSplit ? fullAmountCents : undefined,
+            myPortionCents: isSplit ? myPortionCents : undefined,
+            category: r.category,
+            subcategory: r.subcategory,
+            notes: r.notes
+          });
+          if (!data.recurringPosted) data.recurringPosted = {};
+          data.recurringPosted[r.id + ':' + dateKey] = true;
+          save(data);
+          renderSnapshot();
+          renderUpcomingCashflow();
+        }
+      }
+      return;
+    }
+    const moveIn = e.target.closest('.move-to-pending-in');
+    if (moveIn) {
+      const incomeId = moveIn.getAttribute('data-income-id');
+      const isRecurring = moveIn.getAttribute('data-income-recurring') === '1';
+      const dateKey = moveIn.getAttribute('data-date-key');
+      const recId = moveIn.getAttribute('data-recurring-id');
+      const paymentTargetId = moveIn.getAttribute('data-payment-target-id');
+      if (isRecurring && recId && dateKey) {
+        const r = data.recurring.find(function(x) { return x.id === recId; });
+        if (r) {
+          const amountCents = (r.expectedMinCents != null && r.expectedMaxCents != null) ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2) : (typeof r.amountCents === 'number' ? r.amountCents : 0);
+          data.pendingIn.push({
+            id: uid(),
+            label: r.name || 'Recurring income',
+            amountCents: amountCents,
+            createdAt: now(),
+            depositTo: 'bank',
+            targetBankId: paymentTargetId || undefined,
+            recurringId: r.id,
+            recurringDateKey: dateKey
+          });
+          if (!data.recurringPosted) data.recurringPosted = {};
+          data.recurringPosted[r.id + ':' + dateKey] = true;
+          save(data);
+          renderSnapshot();
+          renderUpcomingCashflow();
+        }
+      } else {
+        const i = expectedIncome.find(function(x) { return x.id === incomeId; });
+        if (i) {
+          data.pendingIn.push({
+            id: uid(),
+            label: i.title || 'Expected income',
+            amountCents: i.amountCents || 0,
+            createdAt: now(),
+            depositTo: 'bank'
+          });
+          i.status = 'moved_to_pending';
+          saveExpectedIncome(expectedIncome);
+          save(data);
+          renderSnapshot();
+          renderUpcomingCashflow();
+        }
+      }
+      return;
+    }
     const costEdit = e.target.closest('.edit-expected-cost');
     if (costEdit) {
       const id = costEdit.getAttribute('data-expected-cost-id');
