@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { CategoryConfig } from '../../state/models';
+import { SwipeRow } from '../../ui/SwipeRow';
 
 export function ManageCategoriesModal(props: {
   open: boolean;
@@ -10,6 +11,11 @@ export function ManageCategoriesModal(props: {
   const initial = useMemo(() => props.load(), [props]);
   const [cfg, setCfg] = useState<CategoryConfig>(initial);
   const [newCatName, setNewCatName] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<
+    | null
+    | { kind: 'category'; catId: string; label: string }
+    | { kind: 'subcategory'; catId: string; sub: string; label: string }
+  >(null);
 
   if (!props.open) return null;
 
@@ -66,41 +72,25 @@ export function ManageCategoriesModal(props: {
           {Object.keys(cfg)
             .sort((a, b) => (cfg[a]?.name || a).localeCompare(cfg[b]?.name || b))
             .map((id) => (
-              <div className="card" key={id}>
-                <div className="row">
-                  <span className="name">{cfg[id]?.name || id}</span>
-                  <button
-                    type="button"
-                    className="btn-delete"
-                    onClick={() => {
-                      if (!confirm(`Delete category "${cfg[id]?.name || id}"?`)) return;
-                      const next = { ...cfg };
-                      delete next[id];
-                      commit(next);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
+              <SwipeRow key={id} id={`category:${id}`} onDeleteRequested={() => setConfirmDelete({ kind: 'category', catId: id, label: cfg[id]?.name || id })}>
+                <div className="card">
+                  <div className="row">
+                    <span className="name">{cfg[id]?.name || id}</span>
+                  </div>
                 <div style={{ marginTop: 10 }}>
                   <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600 }}>Subcategories</div>
                   {(cfg[id]?.sub || []).length ? (
                     <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
                       {(cfg[id]?.sub || []).map((s) => (
-                        <div key={s} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <span style={{ color: 'var(--muted)', flex: 1 }}>{s}</span>
-                          <button
-                            type="button"
-                            className="btn-delete"
-                            onClick={() => {
-                              if (!confirm(`Delete subcategory "${s}"?`)) return;
-                              const next = { ...cfg, [id]: { ...cfg[id], sub: (cfg[id].sub || []).filter((x) => x !== s) } };
-                              commit(next);
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
+                        <SwipeRow
+                          key={s}
+                          id={`subcategory:${id}:${s}`}
+                          onDeleteRequested={() => setConfirmDelete({ kind: 'subcategory', catId: id, sub: s, label: `${cfg[id]?.name || id} → ${s}` })}
+                        >
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                            <span style={{ color: 'var(--muted)', flex: 1 }}>{s}</span>
+                          </div>
+                        </SwipeRow>
                       ))}
                     </div>
                   ) : (
@@ -125,7 +115,8 @@ export function ManageCategoriesModal(props: {
                     + Add subcategory
                   </button>
                 </div>
-              </div>
+                </div>
+              </SwipeRow>
             ))}
         </div>
 
@@ -135,7 +126,41 @@ export function ManageCategoriesModal(props: {
           </button>
         </div>
       </div>
+
+      {confirmDelete ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Are you sure you want to delete this?</h3>
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{confirmDelete.label}</p>
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  if (confirmDelete.kind === 'category') {
+                    const next = { ...cfg };
+                    delete (next as any)[confirmDelete.catId];
+                    commit(next);
+                  } else {
+                    const id = confirmDelete.catId;
+                    const s = confirmDelete.sub;
+                    const next = { ...cfg, [id]: { ...cfg[id], sub: (cfg[id].sub || []).filter((x) => x !== s) } };
+                    commit(next);
+                  }
+                  setConfirmDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
+
 

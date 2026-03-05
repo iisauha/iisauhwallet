@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
-import { PENDING_IN_COLLAPSED_KEY, PENDING_OUT_COLLAPSED_KEY, SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
+import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref } from '../../state/storage';
 import { Select } from '../../ui/Select';
+import { SwipeRow } from '../../ui/SwipeRow';
 import { BankAccountCard, CreditCardCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 
@@ -14,10 +15,10 @@ export function SnapshotPage() {
   const legacyShowZero = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
   const [showZeroCashItems, setShowZeroCashItems] = useState<boolean>(loadBoolPref(SHOW_ZERO_CASH_KEY, legacyShowZero));
   const [showZeroCreditCards, setShowZeroCreditCards] = useState<boolean>(loadBoolPref(SHOW_ZERO_CARDS_KEY, legacyShowZero));
-  const [cashCollapsed, setCashCollapsed] = useState(false);
-  const [cardsCollapsed, setCardsCollapsed] = useState(false);
-  const [pendingInCollapsed, setPendingInCollapsed] = useState<boolean>(loadBoolPref(PENDING_IN_COLLAPSED_KEY, false));
-  const [pendingOutCollapsed, setPendingOutCollapsed] = useState<boolean>(loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false));
+  const [cashCollapsed, setCashCollapsed] = useState(true);
+  const [cardsCollapsed, setCardsCollapsed] = useState(true);
+  const [pendingInCollapsed, setPendingInCollapsed] = useState<boolean>(true);
+  const [pendingOutCollapsed, setPendingOutCollapsed] = useState<boolean>(true);
 
   const [modal, setModal] = useState<
     | { type: 'none' }
@@ -86,44 +87,71 @@ export function SnapshotPage() {
         <>
           <div>
             {visibleBanks.map((b) => (
-              <div className="card ll-account-card" key={b.id}>
-                <button
-                  type="button"
-                  className="ll-card-button"
-                  onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+              b.type !== 'physical_cash' ? (
+                <SwipeRow
+                  key={b.id}
+                  id={`bank:${b.id}`}
+                  onDeleteRequested={() =>
+                    openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deleteBankAccount(b.id))
+                  }
                 >
-                  <BankAccountCard bank={b} />
-                </button>
-                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
-                  >
-                    Add / Set
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      actions.updateBankBalance(b.id, 0, 'set');
-                    }}
-                  >
-                    Clear
-                  </button>
-                  {b.type !== 'physical_cash' ? (
+                  <div className="card ll-account-card">
                     <button
                       type="button"
-                      className="btn btn-danger"
-                      onClick={() =>
-                        openConfirm('Delete bank?', `Delete "${b.name}"? This does not erase other data.`, () => actions.deleteBankAccount(b.id))
-                      }
+                      className="ll-card-button"
+                      onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
                     >
-                      Delete
+                      <BankAccountCard bank={b} />
                     </button>
-                  ) : null}
+                    <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+                      >
+                        Add / Set
+                      </button>
+                      <button
+                        type="button"
+                        className="btn clear-btn"
+                        onClick={() => {
+                          actions.updateBankBalance(b.id, 0, 'set');
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </SwipeRow>
+              ) : (
+                <div className="card ll-account-card" key={b.id}>
+                  <button
+                    type="button"
+                    className="ll-card-button"
+                    onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+                  >
+                    <BankAccountCard bank={b} />
+                  </button>
+                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+                    >
+                      Add / Set
+                    </button>
+                    <button
+                      type="button"
+                      className="btn clear-btn"
+                      onClick={() => {
+                        actions.updateBankBalance(b.id, 0, 'set');
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )
             ))}
           </div>
           <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })}>
@@ -154,40 +182,41 @@ export function SnapshotPage() {
         <>
           <div>
             {visibleCards.map((c) => (
-              <div className="card ll-account-card" key={c.id}>
-                <button
-                  type="button"
-                  className="ll-card-button"
-                  onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                >
-                  <CreditCardCard card={c} />
-                </button>
-                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+              <SwipeRow
+                key={c.id}
+                id={`card:${c.id}`}
+                onDeleteRequested={() =>
+                  openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deleteCreditCard(c.id))
+                }
+              >
+                <div className="card ll-account-card">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="ll-card-button"
                     onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
                   >
-                    Add / Set
+                    <CreditCardCard card={c} />
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      actions.updateCardBalance(c.id, 0, 'set');
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() => openConfirm('Delete card?', `Delete "${c.name}"?`, () => actions.deleteCreditCard(c.id))}
-                  >
-                    Delete
-                  </button>
+                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
+                    >
+                      Add / Set
+                    </button>
+                    <button
+                      type="button"
+                      className="btn clear-btn"
+                      onClick={() => {
+                        actions.updateCardBalance(c.id, 0, 'set');
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </SwipeRow>
             ))}
           </div>
           <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })}>
@@ -201,9 +230,7 @@ export function SnapshotPage() {
         id="pendingInHeader"
         style={{ marginTop: 24 }}
         onClick={() => {
-          const next = !pendingInCollapsed;
-          setPendingInCollapsed(next);
-          saveBoolPref(PENDING_IN_COLLAPSED_KEY, next);
+          setPendingInCollapsed((v) => !v);
         }}
       >
         <span className="section-header-left">
@@ -217,7 +244,7 @@ export function SnapshotPage() {
             data={data}
             items={data.pendingIn || []}
             onPosted={(id) => handlePendingPosted('in', id)}
-            onDelete={(id) => openConfirm('Delete pending?', 'Delete this pending inbound item?', () => actions.deletePending('in', id))}
+            onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('in', id))}
           />
           <div className="btn-row">
             <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
@@ -235,9 +262,7 @@ export function SnapshotPage() {
         id="pendingOutHeader"
         style={{ marginTop: 24 }}
         onClick={() => {
-          const next = !pendingOutCollapsed;
-          setPendingOutCollapsed(next);
-          saveBoolPref(PENDING_OUT_COLLAPSED_KEY, next);
+          setPendingOutCollapsed((v) => !v);
         }}
       >
         <span className="section-header-left">
@@ -251,7 +276,7 @@ export function SnapshotPage() {
             data={data}
             items={data.pendingOut || []}
             onPosted={(id) => handlePendingPosted('out', id)}
-            onDelete={(id) => openConfirm('Delete pending?', 'Delete this pending outbound item?', () => actions.deletePending('out', id))}
+            onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('out', id))}
           />
           <div className="btn-row">
             <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
@@ -638,7 +663,7 @@ export function SnapshotPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-danger"
                     onClick={() => {
                       modal.onConfirm();
                       setModal({ type: 'none' });

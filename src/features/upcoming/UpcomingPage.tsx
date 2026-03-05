@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
+import { SwipeRow } from '../../ui/SwipeRow';
 import {
   loadExpectedCosts,
   loadExpectedIncome,
@@ -28,6 +29,11 @@ export function UpcomingPage() {
   const [windowDays, setWindowDays] = useState(() => loadUpcomingWindowPreference().days);
   const [expectedCosts, setExpectedCosts] = useState(() => loadExpectedCosts());
   const [expectedIncome, setExpectedIncome] = useState(() => loadExpectedIncome());
+  const [confirmDelete, setConfirmDelete] = useState<
+    | null
+    | { kind: 'income'; id: string; label: string }
+    | { kind: 'cost'; id: string; label: string }
+  >(null);
   const [modal, setModal] = useState<
     | { type: 'none' }
     | {
@@ -126,27 +132,29 @@ export function UpcomingPage() {
         Expected Income
       </p>
       {incomeInWindow.map((i) => (
-        <div className="card" key={i.id}>
-          <div className="row">
-            <span className="name">{i.title}</span>
-            <span className="amount">{formatCents(i.amountCents || 0)}</span>
+        <SwipeRow key={i.id} id={`expected-income:${i.id}`} onDeleteRequested={() => setConfirmDelete({ kind: 'income', id: i.id, label: i.title })}>
+          <div className="card">
+            <div className="row">
+              <span className="name">{i.title}</span>
+              <span className="amount">{formatCents(i.amountCents || 0)}</span>
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{i.expectedDate}</div>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  actions.addPendingInbound({ label: i.title, amountCents: i.amountCents || 0, depositTo: 'bank' });
+                  const next = expectedIncome.map((x) => (x.id === i.id ? { ...x, status: 'moved_to_pending' as const } : x));
+                  setExpectedIncome(next);
+                  saveExpectedIncome(next);
+                }}
+              >
+                Move to Pending Inbound
+              </button>
+            </div>
           </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{i.expectedDate}</div>
-          <div className="btn-row">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                actions.addPendingInbound({ label: i.title, amountCents: i.amountCents || 0, depositTo: 'bank' });
-                const next = expectedIncome.map((x) => (x.id === i.id ? { ...x, status: 'moved_to_pending' as const } : x));
-                setExpectedIncome(next);
-                saveExpectedIncome(next);
-              }}
-            >
-              Move to Pending Inbound
-            </button>
-          </div>
-        </div>
+        </SwipeRow>
       ))}
       {recurringIncome.map((i) => (
         <div className="card" key={i.id}>
@@ -169,7 +177,6 @@ export function UpcomingPage() {
                     recurringId: i.recurringId,
                     recurringDateKey: i.expectedDate
                   });
-                  actions.markRecurringHandled(i.recurringId, i.expectedDate);
                 }}
               >
                 Move to Pending Inbound
@@ -203,27 +210,29 @@ export function UpcomingPage() {
         Expected Costs
       </p>
       {costsInWindow.map((c) => (
-        <div className="card" key={c.id}>
-          <div className="row">
-            <span className="name">{c.title}</span>
-            <span className="amount">{formatCents(c.amountCents || 0)}</span>
-          </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{c.expectedDate}</div>
-          <div className="btn-row">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
+        <SwipeRow key={c.id} id={`expected-cost:${c.id}`} onDeleteRequested={() => setConfirmDelete({ kind: 'cost', id: c.id, label: c.title })}>
+          <div className="card">
+            <div className="row">
+              <span className="name">{c.title}</span>
+              <span className="amount">{formatCents(c.amountCents || 0)}</span>
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{c.expectedDate}</div>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
                   actions.addPendingOutbound({ label: c.title, amountCents: c.amountCents || 0 });
-                const next = expectedCosts.map((x) => (x.id === c.id ? { ...x, status: 'moved_to_pending' as const } : x));
-                setExpectedCosts(next);
-                saveExpectedCosts(next);
-              }}
-            >
-              Move to Pending Outbound
-            </button>
+                  const next = expectedCosts.map((x) => (x.id === c.id ? { ...x, status: 'moved_to_pending' as const } : x));
+                  setExpectedCosts(next);
+                  saveExpectedCosts(next);
+                }}
+              >
+                Move to Pending Outbound
+              </button>
+            </div>
           </div>
-        </div>
+        </SwipeRow>
       ))}
       {recurringCosts.map((c) => (
         <div className="card" key={c.recurringId + ':' + c.dateKey}>
@@ -250,7 +259,6 @@ export function UpcomingPage() {
                     category: c.category,
                     subcategory: c.subcategory
                   });
-                  actions.markRecurringHandled(c.recurringId, c.dateKey);
                 }}
               >
                 Move to Pending Outbound
@@ -392,6 +400,38 @@ export function UpcomingPage() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      ) : null}
+
+      {confirmDelete ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Are you sure you want to delete this?</h3>
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{confirmDelete.label}</p>
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  if (confirmDelete.kind === 'income') {
+                    const next = expectedIncome.filter((x) => x.id !== confirmDelete.id);
+                    setExpectedIncome(next);
+                    saveExpectedIncome(next);
+                  } else {
+                    const next = expectedCosts.filter((x) => x.id !== confirmDelete.id);
+                    setExpectedCosts(next);
+                    saveExpectedCosts(next);
+                  }
+                  setConfirmDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

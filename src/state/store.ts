@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase } from './models';
-import { loadData, nowIso, saveData, setLastPostedBankId, uid } from './storage';
+import { loadData, loadSubTracker, nowIso, saveData, saveSubTracker, setLastPostedBankId, uid } from './storage';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
@@ -96,6 +96,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const next = structuredClone(get().data) as LedgerData;
       const id = uid();
       const p: any = { ...purchase, id };
+      const normalize = (s: unknown) => (typeof s === 'string' ? s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() : '');
 
       // If split purchase with inbound reimbursement, create pending inbound item (legacy behavior).
       if (p.isSplit && typeof p.splitInboundCents === 'number' && p.splitInboundCents > 0) {
@@ -136,6 +137,33 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         }
       }
 
+      // SUB tracker (new feature): track spend on applied card purchases (uses user's portion, not split total).
+      try {
+        const isCard = p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
+        const delta = typeof p.amountCents === 'number' ? p.amountCents : 0;
+        if (isCard && delta > 0) {
+          const targetId = String(p.paymentTargetId || '');
+          const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
+          const tracker = loadSubTracker();
+          let changed = false;
+          const entries = (tracker.entries || []).map((e: any) => {
+            if (!e) return e;
+            const ref = e.cardRef;
+            const matches =
+              ref && ref.type === 'card'
+                ? String(ref.cardId || '') === targetId
+                : ref && ref.type === 'manual'
+                  ? normalize(ref.name) && normalize(ref.name) === normalize(cardName)
+                  : false;
+            if (!matches) return e;
+            const nextSpend = (typeof e.spendCents === 'number' ? e.spendCents : 0) + delta;
+            changed = true;
+            return { ...e, spendCents: nextSpend, updatedAt: nowIso() };
+          });
+          if (changed) saveSubTracker({ version: 1, entries });
+        }
+      } catch (_) {}
+
       next.purchases.push(p);
       saveData(next);
       set({ data: next });
@@ -144,6 +172,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const next = structuredClone(get().data) as LedgerData;
       const p: any = (next.purchases || []).find((x: any) => x.id === id);
       if (!p) return;
+      const normalize = (s: unknown) => (typeof s === 'string' ? s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() : '');
 
       const applied = !!p.applyToSnapshot && !!p.paymentSource;
       if (applied) {
@@ -171,6 +200,34 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (p.isSplit && p.splitPendingId && Array.isArray(next.pendingIn)) {
         next.pendingIn = next.pendingIn.filter((pi: any) => pi.id !== p.splitPendingId);
       }
+
+      // SUB tracker rollback (new feature) when deleting a tracked purchase.
+      try {
+        const isCard = p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
+        const delta = typeof p.amountCents === 'number' ? p.amountCents : 0;
+        if (isCard && delta > 0) {
+          const targetId = String(p.paymentTargetId || '');
+          const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
+          const tracker = loadSubTracker();
+          let changed = false;
+          const entries = (tracker.entries || []).map((e: any) => {
+            if (!e) return e;
+            const ref = e.cardRef;
+            const matches =
+              ref && ref.type === 'card'
+                ? String(ref.cardId || '') === targetId
+                : ref && ref.type === 'manual'
+                  ? normalize(ref.name) && normalize(ref.name) === normalize(cardName)
+                  : false;
+            if (!matches) return e;
+            const prev = typeof e.spendCents === 'number' ? e.spendCents : 0;
+            const nextSpend = Math.max(0, prev - delta);
+            changed = true;
+            return { ...e, spendCents: nextSpend, updatedAt: nowIso() };
+          });
+          if (changed) saveSubTracker({ version: 1, entries });
+        }
+      } catch (_) {}
 
       next.purchases = next.purchases.filter((x: any) => x.id !== id);
       saveData(next);
@@ -331,6 +388,15 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     markPendingPosted: (kind, id, opts) => {
       const current = get().data;
       const next = structuredClone(current) as LedgerData;
+      const markRecurringInstanceHandledIfPresent = (pendingItem: any) => {
+        const recurringId = String(pendingItem?.recurringId || '');
+        const dateKey = String(pendingItem?.recurringDateKey || '');
+        if (!recurringId || !dateKey) return;
+        const regKey = recurringId + ':' + dateKey;
+        const anyNext: any = next as any;
+        if (!anyNext.recurringPosted || typeof anyNext.recurringPosted !== 'object') anyNext.recurringPosted = {};
+        anyNext.recurringPosted[regKey] = true;
+      };
       const list = kind === 'in' ? next.pendingIn : next.pendingOut;
       const idx = list.findIndex((p) => p.id === id);
       if (idx === -1) return { needsBankSelection: false };
@@ -344,6 +410,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           bank.balanceCents = (bank.balanceCents || 0) + amount;
           bank.updatedAt = nowIso();
         }
+        markRecurringInstanceHandledIfPresent(item);
         next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
         saveData(next);
         set({ data: next });
@@ -359,6 +426,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           card.balanceCents = (card.balanceCents || 0) - amount;
           card.updatedAt = nowIso();
         }
+        markRecurringInstanceHandledIfPresent(item);
         next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
         saveData(next);
         set({ data: next });
@@ -369,6 +437,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         const bank = next.banks.find((b) => b.id === item.sourceBankId);
         const card = next.cards.find((c) => c.id === item.targetCardId);
         if (!bank || !card) {
+          markRecurringInstanceHandledIfPresent(item);
           next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
           saveData(next);
           set({ data: next });
@@ -381,6 +450,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         card.balanceCents = (card.balanceCents || 0) - amount;
         bank.updatedAt = nowIso();
         card.updatedAt = nowIso();
+        markRecurringInstanceHandledIfPresent(item);
         next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
         saveData(next);
         set({ data: next });
@@ -402,6 +472,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const bank = next.banks.find((b) => b.id === resolvedBankId) || next.banks[0];
       bank.balanceCents = kind === 'in' ? (bank.balanceCents || 0) + amount : (bank.balanceCents || 0) - amount;
       bank.updatedAt = nowIso();
+      markRecurringInstanceHandledIfPresent(item);
       if (kind === 'in') next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
       else next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
       setLastPostedBankId(kind, bank.id);

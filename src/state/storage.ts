@@ -13,6 +13,7 @@ import {
   SHOW_ZERO_CARDS_KEY,
   SHOW_ZERO_CASH_KEY,
   STORAGE_KEY,
+  SUB_TRACKER_KEY,
   UPCOMING_WINDOW_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
@@ -395,6 +396,44 @@ export function loadUpcomingWindowPreference(): { days: number } {
   } catch (_) {
     return { days: 30 };
   }
+}
+
+export type SubTrackerTier = {
+  id: string;
+  spendTargetCents: number;
+  rewardText: string;
+};
+
+export type SubTrackerEntry = {
+  id: string;
+  cardRef: { type: 'card'; cardId: string } | { type: 'manual'; name: string };
+  startDate: string; // YYYY-MM-DD
+  deadlineDate?: string; // YYYY-MM-DD
+  monthsWindow?: number;
+  tiers: SubTrackerTier[];
+  spendCents: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type SubTrackerData = { version: 1; entries: SubTrackerEntry[] };
+
+export function loadSubTracker(): SubTrackerData {
+  try {
+    const raw = localStorage.getItem(SUB_TRACKER_KEY);
+    if (!raw) return { version: 1, entries: [] };
+    const parsed = JSON.parse(raw) as any;
+    const entries = Array.isArray(parsed?.entries) ? parsed.entries : Array.isArray(parsed) ? parsed : [];
+    return { version: 1, entries };
+  } catch (_) {
+    return { version: 1, entries: [] };
+  }
+}
+
+export function saveSubTracker(next: SubTrackerData) {
+  try {
+    localStorage.setItem(SUB_TRACKER_KEY, JSON.stringify(next));
+  } catch (_) {}
 }
 
 export function saveUpcomingWindowPreference(pref: { days: number }) {

@@ -1,5 +1,6 @@
 import type { LedgerData, PendingInboundItem, PendingOutboundItem } from '../../state/models';
 import { formatCents } from '../../state/calc';
+import { SwipeRow } from '../../ui/SwipeRow';
 
 function escapeText(s: string): string {
   return s;
@@ -20,21 +21,20 @@ export function PendingInboundList(props: {
         const label = isRefund ? `Refund — ${p.label} ${formatCents(p.amountCents)}${cardName ? ` → ${cardName}` : ''}` : `${p.label} ${formatCents(p.amountCents)}`;
 
         return (
-          <div className="pending-item" key={p.id}>
-            <span>
-              {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
-              {isRefund ? ' — ' : null}
-              {escapeText(label.replace(/^Refund —\s*/, ''))}
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn-secondary posted" onClick={() => props.onPosted?.(p.id)}>
-                Posted
-              </button>
-              <button type="button" className="btn-delete" onClick={() => props.onDelete?.(p.id)}>
-                Delete
-              </button>
+          <SwipeRow key={p.id} id={`pending-in:${p.id}`} onDeleteRequested={() => props.onDelete?.(p.id)}>
+            <div className="pending-item">
+              <span>
+                {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
+                {isRefund ? ' — ' : null}
+                {escapeText(label.replace(/^Refund —\s*/, ''))}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-posted" onClick={() => props.onPosted?.(p.id)}>
+                  Posted
+                </button>
+              </div>
             </div>
-          </div>
+          </SwipeRow>
         );
       })}
     </div>
@@ -62,21 +62,20 @@ export function PendingOutboundList(props: {
           label = `${p.label} ${formatCents(p.amountCents)}`;
         }
         return (
-          <div className="pending-item" key={p.id}>
-            <span>
-              {isCcPay ? <span className="pending-ccpay-badge">CC Payment</span> : null}
-              {isCcPay ? ' ' : null}
-              {escapeText(label.replace(/^CC Payment\s*/, ''))}
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn-secondary posted" onClick={() => props.onPosted?.(p.id)}>
-                Posted
-              </button>
-              <button type="button" className="btn-delete" onClick={() => props.onDelete?.(p.id)}>
-                Delete
-              </button>
+          <SwipeRow key={p.id} id={`pending-out:${p.id}`} onDeleteRequested={() => props.onDelete?.(p.id)}>
+            <div className="pending-item">
+              <span>
+                {isCcPay ? <span className="pending-ccpay-badge">CC Payment</span> : null}
+                {isCcPay ? ' ' : null}
+                {escapeText(label.replace(/^CC Payment\s*/, ''))}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-posted" onClick={() => props.onPosted?.(p.id)}>
+                  Posted
+                </button>
+              </div>
             </div>
-          </div>
+          </SwipeRow>
         );
       })}
     </div>

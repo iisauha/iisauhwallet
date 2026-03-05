@@ -22,3 +22,6 @@ export const EXPECTED_INCOME_KEY = 'expectedIncome_v1';
 export const UPCOMING_WINDOW_KEY = 'upcomingCashflow_window_v1';
 
 export const PHYSICAL_CASH_ID = 'physical_cash';
+
+// New feature (does not replace any legacy keys).
+export const SUB_TRACKER_KEY = 'ledgerlite_subTracker_v1';

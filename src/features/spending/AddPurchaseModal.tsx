@@ -93,7 +93,24 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) 
         </div>
 
         <div className="toggle-row">
-          <input type="checkbox" checked={isSplit} onChange={(e) => setIsSplit(e.target.checked)} id="split" />
+          <input
+            type="checkbox"
+            checked={isSplit}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setIsSplit(next);
+              if (next) {
+                const totalCents = parseCents(amount);
+                if (totalCents > 0) {
+                  const half = Math.round(totalCents / 2);
+                  setMyPortion((half / 100).toFixed(2));
+                }
+              } else {
+                setMyPortion('');
+              }
+            }}
+            id="split"
+          />
           <label htmlFor="split">Split</label>
         </div>
         {isSplit ? (

@@ -3,6 +3,7 @@ import { parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
 import { Select } from '../../ui/Select';
+import { SwipeRow } from '../../ui/SwipeRow';
 
 export function RecurringPage() {
   const data = useLedgerStore((s) => s.data);
@@ -30,7 +31,6 @@ export function RecurringPage() {
   });
   const [active, setActive] = useState(true);
   const [autoPay, setAutoPay] = useState(false);
-  const [applyToSnapshot, setApplyToSnapshot] = useState(false);
   const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
   const [category, setCategory] = useState('food');
@@ -45,6 +45,7 @@ export function RecurringPage() {
   const recurring = (data as any).recurring || [];
   const income = recurring.filter((r: any) => r.type === 'income');
   const expenses = recurring.filter((r: any) => (r.type || 'expense') !== 'income');
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
   return (
     <div className="tab-panel active" id="recurringContent">
@@ -53,41 +54,43 @@ export function RecurringPage() {
         Recurring Income
       </p>
       {income.map((r: any) => (
-        <div className="card" key={r.id}>
-          <div className="row">
-            <span className="name">{r.name || 'Income'}</span>
-            <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+        <SwipeRow
+          key={r.id}
+          id={`recurring:${r.id}`}
+          onDeleteRequested={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring income' })}
+        >
+          <div className="card">
+            <div className="row">
+              <span className="name">{r.name || 'Income'}</span>
+              <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+              {r.frequency || 'monthly'} • start {r.startDate}
+            </div>
           </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-            {r.frequency || 'monthly'} • start {r.startDate}
-          </div>
-          <div className="btn-row">
-            <button type="button" className="btn btn-danger" onClick={() => actions.deleteRecurringItem(r.id)}>
-              Delete
-            </button>
-          </div>
-        </div>
+        </SwipeRow>
       ))}
 
       <p className="section-title" style={{ marginTop: 24, fontSize: '1rem' }}>
         Recurring Expenses
       </p>
       {expenses.map((r: any) => (
-        <div className="card" key={r.id}>
-          <div className="row">
-            <span className="name">{r.name || 'Expense'}</span>
-            <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+        <SwipeRow
+          key={r.id}
+          id={`recurring:${r.id}`}
+          onDeleteRequested={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring' })}
+        >
+          <div className="card">
+            <div className="row">
+              <span className="name">{r.name || 'Expense'}</span>
+              <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+              {getCategoryName(cfg, r.category || 'uncategorized')} • {r.frequency || 'monthly'} • start {r.startDate}{' '}
+              {r.autoPay ? '• autopay' : ''}
+            </div>
           </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-            {getCategoryName(cfg, r.category || 'uncategorized')} • {r.frequency || 'monthly'} • start {r.startDate}{' '}
-            {r.autoPay ? '• autopay' : ''}
-          </div>
-          <div className="btn-row">
-            <button type="button" className="btn btn-danger" onClick={() => actions.deleteRecurringItem(r.id)}>
-              Delete
-            </button>
-          </div>
-        </div>
+        </SwipeRow>
       ))}
 
       <button type="button" className="btn btn-add" style={{ marginTop: 16, width: '100%' }} onClick={() => setOpen(true)}>
@@ -125,7 +128,24 @@ export function RecurringPage() {
             {type !== 'income' ? (
               <>
                 <div className="toggle-row">
-                  <input type="checkbox" checked={isSplit} onChange={(e) => setIsSplit(e.target.checked)} id="recSplit" />
+                  <input
+                    type="checkbox"
+                    checked={isSplit}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setIsSplit(next);
+                      if (next) {
+                        const totalCents = parseCents(amount);
+                        if (totalCents > 0) {
+                          const half = Math.round(totalCents / 2);
+                          setMyPortion((half / 100).toFixed(2));
+                        }
+                      } else {
+                        setMyPortion('');
+                      }
+                    }}
+                    id="recSplit"
+                  />
                   <label htmlFor="recSplit">Split with others</label>
                 </div>
                 {isSplit ? (
@@ -183,10 +203,52 @@ export function RecurringPage() {
             ) : null}
             <div className="field">
               <label>Start date</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) {
+                    setStartDate(v);
+                    return;
+                  }
+                  if (useLastDayOfMonth) {
+                    const [y, m] = v.split('-').map(Number);
+                    if (Number.isFinite(y) && Number.isFinite(m)) {
+                      const last = new Date(y, m, 0);
+                      const mm = String(last.getMonth() + 1).padStart(2, '0');
+                      const dd = String(last.getDate()).padStart(2, '0');
+                      setStartDate(`${y}-${mm}-${dd}`);
+                    } else {
+                      setStartDate(v);
+                    }
+                  } else {
+                    setStartDate(v);
+                  }
+                }}
+              />
             </div>
             <div className="toggle-row">
-              <input type="checkbox" checked={useLastDayOfMonth} onChange={(e) => setUseLastDayOfMonth(e.target.checked)} id="lastDay" />
+              <input
+                type="checkbox"
+                checked={useLastDayOfMonth}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setUseLastDayOfMonth(next);
+                  if (next && startDate) {
+                    const [yStr, mStr] = startDate.split('-');
+                    const y = Number(yStr);
+                    const m = Number(mStr);
+                    if (Number.isFinite(y) && Number.isFinite(m)) {
+                      const last = new Date(y, m, 0);
+                      const mm = String(last.getMonth() + 1).padStart(2, '0');
+                      const dd = String(last.getDate()).padStart(2, '0');
+                      setStartDate(`${y}-${mm}-${dd}`);
+                    }
+                  }
+                }}
+                id="lastDay"
+              />
               <label htmlFor="lastDay">Use last day of month</label>
             </div>
             <div className="toggle-row">
@@ -198,50 +260,41 @@ export function RecurringPage() {
               <label htmlFor="autopay">Auto Pay / Auto Deposit</label>
             </div>
 
-            <div className="toggle-row">
-              <input type="checkbox" checked={applyToSnapshot} onChange={(e) => setApplyToSnapshot(e.target.checked)} id="applySnap" />
-              <label htmlFor="applySnap">Apply to Snapshot</label>
-            </div>
-
-            {applyToSnapshot ? (
+            {type === 'income' ? (
+              <div className="field">
+                <label>Default deposit bank (for posting)</label>
+                <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                  <option value="">— Select bank —</option>
+                  {(data.banks || []).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : (
               <>
-                {type === 'income' ? (
-                  <div className="field">
-                    <label>Deposit to bank</label>
-                    <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
-                      <option value="">— Select bank —</option>
-                      {(data.banks || []).map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                ) : (
-                  <>
-                    <div className="field">
-                      <label>Payment Source</label>
-                      <Select value={paymentSource} onChange={(e) => setPaymentSource(e.target.value as any)}>
-                        <option value="">— Select source —</option>
-                        <option value="card">Credit Card</option>
-                        <option value="bank">Cash (Bank)</option>
-                      </Select>
-                    </div>
-                    <div className="field">
-                      <label>Select Target</label>
-                      <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
-                        <option value="">— Select —</option>
-                        {(paymentSource === 'card' ? data.cards : data.banks).map((x: any) => (
-                          <option key={x.id} value={x.id}>
-                            {x.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                  </>
-                )}
+                <div className="field">
+                  <label>Default payment source</label>
+                  <Select value={paymentSource} onChange={(e) => setPaymentSource(e.target.value as any)}>
+                    <option value="">— Select source —</option>
+                    <option value="card">Credit Card</option>
+                    <option value="bank">Cash (Bank)</option>
+                  </Select>
+                </div>
+                <div className="field">
+                  <label>Default payment target</label>
+                  <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                    <option value="">— Select —</option>
+                    {(paymentSource === 'card' ? data.cards : data.banks).map((x: any) => (
+                      <option key={x.id} value={x.id}>
+                        {x.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
               </>
-            ) : null}
+            )}
 
             <div className="btn-row">
               <button type="button" className="btn btn-secondary" onClick={() => setOpen(false)}>
@@ -270,8 +323,7 @@ export function RecurringPage() {
                     endDate: undefined,
                     active,
                     autoPay: autoPay || undefined,
-                    applyToSnapshot: applyToSnapshot || undefined,
-                    paymentSource: type === 'income' ? 'bank' : paymentSource || undefined,
+                    paymentSource: type === 'income' ? undefined : paymentSource || undefined,
                     paymentTargetId: paymentTargetId || undefined,
                     useLastDayOfMonth: useLastDayOfMonth || undefined,
                     category: type === 'income' ? undefined : category,
@@ -284,6 +336,30 @@ export function RecurringPage() {
                 }}
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {confirmDelete ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Are you sure you want to delete this?</h3>
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{confirmDelete.label}</p>
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  actions.deleteRecurringItem(confirmDelete.id);
+                  setConfirmDelete(null);
+                }}
+              >
+                Delete
               </button>
             </div>
           </div>

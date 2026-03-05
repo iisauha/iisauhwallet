@@ -5,6 +5,7 @@ import { getCategoryName, loadCategoryConfig } from '../../state/storage';
 import { Select } from '../../ui/Select';
 import { AddPurchaseModal } from './AddPurchaseModal';
 import { getCategoryColor, renderSpendingPieChart } from './charts';
+import { SwipeRow } from '../../ui/SwipeRow';
 
 type FilterKey = 'this_month' | 'last_month' | 'all_time' | 'custom';
 type BreakdownView = 'category' | 'card';
@@ -52,6 +53,7 @@ export function SpendingPage() {
   const [view, setView] = useState<BreakdownView>('category');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -201,29 +203,20 @@ export function SpendingPage() {
         <span className="amount">{formatCents(periodTotalCents)}</span>
       </div>
 
-      <p className="section-title">{view === 'category' ? 'By category' : 'By card'}</p>
+      <p className="section-title">By category</p>
       <div>
-        {view === 'category'
-          ? byCategory.map((c) => (
-              <div
-                className="card"
-                key={c.categoryId}
-                style={{ background: hexToRgba(getCategoryColor(c.categoryId), 0.14), borderColor: 'var(--border)' }}
-              >
-                <div className="row">
-                  <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
-                  <span className="amount">{formatCents(c.amountCents)}</span>
-                </div>
-              </div>
-            ))
-          : byCard.map((c) => (
-              <div className="card" key={c.paymentTargetName}>
-                <div className="row">
-                  <span className="name">{c.paymentTargetName}</span>
-                  <span className="amount">{formatCents(c.amountCents)}</span>
-                </div>
-              </div>
-            ))}
+        {byCategory.map((c) => (
+          <div
+            className="card"
+            key={c.categoryId}
+            style={{ background: hexToRgba(getCategoryColor(c.categoryId), 0.14), borderColor: 'var(--border)' }}
+          >
+            <div className="row">
+              <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
+              <span className="amount">{formatCents(c.amountCents)}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px 0' }}>
@@ -252,7 +245,7 @@ export function SpendingPage() {
             placeholder='Search title, category, subcategory… (or "/regex/")'
             style={{ flex: 1 }}
           />
-          <button type="button" className="btn btn-secondary" onClick={() => setSearchQuery('')}>
+          <button type="button" className="btn clear-btn" onClick={() => setSearchQuery('')}>
             Clear
           </button>
         </div>
@@ -262,24 +255,21 @@ export function SpendingPage() {
           .slice()
           .sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || ''))
           .map((p: any) => (
-            <div className="card" key={p.id}>
-              <div className="row">
-                <span className="name">{p.title || 'Purchase'}</span>
-                <span className="amount">{formatCents(p.amountCents || 0)}</span>
+            <SwipeRow key={p.id} id={`purchase:${p.id}`} onDeleteRequested={() => setConfirmDelete({ id: p.id, label: p.title || 'Purchase' })}>
+              <div className="card">
+                <div className="row">
+                  <span className="name">{p.title || 'Purchase'}</span>
+                  <span className="amount">{formatCents(p.amountCents || 0)}</span>
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                  {formatLongLocalDate(p.dateISO || '')} •{' '}
+                  <span style={{ color: getCategoryColor(p.category || 'uncategorized'), fontWeight: 600 }}>
+                    {getCategoryName(cfg, p.category || 'uncategorized')}
+                  </span>
+                  {p.subcategory ? <span> • {p.subcategory}</span> : null}
+                </div>
               </div>
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-                {formatLongLocalDate(p.dateISO || '')} •{' '}
-                <span style={{ color: getCategoryColor(p.category || 'uncategorized'), fontWeight: 600 }}>
-                  {getCategoryName(cfg, p.category || 'uncategorized')}
-                </span>
-                {p.subcategory ? <span> • {p.subcategory}</span> : null}
-              </div>
-              <div className="btn-row">
-                <button type="button" className="btn btn-danger" onClick={() => actions.deletePurchase(p.id)}>
-                  Delete
-                </button>
-              </div>
-            </div>
+            </SwipeRow>
           ))}
       </div>
 
@@ -288,6 +278,30 @@ export function SpendingPage() {
       </button>
 
       <AddPurchaseModal open={openAdd} onClose={() => setOpenAdd(false)} />
+
+      {confirmDelete ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Are you sure you want to delete this?</h3>
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{confirmDelete.label}</p>
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  actions.deletePurchase(confirmDelete.id);
+                  setConfirmDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
