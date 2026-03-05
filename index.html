@@ -1680,10 +1680,15 @@
 
   function requestRenderSnapshot(reason) {
     let tries = 0;
+    const prevShowZeroCash = showZeroCashItems;
+    const prevShowZeroCards = showZeroCreditCards;
     const delays = [0, 25, 60, 120, 250, 500, 900];
     function attempt() {
       tries++;
       try { data = load(); } catch (_) {}
+      // Preserve toggle preferences across refresh – never reset from storage here.
+      showZeroCashItems = prevShowZeroCash;
+      showZeroCreditCards = prevShowZeroCards;
       const ok = renderSnapshot();
       if (!ok) return scheduleNext();
       if (snapshotNeedsPaint() && tries < delays.length) return scheduleNext();
