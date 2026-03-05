@@ -414,6 +414,10 @@
         <label>Amount ($)</label>
         <input type="text" id="modalAddSetAmount" inputmode="decimal" placeholder="0.00" />
       </div>
+      <div id="modalAddSetRefundWrap" class="field toggle-row hidden">
+        <input type="checkbox" id="modalAddSetRefundCredit" />
+        <label for="modalAddSetRefundCredit">Refund/Credit</label>
+      </div>
       <div class="toggle-row">
         <input type="checkbox" id="modalAddSetUseSet" />
         <label for="modalAddSetUseSet">Set (replace value)</label>
@@ -593,6 +597,14 @@
       <div class="field">
         <label>Expected max ($) optional — for variable bills</label>
         <input type="text" id="modalRecurringExpectedMax" inputmode="decimal" placeholder="e.g. 150" />
+      </div>
+      <div class="field toggle-row">
+        <input type="checkbox" id="modalRecurringSplit" />
+        <label for="modalRecurringSplit">Split with others</label>
+      </div>
+      <div id="modalRecurringMyPortionWrap" class="field hidden">
+        <label>My portion ($)</label>
+        <input type="text" id="modalRecurringMyPortion" inputmode="decimal" placeholder="0.00" />
       </div>
       <div class="field">
         <label>Category</label>
@@ -1440,8 +1452,9 @@
     if (elNet) { elNet.textContent = formatCents(netCash); setSignClass(elNet, netCash); }
     if (elDebt) { elDebt.textContent = formatCents(ccDebt); setSignClass(elDebt, -1); }
     const sumCcCreditRow = document.getElementById('sumCcCreditRow');
-    if (sumCcCreditRow) sumCcCreditRow.style.display = ccCredit > 0 ? '' : 'none';
-    if (elCredit) { elCredit.textContent = (ccCredit > 0 ? '+' : '') + formatCents(ccCredit); setSignClass(elCredit, ccCredit); }
+    const displayCredit = Math.max(0, ccCredit);
+    if (sumCcCreditRow) sumCcCreditRow.style.display = displayCredit > 0 ? '' : 'none';
+    if (elCredit) { elCredit.textContent = (displayCredit > 0 ? '+' : '') + formatCents(displayCredit); elCredit.classList.remove('neg'); if (displayCredit > 0) elCredit.classList.add('pos'); }
     if (elOut) { elOut.textContent = formatCents(pendingOutTotal); setSignClass(elOut, -1); }
     if (elIn) { elIn.textContent = formatCents(pendingInTotal); setSignClass(elIn, pendingInTotal); }
     if (elFinal) {
@@ -1700,7 +1713,21 @@
       const delCardBtn = e.target.closest('.btn-delete[data-type="card"]');
       if (btn) {
         addSetTarget = { type: btn.getAttribute('data-type'), id: btn.getAttribute('data-id') };
-        document.getElementById('modalAddSetAmount').value = '';
+        const isCard = addSetTarget.type === 'card';
+        const refundWrap = document.getElementById('modalAddSetRefundWrap');
+        const refundCheck = document.getElementById('modalAddSetRefundCredit');
+        const amountInput = document.getElementById('modalAddSetAmount');
+        if (refundWrap) refundWrap.classList.toggle('hidden', !isCard);
+        if (isCard) {
+          const c = data.cards.find(x => x.id === addSetTarget.id);
+          const bal = c && typeof c.balanceCents === 'number' ? c.balanceCents : 0;
+          const isCredit = bal < 0;
+          if (refundCheck) refundCheck.checked = isCredit;
+          if (amountInput) amountInput.value = (Math.abs(bal) / 100).toFixed(2);
+        } else {
+          if (refundCheck) refundCheck.checked = false;
+          if (amountInput) amountInput.value = '';
+        }
         document.getElementById('modalAddSetUseSet').checked = false;
         document.getElementById('modalAddSet').classList.remove('hidden');
         updateBodyModalOpen();
@@ -1742,14 +1769,22 @@
 
   document.getElementById('modalAddSetCancel').onclick = () => { document.getElementById('modalAddSet').classList.add('hidden'); updateBodyModalOpen(); };
   document.getElementById('modalAddSetOk').onclick = function() {
-    const cents = parseCents(document.getElementById('modalAddSetAmount').value);
+    const rawCents = parseCents(document.getElementById('modalAddSetAmount').value);
     const useSet = document.getElementById('modalAddSetUseSet').checked;
     if (addSetTarget.type === 'bank') {
       const b = data.banks.find(x => x.id === addSetTarget.id);
-      if (b) { b.balanceCents = useSet ? cents : b.balanceCents + cents; b.updatedAt = now(); save(data); renderSnapshot(); }
+      if (b) { b.balanceCents = useSet ? rawCents : b.balanceCents + rawCents; b.updatedAt = now(); save(data); renderSnapshot(); }
     } else if (addSetTarget.type === 'card') {
       const c = data.cards.find(x => x.id === addSetTarget.id);
-      if (c) { c.balanceCents = useSet ? cents : c.balanceCents + cents; c.updatedAt = now(); save(data); renderSnapshot(); }
+      if (c) {
+        const isRefund = document.getElementById('modalAddSetRefundCredit').checked;
+        const cents = Math.abs(rawCents);
+        const newVal = useSet ? (isRefund ? -cents : cents) : (c.balanceCents || 0) + (isRefund ? -cents : cents);
+        c.balanceCents = newVal;
+        c.updatedAt = now();
+        save(data);
+        renderSnapshot();
+      }
     }
     document.getElementById('modalAddSet').classList.add('hidden');
     updateBodyModalOpen();
@@ -2087,6 +2122,18 @@
     if (expectedMinEl) expectedMinEl.value = recurring && typeof recurring.expectedMinCents === 'number' ? (recurring.expectedMinCents / 100).toFixed(2) : '';
     if (expectedMaxEl) expectedMaxEl.value = recurring && typeof recurring.expectedMaxCents === 'number' ? (recurring.expectedMaxCents / 100).toFixed(2) : '';
 
+    const splitCheckRec = document.getElementById('modalRecurringSplit');
+    const myPortionWrapRec = document.getElementById('modalRecurringMyPortionWrap');
+    const myPortionInputRec = document.getElementById('modalRecurringMyPortion');
+    if (splitCheckRec) splitCheckRec.checked = recurring ? !!recurring.isSplit : false;
+    if (myPortionInputRec) myPortionInputRec.value = recurring && typeof recurring.myPortionCents === 'number' ? (recurring.myPortionCents / 100).toFixed(2) : '';
+    if (myPortionWrapRec) myPortionWrapRec.classList.toggle('hidden', !(splitCheckRec && splitCheckRec.checked));
+    if (splitCheckRec) splitCheckRec.onchange = function() {
+      if (myPortionWrapRec) myPortionWrapRec.classList.toggle('hidden', !splitCheckRec.checked);
+      updateRecurringSaveState();
+    };
+    if (myPortionInputRec) myPortionInputRec.oninput = updateRecurringSaveState;
+
     const useLastDay = recurring ? !!recurring.useLastDayOfMonth : false;
     if (lastDayCheck) lastDayCheck.checked = useLastDay;
     if (lastDayHint) lastDayHint.classList.toggle('hidden', !useLastDay);
@@ -2266,6 +2313,14 @@
           return { ok: false, msg: 'Select a specific ' + (src === 'card' ? 'card' : 'bank') + ' or choose a different source.' };
         }
       }
+      const isSplit = !!(splitCheckRec && splitCheckRec.checked);
+      if (isSplit) {
+        const myPortion = myPortionInputRec ? parseCents(myPortionInputRec.value) : 0;
+        if (!(myPortion > 0)) return { ok: false, msg: 'My portion must be greater than $0 when split is enabled.' };
+        const expectedMax = expectedMaxEl ? parseCents(expectedMaxEl.value) : 0;
+        const maxAllowed = expectedMax > 0 ? expectedMax : amount;
+        if (myPortion > maxAllowed) return { ok: false, msg: 'My portion cannot exceed the bill amount (or expected max).' };
+      }
       return { ok: true, msg: '' };
     }
 
@@ -2328,10 +2383,17 @@
     const expectedMaxRaw = document.getElementById('modalRecurringExpectedMax').value.trim();
     const expectedMinCents = expectedMinRaw ? parseCents(expectedMinRaw) : undefined;
     const expectedMaxCents = expectedMaxRaw ? parseCents(expectedMaxRaw) : undefined;
+    const isSplit = document.getElementById('modalRecurringSplit').checked;
+    const myPortionCents = isSplit && document.getElementById('modalRecurringMyPortion') ? parseCents(document.getElementById('modalRecurringMyPortion').value) : undefined;
 
     const failures = [];
     if (!nameRaw) failures.push('Name is required');
     if (!(amountCents > 0)) failures.push('Amount must be greater than $0');
+    if (isSplit) {
+      if (!(myPortionCents > 0)) failures.push('My portion must be greater than $0 when split is enabled');
+      else if (expectedMaxCents != null && expectedMaxCents > 0 && myPortionCents > expectedMaxCents) failures.push('My portion cannot exceed expected max');
+      else if ((expectedMaxCents == null || expectedMaxCents <= 0) && myPortionCents > amountCents) failures.push('My portion cannot exceed amount');
+    }
     if (!category) failures.push('Category is required');
     if (!frequency) failures.push('Frequency is required');
     if (!startDate && !useLastDayOfMonth) failures.push('Start date is required');
@@ -2371,7 +2433,9 @@
       paymentTargetId,
       useLastDayOfMonth,
       expectedMinCents,
-      expectedMaxCents
+      expectedMaxCents,
+      isSplit: isSplit || undefined,
+      myPortionCents: isSplit && myPortionCents > 0 ? myPortionCents : undefined
     };
     console.log('[recurring] saving payload:', payload);
 
@@ -2393,7 +2457,9 @@
         paymentTargetId,
         useLastDayOfMonth,
         expectedMinCents,
-        expectedMaxCents
+        expectedMaxCents,
+        isSplit: isSplit || undefined,
+        myPortionCents: isSplit && myPortionCents > 0 ? myPortionCents : undefined
       };
       data.recurring.push(r);
     } else {
@@ -2415,6 +2481,8 @@
         r.useLastDayOfMonth = useLastDayOfMonth;
         if (expectedMinCents !== undefined) r.expectedMinCents = expectedMinCents;
         if (expectedMaxCents !== undefined) r.expectedMaxCents = expectedMaxCents;
+        r.isSplit = isSplit || undefined;
+        r.myPortionCents = isSplit && myPortionCents > 0 ? myPortionCents : undefined;
       }
     }
     try {
@@ -2507,7 +2575,7 @@
 
   function applyPurchaseToSnapshot(purchase) {
     if (!purchase || !purchase.applyToSnapshot || !purchase.paymentSource) return;
-    const amount = typeof purchase.amountCents === 'number' ? purchase.amountCents : 0;
+    const amount = typeof purchase.splitTotalCents === 'number' ? purchase.splitTotalCents : (typeof purchase.amountCents === 'number' ? purchase.amountCents : 0);
     const src = purchase.paymentSource;
     let targetMissing = false;
     if ((src === 'card' || src === 'credit_card') && purchase.paymentTargetId) {
@@ -2567,10 +2635,15 @@
         const dateKey = toLocalDateKey(current);
         const regKey = (r.id || '') + ':' + dateKey;
         if (!data.recurringPosted[regKey]) {
+          const fullAmountCents = (r.expectedMinCents != null && r.expectedMaxCents != null)
+            ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+            : (typeof r.amountCents === 'number' ? r.amountCents : 0);
+          const isSplit = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
+          const myPortionCents = isSplit ? r.myPortionCents : fullAmountCents;
           const purchase = {
             id: uid(),
             title: r.name || 'Recurring',
-            amountCents: typeof r.amountCents === 'number' ? r.amountCents : 0,
+            amountCents: myPortionCents,
             dateISO: dateKey,
             category: normalizeCategoryId(r.category),
             subcategory: r.subcategory || undefined,
@@ -2582,14 +2655,25 @@
             purchase.applyToSnapshot = true;
             purchase.paymentSource = r.paymentSource;
             if (r.paymentTargetId) purchase.paymentTargetId = r.paymentTargetId;
+            if (isSplit) purchase.splitTotalCents = fullAmountCents;
           }
           data.purchases.push(purchase);
-          console.log('[recurring] posting occurrence', { recurringId: r.id, dateKey, regKey, applyToSnapshot: !!purchase.applyToSnapshot });
           if (purchase.applyToSnapshot) {
             applyPurchaseToSnapshot(purchase);
+            if (isSplit && fullAmountCents > myPortionCents) {
+              const reimbCents = fullAmountCents - myPortionCents;
+              data.pendingIn.push({
+                id: uid(),
+                label: 'Reimbursement: ' + (r.name || 'Recurring'),
+                amountCents: reimbCents,
+                createdAt: now(),
+                splitRecurringPurchaseId: purchase.id
+              });
+            }
           }
           data.recurringPosted[regKey] = true;
           mutated = true;
+          console.log('[recurring] posting occurrence', { recurringId: r.id, dateKey, regKey, applyToSnapshot: !!purchase.applyToSnapshot, isSplit });
         } else {
           console.log('[recurring] occurrence already posted', { recurringId: r.id, dateKey, regKey });
         }
@@ -2658,9 +2742,13 @@
       while (current <= endDate && (!end || current <= end)) {
         const dateKey = toLocalDateKey(current);
         if (dateKey >= todayKey && dateKey <= endKey) {
-          const amountCents = typeof r.amountCents === 'number' ? r.amountCents : 0;
-          const minCents = typeof r.expectedMinCents === 'number' ? r.expectedMinCents : null;
-          const maxCents = typeof r.expectedMaxCents === 'number' ? r.expectedMaxCents : null;
+          const isSplitRec = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
+          const fullAmount = (r.expectedMinCents != null && r.expectedMaxCents != null)
+            ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+            : (typeof r.amountCents === 'number' ? r.amountCents : 0);
+          const amountCents = isSplitRec ? r.myPortionCents : fullAmount;
+          const minCents = isSplitRec ? null : (typeof r.expectedMinCents === 'number' ? r.expectedMinCents : null);
+          const maxCents = isSplitRec ? null : (typeof r.expectedMaxCents === 'number' ? r.expectedMaxCents : null);
           result.push({
             dateKey,
             amountCents,
@@ -3671,7 +3759,36 @@
           ? p.title + '\n\nDeleting will also reverse the Snapshot balance update.'
           : p.title;
         confirmModal('Delete purchase?', msg, () => {
-          if (applied) {
+          if (typeof p.splitTotalCents === 'number' && p.recurringId) {
+            const amount = p.splitTotalCents;
+            const src = p.paymentSource;
+            const targetId = p.paymentTargetId;
+            let targetMissing = false;
+            if ((src === 'card' || src === 'credit_card') && targetId) {
+              const card = data.cards.find(c => c.id === targetId);
+              if (card) {
+                card.balanceCents = (card.balanceCents || 0) - amount;
+                card.updatedAt = now();
+              } else {
+                targetMissing = true;
+              }
+            } else if ((src === 'bank' || src === 'cash') && (targetId || src === 'cash')) {
+              const bid = targetId || PHYSICAL_CASH_ID;
+              const bank = data.banks.find(b => b.id === bid) || (src === 'cash' ? ensurePhysicalCashBank(data) : null);
+              if (bank) {
+                bank.balanceCents = (bank.balanceCents || 0) + amount;
+                bank.updatedAt = now();
+              } else {
+                targetMissing = true;
+              }
+            }
+            if (targetMissing) {
+              alert('Could not reverse Snapshot because the target account no longer exists.');
+            }
+            if (Array.isArray(data.pendingIn)) {
+              data.pendingIn = data.pendingIn.filter(pi => pi.splitRecurringPurchaseId !== p.id);
+            }
+          } else if (applied) {
             const isSplit = !!p.isSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
             const amount = isSplit
               ? p.splitSnapshot.amountCents
