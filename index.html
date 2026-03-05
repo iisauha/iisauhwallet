@@ -86,9 +86,12 @@
       padding: 8px 4px;
       border-radius: 8px;
     }
+    .section-header-left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .section-header .chevron {
       font-size: 0.9rem;
-      min-width: 24px;
+      width: 28px;
+      min-width: 28px;
+      flex-shrink: 0;
       text-align: center;
     }
     .section-header:hover {
@@ -122,6 +125,11 @@
     .row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .row .name { font-weight: 600; flex: 1; min-width: 0; }
     .row .amount { font-variant-numeric: tabular-nums; font-size: 1.1rem; }
+    .card-row-one-line { padding: 10px 12px; }
+    .card-row-one-line .card-row-inner { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; width: 100%; }
+    .card-row-one-line .card-row-inner .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    .card-row-one-line .card-row-inner .amount { flex-shrink: 0; }
+    .card-row-one-line .card-row-inner .btn-row { flex-shrink: 0; margin-top: 0; display: flex; gap: 6px; align-items: center; }
     .btn-row { display: flex; gap: 8px; margin-top: 10px; }
     .btn {
       min-height: 44px;
@@ -238,7 +246,7 @@
     }
     .pending-item .posted {
       border: 1px solid var(--green);
-      background: #fff;
+      background: var(--green-light);
       color: var(--green);
     }
     .btn-delete {
@@ -284,31 +292,29 @@
 <body>
   <div id="snapshotContent" class="tab-panel active">
     <div class="section-header" id="bankHeader">
-      <span>Cash — <span id="cashHeaderTotal">$0.00</span></span>
-      <span style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+      <span class="section-header-left">Cash — <span id="cashHeaderTotal">$0.00</span>
         <button type="button" class="icon-btn" id="zeroCashToggle" aria-label="Toggle zero-balance cash items" title="Toggle zero-balance cash items">
           <span id="zeroCashIcon">Show $0 balances</span>
         </button>
-        <span class="chevron" id="bankChevron">▾</span>
       </span>
+      <span class="chevron" id="bankChevron">▾</span>
     </div>
     <div id="bankList"></div>
     <button type="button" class="btn btn-primary" id="addBankBtn" style="width:100%; margin-top:8px;">+ Add Bank Account</button>
 
     <div class="section-header" id="cardHeader" style="margin-top: 24px;">
-      <span>Credit Cards — <span id="cardHeaderTotal">$0.00</span></span>
-      <span style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+      <span class="section-header-left">Credit Cards — <span id="cardHeaderTotal">$0.00</span>
         <button type="button" class="icon-btn" id="zeroCardsToggle" aria-label="Toggle zero-balance credit cards" title="Toggle zero-balance credit cards">
           <span id="zeroCardsIcon">Show $0 balances</span>
         </button>
-        <span class="chevron" id="cardChevron">▾</span>
       </span>
+      <span class="chevron" id="cardChevron">▾</span>
     </div>
     <div id="cardList"></div>
     <button type="button" class="btn btn-primary" id="addCardBtn" style="width:100%; margin-top:8px;">+ Add Credit Card</button>
 
     <div class="section-header" id="pendingInHeader" style="margin-top: 24px;">
-      <span>Pending Inbound — <span id="pendingInHeaderTotal">$0.00</span></span>
+      <span class="section-header-left">Pending Inbound — <span id="pendingInHeaderTotal">$0.00</span></span>
       <span class="chevron" id="pendingInChevron">▾</span>
     </div>
     <div id="pendingInSectionBody">
@@ -320,7 +326,7 @@
     </div>
 
     <div class="section-header" id="pendingOutHeader" style="margin-top: 24px;">
-      <span>Pending Outbound — <span id="pendingOutHeaderTotal">$0.00</span></span>
+      <span class="section-header-left">Pending Outbound — <span id="pendingOutHeaderTotal">$0.00</span></span>
       <span class="chevron" id="pendingOutChevron">▾</span>
     </div>
     <div id="pendingOutSectionBody">
@@ -425,7 +431,8 @@
       <button type="button" class="btn btn-secondary" id="exportCsvBtn" style="margin-top:8px; width:100%;">Export CSV</button>
     </div>
     <div class="section-header" id="manageCategoriesHeader" style="margin-top: 24px;">
-      <span>Manage Categories</span><span class="chevron" id="manageCategoriesChevron">▸</span>
+      <span class="section-header-left">Manage Categories</span>
+      <span class="chevron" id="manageCategoriesChevron">▸</span>
     </div>
     <div id="manageCategories" class="settings-section hidden"></div>
     <p class="section-title" style="margin-top: 24px;">Backup</p>
@@ -1543,15 +1550,15 @@
     if (cardsToRender.length) {
       cardsToRender.forEach(c => {
         const card = document.createElement('div');
-        card.className = 'card';
+        card.className = 'card card-row-one-line';
         const bal = c.balanceCents || 0;
         const isCredit = bal < 0;
         const amountClass = isCredit ? 'amount amount-credit' : 'amount';
         const amountLabel = isCredit ? formatCents(bal) + ' (Credit)' : formatCents(bal);
-        card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="' + amountClass + '">' + amountLabel + '</span></div>' +
+        card.innerHTML = '<div class="row card-row-inner"><span class="name">' + escapeHtml(c.name) + '</span><span class="' + amountClass + '">' + amountLabel + '</span>' +
           '<div class="btn-row"><button type="button" class="btn btn-secondary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
           '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button>' +
-          '<button type="button" class="btn btn-delete" data-type="card" data-id="' + c.id + '" aria-label="Delete credit card">Delete</button></div>';
+          '<button type="button" class="btn btn-delete" data-type="card" data-id="' + c.id + '" aria-label="Delete credit card">Delete</button></div></div>';
         cardList.appendChild(card);
       });
     } else {
@@ -4881,10 +4888,17 @@
     const body = document.getElementById('manageCategories');
     const chev = document.getElementById('manageCategoriesChevron');
     if (!header || !body || !chev) return;
-    header.addEventListener('click', function() {
+    header.addEventListener('click', function(e) {
+      e.stopPropagation();
       const isHidden = body.classList.contains('hidden');
-      body.classList.toggle('hidden', !isHidden);
-      chev.textContent = isHidden ? '▾' : '▸';
+      if (isHidden) {
+        renderManageCategories();
+        body.classList.remove('hidden');
+        chev.textContent = '▾';
+      } else {
+        body.classList.add('hidden');
+        chev.textContent = '▸';
+      }
     });
   })();
 
@@ -4911,9 +4925,29 @@
     m.addEventListener('touchstart', function(e) { e.stopPropagation(); });
   });
 
+  function rehydrateUI() {
+    try {
+      data = load();
+      renderSnapshot();
+      renderSpending();
+      renderRecurring();
+      renderUpcomingCashflow();
+      renderManageCategories();
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.error) console.error('Rehydrate error:', err);
+    }
+  }
+
   processRecurringBillsUpToToday();
   renderSnapshot();
   renderManageCategories();
+
+  window.addEventListener('pageshow', function(ev) {
+    if (ev.persisted) rehydrateUI();
+  });
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') rehydrateUI();
+  });
 
   (function checkLocalDateFilter() {
     var start = new Date(2026, 2, 1);
