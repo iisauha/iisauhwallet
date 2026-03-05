@@ -206,7 +206,10 @@
     .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
     .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .pending-item:last-child { border-bottom: none; }
-    .pending-refund-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: var(--green-light); color: var(--green); margin-right: 6px; }
+    .pending-refund-badge,
+    .pending-ccpay-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; }
+    .pending-refund-badge { background: var(--green-light); color: var(--green); }
+    .pending-ccpay-badge { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
     .recurring-expense-group { margin-bottom: 12px; }
     .recurring-expense-group-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 1rem; font-weight: 600; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     .recurring-expense-group-header:hover { background: rgba(148, 163, 184, 0.1); }
@@ -461,6 +464,24 @@
       <div class="field">
         <label>Amount ($)</label>
         <input type="text" id="modalPendingAmount" inputmode="decimal" placeholder="0.00" />
+      </div>
+      <div id="modalPendingOutboundTypeWrap" class="field hidden">
+        <label>Outbound Type</label>
+        <select id="modalPendingOutboundType" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; width:100%;">
+          <option value="standard">Standard Outbound</option>
+          <option value="cc_payment">Credit Card Payment</option>
+        </select>
+      </div>
+      <div id="modalPendingCcPaymentWrap" class="field hidden">
+        <label style="font-size:0.95rem;">Credit Card Payment</label>
+        <div class="field" style="margin-top:6px;">
+          <label style="font-size:0.9rem; color:var(--muted);">From Bank</label>
+          <select id="modalPendingCcSourceBank" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; width:100%;"></select>
+        </div>
+        <div class="field" style="margin-top:8px;">
+          <label style="font-size:0.9rem; color:var(--muted);">To Credit Card</label>
+          <select id="modalPendingCcTargetCard" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; width:100%;"></select>
+        </div>
       </div>
       <div id="modalPendingDepositToWrap" class="field hidden">
         <div class="field toggle-row" style="margin-bottom:8px;">
@@ -1440,10 +1461,21 @@
       pendingInList.appendChild(div);
     });
     data.pendingOut.forEach(p => {
+      const isCcPay = p.outboundType === 'cc_payment';
+      let labelText;
+      if (isCcPay) {
+        const bank = (data.banks || []).find(b => b.id === p.sourceBankId);
+        const card = (data.cards || []).find(c => c.id === p.targetCardId);
+        const bankName = bank ? (bank.name || 'Bank') : 'Bank';
+        const cardName = card ? (card.name || 'Card') : 'Card';
+        labelText = '<span class="pending-ccpay-badge">CC Payment</span> From ' + escapeHtml(bankName) + ' \u2192 ' + escapeHtml(cardName) + ' ' + formatCents(p.amountCents);
+      } else {
+        labelText = escapeHtml(p.label) + ' ' + formatCents(p.amountCents);
+      }
       const div = document.createElement('div');
       div.className = 'pending-item';
       div.innerHTML =
-        '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
+        '<span>' + labelText + '</span>' +
         '<div>' +
         '<button type="button" class="posted" data-kind="out" data-id="' + p.id + '">Mark Posted</button>' +
         '<button type="button" class="btn-delete" data-kind="out" data-id="' + p.id + '">Delete</button>' +
@@ -1882,9 +1914,20 @@
     document.getElementById('modalPendingTitle').textContent = 'Add pending inbound';
     document.getElementById('modalPendingLabel').value = '';
     document.getElementById('modalPendingAmount').value = '';
+    const outboundTypeWrap = document.getElementById('modalPendingOutboundTypeWrap');
+    const ccPayWrap = document.getElementById('modalPendingCcPaymentWrap');
+    if (outboundTypeWrap) outboundTypeWrap.classList.add('hidden');
+    if (ccPayWrap) ccPayWrap.classList.add('hidden');
     document.getElementById('modalPendingDepositToWrap').classList.remove('hidden');
     document.getElementById('modalPendingIsRefund').checked = false;
-    document.getElementById('modalPendingDepositTo').value = 'bank';
+    const depositSel = document.getElementById('modalPendingDepositTo');
+    if (depositSel) {
+      depositSel.value = 'bank';
+      depositSel.disabled = true;
+      Array.from(depositSel.options || []).forEach(function(o) {
+        if (o.value === 'card') o.hidden = true;
+      });
+    }
     const cardWrap = document.getElementById('modalPendingCardWrap');
     const cardSel = document.getElementById('modalPendingCardSelect');
     cardWrap.classList.add('hidden');
@@ -1913,9 +1956,43 @@
     document.getElementById('modalPendingLabel').value = '';
     document.getElementById('modalPendingAmount').value = '';
     document.getElementById('modalPendingDepositToWrap').classList.add('hidden');
+    const outboundTypeWrap = document.getElementById('modalPendingOutboundTypeWrap');
+    const ccPayWrap = document.getElementById('modalPendingCcPaymentWrap');
+    const outboundTypeSel = document.getElementById('modalPendingOutboundType');
+    const ccSourceSel = document.getElementById('modalPendingCcSourceBank');
+    const ccTargetSel = document.getElementById('modalPendingCcTargetCard');
+    if (outboundTypeWrap) outboundTypeWrap.classList.remove('hidden');
+    if (outboundTypeSel) outboundTypeSel.value = 'standard';
+    if (ccPayWrap) ccPayWrap.classList.add('hidden');
+    if (ccSourceSel) {
+      ccSourceSel.innerHTML = '<option value="">— Select bank —</option>';
+      (data.banks || []).forEach(function(b) {
+        const o = document.createElement('option');
+        o.value = b.id;
+        o.textContent = b.name || 'Bank';
+        ccSourceSel.appendChild(o);
+      });
+    }
+    if (ccTargetSel) {
+      ccTargetSel.innerHTML = '<option value="">— Select card —</option>';
+      (data.cards || []).forEach(function(c) {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = c.name || 'Card';
+        ccTargetSel.appendChild(o);
+      });
+    }
     document.getElementById('modalPending').classList.remove('hidden');
     updateBodyModalOpen();
   };
+  const outboundTypeSelEl = document.getElementById('modalPendingOutboundType');
+  if (outboundTypeSelEl) {
+    outboundTypeSelEl.addEventListener('change', function() {
+      const wrap = document.getElementById('modalPendingCcPaymentWrap');
+      if (!wrap) return;
+      wrap.classList.toggle('hidden', this.value !== 'cc_payment');
+    });
+  }
   document.getElementById('modalPendingDepositTo').addEventListener('change', function() {
     const isCard = this.value === 'card';
     document.getElementById('modalPendingCardWrap').classList.toggle('hidden', !isCard);
@@ -1934,7 +2011,37 @@
       }
       data.pendingIn.push({ id: uid(), label, amountCents, createdAt: now(), depositTo: depositTo, targetCardId: targetCardId || undefined, isRefund: isRefund || undefined });
     } else {
-      data.pendingOut.push({ id: uid(), label, amountCents, createdAt: now() });
+      const outboundTypeEl = document.getElementById('modalPendingOutboundType');
+      const outboundType = outboundTypeEl ? (outboundTypeEl.value || 'standard') : 'standard';
+      if (outboundType === 'cc_payment') {
+        const sourceBankSel = document.getElementById('modalPendingCcSourceBank');
+        const targetCardSel = document.getElementById('modalPendingCcTargetCard');
+        const sourceBankId = sourceBankSel ? (sourceBankSel.value || '') : '';
+        const targetCardId = targetCardSel ? (targetCardSel.value || '') : '';
+        if (!(amountCents > 0)) {
+          alert('Amount must be greater than $0 for a credit card payment.');
+          return;
+        }
+        if (!sourceBankId) {
+          alert('Select a bank account to pay from.');
+          return;
+        }
+        if (!targetCardId) {
+          alert('Select a credit card to pay.');
+          return;
+        }
+        data.pendingOut.push({
+          id: uid(),
+          label,
+          amountCents,
+          createdAt: now(),
+          outboundType: 'cc_payment',
+          sourceBankId,
+          targetCardId
+        });
+      } else {
+        data.pendingOut.push({ id: uid(), label, amountCents, createdAt: now() });
+      }
     }
     save(data);
     renderSnapshot();
@@ -2672,6 +2779,29 @@
         renderSnapshot();
         alert('Credit card no longer exists. Pending item was removed.');
       }
+      return;
+    }
+    if (kind === 'out' && item.outboundType === 'cc_payment') {
+      const bank = data.banks.find(b => b.id === item.sourceBankId);
+      const card = data.cards.find(c => c.id === item.targetCardId);
+      if (!bank || !card) {
+        alert('Bank or credit card no longer exists. Pending item was removed.');
+        data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+        save(data);
+        renderSnapshot();
+        return;
+      }
+      if (typeof card.balanceCents === 'number' && card.balanceCents < 0) {
+        alert('This card currently has a credit balance. You cannot apply a card payment.');
+        return;
+      }
+      bank.balanceCents = (bank.balanceCents || 0) - amount;
+      card.balanceCents = (card.balanceCents || 0) - amount;
+      bank.updatedAt = now();
+      card.updatedAt = now();
+      data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+      save(data);
+      renderSnapshot();
       return;
     }
     if (kind === 'out' && item.recurringId && item.paymentSource && item.paymentTargetId) {
