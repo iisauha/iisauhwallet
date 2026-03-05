@@ -60,3 +60,216 @@ export function calcFinalNetCashCents(data: LedgerData): {
   return { bankTotalCents, ccDebtCents, ccCreditCents, pendingOutCents, pendingInCents, finalNetCashCents };
 }
 
+export function toLocalDateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+
+export function parseLocalDateKey(key: string) {
+  if (typeof key !== 'string' || !key) return new Date(NaN);
+  const parts = key.split('-').map(Number);
+  if (parts.length !== 3) return new Date(NaN);
+  const [y, m, d] = parts;
+  if (Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d)) return new Date(NaN);
+  return new Date(y, m - 1, d);
+}
+
+export function addDaysLocal(date: Date, days: number) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+export function addMonthsPreserveDay(startDate: Date, currentDate: Date, months: number) {
+  const base = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const targetMonthIndex = currentDate.getMonth() + months;
+  const targetYear = currentDate.getFullYear() + Math.floor(targetMonthIndex / 12);
+  const targetMonth = (targetMonthIndex % 12 + 12) % 12;
+  const baseDay = base.getDate();
+  const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const day = Math.min(baseDay, lastDay);
+  return new Date(targetYear, targetMonth, day);
+}
+
+export function addYearsPreserveDay(startDate: Date, currentDate: Date, years: number) {
+  const base = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const targetYear = currentDate.getFullYear() + years;
+  const targetMonth = base.getMonth();
+  const baseDay = base.getDate();
+  const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const day = Math.min(baseDay, lastDay);
+  return new Date(targetYear, targetMonth, day);
+}
+
+export function recurringIntervalDays(r: any) {
+  return typeof r.intervalDays === 'number' && r.intervalDays > 0
+    ? r.intervalDays
+    : typeof r.everyNDays === 'number' && r.everyNDays > 0
+      ? Math.floor(r.everyNDays)
+      : 1;
+}
+
+export type RecurringExpenseOccurrence = {
+  dateKey: string;
+  amountCents: number;
+  minCents: number | null;
+  maxCents: number | null;
+  recurringId: string;
+  recurringName: string;
+  autoPay: boolean;
+  paymentSource?: string;
+  paymentTargetId?: string;
+  category?: string;
+  subcategory?: string;
+  isSplit: boolean;
+  myPortionCents: number | null;
+  fullAmountCents: number;
+};
+
+export type RecurringIncomeOccurrence = {
+  id: string;
+  expectedDate: string;
+  amountCents: number;
+  title: string;
+  autoPay: boolean;
+  paymentTargetId?: string;
+  recurringId: string;
+};
+
+export function getRecurringOccurrencesInWindow(data: LedgerData, windowDays: number): RecurringExpenseOccurrence[] {
+  const today = new Date();
+  const todayKey = toLocalDateKey(today);
+  const endDate = addDaysLocal(today, windowDays);
+  const endKey = toLocalDateKey(endDate);
+  const result: RecurringExpenseOccurrence[] = [];
+  if (!Array.isArray((data as any).recurring)) return result;
+  (data as any).recurring.forEach((r: any) => {
+    if (!r || !r.active) return;
+    if ((r.type || 'expense') === 'income') return;
+    const start = parseLocalDateKey(r.startDate);
+    if (Number.isNaN(start.getTime())) return;
+    const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
+    const freq = r.frequency || 'monthly';
+    const nDays = freq === 'custom' || freq === 'every_n_days' ? recurringIntervalDays(r) : 0;
+    let current: Date;
+    if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    else current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    function advance() {
+      if (freq === 'weekly') current = addDaysLocal(current, 7);
+      else if (freq === 'biweekly') current = addDaysLocal(current, 14);
+      else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
+      else if (freq === 'custom' || freq === 'every_n_days') current = addDaysLocal(current, nDays);
+      else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+      else current = addMonthsPreserveDay(start, current, 1);
+    }
+    function pushOccurrence(dateKey: string) {
+      const isSplitRec = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
+      const fullAmount =
+        r.expectedMinCents != null && r.expectedMaxCents != null
+          ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+          : typeof r.amountCents === 'number'
+            ? r.amountCents
+            : 0;
+      const amountCents = isSplitRec ? r.myPortionCents : fullAmount;
+      const minCents = isSplitRec ? null : typeof r.expectedMinCents === 'number' ? r.expectedMinCents : null;
+      const maxCents = isSplitRec ? null : typeof r.expectedMaxCents === 'number' ? r.expectedMaxCents : null;
+      result.push({
+        dateKey,
+        amountCents,
+        minCents,
+        maxCents,
+        recurringId: r.id,
+        recurringName: r.name || 'Recurring',
+        autoPay: !!r.autoPay,
+        paymentSource: r.paymentSource,
+        paymentTargetId: r.paymentTargetId,
+        category: r.category,
+        subcategory: r.subcategory,
+        isSplit: isSplitRec,
+        myPortionCents: isSplitRec ? r.myPortionCents : null,
+        fullAmountCents:
+          r.expectedMinCents != null && r.expectedMaxCents != null
+            ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+            : typeof r.amountCents === 'number'
+              ? r.amountCents
+              : 0
+      });
+    }
+    while (current < today && (!end || current <= end)) {
+      const dateKey = toLocalDateKey(current);
+      const regKey = (r.id || '') + ':' + dateKey;
+      if (!r.autoPay && !(data as any).recurringPosted?.[regKey] && dateKey < todayKey) pushOccurrence(dateKey);
+      advance();
+    }
+    while (current <= endDate && (!end || current <= end)) {
+      const dateKey = toLocalDateKey(current);
+      const regKey = (r.id || '') + ':' + dateKey;
+      const handled = !!(data as any).recurringPosted?.[regKey];
+      if (!handled && dateKey >= todayKey && dateKey <= endKey) pushOccurrence(dateKey);
+      advance();
+    }
+  });
+  return result;
+}
+
+export function getRecurringIncomeOccurrencesInWindow(data: LedgerData, windowDays: number): RecurringIncomeOccurrence[] {
+  const today = new Date();
+  const todayKey = toLocalDateKey(today);
+  const endDate = addDaysLocal(today, windowDays);
+  const endKey = toLocalDateKey(endDate);
+  const result: RecurringIncomeOccurrence[] = [];
+  if (!Array.isArray((data as any).recurring)) return result;
+  (data as any).recurring.forEach((r: any) => {
+    if (!r || !r.active || r.type !== 'income') return;
+    const start = parseLocalDateKey(r.startDate);
+    if (Number.isNaN(start.getTime())) return;
+    const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
+    const freq = r.frequency || 'monthly';
+    const nDays = freq === 'custom' || freq === 'every_n_days' ? recurringIntervalDays(r) : 0;
+    let current: Date;
+    if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    else current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    function advance() {
+      if (freq === 'weekly') current = addDaysLocal(current, 7);
+      else if (freq === 'biweekly') current = addDaysLocal(current, 14);
+      else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
+      else if (freq === 'custom' || freq === 'every_n_days') current = addDaysLocal(current, nDays);
+      else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+      else current = addMonthsPreserveDay(start, current, 1);
+    }
+    const amountCents =
+      r.expectedMinCents != null && r.expectedMaxCents != null
+        ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+        : typeof r.amountCents === 'number'
+          ? r.amountCents
+          : 0;
+    function pushIncome(dateKey: string) {
+      result.push({
+        id: 'rec:' + r.id + ':' + dateKey,
+        expectedDate: dateKey,
+        amountCents,
+        title: r.name || 'Recurring income',
+        autoPay: !!r.autoPay,
+        paymentTargetId: r.paymentTargetId,
+        recurringId: r.id
+      });
+    }
+    while (current < today && (!end || current <= end)) {
+      const dateKey = toLocalDateKey(current);
+      const regKey = (r.id || '') + ':' + dateKey;
+      if (!r.autoPay && !(data as any).recurringPosted?.[regKey] && dateKey < todayKey) pushIncome(dateKey);
+      advance();
+    }
+    while (current <= endDate && (!end || current <= end)) {
+      const dateKey = toLocalDateKey(current);
+      const regKey = (r.id || '') + ':' + dateKey;
+      const handled = !!(data as any).recurringPosted?.[regKey];
+      if (!handled && dateKey >= todayKey && dateKey <= endKey) pushIncome(dateKey);
+      advance();
+    }
+  });
+  return result;
+}
+

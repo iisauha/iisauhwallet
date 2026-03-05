@@ -327,3 +327,78 @@ export function getCategorySubcategories(cfg: CategoryConfig, id: string): strin
   return entry && Array.isArray(entry.sub) ? entry.sub : [];
 }
 
+export type ExpectedCost = {
+  id: string;
+  title: string;
+  expectedDate: string; // YYYY-MM-DD
+  amountCents: number;
+  minCents?: number | null;
+  maxCents?: number | null;
+  notes?: string;
+  status?: 'expected' | 'moved_to_pending';
+};
+
+export type ExpectedIncome = {
+  id: string;
+  title: string;
+  expectedDate: string; // YYYY-MM-DD
+  amountCents: number;
+  notes?: string;
+  status?: 'expected' | 'moved_to_pending';
+};
+
+export function loadExpectedCosts(): ExpectedCost[] {
+  try {
+    const raw = localStorage.getItem(EXPECTED_COSTS_KEY);
+    if (raw == null) return [];
+    const parsed = JSON.parse(raw);
+    const arr = Array.isArray(parsed) ? parsed : [];
+    return arr.map((c: any) => Object.assign({}, c, { status: c.status || 'expected' }));
+  } catch (_) {
+    return [];
+  }
+}
+
+export function saveExpectedCosts(arr: ExpectedCost[]) {
+  try {
+    localStorage.setItem(EXPECTED_COSTS_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
+  } catch (_) {}
+}
+
+export function loadExpectedIncome(): ExpectedIncome[] {
+  try {
+    const raw = localStorage.getItem(EXPECTED_INCOME_KEY);
+    if (raw == null) return [];
+    const parsed = JSON.parse(raw);
+    const arr = Array.isArray(parsed) ? parsed : [];
+    return arr.map((i: any) => Object.assign({}, i, { status: i.status || 'expected' }));
+  } catch (_) {
+    return [];
+  }
+}
+
+export function saveExpectedIncome(arr: ExpectedIncome[]) {
+  try {
+    localStorage.setItem(EXPECTED_INCOME_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
+  } catch (_) {}
+}
+
+export function loadUpcomingWindowPreference(): { days: number } {
+  try {
+    const raw = localStorage.getItem(UPCOMING_WINDOW_KEY);
+    if (raw == null) return { days: 30 };
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.days === 'number' && parsed.days >= 1) return { days: Math.min(365, parsed.days) };
+    return { days: 30 };
+  } catch (_) {
+    return { days: 30 };
+  }
+}
+
+export function saveUpcomingWindowPreference(pref: { days: number }) {
+  try {
+    const merged = { ...loadUpcomingWindowPreference(), ...pref };
+    localStorage.setItem(UPCOMING_WINDOW_KEY, JSON.stringify(merged));
+  } catch (_) {}
+}
+

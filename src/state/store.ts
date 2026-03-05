@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase } from './models';
 import { loadData, nowIso, saveData, setLastPostedBankId, uid } from './storage';
 import { PHYSICAL_CASH_ID } from './keys';
+import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
 export interface LedgerState {
   data: LedgerData;
@@ -17,6 +18,10 @@ export interface LedgerState {
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
     deletePurchase: (id: string) => void;
+    addRecurringItem: (item: any) => void;
+    deleteRecurringItem: (id: string) => void;
+    processRecurringBillsUpToToday: () => void;
+    markRecurringHandled: (recurringId: string, dateKey: string) => void;
     deletePending: (kind: 'in' | 'out', id: string) => void;
     clearPending: (kind: 'in' | 'out') => void;
     markPendingPosted: (kind: 'in' | 'out', id: string, bankId?: string) => { needsBankSelection: boolean };
@@ -164,6 +169,144 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       }
 
       next.purchases = next.purchases.filter((x: any) => x.id !== id);
+      saveData(next);
+      set({ data: next });
+    },
+    addRecurringItem: (item) => {
+      const next = structuredClone(get().data) as any;
+      if (!Array.isArray(next.recurring)) next.recurring = [];
+      next.recurring.push({ id: uid(), ...item });
+      saveData(next);
+      set({ data: next });
+    },
+    deleteRecurringItem: (id) => {
+      const next = structuredClone(get().data) as any;
+      next.recurring = (next.recurring || []).filter((r: any) => r.id !== id);
+      if (next.recurringPosted && typeof next.recurringPosted === 'object') {
+        Object.keys(next.recurringPosted).forEach((k) => {
+          if (k.startsWith(id + ':')) delete next.recurringPosted[k];
+        });
+      }
+      saveData(next);
+      set({ data: next });
+    },
+    processRecurringBillsUpToToday: () => {
+      const next = structuredClone(get().data) as any;
+      if (!Array.isArray(next.recurring)) next.recurring = [];
+      if (!next.recurringPosted || typeof next.recurringPosted !== 'object') next.recurringPosted = {};
+      const todayKey = toLocalDateKey(new Date());
+      const today = parseLocalDateKey(todayKey);
+      if (Number.isNaN(today.getTime())) return;
+      let mutated = false;
+
+      function applyPurchaseToSnapshot(purchase: any) {
+        if (!purchase || !purchase.applyToSnapshot || !purchase.paymentSource) return;
+        const amount = typeof purchase.splitTotalCents === 'number' ? purchase.splitTotalCents : typeof purchase.amountCents === 'number' ? purchase.amountCents : 0;
+        const src = purchase.paymentSource;
+        if ((src === 'card' || src === 'credit_card') && purchase.paymentTargetId) {
+          const card = next.cards.find((c: any) => c.id === purchase.paymentTargetId);
+          if (card) {
+            card.balanceCents = (card.balanceCents || 0) + amount;
+            card.updatedAt = nowIso();
+          }
+        } else if ((src === 'bank' || src === 'cash') && (purchase.paymentTargetId || src === 'cash')) {
+          const targetId = purchase.paymentTargetId || PHYSICAL_CASH_ID;
+          const bank = next.banks.find((b: any) => b.id === targetId);
+          if (bank) {
+            bank.balanceCents = (bank.balanceCents || 0) - amount;
+            bank.updatedAt = nowIso();
+          }
+        }
+      }
+
+      next.recurring.forEach((r: any) => {
+        if (!r || !r.active || !r.autoPay) return;
+        const start = parseLocalDateKey(r.startDate);
+        if (Number.isNaN(start.getTime())) return;
+        const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
+        const freq = r.frequency || 'monthly';
+        const nDays = freq === 'custom' || freq === 'every_n_days' ? recurringIntervalDays(r) : 0;
+        let current: Date;
+        if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+        else current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        function advance() {
+          if (freq === 'weekly') current = addDaysLocal(current, 7);
+          else if (freq === 'biweekly') current = addDaysLocal(current, 14);
+          else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
+          else if (freq === 'custom' || freq === 'every_n_days') current = addDaysLocal(current, nDays);
+          else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+          else current = addMonthsPreserveDay(start, current, 1);
+        }
+
+        while (current <= today && (!end || current <= end)) {
+          const dateKey = toLocalDateKey(current);
+          const regKey = (r.id || '') + ':' + dateKey;
+          if (!next.recurringPosted[regKey]) {
+            const recType = r.type || 'expense';
+            const fullAmountCents =
+              r.expectedMinCents != null && r.expectedMaxCents != null
+                ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+                : typeof r.amountCents === 'number'
+                  ? r.amountCents
+                  : 0;
+            if (recType === 'income') {
+              if (r.applyToSnapshot && r.paymentTargetId) {
+                const bank = next.banks.find((b: any) => b.id === r.paymentTargetId);
+                if (bank) {
+                  bank.balanceCents = (bank.balanceCents || 0) + fullAmountCents;
+                  bank.updatedAt = nowIso();
+                }
+              }
+              next.recurringPosted[regKey] = true;
+              mutated = true;
+            } else {
+              const isSplit = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
+              const myPortionCents = isSplit ? r.myPortionCents : fullAmountCents;
+              if (r.applyToSnapshot && r.paymentSource) {
+                const purchase: any = {
+                  id: uid(),
+                  title: r.name || 'Recurring',
+                  amountCents: myPortionCents,
+                  dateISO: dateKey,
+                  category: r.category,
+                  subcategory: r.subcategory || undefined,
+                  notes: r.notes,
+                  recurringId: r.id,
+                  recurringDateKey: dateKey,
+                  applyToSnapshot: true,
+                  paymentSource: r.paymentSource,
+                  paymentTargetId: r.paymentTargetId
+                };
+                if (isSplit) purchase.splitTotalCents = fullAmountCents;
+                next.purchases.push(purchase);
+                applyPurchaseToSnapshot(purchase);
+                if (isSplit && fullAmountCents > myPortionCents) {
+                  next.pendingIn.push({
+                    id: uid(),
+                    label: 'Reimbursement: ' + (r.name || 'Recurring'),
+                    amountCents: fullAmountCents - myPortionCents,
+                    createdAt: nowIso(),
+                    splitRecurringPurchaseId: purchase.id
+                  });
+                }
+              }
+              next.recurringPosted[regKey] = true;
+              mutated = true;
+            }
+          }
+          advance();
+        }
+      });
+
+      if (mutated) {
+        saveData(next);
+        set({ data: next });
+      }
+    },
+    markRecurringHandled: (recurringId, dateKey) => {
+      const next = structuredClone(get().data) as any;
+      if (!next.recurringPosted || typeof next.recurringPosted !== 'object') next.recurringPosted = {};
+      next.recurringPosted[recurringId + ':' + dateKey] = true;
       saveData(next);
       set({ data: next });
     },
