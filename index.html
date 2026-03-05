@@ -344,9 +344,12 @@
   </div>
 
   <div id="recurringContent" class="tab-panel">
-    <p class="section-title">Recurring Bills</p>
-    <div id="recurringList"></div>
-    <button type="button" class="btn btn-primary" id="addRecurringBtn" style="margin-top: 16px; width: 100%;">+ Add Recurring Bill</button>
+    <p class="section-title">Recurring Items</p>
+    <p class="section-title" style="margin-top:16px;font-size:1rem;">Recurring Expenses</p>
+    <div id="recurringExpensesList"></div>
+    <p class="section-title" style="margin-top:24px;font-size:1rem;">Recurring Income</p>
+    <div id="recurringIncomeList"></div>
+    <button type="button" class="btn btn-primary" id="addRecurringBtn" style="margin-top: 16px; width: 100%;">+ Add Recurring Item</button>
   </div>
 
   <div id="upcomingContent" class="tab-panel">
@@ -580,8 +583,15 @@
 
   <div id="modalRecurring" class="modal-overlay hidden">
     <div class="modal">
-      <h3 id="modalRecurringHeading">Recurring Bill</h3>
+      <h3 id="modalRecurringHeading">Recurring Item</h3>
       <p class="field hidden" id="modalRecurringError" style="color: var(--danger); font-size: 0.95rem; margin: 0 0 10px 0;"></p>
+      <div class="field">
+        <label>Type</label>
+        <select id="modalRecurringType" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; width:100%;">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+      </div>
       <div class="field">
         <label>Name / Merchant</label>
         <input type="text" id="modalRecurringName" placeholder="e.g. Rent" />
@@ -606,7 +616,7 @@
         <label>My portion ($)</label>
         <input type="text" id="modalRecurringMyPortion" inputmode="decimal" placeholder="0.00" />
       </div>
-      <div class="field">
+      <div id="modalRecurringCategoryWrap" class="field">
         <label>Category</label>
         <select id="modalRecurringCategory"></select>
       </div>
@@ -652,11 +662,11 @@
         <label for="modalRecurringActive">Active</label>
       </div>
       <div class="field toggle-row">
-        <input type="checkbox" id="modalRecurringApplyToSnapshot" />
-        <label for="modalRecurringApplyToSnapshot">Apply to Snapshot</label>
+        <input type="checkbox" id="modalRecurringAutoPay" />
+        <label for="modalRecurringAutoPay">Auto Pay / Auto Deposit</label>
       </div>
       <div class="field hidden" id="modalRecurringApplySection">
-        <label>Payment Source</label>
+        <label id="modalRecurringApplySectionLabel">Payment Source</label>
         <select id="modalRecurringPaymentSource">
           <option value="">— Select source —</option>
           <option value="card">Credit Card</option>
@@ -667,6 +677,12 @@
         <label id="modalRecurringTargetLabel">Select Card / Bank</label>
         <select id="modalRecurringTarget">
           <option value="">— Select —</option>
+        </select>
+      </div>
+      <div class="field hidden" id="modalRecurringIncomeBankWrap">
+        <label>Deposit to bank</label>
+        <select id="modalRecurringIncomeBank">
+          <option value="">— Select bank —</option>
         </select>
       </div>
       <div class="modal-actions">
@@ -1949,18 +1965,16 @@
 
   function renderRecurring() {
     if (!Array.isArray(data.recurring)) data.recurring = [];
-    const list = document.getElementById('recurringList');
-    if (!list) return;
-    list.innerHTML = '';
-    if (!data.recurring.length) {
-      const empty = document.createElement('p');
-      empty.style.color = 'var(--muted)';
-      empty.textContent = 'No recurring bills yet.';
-      list.appendChild(empty);
-      return;
-    }
+    const expensesList = document.getElementById('recurringExpensesList');
+    const incomeList = document.getElementById('recurringIncomeList');
+    if (!expensesList || !incomeList) return;
+    expensesList.innerHTML = '';
+    incomeList.innerHTML = '';
     const todayKey = toLocalDateKey(new Date());
-    data.recurring.forEach(r => {
+    const expenses = data.recurring.filter(r => (r.type || 'expense') !== 'income');
+    const incomeItems = data.recurring.filter(r => r.type === 'income');
+
+    function renderRecurringCard(r, list) {
       const card = document.createElement('div');
       card.className = 'card';
       const freqLabel = (function() {
@@ -1970,34 +1984,29 @@
         if (r.frequency === 'custom') return 'Every ' + (r.everyNDays || 1) + ' days';
         return 'Monthly';
       })();
-      const catName = getCategoryName(r.category);
+      const isIncome = r.type === 'income';
+      const catName = isIncome ? '' : getCategoryName(r.category || '');
       const activeLabel = r.active ? 'Active' : 'Paused';
       const startDisplay = formatDisplayDate(r.startDate || todayKey);
       const endDisplay = r.endDate ? formatDisplayDate(r.endDate) : '';
+      const metaLine = isIncome
+        ? (escapeHtml(freqLabel) + ' · starts ' + escapeHtml(startDisplay) + (r.endDate ? ' to ' + escapeHtml(endDisplay) : ''))
+        : (escapeHtml(freqLabel) + (catName ? ' · ' + escapeHtml(catName) : '') + (r.subcategory ? ' → ' + escapeHtml(r.subcategory) : '') + ' · starts ' + escapeHtml(startDisplay) + (r.endDate ? ' to ' + escapeHtml(endDisplay) : ''));
+      const autoLabel = r.autoPay ? 'Auto' : 'Pending';
       card.innerHTML =
         '<div class="row">' +
           '<span class="name">' + escapeHtml(r.name || 'Recurring') + '</span>' +
           '<span class="amount">' + formatCents(r.amountCents || 0) + '</span>' +
         '</div>' +
-        '<div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">' +
-          escapeHtml(freqLabel) + ' · ' + escapeHtml(catName) +
-          (r.subcategory ? ' → ' + escapeHtml(r.subcategory) : '') +
-          ' · starts ' + escapeHtml(startDisplay) +
-          (r.endDate ? ' to ' + escapeHtml(endDisplay) : '') +
-        '</div>' +
-        '<div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">' +
-          (r.applyToSnapshot ? 'Applies to Snapshot · ' : '') +
-          activeLabel +
-        '</div>';
+        '<div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">' + metaLine + '</div>' +
+        '<div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">' + activeLabel + ' · ' + autoLabel + '</div>';
       const btnRow = document.createElement('div');
       btnRow.className = 'btn-row';
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
       editBtn.className = 'btn btn-secondary';
       editBtn.textContent = 'Edit';
-      editBtn.onclick = function() {
-        openRecurringModal(r);
-      };
+      editBtn.onclick = function() { openRecurringModal(r); };
       const toggleBtn = document.createElement('button');
       toggleBtn.type = 'button';
       toggleBtn.className = 'btn btn-secondary';
@@ -2012,7 +2021,7 @@
       delBtn.className = 'btn btn-danger';
       delBtn.textContent = 'Delete';
       delBtn.onclick = function() {
-        confirmModal('Delete recurring bill?', 'This will remove the recurring schedule. Existing posted purchases will remain.', function() {
+        confirmModal('Delete recurring item?', 'This will remove the schedule. Existing posted entries will remain.', function() {
           const id = r.id;
           data.recurring = data.recurring.filter(x => x.id !== id);
           if (data.recurringPosted && typeof data.recurringPosted === 'object') {
@@ -2029,13 +2038,28 @@
       btnRow.appendChild(delBtn);
       card.appendChild(btnRow);
       list.appendChild(card);
-    });
+    }
+
+    expenses.forEach(r => renderRecurringCard(r, expensesList));
+    incomeItems.forEach(r => renderRecurringCard(r, incomeList));
+    if (!expenses.length) {
+      const p = document.createElement('p');
+      p.style.color = 'var(--muted)';
+      p.textContent = 'No recurring expenses yet.';
+      expensesList.appendChild(p);
+    }
+    if (!incomeItems.length) {
+      const p = document.createElement('p');
+      p.style.color = 'var(--muted)';
+      p.textContent = 'No recurring income yet.';
+      incomeList.appendChild(p);
+    }
   }
 
   function openRecurringModal(recurring) {
     const isEdit = !!recurring;
     editingRecurringId = isEdit ? recurring.id : null;
-    document.getElementById('modalRecurringHeading').textContent = isEdit ? 'Edit Recurring Bill' : 'New Recurring Bill';
+    document.getElementById('modalRecurringHeading').textContent = isEdit ? 'Edit Recurring Item' : 'New Recurring Item';
     const nameInput = document.getElementById('modalRecurringName');
     const amountInput = document.getElementById('modalRecurringAmount');
     const catSel = document.getElementById('modalRecurringCategory');
@@ -2050,12 +2074,16 @@
     const lastDayCheck = document.getElementById('modalRecurringLastDay');
     const lastDayHint = document.getElementById('modalRecurringLastDayHint');
     const activeCheck = document.getElementById('modalRecurringActive');
-    const applyCheckRec = document.getElementById('modalRecurringApplyToSnapshot');
+    const typeSelRec = document.getElementById('modalRecurringType');
+    const autoPayCheck = document.getElementById('modalRecurringAutoPay');
     const applySectionRec = document.getElementById('modalRecurringApplySection');
     const sourceSelRec = document.getElementById('modalRecurringPaymentSource');
     const targetWrapRec = document.getElementById('modalRecurringTargetWrap');
     const targetLabelRec = document.getElementById('modalRecurringTargetLabel');
     const targetSelRec = document.getElementById('modalRecurringTarget');
+    const incomeBankWrapRec = document.getElementById('modalRecurringIncomeBankWrap');
+    const incomeBankSelRec = document.getElementById('modalRecurringIncomeBank');
+    const categoryWrapRec = document.getElementById('modalRecurringCategoryWrap');
     const errEl = document.getElementById('modalRecurringError');
 
     nameInput.value = (recurring && recurring.name) || '';
@@ -2117,6 +2145,9 @@
     startInput.value = (recurring && recurring.startDate) || todayKey;
     endInput.value = (recurring && recurring.endDate) || '';
     activeCheck.checked = recurring ? !!recurring.active : true;
+    const recType = recurring && (recurring.type === 'income') ? 'income' : 'expense';
+    if (typeSelRec) typeSelRec.value = recType;
+    if (autoPayCheck) autoPayCheck.checked = recurring ? !!recurring.autoPay : false;
     const expectedMinEl = document.getElementById('modalRecurringExpectedMin');
     const expectedMaxEl = document.getElementById('modalRecurringExpectedMax');
     if (expectedMinEl) expectedMinEl.value = recurring && typeof recurring.expectedMinCents === 'number' ? (recurring.expectedMinCents / 100).toFixed(2) : '';
@@ -2138,7 +2169,6 @@
     if (lastDayCheck) lastDayCheck.checked = useLastDay;
     if (lastDayHint) lastDayHint.classList.toggle('hidden', !useLastDay);
     if (useLastDay) {
-      // When editing an existing last-day rule, respect its stored startDate month.
       startInput.disabled = true;
       startInput.style.opacity = '0.6';
     } else {
@@ -2146,35 +2176,51 @@
       startInput.style.opacity = '';
     }
 
-    applyCheckRec.checked = recurring ? !!recurring.applyToSnapshot : false;
-    sourceSelRec.value = recurring && recurring.paymentSource ? recurring.paymentSource : '';
-    targetSelRec.innerHTML = '';
-    if (applyCheckRec.checked && sourceSelRec.value) {
-      applySectionRec.classList.remove('hidden');
-    } else {
-      applySectionRec.classList.add('hidden');
-    }
-    targetWrapRec.classList.add('hidden');
-    if (applyCheckRec.checked && (sourceSelRec.value === 'card' || sourceSelRec.value === 'bank')) {
-      targetSelRec.innerHTML = '';
-      const placeholder = document.createElement('option');
-      placeholder.value = '';
-      placeholder.disabled = true;
-      placeholder.textContent = sourceSelRec.value === 'card' ? 'Select a card…' : 'Select a bank…';
-      targetSelRec.appendChild(placeholder);
-      const list = sourceSelRec.value === 'card' ? data.cards : data.banks;
-      list.forEach(item => {
-        const o = document.createElement('option');
-        o.value = item.id;
-        o.textContent = item.name;
-        targetSelRec.appendChild(o);
-      });
-      if (recurring && recurring.paymentTargetId && list.some(x => x.id === recurring.paymentTargetId)) {
-        targetSelRec.value = recurring.paymentTargetId;
+    function refreshRecurringTypeVisibility() {
+      const isIncome = typeSelRec && typeSelRec.value === 'income';
+      if (categoryWrapRec) categoryWrapRec.classList.toggle('hidden', isIncome);
+      if (subWrapEl) subWrapEl.classList.add('hidden');
+      if (applySectionRec) applySectionRec.classList.toggle('hidden', isIncome);
+      if (targetWrapRec) targetWrapRec.classList.toggle('hidden', isIncome);
+      if (incomeBankWrapRec) incomeBankWrapRec.classList.toggle('hidden', !isIncome);
+      if (splitCheckRec && splitCheckRec.parentNode) splitCheckRec.parentNode.classList.toggle('hidden', isIncome);
+      if (myPortionWrapRec) myPortionWrapRec.classList.add('hidden');
+      if (isIncome && incomeBankSelRec) {
+        incomeBankSelRec.innerHTML = '<option value="">— Select bank —</option>';
+        (data.banks || []).forEach(b => {
+          const o = document.createElement('option');
+          o.value = b.id;
+          o.textContent = b.name;
+          incomeBankSelRec.appendChild(o);
+        });
+        if (recurring && recurring.paymentTargetId && (data.banks || []).some(x => x.id === recurring.paymentTargetId)) {
+          incomeBankSelRec.value = recurring.paymentTargetId;
+        }
       }
-      targetLabelRec.textContent = sourceSelRec.value === 'card' ? 'Select Card' : 'Select Bank';
-      targetWrapRec.classList.remove('hidden');
+      if (!isIncome) {
+        sourceSelRec.value = recurring && recurring.paymentSource ? recurring.paymentSource : '';
+        targetSelRec.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.disabled = true;
+        placeholder.textContent = 'Select…';
+        targetSelRec.appendChild(placeholder);
+        const list = sourceSelRec.value === 'card' ? data.cards : data.banks;
+        (list || []).forEach(item => {
+          const o = document.createElement('option');
+          o.value = item.id;
+          o.textContent = item.name;
+          targetSelRec.appendChild(o);
+        });
+        if (recurring && recurring.paymentTargetId && list && list.some(x => x.id === recurring.paymentTargetId)) {
+          targetSelRec.value = recurring.paymentTargetId;
+        }
+        targetLabelRec.textContent = sourceSelRec.value === 'card' ? 'Select Card' : 'Select Bank';
+      }
+      updateRecurringSaveState();
     }
+    refreshRecurringTypeVisibility();
+    if (typeSelRec) typeSelRec.onchange = refreshRecurringTypeVisibility;
 
     catSel.onchange = function() {
       const catId = catSel.value;
@@ -2202,18 +2248,6 @@
         everyWrap.classList.remove('hidden');
       } else {
         everyWrap.classList.add('hidden');
-      }
-      updateRecurringSaveState();
-    };
-
-    applyCheckRec.onchange = function() {
-      if (applyCheckRec.checked) {
-        applySectionRec.classList.remove('hidden');
-      } else {
-        applySectionRec.classList.add('hidden');
-        targetWrapRec.classList.add('hidden');
-        sourceSelRec.value = '';
-        targetSelRec.innerHTML = '';
       }
       updateRecurringSaveState();
     };
@@ -2278,8 +2312,9 @@
       if (!name) return { ok: false, msg: 'Name is required.' };
       const amount = parseCents(amountInput.value);
       if (!(amount > 0)) return { ok: false, msg: 'Amount must be greater than $0.' };
+      const isIncomeType = typeSelRec && typeSelRec.value === 'income';
       const catId = catSel.value;
-      if (!catId) return { ok: false, msg: 'Category is required.' };
+      if (!isIncomeType && !catId) return { ok: false, msg: 'Category is required.' };
       const freq = freqSel.value;
       if (!freq) return { ok: false, msg: 'Frequency is required.' };
       if (freq === 'custom') {
@@ -2306,14 +2341,17 @@
           return { ok: false, msg: 'End date must be after start date.' };
         }
       }
-      if (applyCheckRec.checked) {
+      const isIncome = typeSelRec && typeSelRec.value === 'income';
+      if (isIncome) {
+        if (!incomeBankSelRec || !incomeBankSelRec.value) return { ok: false, msg: 'Select a bank for deposit.' };
+      } else {
         const src = sourceSelRec.value;
-        if (!src) return { ok: false, msg: 'Select a payment source or disable Apply to Snapshot.' };
+        if (!src) return { ok: false, msg: 'Select a payment source.' };
         if ((src === 'card' || src === 'bank') && !targetSelRec.value) {
-          return { ok: false, msg: 'Select a specific ' + (src === 'card' ? 'card' : 'bank') + ' or choose a different source.' };
+          return { ok: false, msg: 'Select a specific ' + (src === 'card' ? 'card' : 'bank') + '.' };
         }
       }
-      const isSplit = !!(splitCheckRec && splitCheckRec.checked);
+      const isSplit = !isIncomeType && !!(splitCheckRec && splitCheckRec.checked);
       if (isSplit) {
         const myPortion = myPortionInputRec ? parseCents(myPortionInputRec.value) : 0;
         if (!(myPortion > 0)) return { ok: false, msg: 'My portion must be greater than $0 when split is enabled.' };
@@ -2371,14 +2409,20 @@
     let startDate = document.getElementById('modalRecurringStart').value;
     const endDate = document.getElementById('modalRecurringEnd').value || undefined;
     const active = document.getElementById('modalRecurringActive').checked;
-    const applyToSnapshot = document.getElementById('modalRecurringApplyToSnapshot').checked;
+    const recType = (document.getElementById('modalRecurringType') && document.getElementById('modalRecurringType').value === 'income') ? 'income' : 'expense';
+    const autoPay = document.getElementById('modalRecurringAutoPay').checked;
     const useLastDayOfMonth = document.getElementById('modalRecurringLastDay').checked;
-    const paymentSource = document.getElementById('modalRecurringPaymentSource').value || undefined;
+    let paymentSource = document.getElementById('modalRecurringPaymentSource').value || undefined;
     let paymentTargetId = undefined;
-    if (applyToSnapshot && (paymentSource === 'card' || paymentSource === 'bank')) {
+    if (recType === 'income') {
+      const bankVal = document.getElementById('modalRecurringIncomeBank') ? document.getElementById('modalRecurringIncomeBank').value : '';
+      paymentSource = 'bank';
+      paymentTargetId = bankVal || undefined;
+    } else {
       const val = document.getElementById('modalRecurringTarget').value;
-      paymentTargetId = val || undefined;
+      paymentTargetId = (paymentSource === 'card' || paymentSource === 'bank') ? (val || undefined) : undefined;
     }
+    const applyToSnapshot = !!(paymentSource && paymentTargetId);
     const expectedMinRaw = document.getElementById('modalRecurringExpectedMin').value.trim();
     const expectedMaxRaw = document.getElementById('modalRecurringExpectedMax').value.trim();
     const expectedMinCents = expectedMinRaw ? parseCents(expectedMinRaw) : undefined;
@@ -2394,7 +2438,7 @@
       else if (expectedMaxCents != null && expectedMaxCents > 0 && myPortionCents > expectedMaxCents) failures.push('My portion cannot exceed expected max');
       else if ((expectedMaxCents == null || expectedMaxCents <= 0) && myPortionCents > amountCents) failures.push('My portion cannot exceed amount');
     }
-    if (!category) failures.push('Category is required');
+    if (recType !== 'income' && !category) failures.push('Category is required');
     if (!frequency) failures.push('Frequency is required');
     if (!startDate && !useLastDayOfMonth) failures.push('Start date is required');
     if (frequency === 'custom' && !(everyNDays > 0)) failures.push('Every N days must be at least 1');
@@ -2403,10 +2447,8 @@
       const e = parseLocalDateKey(endDate);
       if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e < s) failures.push('End date must be after start date');
     }
-    if (applyToSnapshot) {
-      if (!paymentSource) failures.push('Payment source is required when applying to Snapshot');
-      if ((paymentSource === 'card' || paymentSource === 'bank') && !paymentTargetId) failures.push('Select a specific card/bank target');
-    }
+    if (recType === 'income' && !paymentTargetId) failures.push('Select a bank for deposit');
+    if (recType !== 'income' && (!paymentSource || !paymentTargetId)) failures.push('Select payment source and target');
     if (failures.length) {
       console.log('[recurring] validation failed:', { failures, useLastDayOfMonth, rawStartDate: document.getElementById('modalRecurringStart').value });
       if (errEl) {
@@ -2420,22 +2462,24 @@
       id: editingRecurringId || '(new)',
       name: nameRaw,
       amountCents,
-      category,
-      subcategory: subcategory || undefined,
+      category: recType === 'income' ? undefined : category,
+      subcategory: recType === 'income' ? undefined : (subcategory || undefined),
       notes,
       frequency,
       everyNDays,
       startDate,
       endDate,
       active,
+      type: recType,
+      autoPay: autoPay || undefined,
       applyToSnapshot,
       paymentSource,
       paymentTargetId,
       useLastDayOfMonth,
       expectedMinCents,
       expectedMaxCents,
-      isSplit: isSplit || undefined,
-      myPortionCents: isSplit && myPortionCents > 0 ? myPortionCents : undefined
+      isSplit: (recType !== 'income' && isSplit) || undefined,
+      myPortionCents: (recType !== 'income' && isSplit && myPortionCents > 0) ? myPortionCents : undefined
     };
     console.log('[recurring] saving payload:', payload);
 
@@ -2444,22 +2488,24 @@
         id: uid(),
         name: nameRaw,
         amountCents,
-        category,
-        subcategory: subcategory || undefined,
+        category: recType === 'income' ? undefined : category,
+        subcategory: recType === 'income' ? undefined : (subcategory || undefined),
         notes,
         frequency,
         everyNDays,
         startDate,
         endDate,
         active,
+        type: recType,
+        autoPay: autoPay || undefined,
         applyToSnapshot,
         paymentSource,
         paymentTargetId,
         useLastDayOfMonth,
         expectedMinCents,
         expectedMaxCents,
-        isSplit: isSplit || undefined,
-        myPortionCents: isSplit && myPortionCents > 0 ? myPortionCents : undefined
+        isSplit: (recType !== 'income' && isSplit) || undefined,
+        myPortionCents: (recType !== 'income' && isSplit && myPortionCents > 0) ? myPortionCents : undefined
       };
       data.recurring.push(r);
     } else {
@@ -2467,22 +2513,24 @@
       if (r) {
         r.name = nameRaw;
         r.amountCents = amountCents;
-        r.category = category;
-        r.subcategory = subcategory || undefined;
+        r.category = recType === 'income' ? undefined : category;
+        r.subcategory = recType === 'income' ? undefined : (subcategory || undefined);
         r.notes = notes;
         r.frequency = frequency;
         r.everyNDays = everyNDays;
         r.startDate = startDate;
         r.endDate = endDate;
         r.active = active;
+        r.type = recType;
+        r.autoPay = autoPay || undefined;
         r.applyToSnapshot = applyToSnapshot;
         r.paymentSource = paymentSource;
         r.paymentTargetId = paymentTargetId;
         r.useLastDayOfMonth = useLastDayOfMonth;
         if (expectedMinCents !== undefined) r.expectedMinCents = expectedMinCents;
         if (expectedMaxCents !== undefined) r.expectedMaxCents = expectedMaxCents;
-        r.isSplit = isSplit || undefined;
-        r.myPortionCents = isSplit && myPortionCents > 0 ? myPortionCents : undefined;
+        r.isSplit = (recType !== 'income' && isSplit) || undefined;
+        r.myPortionCents = (recType !== 'income' && isSplit && myPortionCents > 0) ? myPortionCents : undefined;
       }
     }
     try {
@@ -2512,6 +2560,24 @@
     if (idx === -1) return;
     const item = list[idx];
     const amount = item.amountCents || 0;
+
+    if (kind === 'in' && item.targetBankId) {
+      const bank = data.banks.find(b => b.id === item.targetBankId);
+      if (bank) {
+        bank.balanceCents = (bank.balanceCents || 0) + amount;
+        bank.updatedAt = now();
+        data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+        if (!item.recurringId) setLastPostedBankId('in', bank.id);
+        save(data);
+        renderSnapshot();
+      } else {
+        data.pendingIn = data.pendingIn.filter(p => p.id !== id);
+        save(data);
+        renderSnapshot();
+        if (item.recurringId) alert('Bank no longer exists. Pending item was removed.');
+      }
+      return;
+    }
     if (kind === 'in' && (item.depositTo === 'card') && item.targetCardId) {
       const card = data.cards.find(c => c.id === item.targetCardId);
       if (card) {
@@ -2526,6 +2592,32 @@
         renderSnapshot();
         alert('Credit card no longer exists. Pending item was removed.');
       }
+      return;
+    }
+    if (kind === 'out' && item.recurringId && item.paymentSource && item.paymentTargetId) {
+      const fullAmount = item.splitTotalCents != null ? item.splitTotalCents : amount;
+      const myPortionCents = item.myPortionCents != null ? item.myPortionCents : fullAmount;
+      const purchase = {
+        id: uid(),
+        title: item.label || 'Recurring',
+        amountCents: myPortionCents,
+        dateISO: item.recurringDateKey || toLocalDateKey(new Date()),
+        category: normalizeCategoryId(item.category || 'uncategorized'),
+        subcategory: item.subcategory || undefined,
+        notes: item.notes,
+        recurringId: item.recurringId,
+        recurringDateKey: item.recurringDateKey,
+        applyToSnapshot: true,
+        paymentSource: item.paymentSource,
+        paymentTargetId: item.paymentTargetId
+      };
+      if (item.splitTotalCents != null) purchase.splitTotalCents = item.splitTotalCents;
+      data.purchases.push(purchase);
+      applyPurchaseToSnapshot(purchase);
+      data.pendingOut = data.pendingOut.filter(p => p.id !== id);
+      save(data);
+      renderSnapshot();
+      if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
       return;
     }
     if (!data.banks.length) {
@@ -2635,45 +2727,98 @@
         const dateKey = toLocalDateKey(current);
         const regKey = (r.id || '') + ':' + dateKey;
         if (!data.recurringPosted[regKey]) {
+          const recType = r.type || 'expense';
+          const autoPay = r.autoPay === true;
           const fullAmountCents = (r.expectedMinCents != null && r.expectedMaxCents != null)
             ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
             : (typeof r.amountCents === 'number' ? r.amountCents : 0);
-          const isSplit = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
-          const myPortionCents = isSplit ? r.myPortionCents : fullAmountCents;
-          const purchase = {
-            id: uid(),
-            title: r.name || 'Recurring',
-            amountCents: myPortionCents,
-            dateISO: dateKey,
-            category: normalizeCategoryId(r.category),
-            subcategory: r.subcategory || undefined,
-            notes: r.notes,
-            recurringId: r.id,
-            recurringDateKey: dateKey
-          };
-          if (r.applyToSnapshot && r.paymentSource) {
-            purchase.applyToSnapshot = true;
-            purchase.paymentSource = r.paymentSource;
-            if (r.paymentTargetId) purchase.paymentTargetId = r.paymentTargetId;
-            if (isSplit) purchase.splitTotalCents = fullAmountCents;
-          }
-          data.purchases.push(purchase);
-          if (purchase.applyToSnapshot) {
-            applyPurchaseToSnapshot(purchase);
-            if (isSplit && fullAmountCents > myPortionCents) {
-              const reimbCents = fullAmountCents - myPortionCents;
-              data.pendingIn.push({
+
+          if (recType === 'income') {
+            if (r.applyToSnapshot && r.paymentTargetId) {
+              const bank = data.banks.find(b => b.id === r.paymentTargetId);
+              if (autoPay && bank) {
+                bank.balanceCents = (bank.balanceCents || 0) + fullAmountCents;
+                bank.updatedAt = now();
+              } else if (!autoPay) {
+                data.pendingIn.push({
+                  id: uid(),
+                  label: (r.name || 'Recurring income'),
+                  amountCents: fullAmountCents,
+                  createdAt: now(),
+                  depositTo: 'bank',
+                  targetBankId: r.paymentTargetId,
+                  recurringId: r.id,
+                  recurringDateKey: dateKey
+                });
+              }
+            }
+            data.recurringPosted[regKey] = true;
+            mutated = true;
+            console.log('[recurring] income occurrence', { recurringId: r.id, dateKey, regKey, autoPay });
+          } else {
+            const isSplit = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
+            const myPortionCents = isSplit ? r.myPortionCents : fullAmountCents;
+
+            if (autoPay && r.applyToSnapshot && r.paymentSource) {
+              const purchase = {
                 id: uid(),
-                label: 'Reimbursement: ' + (r.name || 'Recurring'),
-                amountCents: reimbCents,
+                title: r.name || 'Recurring',
+                amountCents: myPortionCents,
+                dateISO: dateKey,
+                category: normalizeCategoryId(r.category || ''),
+                subcategory: r.subcategory || undefined,
+                notes: r.notes,
+                recurringId: r.id,
+                recurringDateKey: dateKey,
+                applyToSnapshot: true,
+                paymentSource: r.paymentSource,
+                paymentTargetId: r.paymentTargetId
+              };
+              if (isSplit) purchase.splitTotalCents = fullAmountCents;
+              data.purchases.push(purchase);
+              applyPurchaseToSnapshot(purchase);
+              if (isSplit && fullAmountCents > myPortionCents) {
+                data.pendingIn.push({
+                  id: uid(),
+                  label: 'Reimbursement: ' + (r.name || 'Recurring'),
+                  amountCents: fullAmountCents - myPortionCents,
+                  createdAt: now(),
+                  splitRecurringPurchaseId: purchase.id
+                });
+              }
+              data.recurringPosted[regKey] = true;
+              mutated = true;
+              console.log('[recurring] posting occurrence (autopay)', { recurringId: r.id, dateKey, regKey, isSplit });
+            } else if (r.applyToSnapshot && r.paymentSource && r.paymentTargetId) {
+              data.pendingOut.push({
+                id: uid(),
+                label: r.name || 'Recurring',
+                amountCents: fullAmountCents,
                 createdAt: now(),
-                splitRecurringPurchaseId: purchase.id
+                recurringId: r.id,
+                recurringDateKey: dateKey,
+                paymentSource: r.paymentSource,
+                paymentTargetId: r.paymentTargetId,
+                splitTotalCents: isSplit ? fullAmountCents : undefined,
+                myPortionCents: isSplit ? myPortionCents : undefined,
+                category: r.category,
+                subcategory: r.subcategory,
+                notes: r.notes
               });
+              if (isSplit && fullAmountCents > myPortionCents) {
+                data.pendingIn.push({
+                  id: uid(),
+                  label: 'Reimbursement: ' + (r.name || 'Recurring'),
+                  amountCents: fullAmountCents - myPortionCents,
+                  createdAt: now(),
+                  recurringOutboundId: data.pendingOut[data.pendingOut.length - 1].id
+                });
+              }
+              data.recurringPosted[regKey] = true;
+              mutated = true;
+              console.log('[recurring] pending outbound created', { recurringId: r.id, dateKey, regKey, isSplit });
             }
           }
-          data.recurringPosted[regKey] = true;
-          mutated = true;
-          console.log('[recurring] posting occurrence', { recurringId: r.id, dateKey, regKey, applyToSnapshot: !!purchase.applyToSnapshot, isSplit });
         } else {
           console.log('[recurring] occurrence already posted', { recurringId: r.id, dateKey, regKey });
         }
@@ -2713,6 +2858,7 @@
     if (!Array.isArray(data.recurring)) return result;
     data.recurring.forEach(r => {
       if (!r || !r.active) return;
+      if ((r.type || 'expense') === 'income') return;
       const start = parseLocalDateKey(r.startDate);
       if (isNaN(start.getTime())) return;
       const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
@@ -2777,6 +2923,57 @@
     return result;
   }
 
+  function getRecurringIncomeOccurrencesInWindow(windowDays) {
+    const today = new Date();
+    const todayKey = toLocalDateKey(today);
+    const endDate = addDaysLocal(today, windowDays);
+    const endKey = toLocalDateKey(endDate);
+    const result = [];
+    if (!Array.isArray(data.recurring)) return result;
+    data.recurring.forEach(r => {
+      if (!r || !r.active || r.type !== 'income') return;
+      const start = parseLocalDateKey(r.startDate);
+      if (isNaN(start.getTime())) return;
+      const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
+      const freq = r.frequency || 'monthly';
+      let current;
+      if (freq === 'monthly' && r.useLastDayOfMonth) {
+        current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      } else {
+        current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      }
+      while (current < today && (!end || current <= end)) {
+        if (freq === 'weekly') current = addDaysLocal(current, 7);
+        else if (freq === 'biweekly') current = addDaysLocal(current, 14);
+        else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
+        else if (freq === 'custom') current = addDaysLocal(current, (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1);
+        else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+        else current = addMonthsPreserveDay(start, current, 1);
+      }
+      while (current <= endDate && (!end || current <= end)) {
+        const dateKey = toLocalDateKey(current);
+        if (dateKey >= todayKey && dateKey <= endKey) {
+          const amountCents = (r.expectedMinCents != null && r.expectedMaxCents != null)
+            ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+            : (typeof r.amountCents === 'number' ? r.amountCents : 0);
+          result.push({
+            id: 'rec:' + r.id + ':' + dateKey,
+            expectedDate: dateKey,
+            amountCents,
+            title: r.name || 'Recurring income'
+          });
+        }
+        if (freq === 'weekly') current = addDaysLocal(current, 7);
+        else if (freq === 'biweekly') current = addDaysLocal(current, 14);
+        else if (freq === 'yearly') current = addYearsPreserveDay(start, current, 1);
+        else if (freq === 'custom') current = addDaysLocal(current, (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1);
+        else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+        else current = addMonthsPreserveDay(start, current, 1);
+      }
+    });
+    return result;
+  }
+
   function daysFromToday(dateKey) {
     const today = toLocalDateKey(new Date());
     const d = parseLocalDateKey(dateKey);
@@ -2814,7 +3011,9 @@
 
     const recurringItems = getRecurringOccurrencesInWindow(windowDays);
     const manualCostsInWindow = expectedCosts.filter(c => c.expectedDate >= todayKey && c.expectedDate <= endKey);
-    const incomeInWindow = expectedIncome.filter(i => i.expectedDate >= todayKey && i.expectedDate <= endKey);
+    const manualIncomeInWindow = expectedIncome.filter(i => i.expectedDate >= todayKey && i.expectedDate <= endKey);
+    const recurringIncomeInWindow = getRecurringIncomeOccurrencesInWindow(windowDays);
+    const incomeInWindow = manualIncomeInWindow.concat(recurringIncomeInWindow);
 
     function midpointCents(item) {
       if (item.minCents != null && item.maxCents != null) {
@@ -2941,7 +3140,7 @@
       if (allCostItems.length === 0) {
         const empty = document.createElement('p');
         empty.style.color = 'var(--muted)';
-        empty.textContent = 'No expected costs in this window. Recurring bills and manual expected costs will appear here.';
+        empty.textContent = 'No expected costs in this window. Recurring expenses and manual expected costs will appear here.';
         costsListEl.appendChild(empty);
       }
     }
@@ -2951,13 +3150,17 @@
       incomeListEl.innerHTML = '';
       incomeInWindow.forEach(item => {
         const days = daysFromToday(item.expectedDate);
+        const isRecurring = typeof item.id === 'string' && item.id.indexOf('rec:') === 0;
+        const actionsHtml = isRecurring
+          ? '<div style="font-size:0.8rem;color:var(--muted);margin-top:6px;">From recurring</div>'
+          : '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-income" style="margin-right:8px;" data-expected-income-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-income-id="' + escapeHtml(item.id) + '">Delete</button></div>';
         const div = document.createElement('div');
         div.className = 'card';
         div.style.marginBottom = '8px';
         div.innerHTML =
           '<div class="row"><span class="name">' + escapeHtml(item.title || 'Income') + '</span><span class="amount upcoming-income-amount">' + formatCents(item.amountCents || 0) + '</span></div>' +
           '<div style="font-size:0.85rem;color:var(--muted);">In ' + (days != null ? days + ' days' : '—') + ' · ' + (item.expectedDate ? formatDisplayDate(item.expectedDate) : '') + '</div>' +
-          '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-income" style="margin-right:8px;" data-expected-income-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-income-id="' + escapeHtml(item.id) + '">Delete</button></div>';
+          actionsHtml;
         incomeListEl.appendChild(div);
       });
     }
