@@ -92,6 +92,7 @@ export function SubTrackerPage() {
         const requiredPace = monthsRemaining == null ? null : remainingCents / monthsRemaining;
         const actualPace = monthsSinceStart == null ? null : spendCents / monthsSinceStart;
         const nextTarget = nextTier ? nextTier.spendTargetCents || 0 : 0;
+        const ratio = nextTarget > 0 ? Math.min(1, Math.max(0, spendCents / nextTarget)) : null;
 
         return (
           <div className="card" key={e.id}>
@@ -121,6 +122,27 @@ export function SubTrackerPage() {
                 {daysRemaining != null ? `~${Math.max(0, daysRemaining)} days` : 'Unknown'}
               </div>
             </div>
+            {ratio != null ? (
+              <div style={{ marginTop: 6 }}>
+                <div
+                  style={{
+                    width: '100%',
+                    height: 4,
+                    borderRadius: 999,
+                    background: 'rgba(148, 163, 184, 0.35)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${ratio * 100}%`,
+                      height: '100%',
+                      background: 'var(--green)'
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
             <div className="btn-row" style={{ marginTop: 10 }}>
               <button
                 type="button"

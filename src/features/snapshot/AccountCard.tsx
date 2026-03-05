@@ -4,11 +4,18 @@ import { formatCents } from '../../state/calc';
 export function AccountCard(props: { name: string; amountCents: number; kind: 'bank' | 'card' }) {
   const amount = props.amountCents;
   const isCredit = amount < 0;
-  const cls = isCredit ? 'amount amount-credit' : 'amount';
+  let amountClass = 'amount';
+  if (props.kind === 'bank') {
+    amountClass = amount >= 0 ? 'amount amount-pos' : 'amount amount-neg';
+  } else if (props.kind === 'card') {
+    amountClass = amount > 0 ? 'amount amount-neg' : amount < 0 ? 'amount amount-pos' : 'amount amount-pos';
+  } else if (isCredit) {
+    amountClass = 'amount amount-credit';
+  }
   return (
     <div className="row ll-account-row">
-      <span className="name">{props.name}</span>
-      <span className={cls}>{formatCents(amount)}</span>
+      <span className="name bank-card-name">{props.name}</span>
+      <span className={amountClass}>{formatCents(amount)}</span>
     </div>
   );
 }

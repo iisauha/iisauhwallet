@@ -132,36 +132,21 @@ body {
 .summary-kv.final-net-cash.negative { background: var(--red-light); }
 .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
 .amount-credit { color: var(--green); font-weight: 600; }
+.amount-pos { color: var(--green); }
+.amount-neg { color: var(--red); }
+.bank-card-name { font-size: 1.02rem; }
 .upcoming-income-amount { color: var(--green); font-weight: 700; }
 .upcoming-cost-amount { color: var(--red); font-weight: 700; }
 .upcoming-status-ok { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(22, 163, 74, 0.2); color: var(--green); font-size: 0.85rem; font-weight: 600; }
 .upcoming-status-warn { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(220, 38, 38, 0.2); color: var(--red); font-size: 0.85rem; font-weight: 600; }
 .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); -webkit-tap-highlight-color: transparent; }
+.pending-amount.inbound-amount { color: var(--green); font-weight: 600; }
+.pending-amount.outbound-amount { color: var(--red); font-weight: 600; }
 .pending-item:last-child { border-bottom: none; }
 .pending-refund-badge,
 .pending-ccpay-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; }
 .pending-refund-badge { background: var(--green-light); color: var(--green); }
 .pending-ccpay-badge { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
-
-.ll-account-card.bank-positive {
-  background: var(--green-light);
-}
-.ll-account-card.card-debt {
-  background: var(--red-light);
-}
-.ll-account-card.card-credit {
-  background: var(--green-light);
-}
-.pending-inbound-wrapper .pending-item {
-  background: var(--green-light);
-  border-radius: 10px;
-  padding-inline: 10px;
-}
-.pending-outbound-wrapper .pending-item {
-  background: var(--red-light);
-  border-radius: 10px;
-  padding-inline: 10px;
-}
 
 .ll-swipe-row {
   position: relative;

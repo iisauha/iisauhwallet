@@ -128,7 +128,9 @@ export function UpcomingPage() {
             <div className="card" key={i.id}>
               <div className="row">
                 <span className="name">{i.title}</span>
-                <span className="amount">{formatCents(i.amountCents || 0)}</span>
+                <span className="amount" style={{ color: 'var(--green)' }}>
+                  {formatCents(i.amountCents || 0)}
+                </span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(i.expectedDate)}</div>
               <div className="btn-row">
@@ -151,7 +153,9 @@ export function UpcomingPage() {
             <div className="card" key={i.id}>
               <div className="row">
                 <span className="name">{i.title}</span>
-                <span className="amount">{formatCents(i.amountCents || 0)}</span>
+                <span className="amount" style={{ color: 'var(--green)' }}>
+                  {formatCents(i.amountCents || 0)}
+                </span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
                 {formatDaysLeft(i.expectedDate)} • From recurring
@@ -217,7 +221,9 @@ export function UpcomingPage() {
             <div className="card" key={c.id}>
               <div className="row">
                 <span className="name">{c.title}</span>
-                <span className="amount">{formatCents(c.amountCents || 0)}</span>
+                <span className="amount" style={{ color: 'var(--red)' }}>
+                  {formatCents(c.amountCents || 0)}
+                </span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(c.expectedDate)}</div>
               <div className="btn-row">
@@ -240,7 +246,9 @@ export function UpcomingPage() {
             <div className="card" key={c.recurringId + ':' + c.dateKey}>
               <div className="row">
                 <span className="name">{c.recurringName}</span>
-                <span className="amount">{formatCents(c.amountCents || 0)}</span>
+                <span className="amount" style={{ color: 'var(--red)' }}>
+                  {formatCents(c.amountCents || 0)}
+                </span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
                 {formatDaysLeft(c.dateKey)} • From recurring

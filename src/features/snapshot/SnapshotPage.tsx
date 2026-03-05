@@ -64,8 +64,13 @@ export function SnapshotPage() {
 
   return (
     <div className="tab-panel active" id="snapshotContent">
-      <div className="section-header" id="bankHeader" onClick={() => setCashCollapsed((v) => !v)}>
-        <span className="section-header-left">
+      <div
+        className="section-header"
+        id="bankHeader"
+        style={{ background: 'rgba(22, 163, 74, 0.12)' }}
+        onClick={() => setCashCollapsed((v) => !v)}
+      >
+        <span className="section-header-left" style={{ color: 'var(--green)' }}>
           Cash — <span>{formatCents(totals.bankTotalCents)}</span>
         </span>
         <button
@@ -136,8 +141,13 @@ export function SnapshotPage() {
         </>
       ) : null}
 
-      <div className="section-header" id="cardHeader" style={{ marginTop: 24 }} onClick={() => setCardsCollapsed((v) => !v)}>
-        <span className="section-header-left">
+      <div
+        className="section-header"
+        id="cardHeader"
+        style={{ marginTop: 24, background: 'rgba(220, 38, 38, 0.12)' }}
+        onClick={() => setCardsCollapsed((v) => !v)}
+      >
+        <span className="section-header-left" style={{ color: 'var(--red)' }}>
           Credit Cards — <span>{formatCents(totals.ccDebtCents - totals.ccCreditCents)}</span>
         </span>
         <button
@@ -209,12 +219,12 @@ export function SnapshotPage() {
       <div
         className="section-header"
         id="pendingInHeader"
-        style={{ marginTop: 24 }}
+        style={{ marginTop: 24, background: 'rgba(22, 163, 74, 0.12)' }}
         onClick={() => {
           setPendingInCollapsed((v) => !v);
         }}
       >
-        <span className="section-header-left">
+        <span className="section-header-left" style={{ color: 'var(--green)' }}>
           Pending Inbound — <span>{formatCents(totals.pendingInCents)}</span>
         </span>
         <span className="chevron">{pendingInCollapsed ? '▸' : '▾'}</span>
@@ -241,12 +251,12 @@ export function SnapshotPage() {
       <div
         className="section-header"
         id="pendingOutHeader"
-        style={{ marginTop: 24 }}
+        style={{ marginTop: 24, background: 'rgba(220, 38, 38, 0.12)' }}
         onClick={() => {
           setPendingOutCollapsed((v) => !v);
         }}
       >
-        <span className="section-header-left">
+        <span className="section-header-left" style={{ color: 'var(--red)' }}>
           Pending Outbound — <span>{formatCents(totals.pendingOutCents)}</span>
         </span>
         <span className="chevron">{pendingOutCollapsed ? '▸' : '▾'}</span>

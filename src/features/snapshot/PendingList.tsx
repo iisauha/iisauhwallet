@@ -19,12 +19,15 @@ export function PendingInboundList(props: {
         const cardName = card ? card.name || '' : '';
         const label = isRefund ? `Refund — ${p.label} ${formatCents(p.amountCents)}${cardName ? ` → ${cardName}` : ''}` : `${p.label} ${formatCents(p.amountCents)}`;
 
+        const amountText = formatCents(p.amountCents);
         return (
           <div className="pending-item" key={p.id}>
             <span>
               {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
               {isRefund ? ' — ' : null}
               {escapeText(label.replace(/^Refund —\s*/, ''))}
+              {' '}
+              <span className="pending-amount inbound-amount">{amountText}</span>
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn btn-posted" onClick={() => props.onPosted?.(p.id)}>
@@ -52,14 +55,15 @@ export function PendingOutboundList(props: {
       {props.items.map((p) => {
         const isCcPay = p.outboundType === 'cc_payment';
         let label: string;
+        const amountText = formatCents(p.amountCents);
         if (isCcPay) {
           const bank = p.sourceBankId ? (props.data.banks || []).find((b) => b.id === p.sourceBankId) : undefined;
           const card = p.targetCardId ? (props.data.cards || []).find((c) => c.id === p.targetCardId) : undefined;
           const bankName = bank ? bank.name || 'Bank' : 'Bank';
           const cardName = card ? card.name || 'Card' : 'Card';
-          label = `CC Payment From ${bankName} → ${cardName} ${formatCents(p.amountCents)}`;
+          label = `CC Payment From ${bankName} → ${cardName}`;
         } else {
-          label = `${p.label} ${formatCents(p.amountCents)}`;
+          label = `${p.label}`;
         }
         return (
           <div className="pending-item" key={p.id}>
@@ -67,6 +71,8 @@ export function PendingOutboundList(props: {
               {isCcPay ? <span className="pending-ccpay-badge">CC Payment</span> : null}
               {isCcPay ? ' ' : null}
               {escapeText(label.replace(/^CC Payment\s*/, ''))}
+              {' '}
+              <span className="pending-amount outbound-amount">{amountText}</span>
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn btn-posted" onClick={() => props.onPosted?.(p.id)}>
