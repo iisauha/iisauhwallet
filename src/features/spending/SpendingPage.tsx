@@ -42,6 +42,7 @@ export function SpendingPage() {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [openAdd, setOpenAdd] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<any | null>(null);
   const [view, setView] = useState<BreakdownView>('category');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,6 +278,16 @@ export function SpendingPage() {
               <div className="btn-row">
                 <button
                   type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setEditingPurchase(p);
+                    setOpenAdd(true);
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
                   className="btn btn-danger"
                   onClick={() => setConfirmDelete({ id: p.id, label: p.title || 'Purchase' })}
                 >
@@ -299,11 +310,19 @@ export function SpendingPage() {
         </div>
       ) : null}
 
-      <button type="button" className="btn btn-add" style={{ marginTop: 16, width: '100%' }} onClick={() => setOpenAdd(true)}>
+      <button
+        type="button"
+        className="btn btn-add"
+        style={{ marginTop: 16, width: '100%' }}
+        onClick={() => {
+          setEditingPurchase(null);
+          setOpenAdd(true);
+        }}
+      >
         + Add Purchase
       </button>
 
-      <AddPurchaseModal open={openAdd} onClose={() => setOpenAdd(false)} />
+      <AddPurchaseModal open={openAdd} onClose={() => setOpenAdd(false)} purchase={editingPurchase} />
 
       {confirmDelete ? (
         <div className="modal-overlay">

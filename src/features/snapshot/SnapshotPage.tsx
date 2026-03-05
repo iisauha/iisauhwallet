@@ -58,7 +58,7 @@ export function SnapshotPage() {
     } else {
       const last = getLastPostedBankId('out');
       const defaultId = data.banks.some((b) => b.id === last) ? last : data.banks[0]?.id || '';
-      setModal({ type: 'post-bank', kind: 'out', pendingId: id, bankId: defaultId });
+      setModal({ type: 'post-bank', kind: 'out', pendingId: id, bankId: `bank:${defaultId}` });
     }
   }
 
@@ -614,15 +614,27 @@ export function SnapshotPage() {
             {modal.type === 'post-bank' ? (
               <>
                 <h3>Confirm payment posted</h3>
-                <p style={{ color: 'var(--muted)', marginTop: 0 }}>Which bank should this subtract from?</p>
+                <p style={{ color: 'var(--muted)', marginTop: 0 }}>Which account should this subtract from?</p>
                 <div className="field">
-                  <label>Bank account</label>
+                  <label>Account</label>
                   <Select value={modal.bankId} onChange={(e) => setModal({ ...modal, bankId: e.target.value })}>
                     {(data.banks || []).map((b) => (
-                      <option key={b.id} value={b.id}>
+                      <option key={b.id} value={`bank:${b.id}`}>
                         {b.name}
                       </option>
                     ))}
+                    {(data.cards || []).length ? (
+                      <>
+                        <option value="" disabled>
+                          ──────────
+                        </option>
+                        {(data.cards || []).map((c) => (
+                          <option key={c.id} value={`card:${c.id}`}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </>
+                    ) : null}
                   </Select>
                 </div>
                 <div className="btn-row">
@@ -634,7 +646,13 @@ export function SnapshotPage() {
                     className="btn btn-secondary"
                     onClick={() => {
                       if (!modal.bankId) return;
-                      actions.markPendingPosted('out', modal.pendingId, { bankId: modal.bankId });
+                      const [kind, destId] = modal.bankId.split(':');
+                      if (!destId) return;
+                      if (kind === 'card') {
+                        actions.markPendingPosted('out', modal.pendingId, { targetCardId: destId });
+                      } else {
+                        actions.markPendingPosted('out', modal.pendingId, { bankId: destId });
+                      }
                       setModal({ type: 'none' });
                     }}
                   >

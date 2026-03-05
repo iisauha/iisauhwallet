@@ -13,7 +13,7 @@ function todayKey() {
   return `${y}-${m}-${dd}`;
 }
 
-export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) {
+export function AddPurchaseModal(props: { open: boolean; onClose: () => void; purchase?: any }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -32,7 +32,26 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) 
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
+  const isEditing = !!props.purchase;
+
+  // Refill form when opening or when purchase changes.
   if (!props.open) return null;
+
+  if (props.purchase && !title && !amount && !notes && !isSplit && !applyToSnapshot) {
+    const p: any = props.purchase;
+    setTitle(p.title || '');
+    setAmount(((p.amountCents || 0) / 100).toFixed(2));
+    setDateISO(p.dateISO || todayKey());
+    setCategory(p.category || 'food');
+    setSubcategory(p.subcategory || '');
+    setNotes(p.notes || '');
+    const split = !!p.isSplit && typeof p.splitMyPortionCents === 'number';
+    setIsSplit(split);
+    setMyPortion(split ? ((p.splitMyPortionCents || 0) / 100).toFixed(2) : '');
+    setApplyToSnapshot(!!p.applyToSnapshot);
+    setPaymentSource((p.paymentSource as any) || '');
+    setPaymentTargetId(p.paymentTargetId || '');
+  }
 
   const totalCents = parseCents(amount);
   const myPortionCents = isSplit ? parseCents(myPortion) : totalCents;
@@ -51,7 +70,7 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) 
   return (
     <div className="modal-overlay">
       <div className="modal">
-        <h3>Add Purchase</h3>
+        <h3>{isEditing ? 'Edit Purchase' : 'Add Purchase'}</h3>
         <div className="field">
           <label>Title / Merchant</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Coffee shop" />
@@ -214,7 +233,11 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) 
                   purchase.splitSnapshot = { amountCents: appliedAmount, paymentSource: purchase.paymentSource, paymentTargetId: purchase.paymentTargetId };
                 }
               }
-              actions.addPurchase(purchase);
+              if (isEditing && props.purchase) {
+                actions.updatePurchase(props.purchase.id, purchase);
+              } else {
+                actions.addPurchase(purchase);
+              }
               props.onClose();
               setTitle('');
               setAmount('');

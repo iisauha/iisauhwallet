@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase } from './models';
+import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
 import { loadData, loadSubTracker, nowIso, saveData, saveSubTracker, setLastPostedBankId, uid } from './storage';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
@@ -17,8 +17,10 @@ export interface LedgerState {
     addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
+    updatePurchase: (id: string, updated: Omit<Purchase, 'id'>) => void;
     deletePurchase: (id: string) => void;
     addRecurringItem: (item: any) => void;
+    updateRecurringItem: (id: string, updates: Partial<RecurringItem>) => void;
     deleteRecurringItem: (id: string) => void;
     processRecurringBillsUpToToday: () => void;
     markRecurringHandled: (recurringId: string, dateKey: string) => void;
@@ -89,6 +91,172 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     addPendingOutbound: (item) => {
       const next = structuredClone(get().data) as LedgerData;
       next.pendingOut.push({ ...item, id: uid(), createdAt: nowIso() });
+      saveData(next);
+      set({ data: next });
+    },
+    updatePurchase: (id, updated) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const idx = (next.purchases || []).findIndex((x: any) => x.id === id);
+      if (idx === -1) return;
+      const oldP: any = (next.purchases || [])[idx];
+      const normalize = (s: unknown) =>
+        typeof s === 'string' ? s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() : '';
+
+      // Roll back snapshot effects of the old purchase (mirror deletePurchase logic).
+      const appliedOld = !!oldP.applyToSnapshot && !!oldP.paymentSource;
+      if (appliedOld) {
+        const isSplitApplied = !!oldP.isSplit && oldP.splitSnapshot && typeof oldP.splitSnapshot.amountCents === 'number';
+        const amount = isSplitApplied
+          ? oldP.splitSnapshot.amountCents
+          : typeof oldP.amountCents === 'number'
+            ? oldP.amountCents
+            : 0;
+        const src = isSplitApplied && oldP.splitSnapshot.paymentSource ? oldP.splitSnapshot.paymentSource : oldP.paymentSource;
+        const targetId = isSplitApplied && oldP.splitSnapshot.paymentTargetId
+          ? oldP.splitSnapshot.paymentTargetId
+          : oldP.paymentTargetId;
+
+        if ((src === 'card' || src === 'credit_card') && targetId) {
+          const card = next.cards.find((c) => c.id === targetId);
+          if (card) {
+            card.balanceCents = (card.balanceCents || 0) - amount;
+            card.updatedAt = nowIso();
+          }
+        } else if ((src === 'bank' || src === 'cash') && (targetId || src === 'cash')) {
+          const bankTargetId = targetId || PHYSICAL_CASH_ID;
+          const bank = next.banks.find((b) => b.id === bankTargetId);
+          if (bank) {
+            bank.balanceCents = (bank.balanceCents || 0) + amount;
+            bank.updatedAt = nowIso();
+          }
+        }
+      }
+
+      // Remove any split-generated pending inbound for the old purchase.
+      if (oldP.isSplit && oldP.splitPendingId && Array.isArray(next.pendingIn)) {
+        next.pendingIn = next.pendingIn.filter((pi: any) => pi.id !== oldP.splitPendingId);
+      }
+
+      // Roll back SUB tracker effects of the old purchase (mirror deletePurchase logic).
+      try {
+        const isCardOld =
+          oldP.applyToSnapshot && (oldP.paymentSource === 'card' || oldP.paymentSource === 'credit_card') && oldP.paymentTargetId;
+        const deltaOld = typeof oldP.amountCents === 'number' ? oldP.amountCents : 0;
+        if (isCardOld && deltaOld > 0) {
+          const targetId = String(oldP.paymentTargetId || '');
+          const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
+          const tracker = loadSubTracker();
+          let changed = false;
+          const entries = (tracker.entries || []).map((e: any) => {
+            if (!e) return e;
+            const ref = e.cardRef;
+            const matches =
+              ref && ref.type === 'card'
+                ? String(ref.cardId || '') === targetId
+                : ref && ref.type === 'manual'
+                  ? normalize(ref.name) && normalize(ref.name) === normalize(cardName)
+                  : false;
+            if (!matches) return e;
+            const applied: string[] = Array.isArray(e.appliedPurchaseIds) ? e.appliedPurchaseIds : [];
+            if (!applied.includes(id)) return e;
+            const prev = typeof e.spendCents === 'number' ? e.spendCents : 0;
+            const nextSpend = Math.max(0, prev - deltaOld);
+            changed = true;
+            return {
+              ...e,
+              spendCents: nextSpend,
+              appliedPurchaseIds: applied.filter((pid) => pid !== id),
+              updatedAt: nowIso()
+            };
+          });
+          if (changed) saveSubTracker({ version: 1, entries });
+        }
+      } catch (_) {}
+
+      // Apply updated purchase (mirror addPurchase logic, but keep same id).
+      const p: any = { ...updated, id };
+
+      // If split purchase with inbound reimbursement, create pending inbound item.
+      if (p.isSplit && typeof p.splitInboundCents === 'number' && p.splitInboundCents > 0) {
+        const pendingId = uid();
+        const label = 'Venmo - "' + (p.title || 'Purchase') + '"';
+        next.pendingIn.push({
+          id: pendingId,
+          label,
+          amountCents: p.splitInboundCents,
+          createdAt: nowIso(),
+          linkedPurchaseId: id,
+          fromSplit: true
+        });
+        p.splitPendingId = pendingId;
+      }
+
+      // Apply to snapshot for updated purchase.
+      const appliedNew = !!p.applyToSnapshot && !!p.paymentSource;
+      if (appliedNew) {
+        const isSplitAppliedNew = !!p.isSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
+        const amountNew = isSplitAppliedNew
+          ? p.splitSnapshot.amountCents
+          : typeof p.amountCents === 'number'
+            ? p.amountCents
+            : 0;
+        const srcNew = isSplitAppliedNew && p.splitSnapshot.paymentSource ? p.splitSnapshot.paymentSource : p.paymentSource;
+        const targetIdNew = isSplitAppliedNew && p.splitSnapshot.paymentTargetId
+          ? p.splitSnapshot.paymentTargetId
+          : p.paymentTargetId;
+
+        if ((srcNew === 'card' || srcNew === 'credit_card') && targetIdNew) {
+          const card = next.cards.find((c) => c.id === targetIdNew);
+          if (card) {
+            card.balanceCents = (card.balanceCents || 0) + amountNew;
+            card.updatedAt = nowIso();
+          }
+        } else if ((srcNew === 'bank' || srcNew === 'cash') && (targetIdNew || srcNew === 'cash')) {
+          const bankTargetIdNew = targetIdNew || PHYSICAL_CASH_ID;
+          const bank = next.banks.find((b) => b.id === bankTargetIdNew);
+          if (bank) {
+            bank.balanceCents = (bank.balanceCents || 0) - amountNew;
+            bank.updatedAt = nowIso();
+          }
+        }
+      }
+
+      // SUB tracker for updated purchase.
+      try {
+        const isCardNew =
+          p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
+        const deltaNew = typeof p.amountCents === 'number' ? p.amountCents : 0;
+        if (isCardNew && deltaNew > 0) {
+          const targetId = String(p.paymentTargetId || '');
+          const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
+          const tracker = loadSubTracker();
+          let changed = false;
+          const entries = (tracker.entries || []).map((e: any) => {
+            if (!e) return e;
+            const ref = e.cardRef;
+            const matches =
+              ref && ref.type === 'card'
+                ? String(ref.cardId || '') === targetId
+                : ref && ref.type === 'manual'
+                  ? normalize(ref.name) && normalize(ref.name) === normalize(cardName)
+                  : false;
+            if (!matches) return e;
+            const applied: string[] = Array.isArray(e.appliedPurchaseIds) ? e.appliedPurchaseIds : [];
+            if (applied.includes(id)) return e;
+            const nextSpend = (typeof e.spendCents === 'number' ? e.spendCents : 0) + deltaNew;
+            changed = true;
+            return {
+              ...e,
+              spendCents: nextSpend,
+              appliedPurchaseIds: [...applied, id],
+              updatedAt: nowIso()
+            };
+          });
+          if (changed) saveSubTracker({ version: 1, entries });
+        }
+      } catch (_) {}
+
+      next.purchases[idx] = p;
       saveData(next);
       set({ data: next });
     },
@@ -252,6 +420,13 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const next = structuredClone(get().data) as any;
       if (!Array.isArray(next.recurring)) next.recurring = [];
       next.recurring.push({ id: uid(), ...item });
+      saveData(next);
+      set({ data: next });
+    },
+    updateRecurringItem: (id, updates) => {
+      const next = structuredClone(get().data) as any;
+      if (!Array.isArray(next.recurring)) next.recurring = [];
+      next.recurring = next.recurring.map((r: any) => (r && r.id === id ? { ...r, ...updates } : r));
       saveData(next);
       set({ data: next });
     },
@@ -476,6 +651,20 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (!next.banks.length) {
         if (kind === 'in') next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
         else next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+        saveData(next);
+        set({ data: next });
+        return { needsBankSelection: false };
+      }
+
+      // For standard outbound, allow either bank or credit card as the payment source.
+      if (kind === 'out' && resolved.targetCardId) {
+        const card = next.cards.find((c) => c.id === resolved.targetCardId);
+        if (card) {
+          card.balanceCents = (card.balanceCents || 0) + amount;
+          card.updatedAt = nowIso();
+        }
+        markRecurringInstanceHandledIfPresent(item);
+        next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
         saveData(next);
         set({ data: next });
         return { needsBankSelection: false };

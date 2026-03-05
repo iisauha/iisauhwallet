@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatLongLocalDate, parseCents } from '../../state/calc';
+import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
 import { Select } from '../../ui/Select';
@@ -38,6 +39,7 @@ export function RecurringPage() {
   const [isSplit, setIsSplit] = useState(false);
   const [myPortion, setMyPortion] = useState('');
   const [useLastDayOfMonth, setUseLastDayOfMonth] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
@@ -89,6 +91,44 @@ export function RecurringPage() {
                 {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
               </div>
               <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setEditingId(r.id);
+                    setType(r.type || 'income');
+                    setName(r.name || '');
+                    setAmount(((r.amountCents || 0) / 100).toFixed(2));
+                    setExpectedMin(
+                      typeof r.expectedMinCents === 'number' ? (r.expectedMinCents / 100).toFixed(2) : ''
+                    );
+                    setExpectedMax(
+                      typeof r.expectedMaxCents === 'number' ? (r.expectedMaxCents / 100).toFixed(2) : ''
+                    );
+                    setFrequency(r.frequency || 'monthly');
+                    const nDays = r.everyNDays || r.intervalDays || 30;
+                    setEveryNDays(String(nDays));
+                    setStartDate(r.startDate || startDate);
+                    setActive(r.active !== false);
+                    setAutoPay(!!r.autoPay);
+                    setPaymentSource((r.paymentSource as any) || '');
+                    setPaymentTargetId(r.paymentTargetId || '');
+                    setCategory(r.category || 'food');
+                    setSubcategory(r.subcategory || '');
+                    setNotes(r.notes || '');
+                    const split = !!r.isSplit && typeof r.myPortionCents === 'number';
+                    setIsSplit(split);
+                    setMyPortion(
+                      split && typeof r.myPortionCents === 'number'
+                        ? (r.myPortionCents / 100).toFixed(2)
+                        : ''
+                    );
+                    setUseLastDayOfMonth(!!r.useLastDayOfMonth);
+                    setOpen(true);
+                  }}
+                >
+                  Edit
+                </button>
                 <button
                   type="button"
                   className="btn btn-danger"
@@ -146,6 +186,44 @@ export function RecurringPage() {
                     <div className="btn-row">
                       <button
                         type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          setEditingId(r.id);
+                          setType((r.type as any) || 'expense');
+                          setName(r.name || '');
+                          setAmount(((r.amountCents || 0) / 100).toFixed(2));
+                          setExpectedMin(
+                            typeof r.expectedMinCents === 'number' ? (r.expectedMinCents / 100).toFixed(2) : ''
+                          );
+                          setExpectedMax(
+                            typeof r.expectedMaxCents === 'number' ? (r.expectedMaxCents / 100).toFixed(2) : ''
+                          );
+                          setFrequency(r.frequency || 'monthly');
+                          const nDays = r.everyNDays || r.intervalDays || 30;
+                          setEveryNDays(String(nDays));
+                          setStartDate(r.startDate || startDate);
+                          setActive(r.active !== false);
+                          setAutoPay(!!r.autoPay);
+                          setPaymentSource((r.paymentSource as any) || '');
+                          setPaymentTargetId(r.paymentTargetId || '');
+                          setCategory(r.category || 'food');
+                          setSubcategory(r.subcategory || '');
+                          setNotes(r.notes || '');
+                          const split = !!r.isSplit && typeof r.myPortionCents === 'number';
+                          setIsSplit(split);
+                          setMyPortion(
+                            split && typeof r.myPortionCents === 'number'
+                              ? (r.myPortionCents / 100).toFixed(2)
+                              : ''
+                          );
+                          setUseLastDayOfMonth(!!r.useLastDayOfMonth);
+                          setOpen(true);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
                         className="btn btn-danger"
                         onClick={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring' })}
                       >
@@ -160,7 +238,37 @@ export function RecurringPage() {
         );
       })}
 
-      <button type="button" className="btn btn-add" style={{ marginTop: 16, width: '100%' }} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className="btn btn-add"
+        style={{ marginTop: 16, width: '100%' }}
+        onClick={() => {
+          setEditingId(null);
+          setType('expense');
+          setName('');
+          setAmount('');
+          setExpectedMin('');
+          setExpectedMax('');
+          setFrequency('monthly');
+          setEveryNDays('30');
+          const d = new Date();
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          setStartDate(`${y}-${m}-${dd}`);
+          setActive(true);
+          setAutoPay(false);
+          setPaymentSource('');
+          setPaymentTargetId('');
+          setCategory('food');
+          setSubcategory('');
+          setNotes('');
+          setIsSplit(false);
+          setMyPortion('');
+          setUseLastDayOfMonth(false);
+          setOpen(true);
+        }}
+      >
         + Add Recurring Item
       </button>
 
@@ -364,7 +472,14 @@ export function RecurringPage() {
             )}
 
             <div className="btn-row">
-              <button type="button" className="btn btn-secondary" onClick={() => setOpen(false)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setOpen(false);
+                  setEditingId(null);
+                }}
+              >
                 Cancel
               </button>
               <button
@@ -375,9 +490,10 @@ export function RecurringPage() {
                   if (!(amountCents > 0)) return;
                   const expectedMinCents = expectedMin.trim() ? parseCents(expectedMin) : undefined;
                   const expectedMaxCents = expectedMax.trim() ? parseCents(expectedMax) : undefined;
-                  const every = frequency === 'every_n_days' ? Math.max(1, parseInt(everyNDays || '1', 10) || 1) : undefined;
+                  const every =
+                    frequency === 'every_n_days' ? Math.max(1, parseInt(everyNDays || '1', 10) || 1) : undefined;
                   const intervalDays = frequency === 'every_n_days' ? every : undefined;
-                  actions.addRecurringItem({
+                  const payload: Partial<RecurringItem> = {
                     name: name.trim() || (type === 'income' ? 'Recurring income' : 'Recurring'),
                     amountCents,
                     expectedMinCents,
@@ -390,7 +506,7 @@ export function RecurringPage() {
                     endDate: undefined,
                     active,
                     autoPay: autoPay || undefined,
-                    paymentSource: type === 'income' ? undefined : paymentSource || undefined,
+                    paymentSource: type === 'income' ? undefined : (paymentSource || undefined),
                     paymentTargetId: paymentTargetId || undefined,
                     useLastDayOfMonth: useLastDayOfMonth || undefined,
                     category: type === 'income' ? undefined : category,
@@ -398,8 +514,14 @@ export function RecurringPage() {
                     notes: notes || undefined,
                     isSplit: type !== 'income' && isSplit ? true : undefined,
                     myPortionCents: type !== 'income' && isSplit ? parseCents(myPortion) : undefined
-                  });
+                  };
+                  if (editingId) {
+                    actions.updateRecurringItem(editingId, payload);
+                  } else {
+                    actions.addRecurringItem(payload);
+                  }
                   setOpen(false);
+                  setEditingId(null);
                 }}
               >
                 Save
