@@ -3,6 +3,7 @@ import { parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, getCategorySubcategories, loadCategoryConfig } from '../../state/storage';
+import { Select } from '../../ui/Select';
 
 function todayKey() {
   const d = new Date();
@@ -65,25 +66,25 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) 
         </div>
         <div className="field">
           <label>Category</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
             {Object.keys(cfg).map((id) => (
               <option key={id} value={id}>
                 {getCategoryName(cfg, id)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {subs.length ? (
           <div className="field">
             <label>Subcategory</label>
-            <select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
+            <Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
               <option value="">—</option>
               {subs.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         ) : null}
         <div className="field">
@@ -115,7 +116,7 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) 
           <>
             <div className="field">
               <label>Payment Source</label>
-              <select
+              <Select
                 value={paymentSource}
                 onChange={(e) => {
                   const v = e.target.value as any;
@@ -127,32 +128,32 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void }) 
                 <option value="card">Credit Card</option>
                 <option value="bank">Cash (Bank)</option>
                 <option value="cash">Physical Cash</option>
-              </select>
+              </Select>
             </div>
             {paymentSource === 'card' ? (
               <div className="field">
                 <label>Select Card</label>
-                <select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
                   <option value="">— Select —</option>
                   {(data.cards || []).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             ) : null}
             {paymentSource === 'bank' ? (
               <div className="field">
                 <label>Select Bank</label>
-                <select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
                   <option value="">— Select —</option>
                   {(data.banks || []).map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             ) : null}
             {paymentSource === 'cash' ? (

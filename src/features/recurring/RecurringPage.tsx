@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
+import { Select } from '../../ui/Select';
 
 export function RecurringPage() {
   const data = useLedgerStore((s) => s.data);
@@ -99,10 +100,10 @@ export function RecurringPage() {
             <h3>Recurring Item</h3>
             <div className="field">
               <label>Type</label>
-              <select value={type} onChange={(e) => setType(e.target.value as any)}>
+              <Select value={type} onChange={(e) => setType(e.target.value as any)}>
                 <option value="expense">Expense</option>
                 <option value="income">Income</option>
-              </select>
+              </Select>
             </div>
             <div className="field">
               <label>Name / Merchant</label>
@@ -135,25 +136,25 @@ export function RecurringPage() {
                 ) : null}
                 <div className="field">
                   <label>Category</label>
-                  <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <Select value={category} onChange={(e) => setCategory(e.target.value)}>
                     {Object.keys(cfg).map((id) => (
                       <option key={id} value={id}>
                         {getCategoryName(cfg, id)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 {subs.length ? (
                   <div className="field">
                     <label>Subcategory</label>
-                    <select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
+                    <Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
                       <option value="">—</option>
                       {subs.map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 ) : null}
               </>
@@ -166,13 +167,13 @@ export function RecurringPage() {
 
             <div className="field">
               <label>Frequency</label>
-              <select value={frequency} onChange={(e) => setFrequency(e.target.value as any)}>
+              <Select value={frequency} onChange={(e) => setFrequency(e.target.value as any)}>
                 <option value="monthly">Monthly</option>
                 <option value="weekly">Weekly</option>
                 <option value="biweekly">Biweekly</option>
                 <option value="yearly">Yearly</option>
                 <option value="every_n_days">Custom (every N days)</option>
-              </select>
+              </Select>
             </div>
             {frequency === 'every_n_days' ? (
               <div className="field">
@@ -207,35 +208,35 @@ export function RecurringPage() {
                 {type === 'income' ? (
                   <div className="field">
                     <label>Deposit to bank</label>
-                    <select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                    <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
                       <option value="">— Select bank —</option>
                       {(data.banks || []).map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.name}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 ) : (
                   <>
                     <div className="field">
                       <label>Payment Source</label>
-                      <select value={paymentSource} onChange={(e) => setPaymentSource(e.target.value as any)}>
+                      <Select value={paymentSource} onChange={(e) => setPaymentSource(e.target.value as any)}>
                         <option value="">— Select source —</option>
                         <option value="card">Credit Card</option>
                         <option value="bank">Cash (Bank)</option>
-                      </select>
+                      </Select>
                     </div>
                     <div className="field">
                       <label>Select Target</label>
-                      <select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                      <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
                         <option value="">— Select —</option>
                         {(paymentSource === 'card' ? data.cards : data.banks).map((x: any) => (
                           <option key={x.id} value={x.id}>
                             {x.name}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   </>
                 )}

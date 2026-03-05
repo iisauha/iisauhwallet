@@ -24,14 +24,14 @@ function saveCategoryColorMapMerge(newAssignments: Record<string, string>) {
     const existing = existingRaw ? JSON.parse(existingRaw) || {} : {};
     const merged = { ...existing, ...newAssignments };
     localStorage.setItem(CATEGORY_COLOR_MAP_KEY, JSON.stringify(merged));
-    if ((getCategoryColorMap as any).cache) {
-      (getCategoryColorMap as any).cache = { ...(getCategoryColorMap as any).cache, ...newAssignments };
+    if ((categoryColorMap as any).cache) {
+      (categoryColorMap as any).cache = { ...(categoryColorMap as any).cache, ...newAssignments };
     }
   } catch (_) {}
 }
 
-function getCategoryColorMap(): Record<string, string> {
-  const anyFn = getCategoryColorMap as any;
+export function categoryColorMap(): Record<string, string> {
+  const anyFn = categoryColorMap as any;
   if (!anyFn.cache) anyFn.cache = loadCategoryColorMap();
   return anyFn.cache;
 }
@@ -89,7 +89,7 @@ function generateDeterministicColorForCategory(id: string) {
 }
 
 export function getCategoryColor(categoryId: string) {
-  const map = getCategoryColorMap();
+  const map = categoryColorMap();
   if (map[categoryId]) return map[categoryId];
   const existingColors = Object.values(map);
   let color = '#64748b';

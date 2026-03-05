@@ -1,6 +1,7 @@
 import type { SelectHTMLAttributes } from 'react';
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} />;
+  const className = ['ll-select', props.className].filter(Boolean).join(' ');
+  return <select {...props} className={className} />;
 }
 

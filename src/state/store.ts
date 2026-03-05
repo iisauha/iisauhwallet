@@ -24,7 +24,11 @@ export interface LedgerState {
     markRecurringHandled: (recurringId: string, dateKey: string) => void;
     deletePending: (kind: 'in' | 'out', id: string) => void;
     clearPending: (kind: 'in' | 'out') => void;
-    markPendingPosted: (kind: 'in' | 'out', id: string, bankId?: string) => { needsBankSelection: boolean };
+    markPendingPosted: (
+      kind: 'in' | 'out',
+      id: string,
+      opts?: { bankId?: string; isRefund?: boolean; targetCardId?: string }
+    ) => { needsBankSelection: boolean };
   };
 }
 
@@ -324,7 +328,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       saveData(next);
       set({ data: next });
     },
-    markPendingPosted: (kind, id, bankId) => {
+    markPendingPosted: (kind, id, opts) => {
       const current = get().data;
       const next = structuredClone(current) as LedgerData;
       const list = kind === 'in' ? next.pendingIn : next.pendingOut;
@@ -332,6 +336,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (idx === -1) return { needsBankSelection: false };
       const item: any = list[idx];
       const amount = item.amountCents || 0;
+      const resolved = opts || {};
 
       if (kind === 'in' && item.targetBankId) {
         const bank = next.banks.find((b) => b.id === item.targetBankId);
@@ -345,8 +350,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         return { needsBankSelection: false };
       }
 
-      if (kind === 'in' && item.isRefund && item.targetCardId) {
-        const card = next.cards.find((c) => c.id === item.targetCardId);
+      // Enforce: inbound cannot be applied to a credit card unless isRefund=true (even if UI is bypassed).
+      const refundAllowed = Boolean(item.isRefund) || Boolean(resolved.isRefund);
+      const targetCardId = (resolved.targetCardId || item.targetCardId) as string | undefined;
+      if (kind === 'in' && refundAllowed && targetCardId) {
+        const card = next.cards.find((c) => c.id === targetCardId);
         if (card) {
           card.balanceCents = (card.balanceCents || 0) - amount;
           card.updatedAt = nowIso();
@@ -388,7 +396,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         return { needsBankSelection: false };
       }
 
-      const resolvedBankId = bankId || (next.banks.length === 1 ? next.banks[0].id : '');
+      const resolvedBankId = resolved.bankId || (next.banks.length === 1 ? next.banks[0].id : '');
       if (!resolvedBankId) return { needsBankSelection: true };
 
       const bank = next.banks.find((b) => b.id === resolvedBankId) || next.banks[0];

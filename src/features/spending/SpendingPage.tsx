@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, loadCategoryConfig } from '../../state/storage';
+import { Select } from '../../ui/Select';
 import { AddPurchaseModal } from './AddPurchaseModal';
-import { renderSpendingPieChart } from './charts';
+import { getCategoryColor, renderSpendingPieChart } from './charts';
 
 type FilterKey = 'this_month' | 'last_month' | 'all_time' | 'custom';
+type BreakdownView = 'category' | 'card';
 
 function toLocalDateKey(date: Date) {
   const y = date.getFullYear();
@@ -22,13 +24,34 @@ function addMonths(d: Date, months: number) {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
+function hexToRgba(hex: string, alpha: number) {
+  const clean = (hex || '').replace('#', '').trim();
+  const full =
+    clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean.length === 6 ? clean : '64748b';
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${Number.isFinite(r) ? r : 100}, ${Number.isFinite(g) ? g : 116}, ${Number.isFinite(b) ? b : 139}, ${alpha})`;
+}
+
+function formatLongLocalDate(dateISO: string) {
+  if (!dateISO) return '';
+  const d = new Date(dateISO + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return dateISO;
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 export function SpendingPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const cfg = useMemo(() => loadCategoryConfig(), []);
   const [filter, setFilter] = useState<FilterKey>('this_month');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [openAdd, setOpenAdd] = useState(false);
+  const [view, setView] = useState<BreakdownView>('category');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -52,7 +75,7 @@ export function SpendingPage() {
     return { startKey: s, endKey: e };
   }, [filter, customStart, customEnd]);
 
-  const filteredPurchases = useMemo(() => {
+  const periodPurchases = useMemo(() => {
     const list: any[] = data.purchases || [];
     return list.filter((p) => {
       const k = p.dateISO || '';
@@ -60,6 +83,32 @@ export function SpendingPage() {
       return k >= startKey && k < endKey;
     });
   }, [data.purchases, startKey, endKey]);
+
+  const filteredPurchases = useMemo(() => {
+    const q = (searchQuery || '').trim();
+    if (!q) return periodPurchases;
+    const lower = q.toLowerCase();
+
+    let rx: RegExp | null = null;
+    if (q.length >= 2 && q.startsWith('/') && q.endsWith('/')) {
+      const inner = q.slice(1, -1);
+      try {
+        rx = new RegExp(inner, 'i');
+      } catch {
+        rx = null;
+      }
+    }
+
+    return periodPurchases.filter((p: any) => {
+      const title = String(p.title || '');
+      const catId = String(p.category || 'uncategorized');
+      const catName = String(getCategoryName(cfg, catId) || '');
+      const sub = String(p.subcategory || '');
+      const haystack = `${title} ${catName} ${sub}`;
+      if (rx) return rx.test(haystack);
+      return haystack.toLowerCase().includes(lower);
+    });
+  }, [periodPurchases, searchQuery, cfg]);
 
   const periodTotalCents = useMemo(() => {
     return filteredPurchases.reduce((s, p) => s + (p.amountCents || 0), 0);
@@ -76,35 +125,75 @@ export function SpendingPage() {
       .sort((a, b) => b.amountCents - a.amountCents);
   }, [filteredPurchases]);
 
+  const byCard = useMemo(() => {
+    const bankById = new Map<string, string>((data.banks || []).map((b) => [b.id, b.name || 'Bank']));
+    const cardById = new Map<string, string>((data.cards || []).map((c) => [c.id, c.name || 'Card']));
+    const map = new Map<string, number>();
+    filteredPurchases.forEach((p: any) => {
+      const targetId = (p.paymentTargetId || '') as string;
+      const src = (p.paymentSource || '') as string;
+      const name =
+        targetId && (src === 'card' || src === 'credit_card')
+          ? cardById.get(targetId) || 'Unknown / Not specified'
+          : targetId && (src === 'bank' || src === 'cash')
+            ? bankById.get(targetId) || 'Unknown / Not specified'
+            : 'Unknown / Not specified';
+      map.set(name, (map.get(name) || 0) + (p.amountCents || 0));
+    });
+    return Array.from(map.entries())
+      .map(([paymentTargetName, amountCents]) => ({ paymentTargetName, amountCents }))
+      .sort((a, b) => b.amountCents - a.amountCents);
+  }, [filteredPurchases, data.banks, data.cards]);
+
   useEffect(() => {
     if (!canvasRef.current) return;
+    if (view !== 'category') return;
     renderSpendingPieChart(canvasRef.current, byCategory);
-  }, [byCategory]);
-
-  const cfg = useMemo(() => loadCategoryConfig(), []);
+  }, [byCategory, view]);
 
   return (
     <div className="tab-panel active" id="spendingContent">
       <div className="filter-bar" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-        <select value={filter} onChange={(e) => setFilter(e.target.value as FilterKey)}>
+        <Select value={filter} onChange={(e) => setFilter(e.target.value as FilterKey)}>
           <option value="this_month">This Month</option>
           <option value="last_month">Last Month</option>
           <option value="all_time">All Time</option>
           <option value="custom">Custom</option>
-        </select>
+        </Select>
         {filter === 'custom' ? (
           <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
-            <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
+            <input className="ll-control" type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+            <input className="ll-control" type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
           </span>
         ) : null}
+        <span style={{ flex: 1 }} />
+        <button
+          type="button"
+          className={view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+          onClick={() => setView((v) => (v === 'category' ? 'card' : 'category'))}
+          aria-pressed={view === 'card'}
+        >
+          By Card
+        </button>
       </div>
 
       <p className="section-title">Spending distribution</p>
       <div className="card">
-        <div className="spending-chart-wrap" style={{ position: 'relative', width: '100%', height: 220 }}>
-          <canvas ref={canvasRef} />
-        </div>
+        {view === 'category' ? (
+          <div className="spending-chart-wrap" style={{ position: 'relative', width: '100%', height: 220 }}>
+            <canvas ref={canvasRef} />
+          </div>
+        ) : (
+          <div>
+            {byCard.map((c) => (
+              <div className="row" key={c.paymentTargetName} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                <span className="name">{c.paymentTargetName}</span>
+                <span className="amount">{formatCents(c.amountCents)}</span>
+              </div>
+            ))}
+            {!byCard.length ? <div style={{ color: 'var(--muted)' }}>No purchases in this period.</div> : null}
+          </div>
+        )}
       </div>
 
       <p className="section-title">This period total</p>
@@ -112,19 +201,62 @@ export function SpendingPage() {
         <span className="amount">{formatCents(periodTotalCents)}</span>
       </div>
 
-      <p className="section-title">By category</p>
+      <p className="section-title">{view === 'category' ? 'By category' : 'By card'}</p>
       <div>
-        {byCategory.map((c) => (
-          <div className="card" key={c.categoryId}>
-            <div className="row">
-              <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
-              <span className="amount">{formatCents(c.amountCents)}</span>
-            </div>
-          </div>
-        ))}
+        {view === 'category'
+          ? byCategory.map((c) => (
+              <div
+                className="card"
+                key={c.categoryId}
+                style={{ background: hexToRgba(getCategoryColor(c.categoryId), 0.14), borderColor: 'var(--border)' }}
+              >
+                <div className="row">
+                  <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
+                  <span className="amount">{formatCents(c.amountCents)}</span>
+                </div>
+              </div>
+            ))
+          : byCard.map((c) => (
+              <div className="card" key={c.paymentTargetName}>
+                <div className="row">
+                  <span className="name">{c.paymentTargetName}</span>
+                  <span className="amount">{formatCents(c.amountCents)}</span>
+                </div>
+              </div>
+            ))}
       </div>
 
-      <p className="section-title">Purchases</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px 0' }}>
+        <p className="section-title" style={{ margin: 0, flex: 1 }}>
+          Purchases
+        </p>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => {
+            setSearchOpen((v) => !v);
+            if (searchOpen) setSearchQuery('');
+          }}
+          aria-label="Search purchases"
+          title="Search"
+        >
+          🔍
+        </button>
+      </div>
+      {searchOpen ? (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <input
+            className="ll-control"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder='Search title, category, subcategory… (or "/regex/")'
+            style={{ flex: 1 }}
+          />
+          <button type="button" className="btn btn-secondary" onClick={() => setSearchQuery('')}>
+            Clear
+          </button>
+        </div>
+      ) : null}
       <div>
         {filteredPurchases
           .slice()
@@ -136,7 +268,11 @@ export function SpendingPage() {
                 <span className="amount">{formatCents(p.amountCents || 0)}</span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-                {p.dateISO || ''} • {getCategoryName(cfg, p.category || 'uncategorized')}
+                {formatLongLocalDate(p.dateISO || '')} •{' '}
+                <span style={{ color: getCategoryColor(p.category || 'uncategorized'), fontWeight: 600 }}>
+                  {getCategoryName(cfg, p.category || 'uncategorized')}
+                </span>
+                {p.subcategory ? <span> • {p.subcategory}</span> : null}
               </div>
               <div className="btn-row">
                 <button type="button" className="btn btn-danger" onClick={() => actions.deletePurchase(p.id)}>

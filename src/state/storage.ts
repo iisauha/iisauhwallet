@@ -343,6 +343,8 @@ export type ExpectedIncome = {
   title: string;
   expectedDate: string; // YYYY-MM-DD
   amountCents: number;
+  minCents?: number | null;
+  maxCents?: number | null;
   notes?: string;
   status?: 'expected' | 'moved_to_pending';
 };

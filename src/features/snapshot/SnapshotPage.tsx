@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
-import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
+import { PENDING_IN_COLLAPSED_KEY, PENDING_OUT_COLLAPSED_KEY, SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref } from '../../state/storage';
+import { Select } from '../../ui/Select';
 import { BankAccountCard, CreditCardCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 
@@ -13,6 +14,10 @@ export function SnapshotPage() {
   const legacyShowZero = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
   const [showZeroCashItems, setShowZeroCashItems] = useState<boolean>(loadBoolPref(SHOW_ZERO_CASH_KEY, legacyShowZero));
   const [showZeroCreditCards, setShowZeroCreditCards] = useState<boolean>(loadBoolPref(SHOW_ZERO_CARDS_KEY, legacyShowZero));
+  const [cashCollapsed, setCashCollapsed] = useState(false);
+  const [cardsCollapsed, setCardsCollapsed] = useState(false);
+  const [pendingInCollapsed, setPendingInCollapsed] = useState<boolean>(loadBoolPref(PENDING_IN_COLLAPSED_KEY, false));
+  const [pendingOutCollapsed, setPendingOutCollapsed] = useState<boolean>(loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false));
 
   const [modal, setModal] = useState<
     | { type: 'none' }
@@ -20,7 +25,8 @@ export function SnapshotPage() {
     | { type: 'add-card'; name: string }
     | { type: 'edit-balance'; kind: 'bank' | 'card'; id: string; amount: string; useSet: boolean }
     | { type: 'add-pending'; kind: 'in' | 'out'; label: string; amount: string; isRefund: boolean; depositTo: 'bank' | 'card'; targetCardId: string; outboundType: 'standard' | 'cc_payment'; sourceBankId: string; targetCardIdOut: string }
-    | { type: 'post-bank'; kind: 'in' | 'out'; pendingId: string; bankId: string }
+    | { type: 'post-inbound'; pendingId: string; isRefund: boolean; dest: string }
+    | { type: 'post-bank'; kind: 'out'; pendingId: string; bankId: string }
     | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
   >({ type: 'none' });
 
@@ -45,21 +51,28 @@ export function SnapshotPage() {
   function handlePendingPosted(kind: 'in' | 'out', id: string) {
     const res = actions.markPendingPosted(kind, id);
     if (!res.needsBankSelection) return;
-    const last = getLastPostedBankId(kind);
-    const defaultId = data.banks.some((b) => b.id === last) ? last : data.banks[0]?.id || '';
-    setModal({ type: 'post-bank', kind, pendingId: id, bankId: defaultId });
+    if (kind === 'in') {
+      const last = getLastPostedBankId('in');
+      const defaultBankId = data.banks.some((b) => b.id === last) ? last : data.banks[0]?.id || '';
+      setModal({ type: 'post-inbound', pendingId: id, isRefund: false, dest: `bank:${defaultBankId}` });
+    } else {
+      const last = getLastPostedBankId('out');
+      const defaultId = data.banks.some((b) => b.id === last) ? last : data.banks[0]?.id || '';
+      setModal({ type: 'post-bank', kind: 'out', pendingId: id, bankId: defaultId });
+    }
   }
 
   return (
     <div className="tab-panel active" id="snapshotContent">
-      <div className="section-header" id="bankHeader">
+      <div className="section-header" id="bankHeader" onClick={() => setCashCollapsed((v) => !v)}>
         <span className="section-header-left">
           Cash — <span>{formatCents(totals.bankTotalCents)}</span>
         </span>
         <button
           type="button"
           className="icon-btn"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             const next = !showZeroCashItems;
             setShowZeroCashItems(next);
             saveBoolPref(SHOW_ZERO_CASH_KEY, next);
@@ -67,44 +80,50 @@ export function SnapshotPage() {
         >
           {showZeroCashItems ? 'Hide $0 cash' : 'Show $0 cash'}
         </button>
+        <span className="chevron">{cashCollapsed ? '▸' : '▾'}</span>
       </div>
-      <div>
-        {visibleBanks.map((b) => (
-          <div key={b.id}>
-            <div onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}>
-              <BankAccountCard bank={b} />
-            </div>
-            {b.type !== 'physical_cash' ? (
-              <div className="btn-row" style={{ marginTop: -2, marginBottom: 10 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}>
-                  Add / Set
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={() =>
-                    openConfirm('Delete bank?', `Delete "${b.name}"? This does not erase other data.`, () => actions.deleteBankAccount(b.id))
-                  }
-                >
-                  Delete
-                </button>
+      {!cashCollapsed ? (
+        <>
+          <div>
+            {visibleBanks.map((b) => (
+              <div key={b.id}>
+                <div onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}>
+                  <BankAccountCard bank={b} />
+                </div>
+                {b.type !== 'physical_cash' ? (
+                  <div className="btn-row" style={{ marginTop: -2, marginBottom: 10 }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}>
+                      Add / Set
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() =>
+                        openConfirm('Delete bank?', `Delete "${b.name}"? This does not erase other data.`, () => actions.deleteBankAccount(b.id))
+                      }
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
+            ))}
           </div>
-        ))}
-      </div>
-      <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })}>
-        + Add Bank Account
-      </button>
+          <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })}>
+            + Add Bank Account
+          </button>
+        </>
+      ) : null}
 
-      <div className="section-header" id="cardHeader" style={{ marginTop: 24 }}>
+      <div className="section-header" id="cardHeader" style={{ marginTop: 24 }} onClick={() => setCardsCollapsed((v) => !v)}>
         <span className="section-header-left">
           Credit Cards — <span>{formatCents(totals.ccDebtCents - totals.ccCreditCents)}</span>
         </span>
         <button
           type="button"
           className="icon-btn"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             const next = !showZeroCreditCards;
             setShowZeroCreditCards(next);
             saveBoolPref(SHOW_ZERO_CARDS_KEY, next);
@@ -112,71 +131,104 @@ export function SnapshotPage() {
         >
           {showZeroCreditCards ? 'Hide $0 balances' : 'Show $0 balances'}
         </button>
+        <span className="chevron">{cardsCollapsed ? '▸' : '▾'}</span>
       </div>
-      <div>
-        {visibleCards.map((c) => (
-          <div key={c.id}>
-            <div onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}>
-              <CreditCardCard card={c} />
-            </div>
-            <div className="btn-row" style={{ marginTop: -2, marginBottom: 10 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}>
-                Add / Set
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={() => openConfirm('Delete card?', `Delete "${c.name}"?`, () => actions.deleteCreditCard(c.id))}
-              >
-                Delete
-              </button>
-            </div>
+      {!cardsCollapsed ? (
+        <>
+          <div>
+            {visibleCards.map((c) => (
+              <div key={c.id}>
+                <div onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}>
+                  <CreditCardCard card={c} />
+                </div>
+                <div className="btn-row" style={{ marginTop: -2, marginBottom: 10 }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}>
+                    Add / Set
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => openConfirm('Delete card?', `Delete "${c.name}"?`, () => actions.deleteCreditCard(c.id))}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })}>
-        + Add Credit Card
-      </button>
+          <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })}>
+            + Add Credit Card
+          </button>
+        </>
+      ) : null}
 
-      <div className="section-header" id="pendingInHeader" style={{ marginTop: 24 }}>
+      <div
+        className="section-header"
+        id="pendingInHeader"
+        style={{ marginTop: 24 }}
+        onClick={() => {
+          const next = !pendingInCollapsed;
+          setPendingInCollapsed(next);
+          saveBoolPref(PENDING_IN_COLLAPSED_KEY, next);
+        }}
+      >
         <span className="section-header-left">
           Pending Inbound — <span>{formatCents(totals.pendingInCents)}</span>
         </span>
+        <span className="chevron">{pendingInCollapsed ? '▸' : '▾'}</span>
       </div>
-      <PendingInboundList
-        data={data}
-        items={data.pendingIn || []}
-        onPosted={(id) => handlePendingPosted('in', id)}
-        onDelete={(id) => openConfirm('Delete pending?', 'Delete this pending inbound item?', () => actions.deletePending('in', id))}
-      />
-      <div className="btn-row">
-        <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
-          + Add item
-        </button>
-        <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending inbound items?', () => actions.clearPending('in'))}>
-          Clear All
-        </button>
-      </div>
+      {!pendingInCollapsed ? (
+        <>
+          <PendingInboundList
+            data={data}
+            items={data.pendingIn || []}
+            onPosted={(id) => handlePendingPosted('in', id)}
+            onDelete={(id) => openConfirm('Delete pending?', 'Delete this pending inbound item?', () => actions.deletePending('in', id))}
+          />
+          <div className="btn-row">
+            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
+              + Add item
+            </button>
+            <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending inbound items?', () => actions.clearPending('in'))}>
+              Clear All
+            </button>
+          </div>
+        </>
+      ) : null}
 
-      <div className="section-header" id="pendingOutHeader" style={{ marginTop: 24 }}>
+      <div
+        className="section-header"
+        id="pendingOutHeader"
+        style={{ marginTop: 24 }}
+        onClick={() => {
+          const next = !pendingOutCollapsed;
+          setPendingOutCollapsed(next);
+          saveBoolPref(PENDING_OUT_COLLAPSED_KEY, next);
+        }}
+      >
         <span className="section-header-left">
           Pending Outbound — <span>{formatCents(totals.pendingOutCents)}</span>
         </span>
+        <span className="chevron">{pendingOutCollapsed ? '▸' : '▾'}</span>
       </div>
-      <PendingOutboundList
-        data={data}
-        items={data.pendingOut || []}
-        onPosted={(id) => handlePendingPosted('out', id)}
-        onDelete={(id) => openConfirm('Delete pending?', 'Delete this pending outbound item?', () => actions.deletePending('out', id))}
-      />
-      <div className="btn-row">
-        <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
-          + Add item
-        </button>
-        <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending outbound items?', () => actions.clearPending('out'))}>
-          Clear All
-        </button>
-      </div>
+      {!pendingOutCollapsed ? (
+        <>
+          <PendingOutboundList
+            data={data}
+            items={data.pendingOut || []}
+            onPosted={(id) => handlePendingPosted('out', id)}
+            onDelete={(id) => openConfirm('Delete pending?', 'Delete this pending outbound item?', () => actions.deletePending('out', id))}
+          />
+          <div className="btn-row">
+            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
+              + Add item
+            </button>
+            <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending outbound items?', () => actions.clearPending('out'))}>
+              Clear All
+            </button>
+          </div>
+        </>
+      ) : null}
 
       <div className="summary" id="snapshotSummary">
         <div className="summary-compact">
@@ -317,38 +369,38 @@ export function SnapshotPage() {
                     </div>
                     <div className="field">
                       <label>Deposit To</label>
-                      <select
+                      <Select
                         value={modal.isRefund ? 'card' : modal.depositTo}
                         onChange={(e) => setModal({ ...modal, depositTo: e.target.value as any })}
                         disabled={modal.isRefund}
                       >
                         <option value="bank">Bank</option>
                         <option value="card">Credit Card</option>
-                      </select>
+                      </Select>
                     </div>
                     {modal.isRefund || modal.depositTo === 'card' ? (
                       <div className="field">
                         <label>Card</label>
-                        <select value={modal.targetCardId} onChange={(e) => setModal({ ...modal, targetCardId: e.target.value })}>
+                        <Select value={modal.targetCardId} onChange={(e) => setModal({ ...modal, targetCardId: e.target.value })}>
                           <option value="">— Select —</option>
                           {(data.cards || []).map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       </div>
                     ) : (
                       <div className="field">
                         <label>Bank (optional)</label>
-                        <select value={(modal as any).targetBankId || ''} onChange={(e) => setModal({ ...(modal as any), targetBankId: e.target.value })}>
+                        <Select value={(modal as any).targetBankId || ''} onChange={(e) => setModal({ ...(modal as any), targetBankId: e.target.value })}>
                           <option value="">— Select —</option>
                           {(data.banks || []).map((b) => (
                             <option key={b.id} value={b.id}>
                               {b.name}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       </div>
                     )}
                   </>
@@ -356,34 +408,34 @@ export function SnapshotPage() {
                   <>
                     <div className="field">
                       <label>Outbound Type</label>
-                      <select value={modal.outboundType} onChange={(e) => setModal({ ...modal, outboundType: e.target.value as any })}>
+                      <Select value={modal.outboundType} onChange={(e) => setModal({ ...modal, outboundType: e.target.value as any })}>
                         <option value="standard">Standard Outbound</option>
                         <option value="cc_payment">Credit Card Payment</option>
-                      </select>
+                      </Select>
                     </div>
                     {modal.outboundType === 'cc_payment' ? (
                       <>
                         <div className="field">
                           <label>From Bank</label>
-                          <select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
+                          <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
                             <option value="">— Select —</option>
                             {(data.banks || []).map((b) => (
                               <option key={b.id} value={b.id}>
                                 {b.name}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                         <div className="field">
                           <label>To Credit Card</label>
-                          <select value={modal.targetCardIdOut} onChange={(e) => setModal({ ...modal, targetCardIdOut: e.target.value })}>
+                          <Select value={modal.targetCardIdOut} onChange={(e) => setModal({ ...modal, targetCardIdOut: e.target.value })}>
                             <option value="">— Select —</option>
                             {(data.cards || []).map((c) => (
                               <option key={c.id} value={c.id}>
                                 {c.name}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                       </>
                     ) : null}
@@ -434,21 +486,55 @@ export function SnapshotPage() {
               </>
             ) : null}
 
-            {modal.type === 'post-bank' ? (
+            {modal.type === 'post-inbound' ? (
               <>
-                <h3>{modal.kind === 'in' ? 'Confirm deposit posted' : 'Confirm payment posted'}</h3>
-                <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-                  {modal.kind === 'in' ? 'Which bank should this deposit go to?' : 'Which bank should this subtract from?'}
-                </p>
+                <h3>Confirm deposit posted</h3>
+                <p style={{ color: 'var(--muted)', marginTop: 0 }}>Where should this inbound be applied?</p>
+                <div className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={modal.isRefund}
+                    onChange={(e) => {
+                      const nextIsRefund = e.target.checked;
+                      let nextDest = modal.dest;
+                      if (!nextIsRefund && nextDest.startsWith('card:')) {
+                        const fallbackBankId = data.banks?.[0]?.id || '';
+                        nextDest = `bank:${fallbackBankId}`;
+                      }
+                      setModal({ ...modal, isRefund: nextIsRefund, dest: nextDest });
+                    }}
+                    id="postIsRefund"
+                  />
+                  <label htmlFor="postIsRefund">Is this a refund?</label>
+                </div>
                 <div className="field">
-                  <label>Bank account</label>
-                  <select value={modal.bankId} onChange={(e) => setModal({ ...modal, bankId: e.target.value })}>
+                  <label>Deposit To</label>
+                  <Select
+                    value={modal.dest}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!modal.isRefund && v.startsWith('card:')) return;
+                      setModal({ ...modal, dest: v });
+                    }}
+                  >
                     {(data.banks || []).map((b) => (
-                      <option key={b.id} value={b.id}>
+                      <option key={b.id} value={`bank:${b.id}`}>
                         {b.name}
                       </option>
                     ))}
-                  </select>
+                    {modal.isRefund ? (
+                      <>
+                        <option value="" disabled>
+                          ──────────
+                        </option>
+                        {(data.cards || []).map((c) => (
+                          <option key={c.id} value={`card:${c.id}`}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </>
+                    ) : null}
+                  </Select>
                 </div>
                 <div className="btn-row">
                   <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
@@ -458,7 +544,47 @@ export function SnapshotPage() {
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => {
-                      actions.markPendingPosted(modal.kind, modal.pendingId, modal.bankId);
+                      const [kind, destId] = (modal.dest || '').split(':');
+                      if (kind === 'card') {
+                        if (!modal.isRefund || !destId) return;
+                        actions.markPendingPosted('in', modal.pendingId, { isRefund: true, targetCardId: destId });
+                      } else {
+                        if (!destId) return;
+                        actions.markPendingPosted('in', modal.pendingId, { bankId: destId });
+                      }
+                      setModal({ type: 'none' });
+                    }}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {modal.type === 'post-bank' ? (
+              <>
+                <h3>Confirm payment posted</h3>
+                <p style={{ color: 'var(--muted)', marginTop: 0 }}>Which bank should this subtract from?</p>
+                <div className="field">
+                  <label>Bank account</label>
+                  <Select value={modal.bankId} onChange={(e) => setModal({ ...modal, bankId: e.target.value })}>
+                    {(data.banks || []).map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="btn-row">
+                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      if (!modal.bankId) return;
+                      actions.markPendingPosted('out', modal.pendingId, { bankId: modal.bankId });
                       setModal({ type: 'none' });
                     }}
                   >
