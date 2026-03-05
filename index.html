@@ -125,11 +125,6 @@
     .row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .row .name { font-weight: 600; flex: 1; min-width: 0; }
     .row .amount { font-variant-numeric: tabular-nums; font-size: 1.1rem; }
-    .card-row-one-line { padding: 10px 12px; }
-    .card-row-one-line .card-row-inner { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; width: 100%; }
-    .card-row-one-line .card-row-inner .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
-    .card-row-one-line .card-row-inner .amount { flex-shrink: 0; }
-    .card-row-one-line .card-row-inner .btn-row { flex-shrink: 0; margin-top: 0; display: flex; gap: 6px; align-items: center; }
     .btn-row { display: flex; gap: 8px; margin-top: 10px; }
     .btn {
       min-height: 44px;
@@ -430,9 +425,9 @@
       <input type="month" id="exportMonth" class="btn" style="width:60%; max-width:260px; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:10px; font-size:0.95rem;" />
       <button type="button" class="btn btn-secondary" id="exportCsvBtn" style="margin-top:8px; width:100%;">Export CSV</button>
     </div>
-    <div class="section-header" id="manageCategoriesHeader" style="margin-top: 24px;">
-      <span class="section-header-left">Manage Categories</span>
-      <span class="chevron" id="manageCategoriesChevron">▸</span>
+    <p class="section-title" style="margin-top: 24px;">Categories</p>
+    <div class="settings-section">
+      <button type="button" class="btn btn-secondary" id="manageCategoriesBtn" style="width: 100%;">Manage Categories</button>
     </div>
     <div id="manageCategories" class="settings-section hidden"></div>
     <p class="section-title" style="margin-top: 24px;">Backup</p>
@@ -1550,15 +1545,15 @@
     if (cardsToRender.length) {
       cardsToRender.forEach(c => {
         const card = document.createElement('div');
-        card.className = 'card card-row-one-line';
+        card.className = 'card';
         const bal = c.balanceCents || 0;
         const isCredit = bal < 0;
         const amountClass = isCredit ? 'amount amount-credit' : 'amount';
         const amountLabel = isCredit ? formatCents(bal) + ' (Credit)' : formatCents(bal);
-        card.innerHTML = '<div class="row card-row-inner"><span class="name">' + escapeHtml(c.name) + '</span><span class="' + amountClass + '">' + amountLabel + '</span>' +
+        card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="' + amountClass + '">' + amountLabel + '</span></div>' +
           '<div class="btn-row"><button type="button" class="btn btn-secondary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
           '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button>' +
-          '<button type="button" class="btn btn-delete" data-type="card" data-id="' + c.id + '" aria-label="Delete credit card">Delete</button></div></div>';
+          '<button type="button" class="btn btn-delete" data-type="card" data-id="' + c.id + '" aria-label="Delete credit card">Delete</button></div>';
         cardList.appendChild(card);
       });
     } else {
@@ -4883,22 +4878,14 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  (function setupManageCategoriesAccordion() {
-    const header = document.getElementById('manageCategoriesHeader');
+  (function setupManageCategoriesButton() {
+    const btn = document.getElementById('manageCategoriesBtn');
     const body = document.getElementById('manageCategories');
-    const chev = document.getElementById('manageCategoriesChevron');
-    if (!header || !body || !chev) return;
-    header.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const isHidden = body.classList.contains('hidden');
-      if (isHidden) {
-        renderManageCategories();
-        body.classList.remove('hidden');
-        chev.textContent = '▾';
-      } else {
-        body.classList.add('hidden');
-        chev.textContent = '▸';
-      }
+    if (!btn || !body) return;
+    btn.addEventListener('click', function() {
+      renderManageCategories();
+      body.classList.remove('hidden');
+      body.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   })();
 
@@ -4925,7 +4912,12 @@
     m.addEventListener('touchstart', function(e) { e.stopPropagation(); });
   });
 
-  function rehydrateUI() {
+  var lastRehydrateAt = 0;
+  var REHYDRATE_DEBOUNCE_MS = 400;
+  function rehydrateAndRender() {
+    var now = (typeof Date.now === 'function') ? Date.now() : 0;
+    if (now - lastRehydrateAt < REHYDRATE_DEBOUNCE_MS) return;
+    lastRehydrateAt = now;
     try {
       data = load();
       renderSnapshot();
@@ -4943,10 +4935,13 @@
   renderManageCategories();
 
   window.addEventListener('pageshow', function(ev) {
-    if (ev.persisted) rehydrateUI();
+    if (ev.persisted) rehydrateAndRender();
   });
   document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'visible') rehydrateUI();
+    if (document.visibilityState === 'visible') rehydrateAndRender();
+  });
+  window.addEventListener('focus', function() {
+    rehydrateAndRender();
   });
 
   (function checkLocalDateFilter() {
