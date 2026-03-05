@@ -587,6 +587,31 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
                     splitRecurringPurchaseId: purchase.id
                   });
                 }
+                // If this is an Investing recurring expense with investingTransferEnabled and autopay,
+                // also credit the configured investing account at post time.
+                if (
+                  r.category &&
+                  r.category !== 'income' &&
+                  r.investingTransferEnabled &&
+                  r.investingTargetAccountId &&
+                  r.investingTargetType
+                ) {
+                  try {
+                    let inv = loadInvesting();
+                    inv = accrueHysaAccounts(inv);
+                    const acc: any = inv.accounts.find(
+                      (a: any) =>
+                        a.id === r.investingTargetAccountId && (a.type === r.investingTargetType)
+                    );
+                    if (acc) {
+                      acc.balanceCents = (acc.balanceCents || 0) + myPortionCents;
+                      if (acc.type === 'hysa') {
+                        acc.lastAccruedAt = Date.now();
+                      }
+                      saveInvesting(inv);
+                    }
+                  } catch (_) {}
+                }
               }
               next.recurringPosted[regKey] = true;
               mutated = true;

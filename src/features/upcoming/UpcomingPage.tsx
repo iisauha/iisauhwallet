@@ -641,6 +641,20 @@ export function UpcomingPage() {
                       (x) => x.recurringId === source.recurringId && x.dateKey === source.dateKey
                     );
                     if (item) {
+                      const rec = ((data as any).recurring || []).find(
+                        (r: any) => r.id === item.recurringId
+                      );
+                      const meta =
+                        rec &&
+                        rec.investingTransferEnabled &&
+                        rec.investingTargetAccountId &&
+                        rec.investingTargetType
+                          ? {
+                              kind: 'transfer',
+                              investingType: rec.investingTargetType,
+                              investingAccountId: rec.investingTargetAccountId
+                            }
+                          : undefined;
                       actions.addPendingOutbound({
                         label: item.recurringName,
                         amountCents: cents,
@@ -651,7 +665,8 @@ export function UpcomingPage() {
                         splitTotalCents: item.isSplit ? item.fullAmountCents : undefined,
                         myPortionCents: item.isSplit ? cents : undefined,
                         category: item.category,
-                        subcategory: item.subcategory
+                        subcategory: item.subcategory,
+                        meta
                       });
                     }
                   }

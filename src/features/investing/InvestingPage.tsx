@@ -11,10 +11,12 @@ import {
   type HysaAccount
 } from '../../state/storage';
 import { Select } from '../../ui/Select';
+import { loadCategoryConfig, getCategoryName } from '../../state/storage';
 
 export function InvestingPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const cfg = useMemo(() => loadCategoryConfig(), []);
 
   const [investing, setInvesting] = useState<InvestingState>(() => {
     const base = loadInvesting();
@@ -53,6 +55,76 @@ export function InvestingPage() {
     () => investing.accounts.filter((a) => a.type === 'general'),
     [investing.accounts]
   );
+
+  const contribution = useMemo(() => {
+    const recurring: any[] = (data as any).recurring || [];
+
+    const normalizeAmount = (r: any): number => {
+      if (typeof r.expectedMinCents === 'number' && typeof r.expectedMaxCents === 'number') {
+        return Math.round((r.expectedMinCents + r.expectedMaxCents) / 2);
+      }
+      if (typeof r.amountCents === 'number') return r.amountCents;
+      return 0;
+    };
+
+    let grossIncomeCents = 0;
+    let preTaxTotalCents = 0;
+    let preTaxInvestCents = 0;
+    let postTaxInvestCents = 0;
+    let incomeMarkedCount = 0;
+
+    recurring.forEach((r) => {
+      if (!r || r.type !== 'income') return;
+      if (!r.countsForInvestingPct) return;
+      incomeMarkedCount += 1;
+      const base = normalizeAmount(r);
+      grossIncomeCents += base;
+
+      if (r.isFullTimeJob && Array.isArray(r.preTaxDeductions)) {
+        r.preTaxDeductions.forEach((d: any) => {
+          if (!d) return;
+          const amt = typeof d.amountCents === 'number' ? d.amountCents : 0;
+          if (amt <= 0) return;
+          preTaxTotalCents += amt;
+          if (d.countsAsInvesting) preTaxInvestCents += amt;
+        });
+      }
+    });
+
+    // Post-tax investing from recurring expenses categorized as "Investing"
+    recurring.forEach((r) => {
+      if (!r || (r.type || 'expense') === 'income') return;
+      const catId = r.category || 'uncategorized';
+      const name = getCategoryName(cfg, catId);
+      if (name !== 'Investing') return;
+      const amt = normalizeAmount(r);
+      if (amt > 0) postTaxInvestCents += amt;
+    });
+
+    const netIncomeCents = Math.max(0, grossIncomeCents - preTaxTotalCents);
+
+    const pct = (num: number, denom: number): number =>
+      denom > 0 && num > 0 ? (num / denom) * 100 : 0;
+
+    const preTaxPctGross = pct(preTaxInvestCents, grossIncomeCents);
+    const postTaxPctNet = pct(postTaxInvestCents, netIncomeCents);
+    const totalInvestCents = preTaxInvestCents + postTaxInvestCents;
+    const totalPctGross = pct(totalInvestCents, grossIncomeCents);
+    const totalPctNet = pct(totalInvestCents, netIncomeCents);
+
+    return {
+      incomeMarkedCount,
+      grossIncomeCents,
+      netIncomeCents,
+      preTaxInvestCents,
+      postTaxInvestCents,
+      totalInvestCents,
+      preTaxPctGross,
+      postTaxPctNet,
+      totalPctGross,
+      totalPctNet
+    };
+  }, [data, cfg]);
 
   const totals = useMemo(() => {
     const sum = (xs: InvestingAccount[]) => xs.reduce((s, a) => s + (a.balanceCents || 0), 0);
@@ -292,7 +364,7 @@ export function InvestingPage() {
     return (
       <>
         <div
-          className="section-header"
+          className="section-header investing-section-header"
           style={{ marginTop: 24 }}
           onClick={() =>
             collapsedKey === 'hysa' ? handleOpenHysa() : setCollapsed((c) => ({ ...c, [collapsedKey]: !c[collapsedKey] }))
@@ -407,7 +479,56 @@ export function InvestingPage() {
       {renderSection('401(k)', 'k401', k401Accounts, 'k401')}
       {renderSection('General Investing', 'general', generalAccounts, 'general')}
 
-      <div className="card" style={{ marginTop: 24 }}>
+      <div className="card investing-contrib-card" style={{ marginTop: 24 }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
+          Investing Contribution
+        </p>
+        {contribution.incomeMarkedCount === 0 || contribution.grossIncomeCents <= 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+            No income sources marked for investing %. Mark eligible recurring income in the Recurring tab.
+          </p>
+        ) : (
+          <div className="summary-compact">
+            <div className="summary-kv">
+              <span className="k">Gross income</span>
+              <span className="v">{formatCents(contribution.grossIncomeCents)}</span>
+            </div>
+            <div className="summary-kv">
+              <span className="k">Net income (after pre-tax deductions)</span>
+              <span className="v">{formatCents(contribution.netIncomeCents)}</span>
+            </div>
+            <div className="summary-kv">
+              <span className="k">Pre-tax investing contributions</span>
+              <span className="v">
+                {formatCents(contribution.preTaxInvestCents)}{' '}
+                <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+                  ({contribution.preTaxPctGross.toFixed(1)}% of gross)
+                </span>
+              </span>
+            </div>
+            <div className="summary-kv">
+              <span className="k">Post-tax investing contributions</span>
+              <span className="v">
+                {formatCents(contribution.postTaxInvestCents)}{' '}
+                <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+                  ({contribution.postTaxPctNet.toFixed(1)}% of net)
+                </span>
+              </span>
+            </div>
+            <div className="summary-kv">
+              <span className="k">Total investing contributions</span>
+              <span className="v">
+                {formatCents(contribution.totalInvestCents)}{' '}
+                <span style={{ color: 'var(--muted)', fontSize: '0.85rem', display: 'block' }}>
+                  {contribution.totalPctGross.toFixed(1)}% of gross • {contribution.totalPctNet.toFixed(1)}% of net
+                </span>
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="card investing-summary-card" style={{ marginTop: 16 }}>
         <div className="summary-kv">
           <span className="k">Total HYSA</span>
           <span className="v">{formatCents(totals.totalHYSA)}</span>

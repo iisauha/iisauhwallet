@@ -131,6 +131,21 @@ body {
 .summary-kv.final-net-cash.positive { background: var(--green-light); }
 .summary-kv.final-net-cash.negative { background: var(--red-light); }
 .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
+.investing-section-header {
+  background: rgba(22, 163, 74, 0.16);
+  border-radius: 10px;
+  padding: 10px 10px;
+  color: var(--green);
+}
+.investing-summary-card,
+.investing-contrib-card {
+  background: radial-gradient(circle at top left, rgba(22, 163, 74, 0.22), var(--surface));
+  border-color: rgba(22, 163, 74, 0.5);
+}
+.investing-summary-card .summary-kv .k,
+.investing-contrib-card .summary-kv .k {
+  color: var(--green);
+}
 .amount-credit { color: var(--green); font-weight: 600; }
 .amount-pos { color: var(--green); }
 .amount-neg { color: var(--red); }

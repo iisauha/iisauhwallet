@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatLongLocalDate, parseCents } from '../../state/calc';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
-import { loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
+import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting } from '../../state/storage';
 import { Select } from '../../ui/Select';
 
 export function RecurringPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
+  const investingState = useMemo(() => loadInvesting(), []);
 
   useEffect(() => {
     actions.processRecurringBillsUpToToday();
@@ -40,6 +41,15 @@ export function RecurringPage() {
   const [myPortion, setMyPortion] = useState('');
   const [useLastDayOfMonth, setUseLastDayOfMonth] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [countsForInvestingPct, setCountsForInvestingPct] = useState(false);
+  const [isFullTimeJob, setIsFullTimeJob] = useState(false);
+  const [preTaxDeductions, setPreTaxDeductions] = useState<
+    { id: string; name: string; amount: string; countsAsInvesting: boolean }[]
+  >([]);
+  const [investingTransferEnabled, setInvestingTransferEnabled] = useState(false);
+  const [investingFromBankId, setInvestingFromBankId] = useState('');
+  const [investingTargetAccountId, setInvestingTargetAccountId] = useState('');
+  const [investingTargetType, setInvestingTargetType] = useState<'hysa' | 'general' | ''>('');
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
@@ -123,7 +133,26 @@ export function RecurringPage() {
                         ? (r.myPortionCents / 100).toFixed(2)
                         : ''
                     );
-                    setUseLastDayOfMonth(!!r.useLastDayOfMonth);
+                      setUseLastDayOfMonth(!!r.useLastDayOfMonth);
+                      setCountsForInvestingPct(!!r.countsForInvestingPct);
+                      setIsFullTimeJob(!!r.isFullTimeJob);
+                      setPreTaxDeductions(
+                        Array.isArray(r.preTaxDeductions)
+                          ? r.preTaxDeductions.map((d: any) => ({
+                              id: d.id,
+                              name: d.name || '',
+                              amount:
+                                typeof d.amountCents === 'number'
+                                  ? (d.amountCents / 100).toFixed(2)
+                                  : '',
+                              countsAsInvesting: !!d.countsAsInvesting
+                            }))
+                          : []
+                      );
+                      setInvestingTransferEnabled(!!r.investingTransferEnabled);
+                      setInvestingFromBankId(r.investingFromBankId || '');
+                      setInvestingTargetAccountId(r.investingTargetAccountId || '');
+                      setInvestingTargetType((r.investingTargetType as any) || '');
                     setOpen(true);
                   }}
                 >
@@ -266,6 +295,13 @@ export function RecurringPage() {
           setIsSplit(false);
           setMyPortion('');
           setUseLastDayOfMonth(false);
+          setCountsForInvestingPct(false);
+          setIsFullTimeJob(false);
+          setPreTaxDeductions([]);
+          setInvestingTransferEnabled(false);
+          setInvestingFromBankId('');
+          setInvestingTargetAccountId('');
+          setInvestingTargetType('');
           setOpen(true);
         }}
       >
@@ -297,10 +333,125 @@ export function RecurringPage() {
             </div>
             <div className="field">
               <label>Expected max ($) optional</label>
-              <input value={expectedMax} onChange={(e) => setExpectedMax(e.target.value)} inputMode="decimal" placeholder="e.g. 150" />
+              <input
+                value={expectedMax}
+                onChange={(e) => setExpectedMax(e.target.value)}
+                inputMode="decimal"
+                placeholder="e.g. 150"
+              />
             </div>
 
-            {type !== 'income' ? (
+            {type === 'income' ? (
+              <>
+                <div className="toggle-row">
+                  <input
+                    type="checkbox"
+                    id="recCountsInvestPct"
+                    checked={countsForInvestingPct}
+                    onChange={(e) => setCountsForInvestingPct(e.target.checked)}
+                  />
+                  <label htmlFor="recCountsInvestPct">Use this income for investing %</label>
+                </div>
+                <div className="toggle-row">
+                  <input
+                    type="checkbox"
+                    id="recFullTimeJob"
+                    checked={isFullTimeJob}
+                    onChange={(e) => setIsFullTimeJob(e.target.checked)}
+                  />
+                  <label htmlFor="recFullTimeJob">Full-time job (has pre-tax deductions)</label>
+                </div>
+                {isFullTimeJob ? (
+                  <div className="card" style={{ marginTop: 8 }}>
+                    <div className="row" style={{ marginBottom: 6 }}>
+                      <span className="name" style={{ fontSize: '0.95rem' }}>
+                        Pre-tax deductions
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+                        onClick={() => {
+                          const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
+                          setPreTaxDeductions((prev) => [
+                            ...prev,
+                            { id, name: '', amount: '', countsAsInvesting: false }
+                          ]);
+                        }}
+                      >
+                        Add deduction
+                      </button>
+                    </div>
+                    {preTaxDeductions.length === 0 ? (
+                      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
+                        No pre-tax deductions added yet.
+                      </p>
+                    ) : null}
+                    {preTaxDeductions.map((d) => (
+                      <div key={d.id} style={{ marginBottom: 8 }}>
+                        <div className="field">
+                          <label>Name</label>
+                          <input
+                            value={d.name}
+                            onChange={(e) =>
+                              setPreTaxDeductions((prev) =>
+                                prev.map((x) => (x.id === d.id ? { ...x, name: e.target.value } : x))
+                              )
+                            }
+                            placeholder="e.g. 401k"
+                          />
+                        </div>
+                        <div className="field">
+                          <label>Amount ($)</label>
+                          <input
+                            value={d.amount}
+                            onChange={(e) =>
+                              setPreTaxDeductions((prev) =>
+                                prev.map((x) => (x.id === d.id ? { ...x, amount: e.target.value } : x))
+                              )
+                            }
+                            inputMode="decimal"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="toggle-row">
+                          <input
+                            type="checkbox"
+                            id={`ded-${d.id}-invest`}
+                            checked={d.countsAsInvesting}
+                            onChange={(e) =>
+                              setPreTaxDeductions((prev) =>
+                                prev.map((x) =>
+                                  x.id === d.id ? { ...x, countsAsInvesting: e.target.checked } : x
+                                )
+                              )
+                            }
+                          />
+                          <label htmlFor={`ded-${d.id}-invest`}>Counts as investing contribution</label>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-delete"
+                          onClick={() => {
+                            if (!window.confirm('Remove this deduction?')) return;
+                            setPreTaxDeductions((prev) => prev.filter((x) => x.id !== d.id));
+                          }}
+                        >
+                          Delete deduction
+                        </button>
+                        <hr
+                          style={{
+                            borderColor: 'var(--border)',
+                            marginTop: 12,
+                            marginBottom: 8
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : (
               <>
                 <div className="toggle-row">
                   <input
@@ -326,7 +477,12 @@ export function RecurringPage() {
                 {isSplit ? (
                   <div className="field">
                     <label>My portion ($)</label>
-                    <input value={myPortion} onChange={(e) => setMyPortion(e.target.value)} inputMode="decimal" placeholder="0.00" />
+                    <input
+                      value={myPortion}
+                      onChange={(e) => setMyPortion(e.target.value)}
+                      inputMode="decimal"
+                      placeholder="0.00"
+                    />
                   </div>
                 ) : null}
                 <div className="field">
@@ -353,7 +509,7 @@ export function RecurringPage() {
                   </div>
                 ) : null}
               </>
-            ) : null}
+            )}
 
             <div className="field">
               <label>Notes (optional)</label>
@@ -468,6 +624,68 @@ export function RecurringPage() {
                     ))}
                   </Select>
                 </div>
+
+                {getCategoryName(cfg, category) === 'Investing' ? (
+                  <div className="card" style={{ marginTop: 8 }}>
+                    <div className="toggle-row">
+                      <input
+                        type="checkbox"
+                        id="recInvestingTransfer"
+                        checked={investingTransferEnabled}
+                        onChange={(e) => setInvestingTransferEnabled(e.target.checked)}
+                      />
+                      <label htmlFor="recInvestingTransfer">Investing transfer (contribution)</label>
+                    </div>
+                    {investingTransferEnabled ? (
+                      <>
+                        <div className="field">
+                          <label>Pay from (bank)</label>
+                          <Select
+                            value={investingFromBankId}
+                            onChange={(e) => setInvestingFromBankId(e.target.value)}
+                          >
+                            <option value="">— Select —</option>
+                            {(data.banks || []).map((b: any) => (
+                              <option key={b.id} value={b.id}>
+                                {b.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div className="field">
+                          <label>Deposit to (investing)</label>
+                          <Select
+                            value={
+                              investingTargetAccountId
+                                ? `${investingTargetType || ''}:${investingTargetAccountId}`
+                                : ''
+                            }
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (!v) {
+                                setInvestingTargetAccountId('');
+                                setInvestingTargetType('');
+                                return;
+                              }
+                              const [kind, id] = v.split(':');
+                              setInvestingTargetType(kind === 'hysa' ? 'hysa' : 'general');
+                              setInvestingTargetAccountId(id);
+                            }}
+                          >
+                            <option value="">— Select —</option>
+                            {investingState.accounts
+                              .filter((a) => a.type === 'hysa' || a.type === 'general')
+                              .map((a) => (
+                                <option key={a.id} value={`${a.type}:${a.id}`}>
+                                  {a.type === 'hysa' ? 'HYSA' : 'Investing'} — {a.name}
+                                </option>
+                              ))}
+                          </Select>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
               </>
             )}
 
@@ -493,6 +711,21 @@ export function RecurringPage() {
                   const every =
                     frequency === 'every_n_days' ? Math.max(1, parseInt(everyNDays || '1', 10) || 1) : undefined;
                   const intervalDays = frequency === 'every_n_days' ? every : undefined;
+                  const preTax =
+                    type === 'income'
+                      ? preTaxDeductions
+                          .map((d) => {
+                            const amtCents = d.amount.trim() ? parseCents(d.amount) : 0;
+                            if (!(amtCents > 0)) return null;
+                            return {
+                              id: d.id,
+                              name: d.name || '',
+                              amountCents: amtCents,
+                              countsAsInvesting: d.countsAsInvesting || undefined
+                            };
+                          })
+                          .filter(Boolean)
+                      : [];
                   const payload: Partial<RecurringItem> = {
                     name: name.trim() || (type === 'income' ? 'Recurring income' : 'Recurring'),
                     amountCents,
@@ -513,7 +746,26 @@ export function RecurringPage() {
                     subcategory: type === 'income' ? undefined : (subcategory || undefined),
                     notes: notes || undefined,
                     isSplit: type !== 'income' && isSplit ? true : undefined,
-                    myPortionCents: type !== 'income' && isSplit ? parseCents(myPortion) : undefined
+                    myPortionCents: type !== 'income' && isSplit ? parseCents(myPortion) : undefined,
+                    countsForInvestingPct: type === 'income' && countsForInvestingPct ? true : undefined,
+                    isFullTimeJob: type === 'income' && isFullTimeJob ? true : undefined,
+                    preTaxDeductions: type === 'income' && preTax.length ? (preTax as any) : undefined,
+                    investingTransferEnabled:
+                      type !== 'income' && investingTransferEnabled && getCategoryName(cfg, category) === 'Investing'
+                        ? true
+                        : undefined,
+                    investingFromBankId:
+                      type !== 'income' && investingTransferEnabled && investingFromBankId
+                        ? investingFromBankId
+                        : undefined,
+                    investingTargetAccountId:
+                      type !== 'income' && investingTransferEnabled && investingTargetAccountId
+                        ? investingTargetAccountId
+                        : undefined,
+                    investingTargetType:
+                      type !== 'income' && investingTransferEnabled && investingTargetType
+                        ? investingTargetType
+                        : undefined
                   };
                   if (editingId) {
                     actions.updateRecurringItem(editingId, payload);

@@ -97,6 +97,13 @@ export interface Purchase {
 export type RecurringType = 'expense' | 'income';
 export type RecurringFrequency = 'monthly' | 'weekly' | 'biweekly' | 'yearly' | 'every_n_days';
 
+export interface PreTaxDeduction {
+  id: string;
+  name: string;
+  amountCents: number;
+  countsAsInvesting?: boolean;
+}
+
 export interface RecurringItem {
   id: string;
   type: RecurringType;
@@ -120,6 +127,14 @@ export interface RecurringItem {
   paymentSource?: 'card' | 'bank';
   paymentTargetId?: string;
   applyToSnapshot?: boolean;
+  // Investing-related, all optional and backward-compatible
+  countsForInvestingPct?: boolean;
+  isFullTimeJob?: boolean;
+  preTaxDeductions?: PreTaxDeduction[];
+  investingTransferEnabled?: boolean;
+  investingFromBankId?: string;
+  investingTargetAccountId?: string;
+  investingTargetType?: 'hysa' | 'general';
 }
 
 export type RecurringPostedMap = Record<string, any>;
