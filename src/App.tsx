@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
 import { SnapshotPage } from './features/snapshot/SnapshotPage';
+import { SpendingPage } from './features/spending/SpendingPage';
+import { RecurringPage } from './features/recurring/RecurringPage';
+import { UpcomingPage } from './features/upcoming/UpcomingPage';
+import { SettingsPage } from './features/settings/SettingsPage';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'settings';
 
@@ -8,10 +12,10 @@ export function App() {
 
   const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;
-    if (tab === 'spending') return <div className="tab-panel active">Spending (coming next)</div>;
-    if (tab === 'recurring') return <div className="tab-panel active">Recurring (coming next)</div>;
-    if (tab === 'upcoming') return <div className="tab-panel active">Upcoming (coming next)</div>;
-    return <div className="tab-panel active">Settings (coming next)</div>;
+    if (tab === 'spending') return <SpendingPage />;
+    if (tab === 'recurring') return <RecurringPage />;
+    if (tab === 'upcoming') return <UpcomingPage />;
+    return <SettingsPage />;
   }, [tab]);
 
   return (

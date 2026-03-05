@@ -42,6 +42,28 @@ const DEFAULT_CARD_NAMES = [
   'Amazon Store Card'
 ];
 
+export const CATEGORIES = [
+  { id: 'food', name: 'Food', sub: ['Groceries', 'Snacks', 'Restaurants'] },
+  { id: 'travel', name: 'Travel', sub: ['MTA', 'Flights'] },
+  { id: 'loan_payment', name: 'Loan Payment', sub: [] },
+  { id: 'rent', name: 'Rent', sub: [] },
+  { id: 'fun_money', name: 'Fun Money', sub: [] },
+  { id: 'necessities', name: 'Necessities', sub: ['Home Necessities'] },
+  { id: 'utilities', name: 'Utilities', sub: ['WiFi', 'Electricity + Gas'] },
+  { id: 'subscriptions', name: 'Subscriptions', sub: [] }
+] as const;
+
+export const CATEGORY_COLORS: Record<string, string> = {
+  food: '#FF8C42',
+  travel: '#3B82F6',
+  utilities: '#10B981',
+  rent: '#6366F1',
+  fun_money: '#F59E0B',
+  loan_payment: '#EF4444',
+  subscriptions: '#8B5CF6',
+  necessities: '#14B8A6'
+};
+
 export function defaultData(): LedgerData {
   const banks = [
     { id: uid(), name: 'Bank', type: 'bank' as const, balanceCents: 0, updatedAt: now() },
@@ -277,6 +299,31 @@ export function loadCategoryConfig(): CategoryConfig {
       if (parsed && typeof parsed === 'object') return parsed as CategoryConfig;
     }
   } catch (_) {}
-  return {};
+  const initial: CategoryConfig = {};
+  CATEGORIES.forEach((c) => {
+    initial[c.id] = { name: c.name, sub: Array.isArray(c.sub) ? c.sub.slice() : [] };
+  });
+  try {
+    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(initial));
+  } catch (_) {}
+  return initial;
+}
+
+export function saveCategoryConfig(cfg: CategoryConfig) {
+  try {
+    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(cfg));
+  } catch (_) {}
+}
+
+export function getCategoryName(cfg: CategoryConfig, id: string): string {
+  const key = (id || '').trim();
+  const entry = key ? cfg[key] : null;
+  if (entry && entry.name) return entry.name;
+  return 'Uncategorized';
+}
+
+export function getCategorySubcategories(cfg: CategoryConfig, id: string): string[] {
+  const entry = cfg[id];
+  return entry && Array.isArray(entry.sub) ? entry.sub : [];
 }
 

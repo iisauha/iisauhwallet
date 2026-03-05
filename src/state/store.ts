@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import type { LedgerData, PendingInboundItem, PendingOutboundItem } from './models';
+import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase } from './models';
 import { loadData, nowIso, saveData, setLastPostedBankId, uid } from './storage';
+import { PHYSICAL_CASH_ID } from './keys';
 
 export interface LedgerState {
   data: LedgerData;
@@ -14,6 +15,8 @@ export interface LedgerState {
     updateCardBalance: (id: string, amountCents: number, mode: 'add' | 'set') => void;
     addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
+    addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
+    deletePurchase: (id: string) => void;
     deletePending: (kind: 'in' | 'out', id: string) => void;
     clearPending: (kind: 'in' | 'out') => void;
     markPendingPosted: (kind: 'in' | 'out', id: string, bankId?: string) => { needsBankSelection: boolean };
@@ -77,6 +80,90 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     addPendingOutbound: (item) => {
       const next = structuredClone(get().data) as LedgerData;
       next.pendingOut.push({ ...item, id: uid(), createdAt: nowIso() });
+      saveData(next);
+      set({ data: next });
+    },
+    addPurchase: (purchase) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const id = uid();
+      const p: any = { ...purchase, id };
+
+      // If split purchase with inbound reimbursement, create pending inbound item (legacy behavior).
+      if (p.isSplit && typeof p.splitInboundCents === 'number' && p.splitInboundCents > 0) {
+        const pendingId = uid();
+        const label = 'Venmo - "' + (p.title || 'Purchase') + '"';
+        next.pendingIn.push({
+          id: pendingId,
+          label,
+          amountCents: p.splitInboundCents,
+          createdAt: nowIso(),
+          linkedPurchaseId: id,
+          fromSplit: true
+        });
+        p.splitPendingId = pendingId;
+      }
+
+      // Apply to snapshot (legacy behavior).
+      const applied = !!p.applyToSnapshot && !!p.paymentSource;
+      if (applied) {
+        const isSplitApplied = !!p.isSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
+        const amount = isSplitApplied ? p.splitSnapshot.amountCents : (typeof p.amountCents === 'number' ? p.amountCents : 0);
+        const src = isSplitApplied && p.splitSnapshot.paymentSource ? p.splitSnapshot.paymentSource : p.paymentSource;
+        const targetId = isSplitApplied && p.splitSnapshot.paymentTargetId ? p.splitSnapshot.paymentTargetId : p.paymentTargetId;
+
+        if ((src === 'card' || src === 'credit_card') && targetId) {
+          const card = next.cards.find((c) => c.id === targetId);
+          if (card) {
+            card.balanceCents = (card.balanceCents || 0) + amount;
+            card.updatedAt = nowIso();
+          }
+        } else if ((src === 'bank' || src === 'cash') && (targetId || src === 'cash')) {
+          const bankTargetId = targetId || PHYSICAL_CASH_ID;
+          const bank = next.banks.find((b) => b.id === bankTargetId);
+          if (bank) {
+            bank.balanceCents = (bank.balanceCents || 0) - amount;
+            bank.updatedAt = nowIso();
+          }
+        }
+      }
+
+      next.purchases.push(p);
+      saveData(next);
+      set({ data: next });
+    },
+    deletePurchase: (id) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const p: any = (next.purchases || []).find((x: any) => x.id === id);
+      if (!p) return;
+
+      const applied = !!p.applyToSnapshot && !!p.paymentSource;
+      if (applied) {
+        const isSplitApplied = !!p.isSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
+        const amount = isSplitApplied ? p.splitSnapshot.amountCents : (typeof p.amountCents === 'number' ? p.amountCents : 0);
+        const src = isSplitApplied && p.splitSnapshot.paymentSource ? p.splitSnapshot.paymentSource : p.paymentSource;
+        const targetId = isSplitApplied && p.splitSnapshot.paymentTargetId ? p.splitSnapshot.paymentTargetId : p.paymentTargetId;
+
+        if ((src === 'card' || src === 'credit_card') && targetId) {
+          const card = next.cards.find((c) => c.id === targetId);
+          if (card) {
+            card.balanceCents = (card.balanceCents || 0) - amount;
+            card.updatedAt = nowIso();
+          }
+        } else if ((src === 'bank' || src === 'cash') && (targetId || src === 'cash')) {
+          const bankTargetId = targetId || PHYSICAL_CASH_ID;
+          const bank = next.banks.find((b) => b.id === bankTargetId);
+          if (bank) {
+            bank.balanceCents = (bank.balanceCents || 0) + amount;
+            bank.updatedAt = nowIso();
+          }
+        }
+      }
+
+      if (p.isSplit && p.splitPendingId && Array.isArray(next.pendingIn)) {
+        next.pendingIn = next.pendingIn.filter((pi: any) => pi.id !== p.splitPendingId);
+      }
+
+      next.purchases = next.purchases.filter((x: any) => x.id !== id);
       saveData(next);
       set({ data: next });
     },
