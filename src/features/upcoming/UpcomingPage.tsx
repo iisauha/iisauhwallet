@@ -41,6 +41,19 @@ export function UpcomingPage() {
         minAmount: string;
         maxAmount: string;
       }
+     | {
+         type: 'adjust-amount';
+         direction: 'in' | 'out';
+         label: string;
+         originalCents: number;
+         amount: string;
+         error: string | null;
+         source:
+           | { kind: 'expected-income'; id: string }
+           | { kind: 'recurring-income'; id: string }
+           | { kind: 'expected-cost'; id: string }
+           | { kind: 'recurring-cost'; recurringId: string; dateKey: string };
+      }
   >({ type: 'none' });
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
@@ -80,16 +93,58 @@ export function UpcomingPage() {
   const [costsCollapsed, setCostsCollapsed] = useState(true);
 
   const today = todayKey();
-  function formatDaysLeft(dateISO: string) {
-    if (!dateISO) return '';
+
+  function getDaysLeft(dateISO: string): number | null {
+    if (!dateISO) return null;
     const d = new Date(dateISO + 'T00:00:00');
     const t = new Date(today + 'T00:00:00');
-    if (Number.isNaN(d.getTime()) || Number.isNaN(t.getTime())) return '';
+    if (Number.isNaN(d.getTime()) || Number.isNaN(t.getTime())) return null;
     const diffMs = d.getTime() - t.getTime();
-    const diffDays = Math.round(diffMs / 86400000);
+    return Math.round(diffMs / 86400000);
+  }
+
+  function formatDaysLeft(dateISO: string) {
+    const diffDays = getDaysLeft(dateISO);
+    if (diffDays == null) return '';
     if (diffDays >= 1) return `~${diffDays} days left`;
     return 'Overdue / Due very soon!';
   }
+
+  const sortedIncomeInWindow = [...incomeInWindow].sort((a, b) => {
+    const aDays = getDaysLeft(a.expectedDate || '') ?? 0;
+    const bDays = getDaysLeft(b.expectedDate || '') ?? 0;
+    const aVerySoon = aDays < 1;
+    const bVerySoon = bDays < 1;
+    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
+    return aDays - bDays;
+  });
+
+  const sortedRecurringIncome = [...recurringIncome].sort((a, b) => {
+    const aDays = getDaysLeft(a.expectedDate || '') ?? 0;
+    const bDays = getDaysLeft(b.expectedDate || '') ?? 0;
+    const aVerySoon = aDays < 1;
+    const bVerySoon = bDays < 1;
+    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
+    return aDays - bDays;
+  });
+
+  const sortedCostsInWindow = [...costsInWindow].sort((a, b) => {
+    const aDays = getDaysLeft(a.expectedDate || '') ?? 0;
+    const bDays = getDaysLeft(b.expectedDate || '') ?? 0;
+    const aVerySoon = aDays < 1;
+    const bVerySoon = bDays < 1;
+    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
+    return aDays - bDays;
+  });
+
+  const sortedRecurringCosts = [...recurringCosts].sort((a, b) => {
+    const aDays = getDaysLeft(a.dateKey || '') ?? 0;
+    const bDays = getDaysLeft(b.dateKey || '') ?? 0;
+    const aVerySoon = aDays < 1;
+    const bVerySoon = bDays < 1;
+    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
+    return aDays - bDays;
+  });
 
   return (
     <div className="tab-panel active" id="upcomingContent">
@@ -124,7 +179,7 @@ export function UpcomingPage() {
       </div>
       {!incomeCollapsed ? (
         <>
-          {incomeInWindow.map((i) => (
+          {sortedIncomeInWindow.map((i) => (
             <div className="card" key={i.id}>
               <div className="row">
                 <span className="name">{i.title}</span>
@@ -138,10 +193,16 @@ export function UpcomingPage() {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => {
-                    actions.addPendingInbound({ label: i.title, amountCents: i.amountCents || 0, depositTo: 'bank' });
-                    const next = expectedIncome.map((x) => (x.id === i.id ? { ...x, status: 'moved_to_pending' as const } : x));
-                    setExpectedIncome(next);
-                    saveExpectedIncome(next);
+                    const initialCents = i.amountCents || 0;
+                    setModal({
+                      type: 'adjust-amount',
+                      direction: 'in',
+                      label: i.title,
+                      originalCents: initialCents,
+                      amount: (initialCents / 100).toFixed(2),
+                      error: null,
+                      source: { kind: 'expected-income', id: i.id }
+                    });
                   }}
                 >
                   Move to Pending Inbound
@@ -149,7 +210,7 @@ export function UpcomingPage() {
               </div>
             </div>
           ))}
-          {recurringIncome.map((i) => (
+          {sortedRecurringIncome.map((i) => (
             <div className="card" key={i.id}>
               <div className="row">
                 <span className="name">{i.title}</span>
@@ -166,13 +227,15 @@ export function UpcomingPage() {
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => {
-                      actions.addPendingInbound({
+                      const initialCents = i.amountCents || 0;
+                      setModal({
+                        type: 'adjust-amount',
+                        direction: 'in',
                         label: i.title,
-                        amountCents: i.amountCents || 0,
-                        depositTo: 'bank',
-                        targetBankId: i.paymentTargetId || undefined,
-                        recurringId: i.recurringId,
-                        recurringDateKey: i.expectedDate
+                        originalCents: initialCents,
+                        amount: (initialCents / 100).toFixed(2),
+                        error: null,
+                        source: { kind: 'recurring-income', id: i.id }
                       });
                     }}
                   >
@@ -217,7 +280,7 @@ export function UpcomingPage() {
       </div>
       {!costsCollapsed ? (
         <>
-          {costsInWindow.map((c) => (
+          {sortedCostsInWindow.map((c) => (
             <div className="card" key={c.id}>
               <div className="row">
                 <span className="name">{c.title}</span>
@@ -231,10 +294,16 @@ export function UpcomingPage() {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => {
-                    actions.addPendingOutbound({ label: c.title, amountCents: c.amountCents || 0 });
-                    const next = expectedCosts.map((x) => (x.id === c.id ? { ...x, status: 'moved_to_pending' as const } : x));
-                    setExpectedCosts(next);
-                    saveExpectedCosts(next);
+                    const initialCents = c.amountCents || 0;
+                    setModal({
+                      type: 'adjust-amount',
+                      direction: 'out',
+                      label: c.title,
+                      originalCents: initialCents,
+                      amount: (initialCents / 100).toFixed(2),
+                      error: null,
+                      source: { kind: 'expected-cost', id: c.id }
+                    });
                   }}
                 >
                   Move to Pending Outbound
@@ -242,7 +311,7 @@ export function UpcomingPage() {
               </div>
             </div>
           ))}
-          {recurringCosts.map((c) => (
+          {sortedRecurringCosts.map((c) => (
             <div className="card" key={c.recurringId + ':' + c.dateKey}>
               <div className="row">
                 <span className="name">{c.recurringName}</span>
@@ -259,17 +328,15 @@ export function UpcomingPage() {
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => {
-                      actions.addPendingOutbound({
+                      const initialCents = c.amountCents || 0;
+                      setModal({
+                        type: 'adjust-amount',
+                        direction: 'out',
                         label: c.recurringName,
-                        amountCents: c.amountCents || 0,
-                        recurringId: c.recurringId,
-                        recurringDateKey: c.dateKey,
-                        paymentSource: c.paymentSource as any,
-                        paymentTargetId: c.paymentTargetId,
-                        splitTotalCents: c.isSplit ? c.fullAmountCents : undefined,
-                        myPortionCents: c.isSplit ? c.amountCents : undefined,
-                        category: c.category,
-                        subcategory: c.subcategory
+                        originalCents: initialCents,
+                        amount: (initialCents / 100).toFixed(2),
+                        error: null,
+                        source: { kind: 'recurring-cost', recurringId: c.recurringId, dateKey: c.dateKey }
                       });
                     }}
                   >
@@ -438,6 +505,112 @@ export function UpcomingPage() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      ) : null}
+      {modal.type === 'adjust-amount' ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Adjust amount?</h3>
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+              You estimated a value of {formatCents(modal.originalCents)}. Would you like to adjust it before moving to Pending?
+            </p>
+            <div className="field">
+              <label>Amount ($)</label>
+              <input
+                value={modal.amount}
+                inputMode="decimal"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  let error: string | null = null;
+                  const cents = parseCents(value || '0');
+                  if (Number.isNaN(cents) || cents < 0) {
+                    error = 'Enter a valid non-negative amount.';
+                  }
+                  setModal({ ...modal, amount: value, error });
+                }}
+                placeholder="0.00"
+              />
+              {modal.error ? (
+                <div style={{ color: 'var(--red)', fontSize: '0.8rem', marginTop: 4 }}>{modal.error}</div>
+              ) : null}
+            </div>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setModal({ type: 'none' })}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={!!modal.error}
+                onClick={() => {
+                  const cents = parseCents((modal as any).amount || '0');
+                  if (Number.isNaN(cents) || cents < 0) return;
+
+                  const source: any = (modal as any).source;
+
+                  if (source.kind === 'expected-income') {
+                    const item = (expectedIncome as any[]).find((x) => x.id === source.id);
+                    if (item) {
+                      actions.addPendingInbound({ label: item.title, amountCents: cents, depositTo: 'bank' });
+                      const next = (expectedIncome as any[]).map((x) =>
+                        x.id === item.id ? { ...x, status: 'moved_to_pending' as const } : x
+                      );
+                      setExpectedIncome(next as any);
+                      saveExpectedIncome(next as any);
+                    }
+                  } else if (source.kind === 'recurring-income') {
+                    const item = (recurringIncome as any[]).find((x) => x.id === source.id);
+                    if (item) {
+                      actions.addPendingInbound({
+                        label: item.title,
+                        amountCents: cents,
+                        depositTo: 'bank',
+                        targetBankId: item.paymentTargetId || undefined,
+                        recurringId: item.recurringId,
+                        recurringDateKey: item.expectedDate
+                      });
+                    }
+                  } else if (source.kind === 'expected-cost') {
+                    const item = (expectedCosts as any[]).find((x) => x.id === source.id);
+                    if (item) {
+                      actions.addPendingOutbound({ label: item.title, amountCents: cents });
+                      const next = (expectedCosts as any[]).map((x) =>
+                        x.id === item.id ? { ...x, status: 'moved_to_pending' as const } : x
+                      );
+                      setExpectedCosts(next as any);
+                      saveExpectedCosts(next as any);
+                    }
+                  } else if (source.kind === 'recurring-cost') {
+                    const item = (recurringCosts as any[]).find(
+                      (x) => x.recurringId === source.recurringId && x.dateKey === source.dateKey
+                    );
+                    if (item) {
+                      actions.addPendingOutbound({
+                        label: item.recurringName,
+                        amountCents: cents,
+                        recurringId: item.recurringId,
+                        recurringDateKey: item.dateKey,
+                        paymentSource: item.paymentSource as any,
+                        paymentTargetId: item.paymentTargetId,
+                        splitTotalCents: item.isSplit ? item.fullAmountCents : undefined,
+                        myPortionCents: item.isSplit ? cents : undefined,
+                        category: item.category,
+                        subcategory: item.subcategory
+                      });
+                    }
+                  }
+
+                  setModal({ type: 'none' });
+                }}
+              >
+                Move
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
