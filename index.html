@@ -4717,16 +4717,15 @@
       del.textContent = 'Delete';
       del.disabled = id === 'uncategorized';
       del.onclick = function() {
-        confirmModal('Delete category?', 'This will migrate any purchases/recurring bills using it to Uncategorized.', function() {
-          delete categoryConfig[id];
-          saveCategoryConfig(categoryConfig);
-          migrateCategoryReferencesAfterDelete(id, null);
-          save(data);
-          renderSnapshot();
-          if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
-          if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
-          renderManageCategories(root);
-        }, 'Delete');
+        if (!window.confirm('Are you sure you want to delete this?')) return;
+        delete categoryConfig[id];
+        saveCategoryConfig(categoryConfig);
+        migrateCategoryReferencesAfterDelete(id, null);
+        save(data);
+        renderSnapshot();
+        if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+        if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
+        renderManageCategories(root);
       };
       header.appendChild(del);
       card.appendChild(header);
@@ -4747,16 +4746,15 @@
           subDel.className = 'btn btn-delete';
           subDel.textContent = 'Delete';
           subDel.onclick = function() {
-            confirmModal('Delete subcategory?', 'This will clear the subcategory on existing purchases/recurring bills.', function() {
-              entry.sub = (entry.sub || []).filter(x => x !== s);
-              saveCategoryConfig(categoryConfig);
-              migrateCategoryReferencesAfterDelete(id, s);
-              save(data);
-              renderSnapshot();
-              if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
-              if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
-              renderManageCategories(root);
-            }, 'Delete');
+            if (!window.confirm('Are you sure you want to delete this?')) return;
+            entry.sub = (entry.sub || []).filter(x => x !== s);
+            saveCategoryConfig(categoryConfig);
+            migrateCategoryReferencesAfterDelete(id, s);
+            save(data);
+            renderSnapshot();
+            if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+            if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
+            renderManageCategories(root);
           };
           row.appendChild(left);
           row.appendChild(subDel);
