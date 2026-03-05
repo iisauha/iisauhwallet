@@ -833,7 +833,7 @@
       <h3>Manage Categories</h3>
       <div id="manageCategoriesModalBody" style="max-height:60vh; overflow-y: auto; margin-bottom: 16px;"></div>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" id="modalManageCategoriesClose">Close</button>
+        <button type="button" class="btn btn-secondary" data-action="close-manage-categories">Close</button>
       </div>
     </div>
   </div>
@@ -4716,17 +4716,8 @@
       del.className = 'btn btn-delete';
       del.textContent = 'Delete';
       del.disabled = id === 'uncategorized';
-      del.onclick = function() {
-        if (!window.confirm('Are you sure you want to delete this?')) return;
-        delete categoryConfig[id];
-        saveCategoryConfig(categoryConfig);
-        migrateCategoryReferencesAfterDelete(id, null);
-        save(data);
-        renderSnapshot();
-        if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
-        if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
-        renderManageCategories(root);
-      };
+      del.setAttribute('data-action', 'delete-category');
+      del.setAttribute('data-category', id);
       header.appendChild(del);
       card.appendChild(header);
 
@@ -4745,17 +4736,9 @@
           subDel.type = 'button';
           subDel.className = 'btn btn-delete';
           subDel.textContent = 'Delete';
-          subDel.onclick = function() {
-            if (!window.confirm('Are you sure you want to delete this?')) return;
-            entry.sub = (entry.sub || []).filter(x => x !== s);
-            saveCategoryConfig(categoryConfig);
-            migrateCategoryReferencesAfterDelete(id, s);
-            save(data);
-            renderSnapshot();
-            if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
-            if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
-            renderManageCategories(root);
-          };
+          subDel.setAttribute('data-action', 'delete-subcategory');
+          subDel.setAttribute('data-category', id);
+          subDel.setAttribute('data-subcategory', s);
           row.appendChild(left);
           row.appendChild(subDel);
           subList.appendChild(row);
@@ -4902,21 +4885,66 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  // Manage Categories: open modal with category list + delete. Wire button when Settings tab is shown so tap always works on iOS PWA.
+  // Manage Categories: open modal with category list + delete. Single delegated click on modal root so Close + Delete always fire.
   var DEBUG_MANAGE_CAT = false;
-  function openManageCategories() {
-    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] handler fired');
-    var overlay = document.getElementById('modalManageCategories');
-    var body = document.getElementById('manageCategoriesModalBody');
-    if (!overlay || !body) return;
-    renderManageCategories(body);
-    overlay.classList.remove('hidden');
-    updateBodyModalOpen();
-  }
   function closeManageCategoriesModal() {
     var overlay = document.getElementById('modalManageCategories');
     if (overlay) overlay.classList.add('hidden');
     updateBodyModalOpen();
+  }
+  function openManageCategories() {
+    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] openManageCategories');
+    var overlay = document.getElementById('modalManageCategories');
+    var body = document.getElementById('manageCategoriesModalBody');
+    if (!overlay || !body) return;
+    ensureManageCategoriesModalDelegation(overlay, body);
+    renderManageCategories(body);
+    overlay.classList.remove('hidden');
+    updateBodyModalOpen();
+  }
+  function ensureManageCategoriesModalDelegation(modalRoot, modalBody) {
+    if (modalRoot._manageCatDelegationAttached) return;
+    modalRoot._manageCatDelegationAttached = true;
+    modalRoot.addEventListener('click', function(e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-action]') : null;
+      if (!btn) return;
+      if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('manageCategories click', btn.dataset.action, btn);
+      var action = btn.getAttribute && btn.getAttribute('data-action');
+      if (action === 'close-manage-categories') {
+        closeManageCategoriesModal();
+        return;
+      }
+      if (action === 'delete-category') {
+        var catId = btn.getAttribute('data-category');
+        if (!catId) return;
+        if (!window.confirm('Are you sure you want to delete this?')) return;
+        delete categoryConfig[catId];
+        saveCategoryConfig(categoryConfig);
+        migrateCategoryReferencesAfterDelete(catId, null);
+        save(data);
+        renderSnapshot();
+        if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+        if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
+        renderManageCategories(modalBody);
+        return;
+      }
+      if (action === 'delete-subcategory') {
+        var catId = btn.getAttribute('data-category');
+        var subName = btn.getAttribute('data-subcategory');
+        if (!catId || subName == null) return;
+        var entry = categoryConfig[catId];
+        if (!entry || !Array.isArray(entry.sub)) return;
+        if (!window.confirm('Are you sure you want to delete this?')) return;
+        entry.sub = entry.sub.filter(function(x) { return x !== subName; });
+        saveCategoryConfig(categoryConfig);
+        migrateCategoryReferencesAfterDelete(catId, subName);
+        save(data);
+        renderSnapshot();
+        if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+        if (document.getElementById('recurringContent').classList.contains('active')) renderRecurring();
+        renderManageCategories(modalBody);
+      }
+    });
   }
   window.openManageCategories = openManageCategories;
   function ensureManageCategoriesWired() {
@@ -4927,21 +4955,11 @@
     if (btn._manageCatWired) return;
     btn._manageCatWired = true;
     if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] handler attached');
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      openManageCategories();
-    });
-    btn.addEventListener('touchend', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      openManageCategories();
-    }, { passive: false });
+    btn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); openManageCategories(); });
+    btn.addEventListener('touchend', function(e) { e.preventDefault(); e.stopPropagation(); openManageCategories(); }, { passive: false });
   }
   ensureManageCategoriesWired();
-  var modalCloseEl = document.getElementById('modalManageCategoriesClose');
   var modalOverlayEl = document.getElementById('modalManageCategories');
-  if (modalCloseEl) modalCloseEl.addEventListener('click', closeManageCategoriesModal);
   if (modalOverlayEl) modalOverlayEl.addEventListener('click', function(e) {
     if (e.target === this) closeManageCategoriesModal();
   });
