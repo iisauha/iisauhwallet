@@ -334,6 +334,31 @@
     <button type="button" class="btn btn-primary" id="addRecurringBtn" style="margin-top: 16px; width: 100%;">+ Add Recurring Bill</button>
   </div>
 
+  <div id="upcomingContent" class="tab-panel">
+    <p class="section-title">Upcoming Cashflow</p>
+    <div class="settings-section">
+      <label style="display:block; font-size:0.9rem; color:var(--muted); margin-bottom:6px;">Time window</label>
+      <select id="upcomingWindowSelect" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem;">
+        <option value="14">Next 14 days</option>
+        <option value="21">Next 21 days</option>
+        <option value="30">Next 30 days</option>
+        <option value="45">Next 45 days</option>
+        <option value="custom">Custom</option>
+      </select>
+      <div id="upcomingCustomDaysWrap" class="hidden" style="margin-top:8px;">
+        <input type="number" id="upcomingCustomDays" min="1" max="365" placeholder="Days" style="width:80px; padding:8px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text);" />
+      </div>
+    </div>
+    <div id="upcomingSummary" class="card" style="margin-top:16px;"></div>
+    <p id="upcomingRiskMsg" class="hidden" style="margin-top:12px; padding:12px; border-radius:10px; background:var(--red-light); color:var(--red); font-weight:500;"></p>
+    <p class="section-title" style="margin-top:24px;">Expected Costs</p>
+    <div id="upcomingCostsList"></div>
+    <button type="button" class="btn btn-dashed" id="addExpectedCostBtn" style="margin-top:8px;">+ Add expected cost</button>
+    <p class="section-title" style="margin-top:24px;">Expected Income</p>
+    <div id="upcomingIncomeList"></div>
+    <button type="button" class="btn btn-dashed" id="addExpectedIncomeBtn" style="margin-top:8px;">+ Add expected income</button>
+  </div>
+
   <div id="settingsContent" class="tab-panel">
     <p class="section-title">Export CSV</p>
     <div class="settings-section">
@@ -362,6 +387,7 @@
     <button type="button" class="tab active" data-tab="snapshot">Snapshot</button>
     <button type="button" class="tab" data-tab="spending">Spending</button>
     <button type="button" class="tab" data-tab="recurring">Recurring</button>
+    <button type="button" class="tab" data-tab="upcoming">Upcoming</button>
     <button type="button" class="tab" data-tab="settings">Settings</button>
   </div>
 
@@ -535,6 +561,14 @@
         <input type="text" id="modalRecurringAmount" inputmode="decimal" placeholder="0.00" />
       </div>
       <div class="field">
+        <label>Expected min ($) optional — for variable bills</label>
+        <input type="text" id="modalRecurringExpectedMin" inputmode="decimal" placeholder="e.g. 90" />
+      </div>
+      <div class="field">
+        <label>Expected max ($) optional — for variable bills</label>
+        <input type="text" id="modalRecurringExpectedMax" inputmode="decimal" placeholder="e.g. 150" />
+      </div>
+      <div class="field">
         <label>Category</label>
         <select id="modalRecurringCategory"></select>
       </div>
@@ -604,6 +638,66 @@
     </div>
   </div>
 
+  <div id="modalExpectedCost" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalExpectedCostHeading">Add expected cost</h3>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="modalExpectedCostTitle" placeholder="e.g. Trip deposit" />
+      </div>
+      <div class="field">
+        <label>Expected date</label>
+        <input type="date" id="modalExpectedCostDate" />
+      </div>
+      <div class="field">
+        <label>Estimated amount ($)</label>
+        <input type="text" id="modalExpectedCostAmount" inputmode="decimal" placeholder="0.00" />
+      </div>
+      <div class="field">
+        <label>Min amount ($) optional</label>
+        <input type="text" id="modalExpectedCostMin" inputmode="decimal" placeholder="Leave blank for fixed" />
+      </div>
+      <div class="field">
+        <label>Max amount ($) optional</label>
+        <input type="text" id="modalExpectedCostMax" inputmode="decimal" placeholder="Leave blank for fixed" />
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <input type="text" id="modalExpectedCostNotes" placeholder="Optional" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalExpectedCostCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalExpectedCostOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalExpectedIncome" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 id="modalExpectedIncomeHeading">Add expected income</h3>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="modalExpectedIncomeTitle" placeholder="e.g. Paycheck" />
+      </div>
+      <div class="field">
+        <label>Expected date</label>
+        <input type="date" id="modalExpectedIncomeDate" />
+      </div>
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="text" id="modalExpectedIncomeAmount" inputmode="decimal" placeholder="0.00" />
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <input type="text" id="modalExpectedIncomeNotes" placeholder="Optional" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="modalExpectedIncomeCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="modalExpectedIncomeOk">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script>
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -642,6 +736,9 @@
     necessities: '#14B8A6'
   };
   const CATEGORY_COLOR_MAP_KEY = 'categoryColorMap_v1';
+  const EXPECTED_COSTS_KEY = 'expectedCosts_v1';
+  const EXPECTED_INCOME_KEY = 'expectedIncome_v1';
+  const UPCOMING_WINDOW_KEY = 'upcomingCashflow_window_v1';
   let spendingChart = null;
   let activeCategoryFilter = '';
 
@@ -863,6 +960,59 @@
 
   function save(data) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function loadExpectedCosts() {
+    try {
+      const raw = localStorage.getItem(EXPECTED_COSTS_KEY);
+      if (raw == null) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveExpectedCosts(arr) {
+    try {
+      localStorage.setItem(EXPECTED_COSTS_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
+    } catch (_) {}
+  }
+
+  function loadExpectedIncome() {
+    try {
+      const raw = localStorage.getItem(EXPECTED_INCOME_KEY);
+      if (raw == null) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveExpectedIncome(arr) {
+    try {
+      localStorage.setItem(EXPECTED_INCOME_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
+    } catch (_) {}
+  }
+
+  function loadUpcomingWindowPreference() {
+    try {
+      const raw = localStorage.getItem(UPCOMING_WINDOW_KEY);
+      if (raw == null) return { days: 30 };
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.days === 'number' && parsed.days >= 1) return { days: Math.min(365, parsed.days) };
+      return { days: 30 };
+    } catch (_) {
+      return { days: 30 };
+    }
+  }
+
+  function saveUpcomingWindowPreference(pref) {
+    try {
+      const merged = { ...loadUpcomingWindowPreference(), ...pref };
+      localStorage.setItem(UPCOMING_WINDOW_KEY, JSON.stringify(merged));
+    } catch (_) {}
   }
 
   function formatCents(c) {
@@ -1111,6 +1261,11 @@
   let showZeroCreditCards = loadBoolPref(SHOW_ZERO_CARDS_KEY, legacyShowZero);
   let pendingInboundCollapsed = loadBoolPref(PENDING_IN_COLLAPSED_KEY, false);
   let pendingOutboundCollapsed = loadBoolPref(PENDING_OUT_COLLAPSED_KEY, false);
+  let expectedCosts = loadExpectedCosts();
+  let expectedIncome = loadExpectedIncome();
+  let upcomingWindowPref = loadUpcomingWindowPreference();
+  let editingExpectedCostId = null;
+  let editingExpectedIncomeId = null;
   let lastHasZeroCash = false;
   let lastHasZeroCards = false;
 
@@ -1300,8 +1455,150 @@
         processRecurringBillsUpToToday();
         renderRecurring();
       }
+      if (t === 'upcoming') {
+        renderUpcomingCashflow();
+      }
     });
   });
+
+  (function setupUpcomingWindow() {
+    const sel = document.getElementById('upcomingWindowSelect');
+    const customWrap = document.getElementById('upcomingCustomDaysWrap');
+    const customInput = document.getElementById('upcomingCustomDays');
+    if (!sel) return;
+    const d = upcomingWindowPref.days;
+    if ([14, 21, 30, 45].indexOf(d) >= 0) {
+      sel.value = String(d);
+      if (customWrap) customWrap.classList.add('hidden');
+    } else {
+      sel.value = 'custom';
+      if (customWrap) customWrap.classList.remove('hidden');
+      if (customInput) customInput.value = Math.min(365, Math.max(1, d));
+    }
+    sel.addEventListener('change', function() {
+      if (sel.value === 'custom') {
+        if (customWrap) customWrap.classList.remove('hidden');
+        const n = customInput ? parseInt(customInput.value || '30', 10) : 30;
+        saveUpcomingWindowPreference({ days: Math.min(365, Math.max(1, isNaN(n) ? 30 : n)) });
+      } else {
+        if (customWrap) customWrap.classList.add('hidden');
+        const n = parseInt(sel.value, 10);
+        saveUpcomingWindowPreference({ days: isNaN(n) ? 30 : n });
+      }
+      upcomingWindowPref = loadUpcomingWindowPreference();
+      if (document.getElementById('upcomingContent').classList.contains('active')) renderUpcomingCashflow();
+    });
+    if (customInput) {
+      customInput.addEventListener('change', function() {
+        const n = parseInt(customInput.value || '30', 10);
+        saveUpcomingWindowPreference({ days: Math.min(365, Math.max(1, isNaN(n) ? 30 : n)) });
+        upcomingWindowPref = loadUpcomingWindowPreference();
+        if (document.getElementById('upcomingContent').classList.contains('active')) renderUpcomingCashflow();
+      });
+    }
+  })();
+
+  function openExpectedCostModal(item) {
+    editingExpectedCostId = item ? item.id : null;
+    document.getElementById('modalExpectedCostHeading').textContent = item ? 'Edit expected cost' : 'Add expected cost';
+    document.getElementById('modalExpectedCostTitle').value = item ? (item.title || '') : '';
+    document.getElementById('modalExpectedCostDate').value = item && item.expectedDate ? item.expectedDate : toLocalDateKey(new Date());
+    document.getElementById('modalExpectedCostAmount').value = item && item.amountCents != null ? (item.amountCents / 100).toFixed(2) : '';
+    document.getElementById('modalExpectedCostMin').value = item && item.minCents != null ? (item.minCents / 100).toFixed(2) : '';
+    document.getElementById('modalExpectedCostMax').value = item && item.maxCents != null ? (item.maxCents / 100).toFixed(2) : '';
+    document.getElementById('modalExpectedCostNotes').value = item ? (item.notes || '') : '';
+    document.getElementById('modalExpectedCost').classList.remove('hidden');
+    updateBodyModalOpen();
+  }
+
+  function openExpectedIncomeModal(item) {
+    editingExpectedIncomeId = item ? item.id : null;
+    document.getElementById('modalExpectedIncomeHeading').textContent = item ? 'Edit expected income' : 'Add expected income';
+    document.getElementById('modalExpectedIncomeTitle').value = item ? (item.title || '') : '';
+    document.getElementById('modalExpectedIncomeDate').value = item && item.expectedDate ? item.expectedDate : toLocalDateKey(new Date());
+    document.getElementById('modalExpectedIncomeAmount').value = item && item.amountCents != null ? (item.amountCents / 100).toFixed(2) : '';
+    document.getElementById('modalExpectedIncomeNotes').value = item ? (item.notes || '') : '';
+    document.getElementById('modalExpectedIncome').classList.remove('hidden');
+    updateBodyModalOpen();
+  }
+
+  document.getElementById('addExpectedCostBtn').onclick = function() {
+    openExpectedCostModal(null);
+  };
+  document.getElementById('modalExpectedCostCancel').onclick = function() {
+    document.getElementById('modalExpectedCost').classList.add('hidden');
+    updateBodyModalOpen();
+  };
+  document.getElementById('modalExpectedCostOk').onclick = function() {
+    const title = document.getElementById('modalExpectedCostTitle').value.trim() || 'Expected cost';
+    const expectedDate = document.getElementById('modalExpectedCostDate').value;
+    const amountCents = parseCents(document.getElementById('modalExpectedCostAmount').value);
+    const minRaw = document.getElementById('modalExpectedCostMin').value.trim();
+    const maxRaw = document.getElementById('modalExpectedCostMax').value.trim();
+    const minCents = minRaw ? parseCents(minRaw) : undefined;
+    const maxCents = maxRaw ? parseCents(maxRaw) : undefined;
+    const notes = document.getElementById('modalExpectedCostNotes').value.trim() || undefined;
+    if (!expectedDate) {
+      alert('Please set an expected date.');
+      return;
+    }
+    if (editingExpectedCostId) {
+      const idx = expectedCosts.findIndex(c => c.id === editingExpectedCostId);
+      if (idx >= 0) {
+        expectedCosts[idx] = { ...expectedCosts[idx], title, expectedDate, amountCents, minCents, maxCents, notes };
+      }
+    } else {
+      expectedCosts.push({
+        id: uid(),
+        title,
+        expectedDate,
+        amountCents: amountCents || 0,
+        minCents,
+        maxCents,
+        notes
+      });
+    }
+    saveExpectedCosts(expectedCosts);
+    document.getElementById('modalExpectedCost').classList.add('hidden');
+    updateBodyModalOpen();
+    renderUpcomingCashflow();
+  };
+
+  document.getElementById('addExpectedIncomeBtn').onclick = function() {
+    openExpectedIncomeModal(null);
+  };
+  document.getElementById('modalExpectedIncomeCancel').onclick = function() {
+    document.getElementById('modalExpectedIncome').classList.add('hidden');
+    updateBodyModalOpen();
+  };
+  document.getElementById('modalExpectedIncomeOk').onclick = function() {
+    const title = document.getElementById('modalExpectedIncomeTitle').value.trim() || 'Expected income';
+    const expectedDate = document.getElementById('modalExpectedIncomeDate').value;
+    const amountCents = parseCents(document.getElementById('modalExpectedIncomeAmount').value);
+    const notes = document.getElementById('modalExpectedIncomeNotes').value.trim() || undefined;
+    if (!expectedDate) {
+      alert('Please set an expected date.');
+      return;
+    }
+    if (editingExpectedIncomeId) {
+      const idx = expectedIncome.findIndex(i => i.id === editingExpectedIncomeId);
+      if (idx >= 0) {
+        expectedIncome[idx] = { ...expectedIncome[idx], title, expectedDate, amountCents: amountCents || 0, notes };
+      }
+    } else {
+      expectedIncome.push({
+        id: uid(),
+        title,
+        expectedDate,
+        amountCents: amountCents || 0,
+        notes
+      });
+    }
+    saveExpectedIncome(expectedIncome);
+    document.getElementById('modalExpectedIncome').classList.add('hidden');
+    updateBodyModalOpen();
+    renderUpcomingCashflow();
+  };
 
   // Collapsible bank / card sections
   (function setupSnapshotCollapsibles() {
@@ -1686,6 +1983,10 @@
     startInput.value = (recurring && recurring.startDate) || todayKey;
     endInput.value = (recurring && recurring.endDate) || '';
     activeCheck.checked = recurring ? !!recurring.active : true;
+    const expectedMinEl = document.getElementById('modalRecurringExpectedMin');
+    const expectedMaxEl = document.getElementById('modalRecurringExpectedMax');
+    if (expectedMinEl) expectedMinEl.value = recurring && typeof recurring.expectedMinCents === 'number' ? (recurring.expectedMinCents / 100).toFixed(2) : '';
+    if (expectedMaxEl) expectedMaxEl.value = recurring && typeof recurring.expectedMaxCents === 'number' ? (recurring.expectedMaxCents / 100).toFixed(2) : '';
 
     const useLastDay = recurring ? !!recurring.useLastDayOfMonth : false;
     if (lastDayCheck) lastDayCheck.checked = useLastDay;
@@ -1924,6 +2225,10 @@
       const val = document.getElementById('modalRecurringTarget').value;
       paymentTargetId = val || undefined;
     }
+    const expectedMinRaw = document.getElementById('modalRecurringExpectedMin').value.trim();
+    const expectedMaxRaw = document.getElementById('modalRecurringExpectedMax').value.trim();
+    const expectedMinCents = expectedMinRaw ? parseCents(expectedMinRaw) : undefined;
+    const expectedMaxCents = expectedMaxRaw ? parseCents(expectedMaxRaw) : undefined;
 
     const failures = [];
     if (!nameRaw) failures.push('Name is required');
@@ -1965,7 +2270,9 @@
       applyToSnapshot,
       paymentSource,
       paymentTargetId,
-      useLastDayOfMonth
+      useLastDayOfMonth,
+      expectedMinCents,
+      expectedMaxCents
     };
     console.log('[recurring] saving payload:', payload);
 
@@ -1985,7 +2292,9 @@
         applyToSnapshot,
         paymentSource,
         paymentTargetId,
-        useLastDayOfMonth
+        useLastDayOfMonth,
+        expectedMinCents,
+        expectedMaxCents
       };
       data.recurring.push(r);
     } else {
@@ -2005,6 +2314,8 @@
         r.paymentSource = paymentSource;
         r.paymentTargetId = paymentTargetId;
         r.useLastDayOfMonth = useLastDayOfMonth;
+        if (expectedMinCents !== undefined) r.expectedMinCents = expectedMinCents;
+        if (expectedMaxCents !== undefined) r.expectedMaxCents = expectedMaxCents;
       }
     }
     try {
@@ -2193,6 +2504,288 @@
       }
     }
   }
+
+  function getRecurringOccurrencesInWindow(windowDays) {
+    const today = new Date();
+    const todayKey = toLocalDateKey(today);
+    const endDate = addDaysLocal(today, windowDays);
+    const endKey = toLocalDateKey(endDate);
+    const result = [];
+    if (!Array.isArray(data.recurring)) return result;
+    data.recurring.forEach(r => {
+      if (!r || !r.active) return;
+      const start = parseLocalDateKey(r.startDate);
+      if (isNaN(start.getTime())) return;
+      const end = r.endDate ? parseLocalDateKey(r.endDate) : null;
+      const freq = r.frequency || 'monthly';
+      let current;
+      if (freq === 'monthly' && r.useLastDayOfMonth) {
+        current = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      } else {
+        current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      }
+      while (current < today && (!end || current <= end)) {
+        if (freq === 'weekly') {
+          current = addDaysLocal(current, 7);
+        } else if (freq === 'biweekly') {
+          current = addDaysLocal(current, 14);
+        } else if (freq === 'yearly') {
+          current = addYearsPreserveDay(start, current, 1);
+        } else if (freq === 'custom') {
+          const n = (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1;
+          current = addDaysLocal(current, n);
+        } else if (freq === 'monthly' && r.useLastDayOfMonth) {
+          current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+        } else {
+          current = addMonthsPreserveDay(start, current, 1);
+        }
+      }
+      while (current <= endDate && (!end || current <= end)) {
+        const dateKey = toLocalDateKey(current);
+        if (dateKey >= todayKey && dateKey <= endKey) {
+          const amountCents = typeof r.amountCents === 'number' ? r.amountCents : 0;
+          const minCents = typeof r.expectedMinCents === 'number' ? r.expectedMinCents : null;
+          const maxCents = typeof r.expectedMaxCents === 'number' ? r.expectedMaxCents : null;
+          result.push({
+            dateKey,
+            amountCents,
+            minCents,
+            maxCents,
+            recurringId: r.id,
+            recurringName: r.name || 'Recurring'
+          });
+        }
+        if (freq === 'weekly') {
+          current = addDaysLocal(current, 7);
+        } else if (freq === 'biweekly') {
+          current = addDaysLocal(current, 14);
+        } else if (freq === 'yearly') {
+          current = addYearsPreserveDay(start, current, 1);
+        } else if (freq === 'custom') {
+          const n = (typeof r.everyNDays === 'number' && r.everyNDays > 0) ? Math.floor(r.everyNDays) : 1;
+          current = addDaysLocal(current, n);
+        } else if (freq === 'monthly' && r.useLastDayOfMonth) {
+          current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
+        } else {
+          current = addMonthsPreserveDay(start, current, 1);
+        }
+      }
+    });
+    return result;
+  }
+
+  function daysFromToday(dateKey) {
+    const today = toLocalDateKey(new Date());
+    const d = parseLocalDateKey(dateKey);
+    const t = parseLocalDateKey(today);
+    if (isNaN(d.getTime()) || isNaN(t.getTime())) return null;
+    return Math.round((d - t) / (24 * 60 * 60 * 1000));
+  }
+
+  function getUpcomingWindowDays() {
+    const sel = document.getElementById('upcomingWindowSelect');
+    const customWrap = document.getElementById('upcomingCustomDaysWrap');
+    const customInput = document.getElementById('upcomingCustomDays');
+    const val = sel && sel.value ? sel.value : '30';
+    if (val === 'custom' && customInput) {
+      const n = parseInt(customInput.value || '30', 10);
+      return Math.min(365, Math.max(1, isNaN(n) ? 30 : n));
+    }
+    const n = parseInt(val, 10);
+    return isNaN(n) ? 30 : Math.min(365, Math.max(1, n));
+  }
+
+  function renderUpcomingCashflow() {
+    const windowDays = getUpcomingWindowDays();
+    const todayKey = toLocalDateKey(new Date());
+    const endDate = addDaysLocal(new Date(), windowDays);
+    const endKey = toLocalDateKey(endDate);
+
+    ensurePhysicalCashBank(data);
+    const netCash = data.banks.reduce((s, b) => s + (b.balanceCents || 0), 0);
+
+    const recurringItems = getRecurringOccurrencesInWindow(windowDays);
+    const manualCostsInWindow = expectedCosts.filter(c => c.expectedDate >= todayKey && c.expectedDate <= endKey);
+    const incomeInWindow = expectedIncome.filter(i => i.expectedDate >= todayKey && i.expectedDate <= endKey);
+
+    function midpointCents(item) {
+      if (item.minCents != null && item.maxCents != null) {
+        return Math.round((item.minCents + item.maxCents) / 2);
+      }
+      return item.amountCents || 0;
+    }
+
+    let totalExpectedCostsCents = 0;
+    recurringItems.forEach(o => {
+      const mid = o.minCents != null && o.maxCents != null
+        ? Math.round((o.minCents + o.maxCents) / 2) : o.amountCents;
+      totalExpectedCostsCents += mid;
+    });
+    manualCostsInWindow.forEach(c => {
+      totalExpectedCostsCents += midpointCents(c);
+    });
+
+    const totalExpectedIncomeCents = incomeInWindow.reduce((s, i) => s + (i.amountCents || 0), 0);
+    const projectedBalance = netCash - totalExpectedCostsCents + totalExpectedIncomeCents;
+
+    const summaryEl = document.getElementById('upcomingSummary');
+    if (summaryEl) {
+      summaryEl.innerHTML =
+        '<div class="summary-kv"><span class="k">Current Net Cash</span><span class="v">' + formatCents(netCash) + '</span></div>' +
+        '<div class="summary-kv"><span class="k">Expected Costs (next ' + windowDays + ' days)</span><span class="v">' + formatCents(totalExpectedCostsCents) + '</span></div>' +
+        '<div class="summary-kv"><span class="k">Expected Income</span><span class="v">' + formatCents(totalExpectedIncomeCents) + '</span></div>' +
+        '<div class="summary-kv final-net-cash"><span class="k">Projected Balance</span><span class="v" id="upcomingProjectedVal">' + formatCents(projectedBalance) + '</span></div>';
+      const pv = document.getElementById('upcomingProjectedVal');
+      if (pv) {
+        pv.classList.remove('positive', 'negative');
+        pv.classList.add(projectedBalance >= 0 ? 'positive' : 'negative');
+      }
+    }
+
+    const riskEl = document.getElementById('upcomingRiskMsg');
+    if (riskEl) {
+      if (projectedBalance < 0) {
+        riskEl.textContent = 'You need approximately $' + (Math.abs(projectedBalance) / 100).toFixed(2) + ' more to cover upcoming costs.';
+        riskEl.classList.remove('hidden');
+      } else {
+        riskEl.classList.add('hidden');
+        riskEl.textContent = '';
+      }
+    }
+
+    const allCostItems = [];
+    recurringItems.forEach(o => {
+      allCostItems.push({
+        type: 'recurring',
+        id: o.recurringId + ':' + o.dateKey,
+        title: o.recurringName,
+        dateKey: o.dateKey,
+        amountCents: o.amountCents,
+        minCents: o.minCents,
+        maxCents: o.maxCents,
+        days: daysFromToday(o.dateKey)
+      });
+    });
+    manualCostsInWindow.forEach(c => {
+      allCostItems.push({
+        type: 'manual',
+        id: c.id,
+        title: c.title || 'Expected cost',
+        dateKey: c.expectedDate,
+        amountCents: c.amountCents || 0,
+        minCents: c.minCents,
+        maxCents: c.maxCents,
+        days: daysFromToday(c.expectedDate)
+      });
+    });
+    allCostItems.sort((a, b) => (a.dateKey || '').localeCompare(b.dateKey || ''));
+
+    const incomeByDate = {};
+    incomeInWindow.forEach(i => {
+      incomeByDate[i.expectedDate] = (incomeByDate[i.expectedDate] || 0) + (i.amountCents || 0);
+    });
+    const sortedCostItems = allCostItems.slice().sort((a, b) => (a.dateKey || '').localeCompare(b.dateKey || ''));
+    const costsByDate = {};
+    sortedCostItems.forEach(c => {
+      const d = c.dateKey || '';
+      if (!costsByDate[d]) costsByDate[d] = [];
+      costsByDate[d].push(c);
+    });
+    const allDates = [...new Set([...Object.keys(incomeByDate), ...Object.keys(costsByDate)])].sort();
+    let runningBalance = netCash;
+    const runningBeforeByItemId = {};
+    allDates.forEach(dateKey => {
+      runningBalance += incomeByDate[dateKey] || 0;
+      (costsByDate[dateKey] || []).forEach(c => {
+        const mid = c.minCents != null && c.maxCents != null ? Math.round((c.minCents + c.maxCents) / 2) : c.amountCents;
+        runningBeforeByItemId[c.id] = runningBalance;
+        runningBalance -= mid;
+      });
+    });
+    function runningBefore(item) {
+      return runningBeforeByItemId[item.id] != null ? runningBeforeByItemId[item.id] : netCash;
+    }
+
+    const costsListEl = document.getElementById('upcomingCostsList');
+    if (costsListEl) {
+      costsListEl.innerHTML = '';
+      allCostItems.forEach(item => {
+        const mid = item.minCents != null && item.maxCents != null
+          ? Math.round((item.minCents + item.maxCents) / 2) : item.amountCents;
+        const runBefore = runningBefore(item.dateKey);
+        const ok = runBefore >= mid;
+        const amountStr = item.minCents != null && item.maxCents != null
+          ? formatCents(item.minCents) + ' – ' + formatCents(item.maxCents)
+          : formatCents(item.amountCents);
+        const statusStr = ok ? '✔ Should be OK to pay' : '⚠ Might require additional funds';
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.marginBottom = '8px';
+        div.innerHTML =
+          '<div class="row"><span class="name">' + escapeHtml(item.title) + '</span><span class="amount">' + amountStr + '</span></div>' +
+          '<div style="font-size:0.85rem;color:var(--muted);">Due in ' + (item.days != null ? item.days + ' days' : '—') + ' · ' + (item.dateKey ? formatDisplayDate(item.dateKey) : '') + '</div>' +
+          '<div style="font-size:0.85rem;margin-top:4px;">Status: ' + statusStr + '</div>' +
+          (item.type === 'manual' ? '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-cost" style="margin-right:8px;" data-expected-cost-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-cost-id="' + escapeHtml(item.id) + '">Delete</button></div>' : '');
+        costsListEl.appendChild(div);
+      });
+      if (allCostItems.length === 0) {
+        const empty = document.createElement('p');
+        empty.style.color = 'var(--muted)';
+        empty.textContent = 'No expected costs in this window. Recurring bills and manual expected costs will appear here.';
+        costsListEl.appendChild(empty);
+      }
+    }
+
+    const incomeListEl = document.getElementById('upcomingIncomeList');
+    if (incomeListEl) {
+      incomeListEl.innerHTML = '';
+      incomeInWindow.forEach(item => {
+        const days = daysFromToday(item.expectedDate);
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.marginBottom = '8px';
+        div.innerHTML =
+          '<div class="row"><span class="name">' + escapeHtml(item.title || 'Income') + '</span><span class="amount">' + formatCents(item.amountCents || 0) + '</span></div>' +
+          '<div style="font-size:0.85rem;color:var(--muted);">In ' + (days != null ? days + ' days' : '—') + ' · ' + (item.expectedDate ? formatDisplayDate(item.expectedDate) : '') + '</div>' +
+          '<div style="margin-top:8px;"><button type="button" class="btn btn-secondary edit-expected-income" style="margin-right:8px;" data-expected-income-id="' + escapeHtml(item.id) + '">Edit</button><button type="button" class="btn btn-delete" data-expected-income-id="' + escapeHtml(item.id) + '">Delete</button></div>';
+        incomeListEl.appendChild(div);
+      });
+    }
+  }
+
+  document.getElementById('upcomingContent').addEventListener('click', function(e) {
+    const costEdit = e.target.closest('.edit-expected-cost');
+    if (costEdit) {
+      const id = costEdit.getAttribute('data-expected-cost-id');
+      const item = expectedCosts.find(c => c.id === id);
+      if (item) openExpectedCostModal(item);
+      return;
+    }
+    const costDel = e.target.closest('[data-expected-cost-id]');
+    if (costDel && !e.target.closest('.edit-expected-cost')) {
+      e.preventDefault();
+      const id = costDel.getAttribute('data-expected-cost-id');
+      expectedCosts = expectedCosts.filter(c => c.id !== id);
+      saveExpectedCosts(expectedCosts);
+      renderUpcomingCashflow();
+      return;
+    }
+    const incomeEdit = e.target.closest('.edit-expected-income');
+    if (incomeEdit) {
+      const id = incomeEdit.getAttribute('data-expected-income-id');
+      const item = expectedIncome.find(i => i.id === id);
+      if (item) openExpectedIncomeModal(item);
+      return;
+    }
+    const incomeDel = e.target.closest('[data-expected-income-id]');
+    if (incomeDel && !e.target.closest('.edit-expected-income')) {
+      e.preventDefault();
+      const id = incomeDel.getAttribute('data-expected-income-id');
+      expectedIncome = expectedIncome.filter(i => i.id !== id);
+      saveExpectedIncome(expectedIncome);
+      renderUpcomingCashflow();
+    }
+  });
 
   document.getElementById('pendingInList').addEventListener('click', function(e) {
     const postedBtn = e.target.closest('.posted[data-kind=\"in\"]');
