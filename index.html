@@ -4773,15 +4773,28 @@
     });
   }
 
-  // Settings
+  // Settings: Export JSON — full backup of all localStorage (read-only). Works on iOS PWA by appending link and delaying revoke.
   document.getElementById('exportBtn').onclick = function() {
-    const exportData = { ...data };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'ledgerlite-backup.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
+    try {
+      var payload = { version: 'backup-v1', exportedAt: new Date().toISOString(), data: {} };
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k) payload.data[k] = localStorage.getItem(k);
+      }
+      var json = JSON.stringify(payload, null, 2);
+      var blob = new Blob([json], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'iisauhwallet-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.error) console.error('Export error:', err);
+      alert('Export failed. Try again.');
+    }
   };
   document.getElementById('importFile').onchange = function(e) {
     const f = e.target.files && e.target.files[0];
@@ -4888,7 +4901,7 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  // Manage Categories: open as modal so tap always works (no dependency on Settings tab DOM). Handler attached via onclick + delegation.
+  // Manage Categories: open as modal. Assign to window first so inline onclick works; then attach direct + delegated listeners so tap always fires on iOS PWA.
   function openManageCategories() {
     var overlay = document.getElementById('modalManageCategories');
     var body = document.getElementById('manageCategoriesModalBody');
@@ -4903,6 +4916,14 @@
     updateBodyModalOpen();
   }
   window.openManageCategories = openManageCategories;
+  var manageCatBtn = document.getElementById('manageCategoriesBtn');
+  if (manageCatBtn) {
+    manageCatBtn.addEventListener('click', function(e) { e.preventDefault(); openManageCategories(); });
+    manageCatBtn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      openManageCategories();
+    }, { passive: false });
+  }
   document.getElementById('modalManageCategoriesClose').addEventListener('click', closeManageCategoriesModal);
   document.getElementById('modalManageCategories').addEventListener('click', function(e) {
     if (e.target === this) closeManageCategoriesModal();
@@ -4940,9 +4961,9 @@
     m.addEventListener('touchstart', function(e) { e.stopPropagation(); });
   });
 
-  // Snapshot auto-refresh on iOS PWA resume: run rehydrate on pageshow, visibilitychange, focus. No "run once" guard on rerender.
+  // Snapshot auto-refresh on iOS PWA resume: pageshow, visibilitychange, focus. Short delay on visibility/focus so rehydrate runs after app is foregrounded.
   var lastRehydrateAt = 0;
-  var REHYDRATE_DEBOUNCE_MS = 350;
+  var REHYDRATE_DEBOUNCE_MS = 300;
   function rehydrateAndRenderSnapshot() {
     var now = (typeof Date.now === 'function') ? Date.now() : 0;
     if (now - lastRehydrateAt < REHYDRATE_DEBOUNCE_MS) return;
@@ -4958,6 +4979,9 @@
       if (typeof console !== 'undefined' && console.error) console.error('Rehydrate snapshot error:', err);
     }
   }
+  function scheduleRehydrate() {
+    setTimeout(rehydrateAndRenderSnapshot, 80);
+  }
 
   processRecurringBillsUpToToday();
   renderSnapshot();
@@ -4967,10 +4991,10 @@
     rehydrateAndRenderSnapshot();
   });
   document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'visible') rehydrateAndRenderSnapshot();
+    if (document.visibilityState === 'visible') scheduleRehydrate();
   });
   window.addEventListener('focus', function() {
-    rehydrateAndRenderSnapshot();
+    scheduleRehydrate();
   });
 
   (function checkLocalDateFilter() {
