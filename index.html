@@ -204,6 +204,12 @@
     .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
     .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .pending-item:last-child { border-bottom: none; }
+    .pending-refund-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: var(--green-light); color: var(--green); margin-right: 6px; }
+    .recurring-expense-group { margin-bottom: 12px; }
+    .recurring-expense-group-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 1rem; font-weight: 600; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .recurring-expense-group-header:hover { background: rgba(148, 163, 184, 0.1); }
+    .recurring-expense-group-chevron { font-size: 0.9rem; min-width: 1em; }
+    .recurring-expense-group-body { margin-top: 8px; padding-left: 4px; }
     .pending-item > div:last-child { display: flex; gap: 8px; }
     .pending-item .posted,
     .pending-item .btn-delete {
@@ -345,10 +351,10 @@
 
   <div id="recurringContent" class="tab-panel">
     <p class="section-title">Recurring Items</p>
-    <p class="section-title" style="margin-top:16px;font-size:1rem;">Recurring Expenses</p>
-    <div id="recurringExpensesList"></div>
-    <p class="section-title" style="margin-top:24px;font-size:1rem;">Recurring Income</p>
+    <p class="section-title" style="margin-top:16px;font-size:1rem;">Recurring Income</p>
     <div id="recurringIncomeList"></div>
+    <p class="section-title" style="margin-top:24px;font-size:1rem;">Recurring Expenses</p>
+    <div id="recurringExpensesList"></div>
     <button type="button" class="btn btn-primary" id="addRecurringBtn" style="margin-top: 16px; width: 100%;">+ Add Recurring Item</button>
   </div>
 
@@ -455,6 +461,10 @@
         <input type="text" id="modalPendingAmount" inputmode="decimal" placeholder="0.00" />
       </div>
       <div id="modalPendingDepositToWrap" class="field hidden">
+        <div class="field toggle-row" style="margin-bottom:8px;">
+          <input type="checkbox" id="modalPendingIsRefund" />
+          <label for="modalPendingIsRefund">Is this a refund/credit?</label>
+        </div>
         <label>Deposit To</label>
         <select id="modalPendingDepositTo" style="min-height:44px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:1rem; width:100%;">
           <option value="bank">Bank</option>
@@ -1409,10 +1419,16 @@
     pendingInList.innerHTML = '';
     pendingOutList.innerHTML = '';
     data.pendingIn.forEach(p => {
+      const isRefund = p.isRefund || p.depositTo === 'card';
+      const card = p.targetCardId && (data.cards || []).find(c => c.id === p.targetCardId);
+      const cardName = card ? (card.name || '') : '';
+      const labelText = isRefund
+        ? ('<span class="pending-refund-badge">Refund</span> — ' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + (cardName ? ' → ' + escapeHtml(cardName) : ''))
+        : (escapeHtml(p.label) + ' ' + formatCents(p.amountCents));
       const div = document.createElement('div');
       div.className = 'pending-item';
       div.innerHTML =
-        '<span>' + escapeHtml(p.label) + ' ' + formatCents(p.amountCents) + '</span>' +
+        '<span>' + labelText + '</span>' +
         '<div>' +
         '<button type="button" class="posted" data-kind="in" data-id="' + p.id + '">Mark Posted</button>' +
         '<button type="button" class="btn-delete" data-kind="in" data-id="' + p.id + '">Delete</button>' +
@@ -1859,6 +1875,7 @@
     document.getElementById('modalPendingLabel').value = '';
     document.getElementById('modalPendingAmount').value = '';
     document.getElementById('modalPendingDepositToWrap').classList.remove('hidden');
+    document.getElementById('modalPendingIsRefund').checked = false;
     document.getElementById('modalPendingDepositTo').value = 'bank';
     const cardWrap = document.getElementById('modalPendingCardWrap');
     const cardSel = document.getElementById('modalPendingCardSelect');
@@ -1873,6 +1890,15 @@
     document.getElementById('modalPending').classList.remove('hidden');
     updateBodyModalOpen();
   };
+  document.getElementById('modalPendingIsRefund').addEventListener('change', function() {
+    if (this.checked) {
+      document.getElementById('modalPendingDepositTo').value = 'card';
+      document.getElementById('modalPendingCardWrap').classList.remove('hidden');
+    } else {
+      document.getElementById('modalPendingDepositTo').value = 'bank';
+      document.getElementById('modalPendingCardWrap').classList.add('hidden');
+    }
+  });
   document.getElementById('addPendingOutBtn').onclick = function() {
     pendingKind = 'out';
     document.getElementById('modalPendingTitle').textContent = 'Add pending outbound';
@@ -1891,9 +1917,14 @@
     const label = document.getElementById('modalPendingLabel').value.trim() || 'Item';
     const amountCents = parseCents(document.getElementById('modalPendingAmount').value);
     if (pendingKind === 'in') {
-      const depositTo = document.getElementById('modalPendingDepositTo').value || 'bank';
+      const isRefund = document.getElementById('modalPendingIsRefund').checked;
+      const depositTo = isRefund ? 'card' : (document.getElementById('modalPendingDepositTo').value || 'bank');
       const targetCardId = depositTo === 'card' ? (document.getElementById('modalPendingCardSelect').value || null) : null;
-      data.pendingIn.push({ id: uid(), label, amountCents, createdAt: now(), depositTo: depositTo, targetCardId: targetCardId || undefined });
+      if (depositTo === 'card' && !targetCardId) {
+        alert('Please select a credit card for the refund.');
+        return;
+      }
+      data.pendingIn.push({ id: uid(), label, amountCents, createdAt: now(), depositTo: depositTo, targetCardId: targetCardId || undefined, isRefund: isRefund || undefined });
     } else {
       data.pendingOut.push({ id: uid(), label, amountCents, createdAt: now() });
     }
@@ -2040,14 +2071,39 @@
       list.appendChild(card);
     }
 
-    expenses.forEach(r => renderRecurringCard(r, expensesList));
-    incomeItems.forEach(r => renderRecurringCard(r, incomeList));
+    const byCategory = {};
+    expenses.forEach(r => {
+      const catName = getCategoryName(r.category || '') || 'Uncategorized';
+      if (!byCategory[catName]) byCategory[catName] = [];
+      byCategory[catName].push(r);
+    });
+    const catNames = Object.keys(byCategory).sort();
+    catNames.forEach(catName => {
+      const section = document.createElement('div');
+      section.className = 'recurring-expense-group';
+      const header = document.createElement('div');
+      header.className = 'recurring-expense-group-header';
+      header.innerHTML = '<span class="recurring-expense-group-chevron">▸</span><span>' + escapeHtml(catName) + '</span>';
+      const body = document.createElement('div');
+      body.className = 'recurring-expense-group-body';
+      body.style.display = 'none';
+      byCategory[catName].forEach(r => renderRecurringCard(r, body));
+      header.onclick = function() {
+        const isHidden = body.style.display === 'none';
+        body.style.display = isHidden ? '' : 'none';
+        header.querySelector('.recurring-expense-group-chevron').textContent = isHidden ? '▾' : '▸';
+      };
+      section.appendChild(header);
+      section.appendChild(body);
+      expensesList.appendChild(section);
+    });
     if (!expenses.length) {
       const p = document.createElement('p');
       p.style.color = 'var(--muted)';
       p.textContent = 'No recurring expenses yet.';
       expensesList.appendChild(p);
     }
+    incomeItems.forEach(r => renderRecurringCard(r, incomeList));
     if (!incomeItems.length) {
       const p = document.createElement('p');
       p.style.color = 'var(--muted)';
@@ -2217,6 +2273,7 @@
         }
         targetLabelRec.textContent = sourceSelRec.value === 'card' ? 'Select Card' : 'Select Bank';
       }
+      if (incomeBankSelRec) incomeBankSelRec.onchange = updateRecurringSaveState;
       updateRecurringSaveState();
     }
     refreshRecurringTypeVisibility();
