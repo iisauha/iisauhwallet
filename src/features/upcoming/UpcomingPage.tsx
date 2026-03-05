@@ -114,7 +114,7 @@ export function UpcomingPage() {
 
       <div
         className="section-header"
-        style={{ marginTop: 24, background: 'var(--green-light)', borderRadius: 10 }}
+        style={{ marginTop: 24 }}
         onClick={() => setIncomeCollapsed((v) => !v)}
       >
         <span className="section-header-left" style={{ color: 'var(--green)' }}>
@@ -203,7 +203,7 @@ export function UpcomingPage() {
 
       <div
         className="section-header"
-        style={{ marginTop: 24, background: 'var(--red-light)', borderRadius: 10 }}
+        style={{ marginTop: 24 }}
         onClick={() => setCostsCollapsed((v) => !v)}
       >
         <span className="section-header-left" style={{ color: 'var(--red)' }}>
@@ -293,41 +293,6 @@ export function UpcomingPage() {
           </button>
         </>
       ) : null}
-      {recurringCosts.map((c) => (
-        <div className="card" key={c.recurringId + ':' + c.dateKey}>
-          <div className="row">
-            <span className="name">{c.recurringName}</span>
-            <span className="amount">{formatCents(c.amountCents || 0)}</span>
-          </div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-            {formatDaysLeft(c.dateKey)} • From recurring
-          </div>
-          {!c.autoPay ? (
-            <div className="btn-row">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  actions.addPendingOutbound({
-                    label: c.recurringName,
-                    amountCents: c.amountCents || 0,
-                    recurringId: c.recurringId,
-                    recurringDateKey: c.dateKey,
-                    paymentSource: c.paymentSource as any,
-                    paymentTargetId: c.paymentTargetId,
-                    splitTotalCents: c.isSplit ? c.fullAmountCents : undefined,
-                    myPortionCents: c.isSplit ? c.amountCents : undefined,
-                    category: c.category,
-                    subcategory: c.subcategory
-                  });
-                }}
-              >
-                Move to Pending Outbound
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ))}
       <button
         type="button"
         className="btn btn-add"

@@ -91,25 +91,35 @@ export function SubTrackerPage() {
 
         const requiredPace = monthsRemaining == null ? null : remainingCents / monthsRemaining;
         const actualPace = monthsSinceStart == null ? null : spendCents / monthsSinceStart;
-        const onPace = requiredPace == null || actualPace == null ? true : actualPace >= requiredPace;
-
         const nextTarget = nextTier ? nextTier.spendTargetCents || 0 : 0;
 
         return (
           <div className="card" key={e.id}>
-            <div className="row">
-              <span className="name">{name}</span>
-              <span className="amount">{formatCents(spendCents)}</span>
+            <div className="row" style={{ marginBottom: 6 }}>
+              <span className="name" style={{ fontSize: '1.05rem' }}>
+                {name}
+              </span>
             </div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 4 }}>
-              {nextTier
-                ? `Next tier: ${formatCents(nextTarget)} (${nextTier.rewardText || 'Bonus'}) • Remaining: ${formatCents(remainingCents)}`
-                : 'No tiers configured'}
+            <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
+              <strong>Spent so far:</strong>{' '}
+              <span>
+                {formatCents(spendCents)}
+                {nextTarget ? ` / ${formatCents(nextTarget)}` : ''}
+              </span>
             </div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 4 }}>
-              Pace: {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))}/mo required`} •{' '}
-              {actualPace == null ? '—' : `${formatCents(Math.round(actualPace))}/mo yours`} •{' '}
-              {daysRemaining != null ? `~${Math.max(0, daysRemaining)} days remaining` : 'Deadline unknown'}
+            <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 4 }}>
+              <div>
+                <strong>Current monthly spend:</strong>{' '}
+                {actualPace == null ? '—' : `${formatCents(Math.round(actualPace))}/mo`}
+              </div>
+              <div>
+                <strong>Required monthly spend:</strong>{' '}
+                {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))}/mo`}
+              </div>
+              <div>
+                <strong>Days remaining:</strong>{' '}
+                {daysRemaining != null ? `~${Math.max(0, daysRemaining)} days` : 'Unknown'}
+              </div>
             </div>
             <div className="btn-row" style={{ marginTop: 10 }}>
               <button
