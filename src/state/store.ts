@@ -102,135 +102,110 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const normalize = (s: unknown) =>
         typeof s === 'string' ? s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() : '';
 
-      // Roll back snapshot effects of the old purchase (mirror deletePurchase logic).
-      const appliedOld = !!oldP.applyToSnapshot && !!oldP.paymentSource;
-      if (appliedOld) {
-        const isSplitApplied = !!oldP.isSplit && oldP.splitSnapshot && typeof oldP.splitSnapshot.amountCents === 'number';
-        const amount = isSplitApplied
-          ? oldP.splitSnapshot.amountCents
-          : typeof oldP.amountCents === 'number'
-            ? oldP.amountCents
-            : 0;
-        const src = isSplitApplied && oldP.splitSnapshot.paymentSource ? oldP.splitSnapshot.paymentSource : oldP.paymentSource;
-        const targetId = isSplitApplied && oldP.splitSnapshot.paymentTargetId
-          ? oldP.splitSnapshot.paymentTargetId
-          : oldP.paymentTargetId;
+      // Build updated purchase object, preserving unspecified fields.
+      const p: any = { ...oldP, ...updated, id };
 
+      // Compute totals and portions in cents.
+      const getTotal = (q: any) =>
+        typeof q.originalTotal === 'number'
+          ? q.originalTotal
+          : typeof q.splitTotalCents === 'number'
+            ? q.splitTotalCents
+            : typeof q.amountCents === 'number'
+              ? q.amountCents
+              : 0;
+
+      const oldTotal = getTotal(oldP);
+      const newTotal = getTotal(p);
+      const oldPortion = typeof oldP.amountCents === 'number' ? oldP.amountCents : 0;
+      const newPortion = typeof p.amountCents === 'number' ? p.amountCents : oldPortion;
+      const oldTheirShare = oldTotal - oldPortion;
+      const newTheirShare = newTotal - newPortion;
+
+      const totalDelta = newTotal - oldTotal;
+      const myDelta = newPortion - oldPortion;
+      const theirDelta = newTheirShare - oldTheirShare;
+
+      const oldApply = !!oldP.applyToSnapshot;
+      const newApply = !!p.applyToSnapshot;
+      const oldSrc = (oldP.paymentSource || '') as string;
+      const newSrc = (p.paymentSource || '') as string;
+      const oldTargetId = (oldP.paymentTargetId || '') as string;
+      const newTargetId = (p.paymentTargetId || '') as string;
+      const oldSplit = !!oldP.isSplit;
+      const newSplit = !!p.isSplit;
+
+      const sideEffectChanged =
+        oldTotal !== newTotal ||
+        oldPortion !== newPortion ||
+        oldApply !== newApply ||
+        normalize(oldSrc) !== normalize(newSrc) ||
+        normalize(oldTargetId) !== normalize(newTargetId) ||
+        oldSplit !== newSplit;
+
+      // If no side-effect fields changed, simply persist updated purchase fields and exit.
+      if (!sideEffectChanged) {
+        next.purchases[idx] = p;
+        saveData(next);
+        set({ data: next });
+        return;
+      }
+
+      const messages: string[] = [];
+
+      // Snapshot delta application (card/bank) using totalDelta and target changes.
+      const applySnapshotDelta = (src: string, targetId: string | undefined, delta: number) => {
+        if (!delta || !src) return;
         if ((src === 'card' || src === 'credit_card') && targetId) {
           const card = next.cards.find((c) => c.id === targetId);
           if (card) {
-            card.balanceCents = (card.balanceCents || 0) - amount;
+            card.balanceCents = (card.balanceCents || 0) + delta;
             card.updatedAt = nowIso();
           }
         } else if ((src === 'bank' || src === 'cash') && (targetId || src === 'cash')) {
           const bankTargetId = targetId || PHYSICAL_CASH_ID;
           const bank = next.banks.find((b) => b.id === bankTargetId);
           if (bank) {
-            bank.balanceCents = (bank.balanceCents || 0) + amount;
+            bank.balanceCents = (bank.balanceCents || 0) - delta;
             bank.updatedAt = nowIso();
           }
         }
+      };
+
+      // Snapshot: remove old if it was applied, then apply new if needed.
+      if (oldApply) {
+        const oldEffectiveTarget = oldTargetId || (oldSrc === 'cash' ? PHYSICAL_CASH_ID : '');
+        applySnapshotDelta(oldSrc, oldEffectiveTarget, -oldTotal);
+      }
+      if (newApply) {
+        const newEffectiveTarget = newTargetId || (newSrc === 'cash' ? PHYSICAL_CASH_ID : '');
+        applySnapshotDelta(newSrc, newEffectiveTarget, newTotal);
+        const labeled =
+          (newSrc === 'card' || newSrc === 'credit_card'
+            ? next.cards.find((c) => c.id === newTargetId)?.name
+            : next.banks.find((b) => b.id === newEffectiveTarget)?.name) || 'account';
+        if (totalDelta !== 0) {
+          messages.push(
+            `Snapshot updated: ${totalDelta > 0 ? '+' : ''}$${(totalDelta / 100).toFixed(
+              2
+            )} applied to ${labeled}`
+          );
+        }
       }
 
-      // Remove any split-generated pending inbound for the old purchase.
-      if (oldP.isSplit && oldP.splitPendingId && Array.isArray(next.pendingIn)) {
-        next.pendingIn = next.pendingIn.filter((pi: any) => pi.id !== oldP.splitPendingId);
-      }
-
-      // Roll back SUB tracker effects of the old purchase (mirror deletePurchase logic).
+      // SUB tracker delta on totalDelta.
       try {
         const isCardOld =
-          oldP.applyToSnapshot && (oldP.paymentSource === 'card' || oldP.paymentSource === 'credit_card') && oldP.paymentTargetId;
-        const deltaOld = typeof oldP.amountCents === 'number' ? oldP.amountCents : 0;
-        if (isCardOld && deltaOld > 0) {
-          const targetId = String(oldP.paymentTargetId || '');
-          const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
-          const tracker = loadSubTracker();
-          let changed = false;
-          const entries = (tracker.entries || []).map((e: any) => {
-            if (!e) return e;
-            const ref = e.cardRef;
-            const matches =
-              ref && ref.type === 'card'
-                ? String(ref.cardId || '') === targetId
-                : ref && ref.type === 'manual'
-                  ? normalize(ref.name) && normalize(ref.name) === normalize(cardName)
-                  : false;
-            if (!matches) return e;
-            const applied: string[] = Array.isArray(e.appliedPurchaseIds) ? e.appliedPurchaseIds : [];
-            if (!applied.includes(id)) return e;
-            const prev = typeof e.spendCents === 'number' ? e.spendCents : 0;
-            const nextSpend = Math.max(0, prev - deltaOld);
-            changed = true;
-            return {
-              ...e,
-              spendCents: nextSpend,
-              appliedPurchaseIds: applied.filter((pid) => pid !== id),
-              updatedAt: nowIso()
-            };
-          });
-          if (changed) saveSubTracker({ version: 1, entries });
-        }
-      } catch (_) {}
-
-      // Apply updated purchase (mirror addPurchase logic, but keep same id).
-      const p: any = { ...updated, id };
-
-      // If split purchase with inbound reimbursement, create pending inbound item.
-      if (p.isSplit && typeof p.splitInboundCents === 'number' && p.splitInboundCents > 0) {
-        const pendingId = uid();
-        const label = 'Venmo - "' + (p.title || 'Purchase') + '"';
-        next.pendingIn.push({
-          id: pendingId,
-          label,
-          amountCents: p.splitInboundCents,
-          createdAt: nowIso(),
-          linkedPurchaseId: id,
-          fromSplit: true
-        });
-        p.splitPendingId = pendingId;
-      }
-
-      // Apply to snapshot for updated purchase.
-      const appliedNew = !!p.applyToSnapshot && !!p.paymentSource;
-      if (appliedNew) {
-        const isSplitAppliedNew = !!p.isSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
-        const amountNew = isSplitAppliedNew
-          ? p.splitSnapshot.amountCents
-          : typeof p.amountCents === 'number'
-            ? p.amountCents
-            : 0;
-        const srcNew = isSplitAppliedNew && p.splitSnapshot.paymentSource ? p.splitSnapshot.paymentSource : p.paymentSource;
-        const targetIdNew = isSplitAppliedNew && p.splitSnapshot.paymentTargetId
-          ? p.splitSnapshot.paymentTargetId
-          : p.paymentTargetId;
-
-        if ((srcNew === 'card' || srcNew === 'credit_card') && targetIdNew) {
-          const card = next.cards.find((c) => c.id === targetIdNew);
-          if (card) {
-            card.balanceCents = (card.balanceCents || 0) + amountNew;
-            card.updatedAt = nowIso();
-          }
-        } else if ((srcNew === 'bank' || srcNew === 'cash') && (targetIdNew || srcNew === 'cash')) {
-          const bankTargetIdNew = targetIdNew || PHYSICAL_CASH_ID;
-          const bank = next.banks.find((b) => b.id === bankTargetIdNew);
-          if (bank) {
-            bank.balanceCents = (bank.balanceCents || 0) - amountNew;
-            bank.updatedAt = nowIso();
-          }
-        }
-      }
-
-      // SUB tracker for updated purchase.
-      try {
+          oldApply && (oldSrc === 'card' || oldSrc === 'credit_card') && oldTargetId;
         const isCardNew =
-          p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
-        const deltaNew = typeof p.amountCents === 'number' ? p.amountCents : 0;
-        if (isCardNew && deltaNew > 0) {
-          const targetId = String(p.paymentTargetId || '');
+          newApply && (newSrc === 'card' || newSrc === 'credit_card') && newTargetId;
+
+        const tracker = loadSubTracker();
+        let changedSub = false;
+
+        const adjustSub = (targetId: string, delta: number) => {
+          if (!delta) return;
           const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
-          const tracker = loadSubTracker();
-          let changed = false;
           const entries = (tracker.entries || []).map((e: any) => {
             if (!e) return e;
             const ref = e.cardRef;
@@ -242,23 +217,95 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
                   : false;
             if (!matches) return e;
             const applied: string[] = Array.isArray(e.appliedPurchaseIds) ? e.appliedPurchaseIds : [];
-            if (applied.includes(id)) return e;
-            const nextSpend = (typeof e.spendCents === 'number' ? e.spendCents : 0) + deltaNew;
-            changed = true;
+            let spend = typeof e.spendCents === 'number' ? e.spendCents : 0;
+            if (!applied.includes(id)) {
+              applied.push(id);
+            }
+            spend = Math.max(0, spend + delta);
+            changedSub = true;
             return {
               ...e,
-              spendCents: nextSpend,
-              appliedPurchaseIds: [...applied, id],
+              spendCents: spend,
+              appliedPurchaseIds: applied,
               updatedAt: nowIso()
             };
           });
-          if (changed) saveSubTracker({ version: 1, entries });
+          if (changedSub) saveSubTracker({ version: 1, entries });
+        };
+
+        // Remove old total from old card if needed.
+        if (isCardOld) {
+          adjustSub(String(oldTargetId), -oldTotal);
+        }
+        // Apply new total to new card if needed.
+        if (isCardNew) {
+          adjustSub(String(newTargetId), newTotal);
+        }
+
+        if (isCardNew && totalDelta !== 0) {
+          const cardName = (next.cards || []).find((c) => c.id === newTargetId)?.name || 'card';
+          messages.push(
+            `SUB tracker updated: ${totalDelta > 0 ? '+' : ''}$${(totalDelta / 100).toFixed(
+              2
+            )} applied to ${cardName}`
+          );
         }
       } catch (_) {}
+
+      // Pending inbound delta for split reimbursements using theirDelta.
+      if (theirDelta !== 0) {
+        const linked = (next.pendingIn || []).filter((pi: any) => pi.linkedPurchaseId === id);
+        if (theirDelta > 0) {
+          // Add new pending inbound for the delta.
+          next.pendingIn = next.pendingIn || [];
+          next.pendingIn.push({
+            id: uid(),
+            label: 'Reimbursement (adjustment): ' + (p.title || 'Purchase'),
+            amountCents: theirDelta,
+            createdAt: nowIso(),
+            linkedPurchaseId: id,
+            fromSplit: true
+          });
+          messages.push(
+            `Reimbursement updated: +$${(theirDelta / 100).toFixed(2)} pending inbound`
+          );
+        } else if (theirDelta < 0 && linked.length) {
+          // Reduce existing pending inbound amounts by |theirDelta|.
+          let remaining = -theirDelta;
+          const updatedPending: any[] = [];
+          for (const pi of next.pendingIn) {
+            if (pi.linkedPurchaseId !== id || remaining <= 0) {
+              updatedPending.push(pi);
+              continue;
+            }
+            const reduce = Math.min(pi.amountCents || 0, remaining);
+            const newAmt = (pi.amountCents || 0) - reduce;
+            remaining -= reduce;
+            if (newAmt > 0) {
+              updatedPending.push({ ...pi, amountCents: newAmt });
+            }
+          }
+          next.pendingIn = updatedPending;
+          messages.push(
+            `Reimbursement updated: -$${((-theirDelta) / 100).toFixed(
+              2
+            )} removed from pending inbound`
+          );
+        }
+      }
 
       next.purchases[idx] = p;
       saveData(next);
       set({ data: next });
+
+      if (messages.length && typeof window !== 'undefined') {
+        // Simple toast via alert for now.
+        try {
+          window.alert(messages.join(' • '));
+        } catch (_) {
+          // ignore
+        }
+      }
     },
     addPurchase: (purchase) => {
       const next = structuredClone(get().data) as LedgerData;
