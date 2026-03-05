@@ -4,40 +4,13 @@ import { useLedgerStore } from '../../state/store';
 import {
   loadInvesting,
   saveInvesting,
+  accrueHysaAccounts,
+  getMonthKeyFromTimestamp,
   type InvestingState,
   type InvestingAccount,
   type HysaAccount
 } from '../../state/storage';
 import { Select } from '../../ui/Select';
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function accrueHysaInterest(state: InvestingState): InvestingState {
-  const now = Date.now();
-  let changed = false;
-  const accounts = state.accounts.map((acc) => {
-    if (acc.type !== 'hysa') return acc;
-    const a = acc as HysaAccount;
-    const last = typeof a.lastAccruedAt === 'number' && a.lastAccruedAt > 0 ? a.lastAccruedAt : now;
-    let days = Math.floor((now - last) / MS_PER_DAY);
-    if (days <= 0 || !a.interestRate || a.balanceCents <= 0) {
-      if (!a.lastAccruedAt) {
-        changed = true;
-        return { ...a, lastAccruedAt: now };
-      }
-      return a;
-    }
-    const r = a.interestRate / 100;
-    const dailyRate = r / 365;
-    const factor = Math.pow(1 + dailyRate, days);
-    const newBalance = Math.round(a.balanceCents * factor);
-    const advanced = last + days * MS_PER_DAY;
-    changed = true;
-    return { ...a, balanceCents: newBalance, lastAccruedAt: advanced };
-  });
-  if (!changed) return state;
-  return { ...state, accounts };
-}
 
 export function InvestingPage() {
   const data = useLedgerStore((s) => s.data);
@@ -45,7 +18,7 @@ export function InvestingPage() {
 
   const [investing, setInvesting] = useState<InvestingState>(() => {
     const base = loadInvesting();
-    const accrued = accrueHysaInterest(base);
+    const accrued = accrueHysaAccounts(base);
     if (accrued !== base) saveInvesting(accrued);
     return accrued;
   });
@@ -97,24 +70,61 @@ export function InvestingPage() {
   }
 
   function accrueNow() {
-    const next = accrueHysaInterest(investing);
+    const next = accrueHysaAccounts(investing);
     if (next !== investing) persist(next);
   }
 
   function addAccount(type: 'hysa' | 'roth' | 'k401' | 'general') {
     const name = window.prompt('Account name?');
     if (!name) return;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+    if (type === 'hysa') {
+      const balanceInput = window.prompt('Starting balance ($)', '0.00');
+      let balanceCents = 0;
+      if (balanceInput != null && balanceInput.trim() !== '') {
+        const parsed = parseCents(balanceInput);
+        if (parsed >= 0) balanceCents = parsed;
+      }
+
+      const whenInput = window.prompt('Balance is as of:\n1) Today (default)\n2) Start of this month', '1');
+      const now = Date.now();
+      const nowDate = new Date(now);
+      const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
+      const asOfStart = whenInput === '2';
+      const lastAccruedAt = asOfStart ? monthStart : now;
+
+      const interestInput = window.prompt('Interest already credited this month ($, optional)', '');
+      let interestThisMonth = 0;
+      if (interestInput != null && interestInput.trim() !== '') {
+        const parsed = parseCents(interestInput);
+        if (parsed >= 0) interestThisMonth = parsed;
+      }
+
+      const monthKey = getMonthKeyFromTimestamp(now);
+
+      const acc: InvestingAccount = {
+        id,
+        type: 'hysa',
+        name: name.trim(),
+        balanceCents: balanceCents,
+        interestRate: 4,
+        lastAccruedAt,
+        monthKey,
+        interestThisMonth
+      } as any as HysaAccount;
+
+      persist({ ...investing, accounts: [...investing.accounts, acc] });
+      return;
+    }
+
     const base: InvestingAccount = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      id,
       type,
       name: name.trim(),
       balanceCents: 0
     } as any;
-    const acc: InvestingAccount =
-      type === 'hysa'
-        ? ({ ...(base as any), type: 'hysa', interestRate: 4, lastAccruedAt: Date.now() } as HysaAccount)
-        : base;
-    persist({ ...investing, accounts: [...investing.accounts, acc] });
+    persist({ ...investing, accounts: [...investing.accounts, base] });
   }
 
   function setBalance(acc: InvestingAccount) {
@@ -123,7 +133,15 @@ export function InvestingPage() {
     if (val == null) return;
     const cents = parseCents(val);
     if (cents < 0) return;
-    const accounts = investing.accounts.map((a) => (a.id === acc.id ? { ...a, balanceCents: cents } : a));
+    const now = Date.now();
+    const accounts = investing.accounts.map((a) => {
+      if (a.id !== acc.id) return a;
+      const base: any = { ...a, balanceCents: cents };
+      if (a.type === 'hysa') {
+        base.lastAccruedAt = now;
+      }
+      return base;
+    });
     persist({ ...investing, accounts });
   }
 
@@ -133,9 +151,15 @@ export function InvestingPage() {
     if (val == null) return;
     const cents = parseCents(val);
     if (cents <= 0) return;
-    const accounts = investing.accounts.map((a) =>
-      a.id === acc.id ? { ...a, balanceCents: (a.balanceCents || 0) + cents } : a
-    );
+    const now = Date.now();
+    const accounts = investing.accounts.map((a) => {
+      if (a.id !== acc.id) return a;
+      const base: any = { ...a, balanceCents: (a.balanceCents || 0) + cents };
+      if (a.type === 'hysa') {
+        base.lastAccruedAt = now;
+      }
+      return base;
+    });
     persist({ ...investing, accounts });
   }
 
@@ -151,8 +175,9 @@ export function InvestingPage() {
     if (val == null) return;
     const rate = parseFloat(val);
     if (!Number.isFinite(rate) || rate < 0) return;
+    const now = Date.now();
     const accounts = investing.accounts.map((a) =>
-      a.id === acc.id ? { ...(a as HysaAccount), interestRate: rate, lastAccruedAt: Date.now() } : a
+      a.id === acc.id ? { ...(a as HysaAccount), interestRate: rate, lastAccruedAt: now } : a
     );
     persist({ ...investing, accounts });
   }
@@ -279,10 +304,6 @@ export function InvestingPage() {
         {!isCollapsed ? (
           <>
             {accounts.map((a) => {
-              const estMonthly =
-                a.type === 'hysa'
-                  ? ((a.balanceCents || 0) * ((a as HysaAccount).interestRate / 100)) / 12
-                  : 0;
               return (
                 <div className="card ll-account-card" key={a.id}>
                   <div className="row ll-account-row">
@@ -290,10 +311,27 @@ export function InvestingPage() {
                     <span className="amount">{formatCents(a.balanceCents || 0)}</span>
                   </div>
                   {a.type === 'hysa' ? (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
-                      APY {(a as HysaAccount).interestRate.toFixed(2)}% • Est monthly interest{' '}
-                      {formatCents(Math.round(estMonthly))}
-                    </div>
+                    (() => {
+                      const h = a as HysaAccount & { interestThisMonth?: number };
+                      const now = Date.now();
+                      const d = new Date(now);
+                      const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+                      const dayOfMonth = d.getDate();
+                      const remainingDays = Math.max(0, daysInMonth - dayOfMonth);
+                      const r = h.interestRate / 100;
+                      const dailyRate = r / 365;
+                      const futureFactor = remainingDays > 0 ? Math.pow(1 + dailyRate, remainingDays) - 1 : 0;
+                      const currentInterest = typeof h.interestThisMonth === 'number' ? h.interestThisMonth : 0;
+                      const futureInterest = Math.round((h.balanceCents || 0) * futureFactor);
+                      const projected = currentInterest + futureInterest;
+                      return (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
+                          <div>APY {h.interestRate.toFixed(2)}%</div>
+                          <div>Interest this month so far: {formatCents(currentInterest)}</div>
+                          <div>Projected month end interest: {formatCents(projected)}</div>
+                        </div>
+                      );
+                    })()
                   ) : null}
                   <div className="btn-row" style={{ marginTop: 8 }}>
                     <button

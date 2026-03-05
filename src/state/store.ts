@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
-import { loadData, loadSubTracker, loadInvesting, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { loadData, loadSubTracker, loadInvesting, accrueHysaAccounts, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
@@ -651,12 +651,16 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
         // Investing transfer: HYSA/General -> Bank
         if (item.meta && item.meta.kind === 'transfer' && item.meta.investingType && item.meta.investingAccountId) {
-          const inv = loadInvesting();
-          const acc = inv.accounts.find(
+          let inv = loadInvesting();
+          inv = accrueHysaAccounts(inv);
+          const acc: any = inv.accounts.find(
             (a: any) => a.id === item.meta!.investingAccountId && (a.type === item.meta!.investingType)
-          ) as any;
+          );
           if (acc) {
             acc.balanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
+            if (acc.type === 'hysa') {
+              acc.lastAccruedAt = Date.now();
+            }
             saveInvesting(inv);
           }
         }
@@ -741,12 +745,16 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
 
       // Investing transfer: Bank -> HYSA/General
       if (kind === 'out' && item.meta && item.meta.kind === 'transfer' && item.meta.investingType && item.meta.investingAccountId) {
-        const inv = loadInvesting();
-        const acc = inv.accounts.find(
+        let inv = loadInvesting();
+        inv = accrueHysaAccounts(inv);
+        const acc: any = inv.accounts.find(
           (a: any) => a.id === item.meta!.investingAccountId && (a.type === item.meta!.investingType)
-        ) as any;
+        );
         if (acc) {
           acc.balanceCents = (acc.balanceCents || 0) + amount;
+          if (acc.type === 'hysa') {
+            acc.lastAccruedAt = Date.now();
+          }
           saveInvesting(inv);
         }
       }

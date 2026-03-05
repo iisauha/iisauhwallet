@@ -486,6 +486,8 @@ export type HysaAccount = InvestingAccountBase & {
   type: 'hysa';
   interestRate: number; // APY percent
   lastAccruedAt: number; // timestamp ms
+  monthKey?: string; // "YYYY-MM"
+  interestThisMonth?: number; // cents of interest accrued in monthKey
 };
 
 export type OtherInvestAccount = InvestingAccountBase & {
@@ -520,5 +522,98 @@ export function saveInvesting(state: InvestingState) {
   try {
     localStorage.setItem(INVESTING_KEY, JSON.stringify(state));
   } catch (_) {}
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export function getMonthKeyFromTimestamp(ts: number): string {
+  const d = new Date(ts);
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
+  const balanceStart = typeof a.balanceCents === 'number' ? a.balanceCents : 0;
+  const rate = typeof a.interestRate === 'number' ? a.interestRate : 0;
+  if (balanceStart <= 0 || rate <= 0) {
+    const baseTs = typeof a.lastAccruedAt === 'number' && a.lastAccruedAt > 0 ? a.lastAccruedAt : now;
+    const mk = a.monthKey || getMonthKeyFromTimestamp(now);
+    return {
+      ...a,
+      balanceCents: balanceStart,
+      lastAccruedAt: baseTs,
+      monthKey: mk,
+      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0
+    };
+  }
+
+  const startTs = typeof a.lastAccruedAt === 'number' && a.lastAccruedAt > 0 ? a.lastAccruedAt : now;
+  if (now <= startTs) {
+    const mk = a.monthKey || getMonthKeyFromTimestamp(now);
+    return {
+      ...a,
+      balanceCents: balanceStart,
+      lastAccruedAt: startTs,
+      monthKey: mk,
+      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0
+    };
+  }
+
+  const days = Math.floor((now - startTs) / MS_PER_DAY);
+  if (days <= 0) {
+    const mk = a.monthKey || getMonthKeyFromTimestamp(now);
+    return {
+      ...a,
+      balanceCents: balanceStart,
+      lastAccruedAt: startTs,
+      monthKey: mk,
+      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0
+    };
+  }
+
+  let balance = balanceStart;
+  let ts = startTs;
+  let monthKey = a.monthKey || getMonthKeyFromTimestamp(startTs);
+  let interestThisMonth = typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0;
+
+  const r = rate / 100;
+  const dailyRate = r / 365;
+
+  for (let i = 0; i < days; i += 1) {
+    ts += MS_PER_DAY;
+    const dayMonthKey = getMonthKeyFromTimestamp(ts);
+    const dailyInterest = Math.round(balance * dailyRate);
+    if (dayMonthKey !== monthKey) {
+      monthKey = dayMonthKey;
+      interestThisMonth = 0;
+    }
+    if (dailyInterest !== 0) {
+      balance += dailyInterest;
+      // Only track interest for the active monthKey (current month for this account).
+      interestThisMonth += dailyInterest;
+    }
+  }
+
+  return {
+    ...a,
+    balanceCents: balance,
+    lastAccruedAt: ts,
+    monthKey,
+    interestThisMonth
+  };
+}
+
+export function accrueHysaAccounts(state: InvestingState, now?: number): InvestingState {
+  const tsNow = typeof now === 'number' ? now : Date.now();
+  let changed = false;
+  const accounts = state.accounts.map((acc) => {
+    if (acc.type !== 'hysa') return acc;
+    const updated = accrueSingleHysaAccount(acc as HysaAccount, tsNow);
+    if (updated !== acc) changed = true;
+    return updated;
+  });
+  if (!changed) return state;
+  return { ...state, accounts };
 }
 
