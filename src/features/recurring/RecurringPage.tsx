@@ -81,7 +81,9 @@ export function RecurringPage() {
             <div className="card" key={r.id}>
               <div className="row">
                 <span className="name">{r.name || 'Income'}</span>
-                <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+                <span className="amount" style={{ color: 'var(--green)' }}>
+                  {`$${((r.amountCents || 0) / 100).toFixed(2)}`}
+                </span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
                 {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
@@ -133,7 +135,9 @@ export function RecurringPage() {
                   <div className="card" key={r.id}>
                     <div className="row">
                       <span className="name">{r.name || 'Expense'}</span>
-                      <span className="amount">{`$${((r.amountCents || 0) / 100).toFixed(2)}`}</span>
+                      <span className="amount" style={{ color: 'var(--red)' }}>
+                        {`$${((r.amountCents || 0) / 100).toFixed(2)}`}
+                      </span>
                     </div>
                     <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
                       {getCategoryName(cfg, r.category || 'uncategorized')} • {r.frequency || 'monthly'} • start{' '}

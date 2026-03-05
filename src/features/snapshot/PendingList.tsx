@@ -17,15 +17,14 @@ export function PendingInboundList(props: {
         const isRefund = Boolean(p.isRefund || p.depositTo === 'card');
         const card = p.targetCardId ? (props.data.cards || []).find((c) => c.id === p.targetCardId) : undefined;
         const cardName = card ? card.name || '' : '';
-        const label = isRefund ? `Refund — ${p.label} ${formatCents(p.amountCents)}${cardName ? ` → ${cardName}` : ''}` : `${p.label} ${formatCents(p.amountCents)}`;
-
+        const baseLabel = isRefund ? `Refund — ${p.label}${cardName ? ` → ${cardName}` : ''}` : p.label;
         const amountText = formatCents(p.amountCents);
         return (
           <div className="pending-item" key={p.id}>
             <span>
               {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
               {isRefund ? ' — ' : null}
-              {escapeText(label.replace(/^Refund —\s*/, ''))}
+              {escapeText(baseLabel.replace(/^Refund —\s*/, ''))}
               {' '}
               <span className="pending-amount inbound-amount">{amountText}</span>
             </span>

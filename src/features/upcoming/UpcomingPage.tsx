@@ -301,26 +301,6 @@ export function UpcomingPage() {
           </button>
         </>
       ) : null}
-      <button
-        type="button"
-        className="btn btn-add"
-        onClick={() => {
-          setModal({
-            type: 'add-expected',
-            kind: 'cost',
-            title: '',
-            date: todayKey(),
-            notes: '',
-            useRange: false,
-            amount: '',
-            minAmount: '',
-            maxAmount: ''
-          });
-        }}
-        style={{ marginTop: 8 }}
-      >
-        + Add expected cost
-      </button>
 
       <div className="card" style={{ marginTop: 24 }}>
         <div className="summary-kv">
