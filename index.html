@@ -210,6 +210,15 @@
     .pending-ccpay-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; }
     .pending-refund-badge { background: var(--green-light); color: var(--green); }
     .pending-ccpay-badge { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+    .undo-snackbar {
+      position: fixed; left: 12px; right: 12px; bottom: calc(12px + var(--safe-bottom, 0));
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+      padding: 12px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25); z-index: 300; max-width: 400px; margin: 0 auto;
+    }
+    .undo-snackbar.hidden { display: none !important; }
+    .btn-add { background: rgba(59, 130, 246, 0.2); color: #2563EB; }
+    .btn-add:hover { background: rgba(59, 130, 246, 0.3); }
     .recurring-expense-group { margin-bottom: 12px; }
     .recurring-expense-group-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 1rem; font-weight: 600; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     .recurring-expense-group-header:hover { background: rgba(148, 163, 184, 0.1); }
@@ -222,8 +231,7 @@
       min-height: 32px;
       padding: 6px 10px;
       font-size: 0.9rem;
-      border-radius: 999px;
-      border: none;
+      border-radius: 8px;
       cursor: pointer;
     }
     .pending-item .posted {
@@ -235,12 +243,13 @@
       min-height: 32px;
       padding: 6px 12px;
       font-size: 0.9rem;
-      border-radius: 999px;
-      border: none;
-      background: var(--red-light);
-      color: var(--red);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
       cursor: pointer;
     }
+    .btn-delete:hover { background: rgba(148, 163, 184, 0.1); color: var(--text); }
     .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .filter-bar select { min-height: 44px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; }
     .category-block { margin-bottom: 20px; }
@@ -275,7 +284,7 @@
       </span>
     </div>
     <div id="bankList"></div>
-    <button type="button" class="btn btn-dashed" id="addBankBtn">+ Add Bank Account</button>
+    <button type="button" class="btn btn-primary" id="addBankBtn" style="width:100%; margin-top:8px;">+ Add Bank Account</button>
 
     <div class="section-header" id="cardHeader" style="margin-top: 24px;">
       <span>Credit Cards — <span id="cardHeaderTotal">$0.00</span></span>
@@ -287,7 +296,7 @@
       </span>
     </div>
     <div id="cardList"></div>
-    <button type="button" class="btn btn-dashed" id="addCardBtn">+ Add Credit Card</button>
+    <button type="button" class="btn btn-primary" id="addCardBtn" style="width:100%; margin-top:8px;">+ Add Credit Card</button>
 
     <div class="section-header" id="pendingInHeader" style="margin-top: 24px;">
       <span>Pending Inbound — <span id="pendingInHeaderTotal">$0.00</span></span>
@@ -296,8 +305,8 @@
     <div id="pendingInSectionBody">
       <div id="pendingInList"></div>
       <div class="btn-row">
-        <button type="button" class="btn btn-dashed" id="addPendingInBtn">+ Add item</button>
-        <button type="button" class="btn btn-danger" id="clearPendingInBtn">Clear All</button>
+        <button type="button" class="btn btn-add" id="addPendingInBtn">+ Add item</button>
+        <button type="button" class="btn btn-secondary" id="clearPendingInBtn">Clear All</button>
       </div>
     </div>
 
@@ -308,8 +317,8 @@
     <div id="pendingOutSectionBody">
       <div id="pendingOutList"></div>
       <div class="btn-row">
-        <button type="button" class="btn btn-dashed" id="addPendingOutBtn">+ Add item</button>
-        <button type="button" class="btn btn-danger" id="clearPendingOutBtn">Clear All</button>
+        <button type="button" class="btn btn-add" id="addPendingOutBtn">+ Add item</button>
+        <button type="button" class="btn btn-secondary" id="clearPendingOutBtn">Clear All</button>
       </div>
     </div>
 
@@ -326,7 +335,7 @@
   </div>
 
   <div id="spendingContent" class="tab-panel">
-    <div class="filter-bar">
+    <div class="filter-bar" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
       <select id="spendingFilter">
         <option value="this_month">This Month</option>
         <option value="last_month">Last Month</option>
@@ -337,7 +346,9 @@
         <input type="date" id="rangeStart" />
         <input type="date" id="rangeEnd" />
       </span>
+      <button type="button" class="btn btn-secondary" id="spendingByCardBtn" style="margin-left:auto;">By Card</button>
     </div>
+    <p id="spendingCardFilterHint" class="hidden" style="font-size:0.9rem; color:var(--muted); margin-top:4px;"></p>
     <p class="section-title">Spending distribution</p>
     <div class="card">
       <div class="spending-chart-wrap">
@@ -347,11 +358,21 @@
     </div>
     <p class="section-title">This period total</p>
     <div class="card"><span id="periodTotal" class="amount">$0.00</span></div>
-    <p class="section-title">By category</p>
+    <p class="section-title" style="display:flex; align-items:center; gap:8px;">
+      <span>By category</span>
+      <button type="button" id="spendingSearchToggle" class="icon-btn" aria-label="Search" style="background:transparent; border:none; padding:4px; cursor:pointer; color:var(--muted); font-size:1.1rem;">🔍</button>
+    </p>
+    <div id="spendingSearchWrap" class="hidden" style="margin-bottom:12px;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="spendingSearchInput" placeholder="Search purchases…" style="flex:1; min-width:120px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:0.95rem;" />
+        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--muted); white-space:nowrap;"><input type="checkbox" id="spendingSearchRegex" /> Regex</label>
+      </div>
+      <p id="spendingSearchError" class="hidden" style="font-size:0.8rem; color:var(--red); margin:4px 0 0 0;"></p>
+    </div>
     <div id="categoryTotals"></div>
     <p class="section-title">Purchases</p>
     <div id="purchaseList"></div>
-    <button type="button" class="btn btn-primary" id="addPurchaseBtn" style="margin-top: 16px; width: 100%;">+ Add Purchase</button>
+    <button type="button" class="btn btn-add" id="addPurchaseBtn" style="margin-top: 16px; width: 100%;">+ Add Purchase</button>
   </div>
 
   <div id="recurringContent" class="tab-panel">
@@ -360,7 +381,7 @@
     <div id="recurringIncomeList"></div>
     <p class="section-title" style="margin-top:24px;font-size:1rem;">Recurring Expenses</p>
     <div id="recurringExpensesList"></div>
-    <button type="button" class="btn btn-primary" id="addRecurringBtn" style="margin-top: 16px; width: 100%;">+ Add Recurring Item</button>
+    <button type="button" class="btn btn-add" id="addRecurringBtn" style="margin-top: 16px; width: 100%;">+ Add Recurring Item</button>
   </div>
 
   <div id="upcomingContent" class="tab-panel">
@@ -380,10 +401,10 @@
     </div>
     <p class="section-title" style="margin-top:24px;">Expected Income</p>
     <div id="upcomingIncomeList"></div>
-    <button type="button" class="btn btn-dashed" id="addExpectedIncomeBtn" style="margin-top:8px;">+ Add expected income</button>
+    <button type="button" class="btn btn-add" id="addExpectedIncomeBtn" style="margin-top:8px;">+ Add expected income</button>
     <p class="section-title" style="margin-top:24px;">Expected Costs</p>
     <div id="upcomingCostsList"></div>
-    <button type="button" class="btn btn-dashed" id="addExpectedCostBtn" style="margin-top:8px;">+ Add expected cost</button>
+    <button type="button" class="btn btn-add" id="addExpectedCostBtn" style="margin-top:8px;">+ Add expected cost</button>
     <p id="upcomingRiskMsg" class="hidden upcoming-risk-msg" style="margin-top:16px; padding:12px; border-radius:10px; font-weight:500;"></p>
     <div id="upcomingSummary" class="card upcoming-summary-bottom" style="margin-top:24px;"></div>
   </div>
@@ -438,7 +459,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalAddSetCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalAddSetOk">OK</button>
+        <button type="button" class="btn btn-secondary" id="modalAddSetOk">OK</button>
       </div>
     </div>
   </div>
@@ -449,7 +470,7 @@
       <p id="modalConfirmMsg"></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalConfirmCancel">Cancel</button>
-        <button type="button" class="btn btn-primary btn-danger" id="modalConfirmOk">Confirm</button>
+        <button type="button" class="btn btn-secondary" id="modalConfirmOk">Confirm</button>
       </div>
     </div>
   </div>
@@ -500,7 +521,19 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalPendingCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalPendingOk">Add</button>
+        <button type="button" class="btn btn-add" id="modalPendingOk">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalSpendingByCard" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Spending Breakdown by Card</h3>
+      <p id="modalSpendingByCardSubtitle" style="font-size:0.9rem; color:var(--muted); margin:0 0 12px 0;"></p>
+      <div id="modalSpendingByCardList"></div>
+      <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary" id="modalSpendingByCardClearFilter">Clear Card Filter</button>
+        <button type="button" class="btn btn-secondary" id="modalSpendingByCardClose">Close</button>
       </div>
     </div>
   </div>
@@ -515,7 +548,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalPostCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalPostOk">Confirm</button>
+        <button type="button" class="btn btn-secondary" id="modalPostOk">Confirm</button>
       </div>
     </div>
   </div>
@@ -581,7 +614,7 @@
       <p class="field hidden" id="modalPurchaseApplyError" style="color: var(--danger); font-size: 0.9rem; margin: 0;"></p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalPurchaseCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalPurchaseOk">Save</button>
+        <button type="button" class="btn btn-secondary" id="modalPurchaseOk">Save</button>
       </div>
     </div>
   </div>
@@ -595,7 +628,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalBankCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalBankOk">Add</button>
+        <button type="button" class="btn btn-secondary" id="modalBankOk">Add</button>
       </div>
     </div>
   </div>
@@ -609,7 +642,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalCardCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalCardOk">Add</button>
+        <button type="button" class="btn btn-secondary" id="modalCardOk">Add</button>
       </div>
     </div>
   </div>
@@ -720,7 +753,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalRecurringCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalRecurringOk">Save</button>
+        <button type="button" class="btn btn-secondary" id="modalRecurringOk">Save</button>
       </div>
     </div>
   </div>
@@ -754,7 +787,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalExpectedCostCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalExpectedCostOk">Save</button>
+        <button type="button" class="btn btn-secondary" id="modalExpectedCostOk">Save</button>
       </div>
     </div>
   </div>
@@ -780,7 +813,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="modalExpectedIncomeCancel">Cancel</button>
-        <button type="button" class="btn btn-primary" id="modalExpectedIncomeOk">Save</button>
+        <button type="button" class="btn btn-secondary" id="modalExpectedIncomeOk">Save</button>
       </div>
     </div>
   </div>
@@ -828,6 +861,89 @@
   const UPCOMING_WINDOW_KEY = 'upcomingCashflow_window_v1';
   let spendingChart = null;
   let activeCategoryFilter = '';
+  let activeCardFilter = '';
+  let spendingSearchQuery = '';
+  let spendingSearchRegexMode = false;
+  let pendingUndo = null;
+  let undoSnackbarTimer = null;
+  const UNDO_SNACKBAR_DURATION_MS = 9000;
+
+  function getPaymentTargetKey(p) {
+    let src = p.paymentSource || '';
+    let targetId = p.paymentTargetId || '';
+    if (p.isSplit && p.splitSnapshot) {
+      if (p.splitSnapshot.paymentSource) src = p.splitSnapshot.paymentSource;
+      if (p.splitSnapshot.paymentTargetId) targetId = p.splitSnapshot.paymentTargetId;
+    }
+    if (src === 'card' || src === 'credit_card') return targetId ? 'card:' + targetId : 'unknown';
+    if (src === 'bank') return targetId ? 'bank:' + targetId : 'unknown';
+    if (src === 'cash') return 'cash';
+    return 'unknown';
+  }
+  function getPaymentTargetName(p) {
+    const key = getPaymentTargetKey(p);
+    if (key === 'unknown') return 'Unknown';
+    if (key === 'cash') {
+      const pc = data.banks && data.banks.find(function(b) { return b.type === 'physical_cash'; });
+      return pc ? pc.name : 'Physical Cash';
+    }
+    const parts = key.split(':');
+    if (parts[0] === 'card' && parts[1]) {
+      const c = data.cards && data.cards.find(function(card) { return card.id === parts[1]; });
+      return c ? c.name : parts[1];
+    }
+    if (parts[0] === 'bank' && parts[1]) {
+      const b = data.banks && data.banks.find(function(bank) { return bank.id === parts[1]; });
+      return b ? b.name : parts[1];
+    }
+    return key;
+  }
+  function getPaymentTargetNameByKey(key) {
+    if (!key) return 'All';
+    if (key === 'unknown') return 'Unknown';
+    if (key === 'cash') {
+      const pc = data.banks && data.banks.find(function(b) { return b.type === 'physical_cash'; });
+      return pc ? pc.name : 'Physical Cash';
+    }
+    const parts = key.split(':');
+    if (parts[0] === 'card' && parts[1]) {
+      const c = data.cards && data.cards.find(function(card) { return card.id === parts[1]; });
+      return c ? c.name : parts[1];
+    }
+    if (parts[0] === 'bank' && parts[1]) {
+      const b = data.banks && data.banks.find(function(bank) { return bank.id === parts[1]; });
+      return b ? b.name : parts[1];
+    }
+    return key;
+  }
+
+  function pushUndo(opts) {
+    if (undoSnackbarTimer) clearTimeout(undoSnackbarTimer);
+    pendingUndo = opts;
+    const el = document.getElementById('undoSnackbar');
+    const labelEl = document.getElementById('undoSnackbarLabel');
+    if (el && labelEl) {
+      labelEl.textContent = (opts.label || 'Action completed') + ' — ';
+      el.classList.remove('hidden');
+    }
+    undoSnackbarTimer = setTimeout(function() {
+      pendingUndo = null;
+      undoSnackbarTimer = null;
+      if (el) el.classList.add('hidden');
+    }, UNDO_SNACKBAR_DURATION_MS);
+  }
+  function consumeUndo() {
+    if (undoSnackbarTimer) clearTimeout(undoSnackbarTimer);
+    undoSnackbarTimer = null;
+    const el = document.getElementById('undoSnackbar');
+    if (el) el.classList.add('hidden');
+    if (pendingUndo && typeof pendingUndo.undoFn === 'function') {
+      pendingUndo.undoFn();
+      pendingUndo = null;
+    } else {
+      pendingUndo = null;
+    }
+  }
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
   function now() { return new Date().toISOString(); }
@@ -1401,7 +1517,7 @@
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">' + formatCents(b.balanceCents) + '</span></div>' +
-          '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="bank" data-id="' + b.id + '">Add / Set</button>' +
+          '<div class="btn-row"><button type="button" class="btn btn-secondary addset-btn" data-type="bank" data-id="' + b.id + '">Add / Set</button>' +
           '<button type="button" class="btn btn-secondary clear-btn" data-type="bank" data-id="' + b.id + '">Clear</button>' +
           (b.type === 'physical_cash' ? '' : '<button type="button" class="btn btn-delete" data-type="bank" data-id="' + b.id + '" aria-label="Delete bank account">Delete</button>') +
           '</div>';
@@ -1425,7 +1541,7 @@
         const amountClass = isCredit ? 'amount amount-credit' : 'amount';
         const amountLabel = isCredit ? formatCents(bal) + ' (Credit)' : formatCents(bal);
         card.innerHTML = '<div class="row"><span class="name">' + escapeHtml(c.name) + '</span><span class="' + amountClass + '">' + amountLabel + '</span></div>' +
-          '<div class="btn-row"><button type="button" class="btn btn-primary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
+          '<div class="btn-row"><button type="button" class="btn btn-secondary addset-btn" data-type="card" data-id="' + c.id + '">Add / Set</button>' +
           '<button type="button" class="btn btn-secondary clear-btn" data-type="card" data-id="' + c.id + '">Clear</button>' +
           '<button type="button" class="btn btn-delete" data-type="card" data-id="' + c.id + '" aria-label="Delete credit card">Delete</button></div>';
         cardList.appendChild(card);
@@ -2077,6 +2193,7 @@
     const amount = item.amountCents || 0;
     const bankId = document.getElementById('modalPostBankSelect').value;
     let targetMissing = false;
+    const snap = { banks: JSON.parse(JSON.stringify(data.banks)), pendingIn: JSON.parse(JSON.stringify(data.pendingIn)), pendingOut: JSON.parse(JSON.stringify(data.pendingOut)) };
     if (bankId) {
       const bank = data.banks.find(b => b.id === bankId);
       if (bank) {
@@ -2095,6 +2212,7 @@
       alert('Could not ' + (kind === 'in' ? 'add to' : 'subtract from') + ' bank (bank not found). Pending item was removed.');
     } else {
       setLastPostedBankId(kind, bankId);
+      pushUndo({ label: (kind === 'in' ? 'Pending inbound' : 'Pending outbound') + ' confirmed', undoFn: function() { data.banks = snap.banks; data.pendingIn = snap.pendingIn; data.pendingOut = snap.pendingOut; save(data); renderSnapshot(); } });
     }
     save(data);
     renderSnapshot();
@@ -2164,7 +2282,7 @@
       };
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
-      delBtn.className = 'btn btn-danger';
+      delBtn.className = 'btn btn-delete';
       delBtn.textContent = 'Delete';
       delBtn.onclick = function() {
         confirmModal('Delete recurring item?', 'This will remove the schedule. Existing posted entries will remain.', function() {
@@ -2749,6 +2867,7 @@
     if (kind === 'in' && item.targetBankId) {
       const bank = data.banks.find(b => b.id === item.targetBankId);
       if (bank) {
+        const snap = { banks: JSON.parse(JSON.stringify(data.banks)), pendingIn: JSON.parse(JSON.stringify(data.pendingIn)), recurringPosted: data.recurringPosted ? JSON.parse(JSON.stringify(data.recurringPosted)) : {} };
         bank.balanceCents = (bank.balanceCents || 0) + amount;
         bank.updatedAt = now();
         data.pendingIn = data.pendingIn.filter(p => p.id !== id);
@@ -2756,6 +2875,7 @@
         if (!item.recurringId) setLastPostedBankId('in', bank.id);
         save(data);
         renderSnapshot();
+        pushUndo({ label: 'Pending inbound confirmed', undoFn: function() { data.banks = snap.banks; data.pendingIn = snap.pendingIn; if (data.recurringPosted) data.recurringPosted = snap.recurringPosted; save(data); renderSnapshot(); } });
       } else {
         data.pendingIn = data.pendingIn.filter(p => p.id !== id);
         save(data);
@@ -2767,12 +2887,14 @@
     if (kind === 'in' && item.isRefund && item.targetCardId) {
       const card = data.cards.find(c => c.id === item.targetCardId);
       if (card) {
+        const snap = { cards: JSON.parse(JSON.stringify(data.cards)), pendingIn: JSON.parse(JSON.stringify(data.pendingIn)), recurringPosted: data.recurringPosted ? JSON.parse(JSON.stringify(data.recurringPosted)) : {} };
         card.balanceCents = (card.balanceCents || 0) - amount;
         card.updatedAt = now();
         data.pendingIn = data.pendingIn.filter(p => p.id !== id);
         if (item.recurringId) markRecurringHandled();
         save(data);
         renderSnapshot();
+        pushUndo({ label: 'Refund applied', undoFn: function() { data.cards = snap.cards; data.pendingIn = snap.pendingIn; if (data.recurringPosted) data.recurringPosted = snap.recurringPosted; save(data); renderSnapshot(); } });
       } else {
         data.pendingIn = data.pendingIn.filter(p => p.id !== id);
         save(data);
@@ -2795,6 +2917,7 @@
         alert('This card currently has a credit balance. You cannot apply a card payment.');
         return;
       }
+      const snap = { banks: JSON.parse(JSON.stringify(data.banks)), cards: JSON.parse(JSON.stringify(data.cards)), pendingOut: JSON.parse(JSON.stringify(data.pendingOut)) };
       bank.balanceCents = (bank.balanceCents || 0) - amount;
       card.balanceCents = (card.balanceCents || 0) - amount;
       bank.updatedAt = now();
@@ -2802,6 +2925,7 @@
       data.pendingOut = data.pendingOut.filter(p => p.id !== id);
       save(data);
       renderSnapshot();
+      pushUndo({ label: 'CC payment confirmed', undoFn: function() { data.banks = snap.banks; data.cards = snap.cards; data.pendingOut = snap.pendingOut; save(data); renderSnapshot(); } });
       return;
     }
     if (kind === 'out' && item.recurringId && item.paymentSource && item.paymentTargetId) {
@@ -2822,6 +2946,7 @@
         paymentTargetId: item.paymentTargetId
       };
       if (item.splitTotalCents != null) purchase.splitTotalCents = item.splitTotalCents;
+      const snap = { purchases: JSON.parse(JSON.stringify(data.purchases)), banks: JSON.parse(JSON.stringify(data.banks)), cards: JSON.parse(JSON.stringify(data.cards)), pendingOut: JSON.parse(JSON.stringify(data.pendingOut)), recurringPosted: data.recurringPosted ? JSON.parse(JSON.stringify(data.recurringPosted)) : {} };
       data.purchases.push(purchase);
       applyPurchaseToSnapshot(purchase);
       data.pendingOut = data.pendingOut.filter(p => p.id !== id);
@@ -2829,6 +2954,7 @@
       save(data);
       renderSnapshot();
       if (document.getElementById('spendingContent').classList.contains('active')) renderSpending();
+      pushUndo({ label: 'Pending outbound confirmed', undoFn: function() { data.purchases = snap.purchases; data.banks = snap.banks; data.cards = snap.cards; data.pendingOut = snap.pendingOut; if (data.recurringPosted) data.recurringPosted = snap.recurringPosted; save(data); renderSnapshot(); renderSpending(); } });
       return;
     }
     if (!data.banks.length) {
@@ -2841,6 +2967,7 @@
     }
     if (data.banks.length === 1) {
       const bank = data.banks[0];
+      const snap = { banks: JSON.parse(JSON.stringify(data.banks)), pendingIn: JSON.parse(JSON.stringify(data.pendingIn)), pendingOut: JSON.parse(JSON.stringify(data.pendingOut)) };
       if (kind === 'in') bank.balanceCents = (bank.balanceCents || 0) + amount;
       else bank.balanceCents = (bank.balanceCents || 0) - amount;
       bank.updatedAt = now();
@@ -2849,6 +2976,7 @@
       setLastPostedBankId(kind, bank.id);
       save(data);
       renderSnapshot();
+      pushUndo({ label: (kind === 'in' ? 'Pending inbound' : 'Pending outbound') + ' confirmed', undoFn: function() { data.banks = snap.banks; data.pendingIn = snap.pendingIn; data.pendingOut = snap.pendingOut; save(data); renderSnapshot(); } });
       return;
     }
     // Multiple banks: show selection modal.
@@ -3387,6 +3515,7 @@
       if (costType === 'manual') {
         const c = expectedCosts.find(function(x) { return x.id === id; });
         if (c) {
+          const snap = { pendingOut: JSON.parse(JSON.stringify(data.pendingOut)), expectedCosts: JSON.parse(JSON.stringify(expectedCosts)) };
           const amountCents = c.amountCents || 0;
           const label = c.title || 'Expected cost';
           data.pendingOut.push({ id: uid(), label: label, amountCents: amountCents, createdAt: now() });
@@ -3395,10 +3524,12 @@
           save(data);
           renderSnapshot();
           renderUpcomingCashflow();
+          pushUndo({ label: 'Moved to pending outbound', undoFn: function() { data.pendingOut = snap.pendingOut; expectedCosts = snap.expectedCosts; saveExpectedCosts(expectedCosts); save(data); renderSnapshot(); renderUpcomingCashflow(); } });
         }
       } else if (recurringId && dateKey) {
         const r = data.recurring.find(function(x) { return x.id === recurringId; });
         if (r) {
+          const snap = { pendingOut: JSON.parse(JSON.stringify(data.pendingOut)), recurringPosted: data.recurringPosted ? JSON.parse(JSON.stringify(data.recurringPosted)) : {} };
           const isSplit = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
           const fullAmountCents = (r.expectedMinCents != null && r.expectedMaxCents != null) ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2) : (typeof r.amountCents === 'number' ? r.amountCents : 0);
           const myPortionCents = isSplit ? r.myPortionCents : fullAmountCents;
@@ -3417,9 +3548,12 @@
             subcategory: r.subcategory,
             notes: r.notes
           });
+          if (!data.recurringPosted) data.recurringPosted = {};
+          data.recurringPosted[r.id + ':' + dateKey] = true;
           save(data);
           renderSnapshot();
           renderUpcomingCashflow();
+          pushUndo({ label: 'Moved to pending outbound', undoFn: function() { data.pendingOut = snap.pendingOut; data.recurringPosted = snap.recurringPosted; save(data); renderSnapshot(); renderUpcomingCashflow(); } });
         }
       }
       return;
@@ -3434,6 +3568,7 @@
       if (isRecurring && recId && dateKey) {
         const r = data.recurring.find(function(x) { return x.id === recId; });
         if (r) {
+          const snap = { pendingIn: JSON.parse(JSON.stringify(data.pendingIn)), recurringPosted: data.recurringPosted ? JSON.parse(JSON.stringify(data.recurringPosted)) : {} };
           const amountCents = (r.expectedMinCents != null && r.expectedMaxCents != null) ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2) : (typeof r.amountCents === 'number' ? r.amountCents : 0);
           data.pendingIn.push({
             id: uid(),
@@ -3445,13 +3580,17 @@
             recurringId: r.id,
             recurringDateKey: dateKey
           });
+          if (!data.recurringPosted) data.recurringPosted = {};
+          data.recurringPosted[r.id + ':' + dateKey] = true;
           save(data);
           renderSnapshot();
           renderUpcomingCashflow();
+          pushUndo({ label: 'Moved to pending inbound', undoFn: function() { data.pendingIn = snap.pendingIn; data.recurringPosted = snap.recurringPosted; save(data); renderSnapshot(); renderUpcomingCashflow(); } });
         }
       } else {
         const i = expectedIncome.find(function(x) { return x.id === incomeId; });
         if (i) {
+          const snap = { pendingIn: JSON.parse(JSON.stringify(data.pendingIn)), expectedIncome: JSON.parse(JSON.stringify(expectedIncome)) };
           data.pendingIn.push({
             id: uid(),
             label: i.title || 'Expected income',
@@ -3464,6 +3603,7 @@
           save(data);
           renderSnapshot();
           renderUpcomingCashflow();
+          pushUndo({ label: 'Moved to pending inbound', undoFn: function() { data.pendingIn = snap.pendingIn; expectedIncome = snap.expectedIncome; saveExpectedIncome(expectedIncome); save(data); renderSnapshot(); renderUpcomingCashflow(); } });
         }
       }
       return;
@@ -3482,9 +3622,11 @@
       const item = expectedCosts.find(c => c.id === id);
       const msg = item ? ((item.title || 'Expected cost') + ' ' + formatCents(item.amountCents || 0)) : 'this expected cost';
       confirmModal('Delete expected cost?', 'Remove ' + escapeHtml(msg) + '?', function() {
+        const snap = JSON.parse(JSON.stringify(expectedCosts));
         expectedCosts = expectedCosts.filter(c => c.id !== id);
         saveExpectedCosts(expectedCosts);
         renderUpcomingCashflow();
+        pushUndo({ label: 'Expected cost deleted', undoFn: function() { expectedCosts = snap; saveExpectedCosts(expectedCosts); renderUpcomingCashflow(); } });
       }, 'Delete');
       return;
     }
@@ -3502,9 +3644,11 @@
       const item = expectedIncome.find(i => i.id === id);
       const msg = item ? ((item.title || 'Income') + ' ' + formatCents(item.amountCents || 0)) : 'this expected income';
       confirmModal('Delete expected income?', 'Remove ' + escapeHtml(msg) + '?', function() {
+        const snap = JSON.parse(JSON.stringify(expectedIncome));
         expectedIncome = expectedIncome.filter(i => i.id !== id);
         saveExpectedIncome(expectedIncome);
         renderUpcomingCashflow();
+        pushUndo({ label: 'Expected income deleted', undoFn: function() { expectedIncome = snap; saveExpectedIncome(expectedIncome); renderUpcomingCashflow(); } });
       }, 'Delete');
     }
   });
@@ -4086,17 +4230,44 @@
   let spendingShowLimit = 5;
   const SPENDING_PAGE_SIZE = 10;
 
+  function spendingSearchMatches(p) {
+    const q = spendingSearchQuery.trim();
+    if (!q) return true;
+    const catName = getCategoryName(p.category || '');
+    const sub = p.subcategory || '';
+    const payName = getPaymentTargetName(p);
+    const text = (p.title || '') + ' ' + catName + ' ' + sub + ' ' + payName + ' ' + (p.notes || '');
+    if (spendingSearchRegexMode) {
+      try {
+        const re = new RegExp(q, 'i');
+        return re.test(text);
+      } catch (_) {
+        return true;
+      }
+    }
+    return text.toLowerCase().indexOf(q.toLowerCase()) >= 0;
+  }
+
   function renderSpending() {
     const filter = document.getElementById('spendingFilter').value;
     const rangeStart = document.getElementById('rangeStart').value;
     const rangeEnd = document.getElementById('rangeEnd').value;
     const { start, end } = getDateRange(filter, rangeStart, rangeEnd);
-    const filtered = data.purchases.filter(p => {
+    let filtered = data.purchases.filter(p => {
       const purchaseDate = parseLocalDateKey(p.dateISO);
       if (isNaN(purchaseDate.getTime())) return false;
       if (activeCategoryFilter && p.category !== activeCategoryFilter) return false;
+      if (activeCardFilter && getPaymentTargetKey(p) !== activeCardFilter) return false;
       return purchaseDate >= start && purchaseDate < end;
     });
+    filtered = filtered.filter(spendingSearchMatches);
+    const searchErrEl = document.getElementById('spendingSearchError');
+    if (searchErrEl) {
+      const q = (document.getElementById('spendingSearchInput') && document.getElementById('spendingSearchInput').value || '').trim();
+      if (spendingSearchRegexMode && q) {
+        try { new RegExp(q, 'i'); searchErrEl.classList.add('hidden'); } catch (_) { searchErrEl.textContent = 'Invalid regex'; searchErrEl.classList.remove('hidden'); }
+      } else { searchErrEl.classList.add('hidden'); }
+    }
     const totalCents = filtered.reduce((s, p) => s + p.amountCents, 0);
     document.getElementById('periodTotal').textContent = formatCents(totalCents);
 
@@ -4263,6 +4434,7 @@
           ? p.title + '\n\nDeleting will also reverse the Snapshot balance update.'
           : p.title;
         confirmModal('Delete purchase?', msg, () => {
+          const snap = { purchases: JSON.parse(JSON.stringify(data.purchases)), banks: JSON.parse(JSON.stringify(data.banks)), cards: JSON.parse(JSON.stringify(data.cards)), pendingIn: JSON.parse(JSON.stringify(data.pendingIn || [])) };
           if (typeof p.splitTotalCents === 'number' && p.recurringId) {
             const amount = p.splitTotalCents;
             const src = p.paymentSource;
@@ -4332,6 +4504,7 @@
           save(data);
           renderSpending();
           renderSnapshot();
+          pushUndo({ label: 'Purchase deleted', undoFn: function() { data.purchases = snap.purchases; data.banks = snap.banks; data.cards = snap.cards; data.pendingIn = snap.pendingIn; save(data); renderSpending(); renderSnapshot(); } });
         }, 'Delete');
       };
       div.appendChild(delBtn);
@@ -4363,7 +4536,98 @@
     }
 
     document.getElementById('customRangeSpan').classList.toggle('hidden', filter !== 'custom');
+    const cardFilterHint = document.getElementById('spendingCardFilterHint');
+    if (cardFilterHint) {
+      if (activeCardFilter) {
+        cardFilterHint.textContent = 'Filtered by: ' + getPaymentTargetNameByKey(activeCardFilter) + ' — ';
+        const clearA = document.createElement('button');
+        clearA.type = 'button';
+        clearA.className = 'btn btn-secondary';
+        clearA.style.marginLeft = '4px';
+        clearA.textContent = 'Clear';
+        clearA.onclick = function() { activeCardFilter = ''; renderSpending(); };
+        cardFilterHint.appendChild(clearA);
+        cardFilterHint.classList.remove('hidden');
+      } else {
+        cardFilterHint.innerHTML = '';
+        cardFilterHint.classList.add('hidden');
+      }
+    }
   }
+
+  document.getElementById('spendingSearchToggle').addEventListener('click', function() {
+    const wrap = document.getElementById('spendingSearchWrap');
+    wrap.classList.toggle('hidden');
+    if (!wrap.classList.contains('hidden')) document.getElementById('spendingSearchInput').focus();
+  });
+  document.getElementById('spendingSearchInput').addEventListener('input', function() {
+    spendingSearchQuery = this.value;
+    renderSpending();
+  });
+  document.getElementById('spendingSearchRegex').addEventListener('change', function() {
+    spendingSearchRegexMode = !!this.checked;
+    renderSpending();
+  });
+
+  document.getElementById('spendingByCardBtn').onclick = function() {
+    const filter = document.getElementById('spendingFilter').value;
+    const rangeStart = document.getElementById('rangeStart').value;
+    const rangeEnd = document.getElementById('rangeEnd').value;
+    const { start, end } = getDateRange(filter, rangeStart, rangeEnd);
+    const dateFiltered = data.purchases.filter(p => {
+      const purchaseDate = parseLocalDateKey(p.dateISO);
+      if (isNaN(purchaseDate.getTime())) return false;
+      return purchaseDate >= start && purchaseDate < end;
+    });
+    const byKey = {};
+    dateFiltered.forEach(p => {
+      const key = getPaymentTargetKey(p);
+      if (!byKey[key]) byKey[key] = { key: key, name: getPaymentTargetNameByKey(key), cents: 0 };
+      byKey[key].cents += (typeof p.amountCents === 'number' ? p.amountCents : 0);
+    });
+    const listEl = document.getElementById('modalSpendingByCardList');
+    const subEl = document.getElementById('modalSpendingByCardSubtitle');
+    listEl.innerHTML = '';
+    const order = Object.keys(byKey).sort(function(a, b) { return byKey[b].cents - byKey[a].cents; });
+    order.forEach(function(k) {
+      const row = document.createElement('div');
+      row.className = 'card';
+      row.style.cursor = 'pointer';
+      row.style.marginBottom = '8px';
+      row.style.padding = '10px 12px';
+      row.innerHTML = '<div class="row"><span class="name">' + escapeHtml(byKey[k].name) + '</span><span class="amount">' + formatCents(byKey[k].cents) + '</span></div>';
+      row.onclick = function() {
+        activeCardFilter = k;
+        document.getElementById('modalSpendingByCard').classList.add('hidden');
+        updateBodyModalOpen();
+        renderSpending();
+      };
+      listEl.appendChild(row);
+    });
+    if (order.length === 0) {
+      const empty = document.createElement('p');
+      empty.style.color = 'var(--muted)';
+      empty.textContent = 'No spending in this period.';
+      listEl.appendChild(empty);
+    }
+    const startStr = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
+    const endStr = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0');
+    subEl.textContent = 'Period: ' + startStr + ' to ' + endStr;
+    document.getElementById('modalSpendingByCard').classList.remove('hidden');
+    updateBodyModalOpen();
+  };
+  document.getElementById('modalSpendingByCardClearFilter').onclick = function() {
+    activeCardFilter = '';
+    document.getElementById('modalSpendingByCard').classList.add('hidden');
+    updateBodyModalOpen();
+    renderSpending();
+  };
+  document.getElementById('modalSpendingByCardClose').onclick = function() {
+    document.getElementById('modalSpendingByCard').classList.add('hidden');
+    updateBodyModalOpen();
+  };
+
+  document.getElementById('undoSnackbarBtn').onclick = consumeUndo;
 
   document.getElementById('spendingFilter').addEventListener('change', renderSpending);
   document.getElementById('rangeStart').addEventListener('change', renderSpending);
@@ -4425,7 +4689,7 @@
       header.innerHTML = '<span class="name">' + escapeHtml(entry.name || id) + '</span>';
       const del = document.createElement('button');
       del.type = 'button';
-      del.className = 'btn btn-danger';
+      del.className = 'btn btn-delete';
       del.textContent = 'Delete';
       del.disabled = id === 'uncategorized';
       del.onclick = function() {
@@ -4456,7 +4720,7 @@
           left.textContent = s;
           const subDel = document.createElement('button');
           subDel.type = 'button';
-          subDel.className = 'btn btn-danger';
+          subDel.className = 'btn btn-delete';
           subDel.textContent = 'Delete';
           subDel.onclick = function() {
             confirmModal('Delete subcategory?', 'This will clear the subcategory on existing purchases/recurring bills.', function() {
@@ -4658,5 +4922,9 @@
       });
     }
   </script>
+  <div id="undoSnackbar" class="undo-snackbar hidden" aria-live="polite">
+    <span id="undoSnackbarLabel"></span>
+    <button type="button" id="undoSnackbarBtn" class="btn btn-secondary" style="margin-left:12px; flex-shrink:0;">Undo</button>
+  </div>
 </body>
 </html>
