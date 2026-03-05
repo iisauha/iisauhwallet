@@ -4902,7 +4902,9 @@
     URL.revokeObjectURL(a.href);
   };
   // Manage Categories: open as modal. Assign to window first so inline onclick works; then attach direct + delegated listeners so tap always fires on iOS PWA.
+  var DEBUG_MANAGE_CAT = false; // Phase 1 diagnosis: set true to log element/handler/fire
   function openManageCategories() {
+    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] openManageCategories called');
     var overlay = document.getElementById('modalManageCategories');
     var body = document.getElementById('manageCategoriesModalBody');
     if (!overlay || !body) return;
@@ -4917,22 +4919,31 @@
   }
   window.openManageCategories = openManageCategories;
   var manageCatBtn = document.getElementById('manageCategoriesBtn');
+  if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] button exists at init:', !!manageCatBtn);
   if (manageCatBtn) {
+    if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] attaching direct click+touchend to button');
     manageCatBtn.addEventListener('click', function(e) { e.preventDefault(); openManageCategories(); });
     manageCatBtn.addEventListener('touchend', function(e) {
       e.preventDefault();
       openManageCategories();
     }, { passive: false });
   }
-  document.getElementById('modalManageCategoriesClose').addEventListener('click', closeManageCategoriesModal);
-  document.getElementById('modalManageCategories').addEventListener('click', function(e) {
+  var modalCloseEl = document.getElementById('modalManageCategoriesClose');
+  var modalOverlayEl = document.getElementById('modalManageCategories');
+  if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] modal close exists:', !!modalCloseEl, 'overlay exists:', !!modalOverlayEl);
+  if (modalCloseEl) modalCloseEl.addEventListener('click', closeManageCategoriesModal);
+  if (modalOverlayEl) modalOverlayEl.addEventListener('click', function(e) {
     if (e.target === this) closeManageCategoriesModal();
   });
   document.body.addEventListener('click', function(e) {
-    if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) openManageCategories();
+    if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) {
+      if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] body click delegation fired');
+      openManageCategories();
+    }
   });
   document.body.addEventListener('touchend', function(e) {
     if (e.target && e.target.closest && e.target.closest('#manageCategoriesBtn')) {
+      if (DEBUG_MANAGE_CAT && typeof console !== 'undefined' && console.log) console.log('[ManageCat] body touchend delegation fired');
       e.preventDefault();
       openManageCategories();
     }
