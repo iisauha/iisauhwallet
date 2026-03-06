@@ -9,13 +9,12 @@ import {
   loadCoastFire,
   saveCoastFire,
   COASTFIRE_DEFAULTS,
-  getDropdownCollapsed,
-  saveDropdownCollapsed,
   type InvestingState,
   type InvestingAccount,
   type HysaAccount,
   type CoastFireAssumptions
 } from '../../state/storage';
+import { useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { loadCategoryConfig, getCategoryName } from '../../state/storage';
 
@@ -242,12 +241,11 @@ export function InvestingPage() {
     return accrued;
   });
 
-  const [collapsed, setCollapsed] = useState<{ hysa: boolean; roth: boolean; k401: boolean; general: boolean }>(() => ({
-    hysa: getDropdownCollapsed('investing_hysa', true),
-    roth: getDropdownCollapsed('investing_roth', true),
-    k401: getDropdownCollapsed('investing_k401', true),
-    general: getDropdownCollapsed('investing_general', true)
-  }));
+  const dropdownState = useDropdownState();
+  const getCollapsed = (key: 'hysa' | 'roth' | 'k401' | 'general') =>
+    dropdownState.getDropdownCollapsed(`investing_${key}`, true);
+  const setCollapsed = (key: 'hysa' | 'roth' | 'k401' | 'general', collapsed: boolean) =>
+    dropdownState.setDropdownCollapsed(`investing_${key}`, collapsed);
 
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
@@ -509,12 +507,9 @@ export function InvestingPage() {
   }
 
   function handleOpenHysa() {
-    setCollapsed((c) => {
-      const next = { ...c, hysa: !c.hysa };
-      saveDropdownCollapsed('investing_hysa', next.hysa);
-      return next;
-    });
-    if (collapsed.hysa) {
+    const wasCollapsed = getCollapsed('hysa');
+    setCollapsed('hysa', !wasCollapsed);
+    if (wasCollapsed) {
       accrueNow();
     }
   }
@@ -601,9 +596,9 @@ export function InvestingPage() {
     label: string,
     type: 'hysa' | 'roth' | 'k401' | 'general',
     accounts: InvestingAccount[],
-    collapsedKey: keyof typeof collapsed
+    collapsedKey: 'hysa' | 'roth' | 'k401' | 'general'
   ) {
-    const isCollapsed = collapsed[collapsedKey];
+    const isCollapsed = getCollapsed(collapsedKey);
     return (
       <>
         <div
@@ -612,11 +607,7 @@ export function InvestingPage() {
           onClick={() =>
             collapsedKey === 'hysa'
               ? handleOpenHysa()
-              : setCollapsed((c) => {
-                  const next = { ...c, [collapsedKey]: !c[collapsedKey] };
-                  saveDropdownCollapsed(`investing_${collapsedKey}`, next[collapsedKey]);
-                  return next;
-                })
+              : setCollapsed(collapsedKey, !isCollapsed)
           }
         >
           <span className="section-header-left">{label}</span>

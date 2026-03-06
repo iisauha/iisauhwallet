@@ -3,18 +3,17 @@ import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import {
-  getDropdownCollapsed,
   loadExpectedCosts,
   loadExpectedIncome,
   loadUpcomingWindowPreference,
   loadLastAdjustments,
-  saveDropdownCollapsed,
   saveExpectedCosts,
   saveExpectedIncome,
   saveLastAdjustments,
   saveUpcomingWindowPreference,
   uid
 } from '../../state/storage';
+import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getRecurringIncomeOccurrencesInWindow, getRecurringOccurrencesInWindow } from '../../state/calc';
 
 function todayKey() {
@@ -94,8 +93,8 @@ export function UpcomingPage() {
 
   const projectedBalanceCents = totals.finalNetCashCents - totalExpectedCostsCents + totalExpectedIncomeCents;
   const statusOk = projectedBalanceCents >= 0;
-  const [incomeCollapsed, setIncomeCollapsed] = useState(() => getDropdownCollapsed('upcoming_expected_income', true));
-  const [costsCollapsed, setCostsCollapsed] = useState(() => getDropdownCollapsed('upcoming_expected_costs', true));
+  const [incomeCollapsed, setIncomeCollapsed] = useDropdownCollapsed('upcoming_expected_income', true);
+  const [costsCollapsed, setCostsCollapsed] = useDropdownCollapsed('upcoming_expected_costs', true);
 
   const today = todayKey();
 
@@ -175,7 +174,7 @@ export function UpcomingPage() {
       <div
         className="section-header"
         style={{ marginTop: 24 }}
-        onClick={() => setIncomeCollapsed((v) => { const next = !v; saveDropdownCollapsed('upcoming_expected_income', next); return next; })}
+        onClick={() => setIncomeCollapsed(!incomeCollapsed)}
       >
         <span className="section-header-left" style={{ color: 'var(--green)' }}>
           Expected Income
@@ -278,7 +277,7 @@ export function UpcomingPage() {
       <div
         className="section-header"
         style={{ marginTop: 24 }}
-        onClick={() => setCostsCollapsed((v) => { const next = !v; saveDropdownCollapsed('upcoming_expected_costs', next); return next; })}
+        onClick={() => setCostsCollapsed(!costsCollapsed)}
       >
         <span className="section-header-left" style={{ color: 'var(--red)' }}>
           Expected Costs

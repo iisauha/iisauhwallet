@@ -6,6 +6,7 @@ import { UpcomingPage } from './features/upcoming/UpcomingPage';
 import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
 import { InvestingPage } from './features/investing/InvestingPage';
 import { SettingsPage } from './features/settings/SettingsPage';
+import { DropdownStateProvider } from './state/DropdownStateContext';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
 
@@ -23,7 +24,7 @@ export function App() {
   }, [tab]);
 
   return (
-    <>
+    <DropdownStateProvider>
       {content}
       <nav className="tabs" aria-label="Sections">
         <button type="button" className={tab === 'snapshot' ? 'tab active' : 'tab'} onClick={() => setTab('snapshot')}>
@@ -48,7 +49,7 @@ export function App() {
           Settings
         </button>
       </nav>
-    </>
+    </DropdownStateProvider>
   );
 }
 

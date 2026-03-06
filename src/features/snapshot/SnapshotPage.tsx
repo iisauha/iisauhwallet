@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
-import { getLastPostedBankId, getDropdownCollapsed, loadBoolPref, saveBoolPref, saveDropdownCollapsed } from '../../state/storage';
+import { getLastPostedBankId, loadBoolPref, saveBoolPref } from '../../state/storage';
+import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { BankAccountCard, CreditCardCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
@@ -14,10 +15,10 @@ export function SnapshotPage() {
   const legacyShowZero = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
   const [showZeroCashItems, setShowZeroCashItems] = useState<boolean>(loadBoolPref(SHOW_ZERO_CASH_KEY, legacyShowZero));
   const [showZeroCreditCards, setShowZeroCreditCards] = useState<boolean>(loadBoolPref(SHOW_ZERO_CARDS_KEY, legacyShowZero));
-  const [cashCollapsed, setCashCollapsed] = useState(() => getDropdownCollapsed('snapshot_cash', true));
-  const [cardsCollapsed, setCardsCollapsed] = useState(() => getDropdownCollapsed('snapshot_cards', true));
-  const [pendingInCollapsed, setPendingInCollapsed] = useState<boolean>(() => getDropdownCollapsed('snapshot_pending_in', true));
-  const [pendingOutCollapsed, setPendingOutCollapsed] = useState<boolean>(() => getDropdownCollapsed('snapshot_pending_out', true));
+  const [cashCollapsed, setCashCollapsed] = useDropdownCollapsed('snapshot_cash', true);
+  const [cardsCollapsed, setCardsCollapsed] = useDropdownCollapsed('snapshot_cards', true);
+  const [pendingInCollapsed, setPendingInCollapsed] = useDropdownCollapsed('snapshot_pending_in', true);
+  const [pendingOutCollapsed, setPendingOutCollapsed] = useDropdownCollapsed('snapshot_pending_out', true);
 
   const [modal, setModal] = useState<
     | { type: 'none' }
@@ -68,7 +69,7 @@ export function SnapshotPage() {
         className="section-header"
         id="bankHeader"
         style={{ background: 'rgba(22, 163, 74, 0.12)' }}
-        onClick={() => setCashCollapsed((v) => { const next = !v; saveDropdownCollapsed('snapshot_cash', next); return next; })}
+        onClick={() => setCashCollapsed(!cashCollapsed)}
       >
         <span className="section-header-left" style={{ color: 'var(--green)' }}>
           Cash — <span>{formatCents(totals.bankTotalCents)}</span>
@@ -145,7 +146,7 @@ export function SnapshotPage() {
         className="section-header"
         id="cardHeader"
         style={{ marginTop: 24, background: 'rgba(220, 38, 38, 0.12)' }}
-        onClick={() => setCardsCollapsed((v) => { const next = !v; saveDropdownCollapsed('snapshot_cards', next); return next; })}
+        onClick={() => setCardsCollapsed(!cardsCollapsed)}
       >
         <span className="section-header-left" style={{ color: 'var(--red)' }}>
           Credit Cards — <span>{formatCents(totals.ccDebtCents - totals.ccCreditCents)}</span>
@@ -220,9 +221,7 @@ export function SnapshotPage() {
         className="section-header"
         id="pendingInHeader"
         style={{ marginTop: 24, background: 'rgba(22, 163, 74, 0.12)' }}
-        onClick={() => {
-          setPendingInCollapsed((v) => { const next = !v; saveDropdownCollapsed('snapshot_pending_in', next); return next; });
-        }}
+        onClick={() => setPendingInCollapsed(!pendingInCollapsed)}
       >
         <span className="section-header-left" style={{ color: 'var(--green)' }}>
           Pending Inbound — <span>{formatCents(totals.pendingInCents)}</span>
@@ -252,9 +251,7 @@ export function SnapshotPage() {
         className="section-header"
         id="pendingOutHeader"
         style={{ marginTop: 24, background: 'rgba(220, 38, 38, 0.12)' }}
-        onClick={() => {
-          setPendingOutCollapsed((v) => { const next = !v; saveDropdownCollapsed('snapshot_pending_out', next); return next; });
-        }}
+        onClick={() => setPendingOutCollapsed(!pendingOutCollapsed)}
       >
         <span className="section-header-left" style={{ color: 'var(--red)' }}>
           Pending Outbound — <span>{formatCents(totals.pendingOutCents)}</span>
