@@ -163,55 +163,52 @@ function computeCoastFire(
 
   const fireNumber = annualSpending / swrDecimal;
   const realReturnWarning = realReturnDecimal <= 0;
+  const C = monthlyContributionDollars * 12;
+  const r = realReturnDecimal;
 
+  // Unified model: same (1+r) compounding everywhere. Coast FIRE number = amount needed TODAY to grow to fireNumber with zero contributions.
   let coastFireNumber = 0;
-  if (!realReturnWarning && realReturnDecimal > -1) {
-    coastFireNumber =
-      annualSpending / (swrDecimal * Math.pow(1 + realReturnDecimal, yearsToRetirement));
+  if (!realReturnWarning && realReturnDecimal > -1 && yearsToRetirement > 0) {
+    coastFireNumber = fireNumber / Math.pow(1 + realReturnDecimal, yearsToRetirement);
   }
 
   const coastReached = !realReturnWarning && pvDollars >= coastFireNumber;
   const gap = !realReturnWarning && coastFireNumber > pvDollars ? coastFireNumber - pvDollars : 0;
 
-  const fvIfStopNow =
-    realReturnDecimal <= -1 || yearsToRetirement <= 0
-      ? pvDollars
-      : pvDollars * Math.pow(1 + realReturnDecimal, yearsToRetirement);
-
-  let coastAge: number | null = null;
-  const C = monthlyContributionDollars * 12;
-  let fvWithContrib = pvDollars;
-  if (!realReturnWarning && yearsToRetirement > 0) {
-    if (realReturnDecimal <= -1) {
-      fvWithContrib = pvDollars;
-    } else {
-      const growthFromPV = pvDollars * Math.pow(1 + realReturnDecimal, yearsToRetirement);
-      const annuityFV =
-        realReturnDecimal === 0
-          ? C * yearsToRetirement
-          : (C * (Math.pow(1 + realReturnDecimal, yearsToRetirement) - 1)) / realReturnDecimal;
-      fvWithContrib = growthFromPV + annuityFV;
+  // A) Stop contributing today: year-by-year growth only (same model as coastFireNumber)
+  let fvIfStopNow = pvDollars;
+  if (yearsToRetirement > 0 && realReturnDecimal > -1) {
+    let portfolio = pvDollars;
+    for (let y = 0; y < yearsToRetirement; y++) {
+      portfolio = portfolio * (1 + r);
     }
+    fvIfStopNow = portfolio;
   }
+
+  // B) Continue contributing: year-by-year growth + contribution (same model as projection)
+  let fvWithContrib = pvDollars;
+  if (yearsToRetirement > 0 && realReturnDecimal > -1) {
+    let portfolio = pvDollars;
+    for (let y = 0; y < yearsToRetirement; y++) {
+      portfolio = portfolio * (1 + r);
+      portfolio = portfolio + C;
+    }
+    fvWithContrib = portfolio;
+  }
+
+  // C) Coast FIRE age: simulate with contributions; at each age check if current portfolio would grow to fireNumber with ZERO further contributions
+  let coastAge: number | null = null;
   if (!realReturnWarning && realReturnDecimal > 0 && yearsToRetirement > 0) {
-    if (pvDollars >= coastFireNumber) {
-      coastAge = currentAge;
-    } else {
-      for (let A = currentAge; A <= retirementAge; A++) {
-        const t = A - currentAge;
-        const N2 = retirementAge - A;
-        const growthFromPV = pvDollars * Math.pow(1 + realReturnDecimal, t);
-        const annuityFV =
-          realReturnDecimal === 0
-            ? C * t
-            : C * (Math.pow(1 + realReturnDecimal, t) - 1) / realReturnDecimal;
-        const pvA = growthFromPV + annuityFV;
-        const fv = N2 <= 0 ? pvA : pvA * Math.pow(1 + realReturnDecimal, N2);
-        if (fv >= fireNumber) {
-          coastAge = A;
-          break;
-        }
+    let portfolio = pvDollars;
+    let age = currentAge;
+    while (age < retirementAge) {
+      const yearsLeft = retirementAge - age;
+      if (portfolio * Math.pow(1 + r, yearsLeft) >= fireNumber) {
+        coastAge = age;
+        break;
       }
+      portfolio = portfolio * (1 + r) + C;
+      age += 1;
     }
   }
 
@@ -236,9 +233,10 @@ function computeCoastFireAgeAndProjection(
   currentInvestedAssets: number,
   monthlyContribution: number,
   inflationAdjustedReturnDecimal: number,
-  coastFireNumber: number
+  fireNumber: number
 ): { coastFireAge: number | null; projection: { age: number; portfolio: number }[] } {
   const annualContribution = monthlyContribution * 12;
+  const r = inflationAdjustedReturnDecimal;
   const projection: { age: number; portfolio: number }[] = [];
   let portfolio = currentInvestedAssets;
   let age = currentAge;
@@ -246,12 +244,15 @@ function computeCoastFireAgeAndProjection(
 
   while (age <= retirementAge) {
     projection.push({ age, portfolio });
-    if (portfolio >= coastFireNumber && coastFireAge === null) {
-      coastFireAge = age;
+    // Coast FIRE age: at this age, would this portfolio reach fireNumber by retirement with ZERO further contributions?
+    if (age < retirementAge) {
+      const yearsLeft = retirementAge - age;
+      if (portfolio * Math.pow(1 + r, yearsLeft) >= fireNumber && coastFireAge === null) {
+        coastFireAge = age;
+      }
     }
     if (age < retirementAge) {
-      portfolio = portfolio * (1 + inflationAdjustedReturnDecimal);
-      portfolio = portfolio + annualContribution;
+      portfolio = portfolio * (1 + r) + annualContribution;
     }
     age += 1;
   }
@@ -286,7 +287,7 @@ function CoastFireResultView({
   const result = computeCoastFire(a, pvDollars, monthlyContrib);
 
   const { coastFireAge, projection } = useMemo(() => {
-    if (result.realReturnWarning || result.coastFireNumber <= 0 || a.retirementAge <= a.currentAge) {
+    if (result.realReturnWarning || result.fireNumber <= 0 || a.retirementAge <= a.currentAge) {
       return { coastFireAge: null as number | null, projection: [] as { age: number; portfolio: number }[] };
     }
     const inflationAdjustedReturnDecimal = result.realReturnPercent / 100;
@@ -296,7 +297,7 @@ function CoastFireResultView({
       pvDollars,
       monthlyContrib,
       inflationAdjustedReturnDecimal,
-      result.coastFireNumber
+      result.fireNumber
     );
   }, [
     a.currentAge,
@@ -305,7 +306,7 @@ function CoastFireResultView({
     monthlyContrib,
     result.realReturnWarning,
     result.realReturnPercent,
-    result.coastFireNumber
+    result.fireNumber
   ]);
 
   const fmt = (x: number) => `$${Math.round(x).toLocaleString()}`;
