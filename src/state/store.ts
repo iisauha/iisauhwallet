@@ -356,7 +356,15 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       // and guard against double counting by tracking applied purchase IDs.
       try {
         const isCard = p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
-        const delta = typeof p.amountCents === 'number' ? p.amountCents : 0;
+        const getTotal = (q: any) =>
+          typeof q.originalTotal === 'number'
+            ? q.originalTotal
+            : typeof q.splitTotalCents === 'number'
+              ? q.splitTotalCents
+              : typeof q.amountCents === 'number'
+                ? q.amountCents
+                : 0;
+        const delta = getTotal(p);
         if (isCard && delta > 0) {
           const targetId = String(p.paymentTargetId || '');
           const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
@@ -427,7 +435,15 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       // SUB tracker rollback when deleting a tracked purchase.
       try {
         const isCard = p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
-        const delta = typeof p.amountCents === 'number' ? p.amountCents : 0;
+        const getTotal = (q: any) =>
+          typeof q.originalTotal === 'number'
+            ? q.originalTotal
+            : typeof q.splitTotalCents === 'number'
+              ? q.splitTotalCents
+              : typeof q.amountCents === 'number'
+                ? q.amountCents
+                : 0;
+        const delta = getTotal(p);
         if (isCard && delta > 0) {
           const targetId = String(p.paymentTargetId || '');
           const cardName = (next.cards || []).find((c) => c.id === targetId)?.name || '';
