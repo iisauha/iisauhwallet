@@ -80,18 +80,28 @@ export function SubTrackerPage() {
         const now = new Date();
         const spendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
 
-        const daysRemaining = Number.isNaN(deadline.getTime()) ? null : Math.ceil((deadline.getTime() - now.getTime()) / 86400000);
+        const daysRemaining = Number.isNaN(deadline.getTime()) ? null : Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / 86400000));
         const elapsedDays = Number.isNaN(start.getTime()) ? null : Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86400000));
+
+        const totalWindowDays =
+          Number.isNaN(deadline.getTime()) || Number.isNaN(start.getTime())
+            ? null
+            : Math.max(1, Math.ceil((deadline.getTime() - start.getTime()) / 86400000));
+        const monthsWindowValue =
+          e.monthsWindow != null && e.monthsWindow > 0
+            ? e.monthsWindow
+            : totalWindowDays != null
+              ? totalWindowDays / 30.44
+              : null;
 
         const tiers = Array.isArray(e.tiers) ? e.tiers.slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0)) : [];
         const nextTier = tiers.find((t) => spendCents < (t.spendTargetCents || 0)) || tiers[tiers.length - 1] || null;
-        const remainingCents = nextTier ? Math.max(0, (nextTier.spendTargetCents || 0) - spendCents) : 0;
-        const monthsRemaining = daysRemaining == null ? null : Math.max(0.01, daysRemaining / 30.44);
-        const monthsSinceStart = elapsedDays == null ? null : Math.max(0.01, elapsedDays / 30.44);
-
-        const requiredPace = monthsRemaining == null ? null : remainingCents / monthsRemaining;
-        const actualPace = monthsSinceStart == null ? null : spendCents / monthsSinceStart;
         const nextTarget = nextTier ? nextTier.spendTargetCents || 0 : 0;
+        const remainingCents = nextTier ? Math.max(0, nextTarget - spendCents) : 0;
+
+        const requiredPace =
+          monthsWindowValue != null && nextTarget > 0 ? nextTarget / monthsWindowValue : null;
+        const currentPace = elapsedDays != null ? (spendCents / elapsedDays) * 30 : null;
         const ratio = nextTarget > 0 ? Math.min(1, Math.max(0, spendCents / nextTarget)) : null;
 
         return (
@@ -110,16 +120,20 @@ export function SubTrackerPage() {
             </div>
             <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 4 }}>
               <div>
-                <strong>Current monthly spend:</strong>{' '}
-                {actualPace == null ? '—' : `${formatCents(Math.round(actualPace))}/mo`}
+                <strong>Required pace:</strong>{' '}
+                {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))} / month`}
               </div>
               <div>
-                <strong>Required monthly spend:</strong>{' '}
-                {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))}/mo`}
+                <strong>Current pace:</strong>{' '}
+                {currentPace == null ? '—' : `${formatCents(Math.round(currentPace))} / month`}
               </div>
               <div>
-                <strong>Days remaining:</strong>{' '}
-                {daysRemaining != null ? `~${Math.max(0, daysRemaining)} days` : 'Unknown'}
+                <strong>Remaining to target:</strong>{' '}
+                {nextTarget ? formatCents(remainingCents) : '—'}
+              </div>
+              <div>
+                <strong>Days left:</strong>{' '}
+                {daysRemaining != null ? `~${daysRemaining} days` : 'Unknown'}
               </div>
             </div>
             {ratio != null ? (

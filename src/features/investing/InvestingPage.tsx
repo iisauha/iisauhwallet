@@ -172,6 +172,22 @@ export function InvestingPage() {
   const [coastFireAssumptions, setCoastFireAssumptions] = useState<CoastFireAssumptions | null>(() => loadCoastFire());
   const [coastFireForm, setCoastFireForm] = useState<CoastFireAssumptions>(() => loadCoastFire() || COASTFIRE_DEFAULTS);
 
+  function coastFireAssumptionsToFormStrings(a: CoastFireAssumptions) {
+    return {
+      currentAge: a.currentAge === 0 ? '' : String(a.currentAge),
+      retirementAge: a.retirementAge === 0 ? '' : String(a.retirementAge),
+      annualSpendingDollars: a.annualSpendingDollars === 0 ? '' : String(a.annualSpendingDollars),
+      swrPercent: a.swrPercent === 0 ? '' : String(a.swrPercent),
+      investmentReturnPercent: (a.investmentReturnPercent ?? 0) === 0 ? '' : String(a.investmentReturnPercent ?? 0),
+      inflationPercent: (a.inflationPercent ?? 0) === 0 ? '' : String(a.inflationPercent ?? 0),
+      manualMonthlyContributionDollars: (a.manualMonthlyContributionDollars ?? 0) === 0 ? '' : String(a.manualMonthlyContributionDollars ?? 0)
+    };
+  }
+
+  const [coastFireFormStrings, setCoastFireFormStrings] = useState(() =>
+    coastFireAssumptionsToFormStrings(loadCoastFire() || COASTFIRE_DEFAULTS)
+  );
+
   const hysaAccounts = useMemo(
     () => investing.accounts.filter((a) => a.type === 'hysa'),
     [investing.accounts]
@@ -693,7 +709,9 @@ export function InvestingPage() {
           className="btn btn-secondary"
           style={{ width: '100%' }}
           onClick={() => {
-            if (coastFireAssumptions) setCoastFireForm({ ...coastFireAssumptions });
+            const source = coastFireAssumptions || coastFireForm;
+            setCoastFireForm({ ...source });
+            setCoastFireFormStrings(coastFireAssumptionsToFormStrings(source));
             setCoastFireOpen(true);
           }}
         >
@@ -715,85 +733,78 @@ export function InvestingPage() {
                 <div className="field">
                   <label>Current age</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className="ll-control"
-                    min={1}
-                    max={120}
-                    value={coastFireForm.currentAge}
+                    placeholder="e.g. 35"
+                    value={coastFireFormStrings.currentAge}
                     onChange={(e) =>
-                      setCoastFireForm((f) => ({ ...f, currentAge: parseInt(e.target.value, 10) || 0 }))
+                      setCoastFireFormStrings((s) => ({ ...s, currentAge: e.target.value }))
                     }
                   />
                 </div>
                 <div className="field">
                   <label>Retirement age</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className="ll-control"
-                    min={1}
-                    max={120}
-                    value={coastFireForm.retirementAge}
+                    placeholder="e.g. 65"
+                    value={coastFireFormStrings.retirementAge}
                     onChange={(e) =>
-                      setCoastFireForm((f) => ({ ...f, retirementAge: parseInt(e.target.value, 10) || 0 }))
+                      setCoastFireFormStrings((s) => ({ ...s, retirementAge: e.target.value }))
                     }
                   />
                 </div>
                 <div className="field">
                   <label>Annual retirement spending (today&apos;s $)</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     className="ll-control"
-                    min={0}
-                    step={1000}
-                    value={coastFireForm.annualSpendingDollars || ''}
+                    placeholder="e.g. 50000"
+                    value={coastFireFormStrings.annualSpendingDollars}
                     onChange={(e) =>
-                      setCoastFireForm((f) => ({
-                        ...f,
-                        annualSpendingDollars: parseFloat(e.target.value) || 0
-                      }))
+                      setCoastFireFormStrings((s) => ({ ...s, annualSpendingDollars: e.target.value }))
                     }
                   />
                 </div>
                 <div className="field">
                   <label>Safe withdrawal rate SWR (%)</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     className="ll-control"
-                    min={0.1}
-                    step={0.5}
-                    value={coastFireForm.swrPercent || ''}
+                    placeholder="e.g. 4"
+                    value={coastFireFormStrings.swrPercent}
                     onChange={(e) =>
-                      setCoastFireForm((f) => ({ ...f, swrPercent: parseFloat(e.target.value) || 0 }))
+                      setCoastFireFormStrings((s) => ({ ...s, swrPercent: e.target.value }))
                     }
                   />
                 </div>
                 <div className="field">
                   <label>Investment return (%)</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     className="ll-control"
-                    step={0.5}
-                    value={coastFireForm.investmentReturnPercent ?? ''}
+                    placeholder="e.g. 7"
+                    value={coastFireFormStrings.investmentReturnPercent}
                     onChange={(e) =>
-                      setCoastFireForm((f) => ({
-                        ...f,
-                        investmentReturnPercent: parseFloat(e.target.value) ?? 0
-                      }))
+                      setCoastFireFormStrings((s) => ({ ...s, investmentReturnPercent: e.target.value }))
                     }
                   />
                 </div>
                 <div className="field">
                   <label>Inflation rate (%)</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     className="ll-control"
-                    step={0.5}
-                    value={coastFireForm.inflationPercent ?? ''}
+                    placeholder="e.g. 3"
+                    value={coastFireFormStrings.inflationPercent}
                     onChange={(e) =>
-                      setCoastFireForm((f) => ({
-                        ...f,
-                        inflationPercent: parseFloat(e.target.value) ?? 0
-                      }))
+                      setCoastFireFormStrings((s) => ({ ...s, inflationPercent: e.target.value }))
                     }
                   />
                 </div>
@@ -851,16 +862,13 @@ export function InvestingPage() {
                   <div className="field">
                     <label>Manual monthly contribution ($)</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       className="ll-control"
-                      min={0}
-                      step={100}
-                      value={coastFireForm.manualMonthlyContributionDollars ?? ''}
+                      placeholder="e.g. 500"
+                      value={coastFireFormStrings.manualMonthlyContributionDollars}
                       onChange={(e) =>
-                        setCoastFireForm((f) => ({
-                          ...f,
-                          manualMonthlyContributionDollars: parseFloat(e.target.value) || 0
-                        }))
+                        setCoastFireFormStrings((s) => ({ ...s, manualMonthlyContributionDollars: e.target.value }))
                       }
                     />
                   </div>
@@ -873,26 +881,50 @@ export function InvestingPage() {
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => {
-                      const a = { ...coastFireForm };
-                      if (a.currentAge < 1) a.currentAge = COASTFIRE_DEFAULTS.currentAge;
-                      if (a.retirementAge < 1) a.retirementAge = COASTFIRE_DEFAULTS.retirementAge;
-                      if (typeof a.investmentReturnPercent !== 'number') a.investmentReturnPercent = COASTFIRE_DEFAULTS.investmentReturnPercent;
-                      if (typeof a.inflationPercent !== 'number') a.inflationPercent = COASTFIRE_DEFAULTS.inflationPercent;
-                      const y = a.retirementAge - a.currentAge;
-                      if (y <= 0) {
+                      const s = coastFireFormStrings;
+                      const currentAge = s.currentAge.trim() === '' ? NaN : parseInt(s.currentAge, 10);
+                      const retirementAge = s.retirementAge.trim() === '' ? NaN : parseInt(s.retirementAge, 10);
+                      const annualSpendingDollars = s.annualSpendingDollars.trim() === '' ? NaN : parseFloat(s.annualSpendingDollars);
+                      const swrPercent = s.swrPercent.trim() === '' ? NaN : parseFloat(s.swrPercent);
+                      const investmentReturnPercent = s.investmentReturnPercent.trim() === '' ? NaN : parseFloat(s.investmentReturnPercent);
+                      const inflationPercent = s.inflationPercent.trim() === '' ? NaN : parseFloat(s.inflationPercent);
+                      const manualMonthlyContributionDollars = s.manualMonthlyContributionDollars.trim() === '' ? NaN : parseFloat(s.manualMonthlyContributionDollars);
+
+                      if (!Number.isFinite(currentAge) || currentAge < 1) {
+                        window.alert('Current age must be greater than 0.');
+                        return;
+                      }
+                      if (!Number.isFinite(retirementAge) || retirementAge < 1) {
+                        window.alert('Retirement age must be greater than 0.');
+                        return;
+                      }
+                      if (retirementAge <= currentAge) {
                         window.alert('Retirement age must be greater than current age.');
                         return;
                       }
-                      if (a.annualSpendingDollars <= 0) {
+                      if (!Number.isFinite(annualSpendingDollars) || annualSpendingDollars <= 0) {
                         window.alert('Annual spending must be positive.');
                         return;
                       }
-                      if (a.swrPercent <= 0) {
+                      if (!Number.isFinite(swrPercent) || swrPercent <= 0) {
                         window.alert('Safe withdrawal rate must be positive.');
                         return;
                       }
+
+                      const a: CoastFireAssumptions = {
+                        ...coastFireForm,
+                        currentAge,
+                        retirementAge,
+                        annualSpendingDollars,
+                        swrPercent,
+                        investmentReturnPercent: Number.isFinite(investmentReturnPercent) ? investmentReturnPercent : COASTFIRE_DEFAULTS.investmentReturnPercent,
+                        inflationPercent: Number.isFinite(inflationPercent) ? inflationPercent : COASTFIRE_DEFAULTS.inflationPercent,
+                        manualMonthlyContributionDollars: Number.isFinite(manualMonthlyContributionDollars) && manualMonthlyContributionDollars >= 0 ? manualMonthlyContributionDollars : COASTFIRE_DEFAULTS.manualMonthlyContributionDollars
+                      };
                       saveCoastFire(a);
                       setCoastFireAssumptions(a);
+                      setCoastFireForm(a);
+                      setCoastFireFormStrings(coastFireAssumptionsToFormStrings(a));
                       setCoastFireEditForm(false);
                     }}
                   >
@@ -991,7 +1023,10 @@ export function InvestingPage() {
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => {
-                        if (coastFireAssumptions) setCoastFireForm({ ...coastFireAssumptions });
+                        if (coastFireAssumptions) {
+                          setCoastFireForm({ ...coastFireAssumptions });
+                          setCoastFireFormStrings(coastFireAssumptionsToFormStrings(coastFireAssumptions));
+                        }
                         setCoastFireEditForm(true);
                       }}
                     >
