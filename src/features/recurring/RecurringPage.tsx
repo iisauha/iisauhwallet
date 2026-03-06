@@ -32,6 +32,7 @@ export function RecurringPage() {
     return `${y}-${m}-${dd}`;
   });
   const [active, setActive] = useState(true);
+  const [isActiveIncome, setIsActiveIncome] = useState(true);
   const [autoPay, setAutoPay] = useState(false);
   const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
@@ -98,8 +99,23 @@ export function RecurringPage() {
       </div>
       {!incomeCollapsed ? (
         <>
-          {income.map((r: any) => (
-            <div className="card" key={r.id}>
+          {income.map((r: any) => {
+            const inactive = r.isActive === false;
+            return (
+            <div
+              className="card"
+              key={r.id}
+              style={
+                inactive
+                  ? { opacity: 0.7, background: 'var(--surface)', borderColor: 'var(--border)' }
+                  : undefined
+              }
+            >
+              {inactive ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 6 }}>
+                  Inactive – not included in projections
+                </div>
+              ) : null}
               <div className="row">
                 <span className="name">{r.name || 'Income'}</span>
                 <span className="amount" style={{ color: 'var(--green)' }}>
@@ -110,6 +126,23 @@ export function RecurringPage() {
                 {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
               </div>
               <div className="btn-row">
+                {inactive ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => actions.updateRecurringItem(r.id, { isActive: true })}
+                  >
+                    Re-enable income
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => actions.updateRecurringItem(r.id, { isActive: false })}
+                  >
+                    Temporarily disable
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -129,6 +162,7 @@ export function RecurringPage() {
                     setEveryNDays(String(nDays));
                     setStartDate(r.startDate || startDate);
                     setActive(r.active !== false);
+                    setIsActiveIncome((r as any).isActive !== false);
                     setAutoPay(!!r.autoPay);
                     setPaymentSource((r.paymentSource as any) || '');
                     setPaymentTargetId(r.paymentTargetId || '');
@@ -200,7 +234,7 @@ export function RecurringPage() {
                 </button>
               </div>
             </div>
-          ))}
+          );})}
         </>
       ) : null}
 
@@ -940,6 +974,7 @@ export function RecurringPage() {
                     startDate,
                     endDate: undefined,
                     active,
+                    ...(type === 'income' && { isActive: isActiveIncome }),
                     autoPay: autoPay || undefined,
                     paymentSource: type === 'income' ? undefined : (paymentSource || undefined),
                     paymentTargetId: paymentTargetId || undefined,

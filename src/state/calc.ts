@@ -229,7 +229,8 @@ export function getRecurringIncomeOccurrencesInWindow(data: LedgerData, windowDa
   const result: RecurringIncomeOccurrence[] = [];
   if (!Array.isArray((data as any).recurring)) return result;
   (data as any).recurring.forEach((r: any) => {
-    if (!r || !r.active || r.type !== 'income') return;
+    if (!r || r.type !== 'income') return;
+    if (r.isActive === false) return;
     const start = parseLocalDateKey(r.startDate);
     if (Number.isNaN(start.getTime())) return;
     const end = r.endDate ? parseLocalDateKey(r.endDate) : null;

@@ -534,7 +534,10 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       }
 
       next.recurring.forEach((r: any) => {
-        if (!r || !r.active || !r.autoPay) return;
+        if (!r || !r.autoPay) return;
+        if ((r.type || 'expense') === 'income') {
+          if (r.isActive === false) return;
+        } else if (!r.active) return;
         const start = parseLocalDateKey(r.startDate);
         if (Number.isNaN(start.getTime())) return;
         const end = r.endDate ? parseLocalDateKey(r.endDate) : null;

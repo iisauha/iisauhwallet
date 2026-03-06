@@ -696,6 +696,7 @@ export function InvestingPage() {
 
     recurring.forEach((r) => {
       if (!r || r.type !== 'income') return;
+      if ((r as any).isActive === false) return;
       if (!r.isFullTimeJob && !r.countsForInvestingPct) return;
       incomeMarkedCount += 1;
       const base = normalizeAmount(r);
@@ -771,6 +772,7 @@ export function InvestingPage() {
     };
     recurring.forEach((r: any) => {
       if (!r || r.type !== 'income' || !Array.isArray(r.preTaxDeductions)) return;
+      if (r.isActive === false) return;
       const itemGrossCents = normalizeAmount(r);
       r.preTaxDeductions.forEach((d: any) => {
         if (!d || d.deductionType !== 'retirement' || !d.investingAccountId) return;

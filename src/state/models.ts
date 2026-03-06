@@ -147,6 +147,8 @@ export interface RecurringItem {
   useLastDayOfMonth?: boolean;
   endDate?: string; // YYYY-MM-DD
   active?: boolean;
+  /** When false, recurring income is excluded from all calculations and projections (default true when missing). */
+  isActive?: boolean;
   autoPay?: boolean;
   paymentSource?: 'card' | 'bank';
   paymentTargetId?: string;
