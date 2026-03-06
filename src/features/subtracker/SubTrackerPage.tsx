@@ -98,11 +98,24 @@ function CompletedBonusEditorModal({
   onSave: (bonus: CompletedBonus) => void;
 }) {
   const init = initial;
-  const initCardMode: 'card' | 'manual' =
-    init?.cardId && cards.some((c) => c.id === init.cardId) ? 'card' : 'manual';
-  const [cardMode, setCardMode] = useState<'card' | 'manual'>(initCardMode);
-  const [cardId, setCardId] = useState(init?.cardId || cards[0]?.id || '');
-  const [manualName, setManualName] = useState(init?.cardName || '');
+  const initAccountValue = (() => {
+    if (init?.cardId && cards.some((c) => c.id === init.cardId)) return `card:${init.cardId}`;
+    const ref = init?.bankAccountRef;
+    if (ref && ref.type === 'bank' && banks.some((b) => b.id === ref.bankId)) {
+      return `bank:${ref.bankId}`;
+    }
+    if (init?.bankAccountRef?.type === 'manual') return 'manual';
+    if (init?.cardName) return 'manual';
+    if (cards[0]?.id) return `card:${cards[0].id}`;
+    if (banks[0]?.id) return `bank:${banks[0].id}`;
+    return 'manual';
+  })();
+  const [accountValue, setAccountValue] = useState<string>(initAccountValue);
+  const [manualAccountName, setManualAccountName] = useState<string>(() => {
+    if (init?.bankAccountRef?.type === 'manual') return init.bankAccountRef.name || '';
+    if (!init?.cardId && init?.cardName) return init.cardName;
+    return '';
+  });
   const [rewardLabel, setRewardLabel] = useState(init?.rewardLabel || '');
   const [rewardQuantity, setRewardQuantity] = useState(init ? String(init.rewardQuantity) : '');
   const [unitType, setUnitType] = useState<CompletedBonusUnitType>(init?.unitType || 'points');
@@ -110,16 +123,20 @@ function CompletedBonusEditorModal({
   const [completedAt, setCompletedAt] = useState(init?.completedAt || todayKey());
   const [notes, setNotes] = useState(init?.notes || '');
 
-  const initBankMode: 'bank' | 'manual' | 'none' =
-    init?.bankAccountRef?.type === 'bank' ? 'bank' : init?.bankAccountRef?.type === 'manual' ? 'manual' : 'none';
-  const [bankMode, setBankMode] = useState<'bank' | 'manual' | 'none'>(initBankMode);
-  const [bankId, setBankId] = useState(init?.bankAccountRef?.type === 'bank' ? init.bankAccountRef.bankId : (banks[0]?.id || ''));
-  const [manualBankName, setManualBankName] = useState(init?.bankAccountRef?.type === 'manual' ? init.bankAccountRef.name : '');
-
-  const cardName =
-    cardMode === 'card'
-      ? cards.find((c) => c.id === cardId)?.name || 'Card'
-      : manualName.trim() || 'Card';
+  const selected = useMemo(() => {
+    if (accountValue.startsWith('card:')) {
+      const id = accountValue.slice('card:'.length);
+      const name = cards.find((c) => c.id === id)?.name || 'Card';
+      return { kind: 'card' as const, id, name };
+    }
+    if (accountValue.startsWith('bank:')) {
+      const id = accountValue.slice('bank:'.length);
+      const name = banks.find((b) => b.id === id)?.name || 'Bank';
+      return { kind: 'bank' as const, id, name };
+    }
+    const name = manualAccountName.trim() || 'Account';
+    return { kind: 'manual' as const, name };
+  }, [accountValue, cards, banks, manualAccountName]);
 
   function handleSave() {
     const qty = parseFloat(rewardQuantity);
@@ -128,13 +145,28 @@ function CompletedBonusEditorModal({
       unitType === 'points' || unitType === 'miles'
         ? Math.max(0, parseFloat(centsPerUnit) || 1)
         : undefined;
+    let cardId: string | undefined = undefined;
+    let cardName: string = selected.name;
     let bankAccountRef: CompletedBonusBankAccountRef | undefined = undefined;
-    if (bankMode === 'bank' && bankId) bankAccountRef = { type: 'bank', bankId };
-    if (bankMode === 'manual' && manualBankName.trim()) bankAccountRef = { type: 'manual', name: manualBankName.trim() };
+
+    if (selected.kind === 'card') {
+      cardId = selected.id;
+      cardName = selected.name;
+      // Preserve legacy bank destination if it existed, since we no longer surface it in the UI.
+      bankAccountRef = init?.bankAccountRef;
+    } else if (selected.kind === 'bank') {
+      bankAccountRef = { type: 'bank', bankId: selected.id };
+      cardId = undefined;
+      cardName = selected.name;
+    } else {
+      bankAccountRef = { type: 'manual', name: manualAccountName.trim() || 'Account' };
+      cardId = undefined;
+      cardName = manualAccountName.trim() || 'Account';
+    }
 
     const bonus: CompletedBonus = {
       id: init?.id || uid(),
-      cardId: cardMode === 'card' ? cardId : undefined,
+      cardId,
       cardName,
       unitType,
       rewardQuantity: qty,
@@ -150,35 +182,41 @@ function CompletedBonusEditorModal({
   return (
     <Modal open title={mode === 'edit' ? 'Edit Completed Bonus' : 'Add Completed Bonus'} onClose={onClose}>
       <div className="field">
-        <label>Card</label>
+        <label>Account</label>
         <Select
-          value={cardMode === 'card' ? `card:${cardId}` : 'manual'}
+          value={accountValue}
           onChange={(e) => {
             const v = e.target.value;
-            if (v === 'manual') {
-              setCardMode('manual');
-            } else if (v.startsWith('card:')) {
-              setCardMode('card');
-              setCardId(v.slice(5));
-            }
+            setAccountValue(v);
           }}
         >
-          {(cards || []).map((c) => (
-            <option key={c.id} value={`card:${c.id}`}>
-              {c.name}
-            </option>
-          ))}
-          <option value="manual">Manual (enter name below)</option>
+          <optgroup label="Credit Cards">
+            {(cards || []).map((c) => (
+              <option key={c.id} value={`card:${c.id}`}>
+                {c.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Bank / Cash Accounts">
+            {(banks || []).map((b) => (
+              <option key={b.id} value={`bank:${b.id}`}>
+                {b.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Manual">
+            <option value="manual">Manual (enter name below)</option>
+          </optgroup>
         </Select>
       </div>
-      {cardMode === 'manual' ? (
+      {selected.kind === 'manual' ? (
         <div className="field">
-          <label>Card name</label>
+          <label>Account name</label>
           <input
             className="ll-control"
-            value={manualName}
-            onChange={(e) => setManualName(e.target.value)}
-            placeholder="e.g. Chase Sapphire Preferred"
+            value={manualAccountName}
+            onChange={(e) => setManualAccountName(e.target.value)}
+            placeholder="e.g. Chase Sapphire Preferred or Old Checking"
           />
         </div>
       ) : null}
@@ -223,38 +261,6 @@ function CompletedBonusEditorModal({
             value={centsPerUnit}
             onChange={(e) => setCentsPerUnit(e.target.value)}
             placeholder="1"
-          />
-        </div>
-      ) : null}
-
-      <div className="field">
-        <label>Checking / Bank Account</label>
-        <Select value={bankMode} onChange={(e) => setBankMode(e.target.value as any)}>
-          <option value="none">—</option>
-          <option value="bank">Use existing saved bank account</option>
-          <option value="manual">Enter account name manually</option>
-        </Select>
-      </div>
-      {bankMode === 'bank' ? (
-        <div className="field">
-          <label>Saved bank account</label>
-          <Select value={bankId} onChange={(e) => setBankId(e.target.value)}>
-            {(banks || []).map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-      ) : null}
-      {bankMode === 'manual' ? (
-        <div className="field">
-          <label>Account name</label>
-          <input
-            className="ll-control"
-            value={manualBankName}
-            onChange={(e) => setManualBankName(e.target.value)}
-            placeholder="e.g. Closed checking account"
           />
         </div>
       ) : null}
@@ -388,7 +394,7 @@ export function SubTrackerPage() {
                 <div style={{ fontSize: '0.95rem', color: 'var(--muted)' }}>
                   <div><strong>Bonus:</strong> {b.rewardLabel}</div>
                   <div><strong>Date completed:</strong> {formatLongLocalDate(b.completedAt)}</div>
-                  {bankLabel ? <div><strong>Checking / bank:</strong> {bankLabel}</div> : null}
+                  {b.cardId && bankLabel ? <div><strong>Checking / bank:</strong> {bankLabel}</div> : null}
                   {isPointsOrMiles ? (
                     <div style={{ marginTop: 6 }}>
                       <div>

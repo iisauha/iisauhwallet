@@ -19,6 +19,8 @@ export default defineConfig({
         icons: [{ src: './icon.png', sizes: '512x512', type: 'image/png' }]
       },
       workbox: {
+        // Avoid flaky SW minification (terser) during build.
+        mode: 'development',
         navigateFallback: '/ledgerlite-copy/index.html'
       }
     })
