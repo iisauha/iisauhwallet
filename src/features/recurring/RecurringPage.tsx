@@ -461,7 +461,7 @@ export function RecurringPage() {
                               </Select>
                             </div>
                             <div className="field">
-                              <label>Employer Match / Employer Contribution Type</label>
+                              <label>Employer contribution type</label>
                               <Select
                                 value={d.employerContributionType}
                                 onChange={(e) =>
@@ -474,14 +474,14 @@ export function RecurringPage() {
                                   )
                                 }
                               >
+                                <option value="pct_employee">Employer matches</option>
+                                <option value="pct_gross">% of gross income</option>
                                 <option value="none">None</option>
-                                <option value="pct_employee">Percent of employee contribution</option>
-                                <option value="pct_gross">Percent of gross income</option>
                               </Select>
                             </div>
                             {d.employerContributionType === 'pct_employee' ? (
                               <div className="field">
-                                <label>Percent of employee contribution</label>
+                                <label>Percent</label>
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -497,7 +497,7 @@ export function RecurringPage() {
                             ) : null}
                             {d.employerContributionType === 'pct_gross' ? (
                               <div className="field">
-                                <label>Percent of gross income</label>
+                                <label>Percent</label>
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -511,6 +511,55 @@ export function RecurringPage() {
                                 />
                               </div>
                             ) : null}
+                            {(() => {
+                              const grossCents = parseCents(amount);
+                              const amtCents = (() => {
+                                if (d.employerContributionType === 'pct_gross') {
+                                  const pctRaw = d.employerMatchPctOfGross != null && d.employerMatchPctOfGross.trim() !== '' ? parseFloat(d.employerMatchPctOfGross) : NaN;
+                                  if (Number.isFinite(pctRaw) && pctRaw >= 0 && grossCents > 0) {
+                                    return Math.round(grossCents * (pctRaw / 100));
+                                  }
+                                  return 0;
+                                }
+                                return d.amount.trim() ? parseCents(d.amount) : 0;
+                              })();
+                              const employerCents = (() => {
+                                if (d.employerContributionType === 'pct_employee') {
+                                  const pctRaw = d.employerMatchPct != null && d.employerMatchPct.trim() !== '' ? parseFloat(d.employerMatchPct) : NaN;
+                                  if (Number.isFinite(pctRaw) && pctRaw >= 0 && amtCents > 0) {
+                                    return Math.round(amtCents * (pctRaw / 100));
+                                  }
+                                  return 0;
+                                }
+                                if (d.employerContributionType === 'pct_gross') {
+                                  const pctRaw = d.employerMatchPctOfGross != null && d.employerMatchPctOfGross.trim() !== '' ? parseFloat(d.employerMatchPctOfGross) : NaN;
+                                  if (Number.isFinite(pctRaw) && pctRaw >= 0 && grossCents > 0) {
+                                    return Math.round(grossCents * (pctRaw / 100));
+                                  }
+                                  return 0;
+                                }
+                                return 0;
+                              })();
+                              const totalCents = amtCents + employerCents;
+                              if (!(amtCents > 0) && !(employerCents > 0)) return null;
+                              return (
+                                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>
+                                  {d.employerContributionType === 'pct_employee' ? (
+                                    <>
+                                      <div>Employee contribution: ${ (amtCents / 100).toFixed(2) }</div>
+                                      <div>Employer contribution: ${ (employerCents / 100).toFixed(2) }</div>
+                                      <div>Total contribution: ${ (totalCents / 100).toFixed(2) }</div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div>Gross income this item: ${ (grossCents / 100).toFixed(2) }</div>
+                                      <div>Percent: {d.employerMatchPctOfGross || '0'}%</div>
+                                      <div>Employee contribution amount: ${ (amtCents / 100).toFixed(2) }</div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </>
                         ) : (
                           <div className="field">
@@ -529,12 +578,27 @@ export function RecurringPage() {
                         <div className="field">
                           <label>Amount ($)</label>
                           <input
-                            value={d.amount}
-                            onChange={(e) =>
-                              setPreTaxDeductions((prev) =>
-                                prev.map((x) => (x.id === d.id ? { ...x, amount: e.target.value } : x))
-                              )
+                            value={
+                              d.employerContributionType === 'pct_gross'
+                                ? (() => {
+                                    const grossCents = parseCents(amount);
+                                    const pctRaw = d.employerMatchPctOfGross != null && d.employerMatchPctOfGross.trim() !== '' ? parseFloat(d.employerMatchPctOfGross) : NaN;
+                                    if (Number.isFinite(pctRaw) && pctRaw >= 0 && grossCents > 0) {
+                                      const cents = Math.round(grossCents * (pctRaw / 100));
+                                      return (cents / 100).toFixed(2);
+                                    }
+                                    return d.amount;
+                                  })()
+                                : d.amount
                             }
+                            onChange={(e) => {
+                              if (d.employerContributionType === 'pct_gross') return;
+                              const v = e.target.value;
+                              setPreTaxDeductions((prev) =>
+                                prev.map((x) => (x.id === d.id ? { ...x, amount: v } : x))
+                              );
+                            }}
+                            readOnly={d.employerContributionType === 'pct_gross'}
                             inputMode="decimal"
                             placeholder="0.00"
                           />
@@ -819,22 +883,47 @@ export function RecurringPage() {
                     type === 'income'
                       ? preTaxDeductions
                           .map((d) => {
-                            const amtCents = d.amount.trim() ? parseCents(d.amount) : 0;
-                            if (!(amtCents > 0)) return null;
                             const contribType = d.employerContributionType || 'none';
-                            const rawPctEmployee = d.employerMatchPct != null && d.employerMatchPct.trim() !== '' ? parseFloat(d.employerMatchPct) : NaN;
-                            const employerMatchPctVal = Number.isFinite(rawPctEmployee) && rawPctEmployee >= 0 ? rawPctEmployee : undefined;
-                            const rawPctGross = d.employerMatchPctOfGross != null && d.employerMatchPctOfGross.trim() !== '' ? parseFloat(d.employerMatchPctOfGross) : NaN;
-                            const employerMatchPctOfGrossVal = Number.isFinite(rawPctGross) && rawPctGross >= 0 ? rawPctGross : undefined;
+                            let amtCents = 0;
+                            if (contribType === 'pct_gross') {
+                              const rawPctGross =
+                                d.employerMatchPctOfGross != null && d.employerMatchPctOfGross.trim() !== ''
+                                  ? parseFloat(d.employerMatchPctOfGross)
+                                  : NaN;
+                              if (Number.isFinite(rawPctGross) && rawPctGross >= 0 && amountCents > 0) {
+                                amtCents = Math.round(amountCents * (rawPctGross / 100));
+                              }
+                            } else {
+                              amtCents = d.amount.trim() ? parseCents(d.amount) : 0;
+                            }
+                            if (!(amtCents > 0)) return null;
+                            const rawPctEmployee =
+                              d.employerMatchPct != null && d.employerMatchPct.trim() !== ''
+                                ? parseFloat(d.employerMatchPct)
+                                : NaN;
+                            const employerMatchPctVal =
+                              Number.isFinite(rawPctEmployee) && rawPctEmployee >= 0 ? rawPctEmployee : undefined;
+                            const rawPctGross =
+                              d.employerMatchPctOfGross != null && d.employerMatchPctOfGross.trim() !== ''
+                                ? parseFloat(d.employerMatchPctOfGross)
+                                : NaN;
+                            const employerMatchPctOfGrossVal =
+                              Number.isFinite(rawPctGross) && rawPctGross >= 0 ? rawPctGross : undefined;
                             return {
                               id: d.id,
                               amountCents: amtCents,
                               deductionType: d.deductionType,
-                              investingAccountId: d.deductionType === 'retirement' ? d.investingAccountId : undefined,
-                              customName: d.deductionType === 'regular' ? (d.customName || '').trim() || undefined : undefined,
+                              investingAccountId:
+                                d.deductionType === 'retirement' ? d.investingAccountId : undefined,
+                              customName:
+                                d.deductionType === 'regular'
+                                  ? (d.customName || '').trim() || undefined
+                                  : undefined,
                               employerContributionType: contribType,
-                              employerMatchPct: contribType === 'pct_employee' ? employerMatchPctVal : undefined,
-                              employerMatchPctOfGross: contribType === 'pct_gross' ? employerMatchPctOfGrossVal : undefined
+                              employerMatchPct:
+                                contribType === 'pct_employee' ? employerMatchPctVal : undefined,
+                              employerMatchPctOfGross:
+                                contribType === 'pct_gross' ? employerMatchPctOfGrossVal : undefined
                             };
                           })
                           .filter(Boolean)
