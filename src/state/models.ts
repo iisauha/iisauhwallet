@@ -61,6 +61,14 @@ export interface PendingTransferMeta {
   kind?: string;
   investingType?: 'hysa' | 'general';
   investingAccountId?: string;
+  // Optional metadata for special-case flows (e.g. Upcoming -> Pending Outbound).
+  source?: string;
+  addToSpendingOnConfirm?: boolean;
+  originalCategory?: string;
+  originalSubcategory?: string;
+  originalTitle?: string;
+  originalNotes?: string;
+  originalAccount?: string;
 }
 
 export interface PurchaseSplitSnapshot {

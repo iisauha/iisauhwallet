@@ -666,6 +666,31 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const amount = item.amountCents || 0;
       const resolved = opts || {};
 
+      const addSpendingFromPendingIfNeeded = (pending: any, paymentSource: 'card' | 'bank' | 'cash', paymentTargetId?: string) => {
+        if (!pending || !pending.meta || pending.meta.source !== 'upcoming' || pending.meta.addToSpendingOnConfirm === false) return;
+        const amountCents = typeof pending.amountCents === 'number' ? pending.amountCents : 0;
+        if (!(amountCents > 0)) return;
+        const todayISO = toLocalDateKey(new Date());
+        const title = pending.meta.originalTitle || pending.label || 'Spending';
+        const category = pending.meta.originalCategory || pending.category || undefined;
+        const subcategory = pending.meta.originalSubcategory || pending.subcategory || undefined;
+        const notes = pending.meta.originalNotes || pending.notes || undefined;
+        if (!Array.isArray((next as any).purchases)) (next as any).purchases = [];
+        const purchase: any = {
+          id: uid(),
+          title,
+          amountCents,
+          dateISO: todayISO,
+          category,
+          subcategory,
+          notes,
+          applyToSnapshot: false,
+          paymentSource,
+          paymentTargetId
+        };
+        (next as any).purchases.push(purchase);
+      };
+
       if (kind === 'in' && item.targetBankId) {
         const bank = next.banks.find((b) => b.id === item.targetBankId);
         if (bank) {
@@ -729,6 +754,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         card.updatedAt = nowIso();
         markRecurringInstanceHandledIfPresent(item);
         next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+        addSpendingFromPendingIfNeeded(item, 'bank', item.sourceBankId);
         saveData(next);
         set({ data: next });
         return { needsBankSelection: false };
@@ -752,6 +778,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         }
         markRecurringInstanceHandledIfPresent(item);
         next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+        addSpendingFromPendingIfNeeded(item, 'card', resolved.targetCardId);
         saveData(next);
         set({ data: next });
         return { needsBankSelection: false };
@@ -765,7 +792,10 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       bank.updatedAt = nowIso();
       markRecurringInstanceHandledIfPresent(item);
       if (kind === 'in') next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
-      else next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+      else {
+        next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+        addSpendingFromPendingIfNeeded(item, 'bank', bank.id);
+      }
       setLastPostedBankId(kind, bank.id);
 
       // Investing transfer: Bank -> HYSA/General

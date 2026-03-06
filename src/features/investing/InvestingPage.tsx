@@ -686,14 +686,14 @@ export function InvestingPage() {
                       const h = a as HysaAccount & { interestThisMonth?: number };
                       const now = Date.now();
                       const d = new Date(now);
-                      const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-                      const dayOfMonth = d.getDate();
-                      const remainingDays = Math.max(0, daysInMonth - dayOfMonth);
+                      const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+                      const daysElapsed = Math.max(0, Math.floor((now - startOfMonth) / (24 * 60 * 60 * 1000)));
                       const r = h.interestRate / 100;
                       const dailyRate = r / 365;
-                      const futureFactor = remainingDays > 0 ? Math.pow(1 + dailyRate, remainingDays) - 1 : 0;
-                      const currentInterest = typeof h.interestThisMonth === 'number' ? h.interestThisMonth : 0;
-                      const futureInterest = Math.round((h.balanceCents || 0) * futureFactor);
+                      const currentInterest = Math.round((h.balanceCents || 0) * dailyRate * daysElapsed);
+                      const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+                      const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
+                      const futureInterest = Math.round((h.balanceCents || 0) * dailyRate * daysRemaining);
                       const projected = currentInterest + futureInterest;
                       return (
                         <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>

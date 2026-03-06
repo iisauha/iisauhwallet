@@ -630,7 +630,19 @@ export function UpcomingPage() {
                   } else if (source.kind === 'expected-cost') {
                     const item = (expectedCosts as any[]).find((x) => x.id === source.id);
                     if (item) {
-                      actions.addPendingOutbound({ label: item.title, amountCents: cents });
+                      actions.addPendingOutbound({
+                        label: item.title,
+                        amountCents: cents,
+                        meta: {
+                          source: 'upcoming',
+                          addToSpendingOnConfirm: true,
+                          originalCategory: undefined,
+                          originalSubcategory: undefined,
+                          originalTitle: item.title,
+                          originalNotes: item.notes,
+                          originalAccount: undefined
+                        }
+                      });
                       const next = (expectedCosts as any[]).map((x) =>
                         x.id === item.id ? { ...x, status: 'moved_to_pending' as const } : x
                       );
@@ -645,7 +657,7 @@ export function UpcomingPage() {
                       const rec = ((data as any).recurring || []).find(
                         (r: any) => r.id === item.recurringId
                       );
-                      const meta =
+                      const baseMeta =
                         rec &&
                         rec.investingTransferEnabled &&
                         rec.investingTargetAccountId &&
@@ -656,6 +668,19 @@ export function UpcomingPage() {
                               investingAccountId: rec.investingTargetAccountId
                             }
                           : undefined;
+                      const meta = {
+                        ...(baseMeta || {}),
+                        source: 'upcoming',
+                        addToSpendingOnConfirm: true,
+                        originalCategory: item.category,
+                        originalSubcategory: item.subcategory,
+                        originalTitle: item.recurringName,
+                        originalNotes: item.notes,
+                        originalAccount:
+                          item.paymentSource && item.paymentTargetId
+                            ? `${item.paymentSource}:${item.paymentTargetId}`
+                            : item.paymentSource || undefined
+                      };
                       actions.addPendingOutbound({
                         label: item.recurringName,
                         amountCents: cents,
