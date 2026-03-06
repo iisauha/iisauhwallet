@@ -9,6 +9,8 @@ import {
   loadCoastFire,
   saveCoastFire,
   COASTFIRE_DEFAULTS,
+  getDropdownCollapsed,
+  saveDropdownCollapsed,
   type InvestingState,
   type InvestingAccount,
   type HysaAccount,
@@ -239,12 +241,12 @@ export function InvestingPage() {
     return accrued;
   });
 
-  const [collapsed, setCollapsed] = useState<{ hysa: boolean; roth: boolean; k401: boolean; general: boolean }>({
-    hysa: true,
-    roth: true,
-    k401: true,
-    general: true
-  });
+  const [collapsed, setCollapsed] = useState<{ hysa: boolean; roth: boolean; k401: boolean; general: boolean }>(() => ({
+    hysa: getDropdownCollapsed('investing_hysa', true),
+    roth: getDropdownCollapsed('investing_roth', true),
+    k401: getDropdownCollapsed('investing_k401', true),
+    general: getDropdownCollapsed('investing_general', true)
+  }));
 
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
@@ -506,7 +508,11 @@ export function InvestingPage() {
   }
 
   function handleOpenHysa() {
-    setCollapsed((c) => ({ ...c, hysa: !c.hysa }));
+    setCollapsed((c) => {
+      const next = { ...c, hysa: !c.hysa };
+      saveDropdownCollapsed('investing_hysa', next.hysa);
+      return next;
+    });
     if (collapsed.hysa) {
       accrueNow();
     }
@@ -603,7 +609,13 @@ export function InvestingPage() {
           className="section-header investing-section-header"
           style={{ marginTop: 24 }}
           onClick={() =>
-            collapsedKey === 'hysa' ? handleOpenHysa() : setCollapsed((c) => ({ ...c, [collapsedKey]: !c[collapsedKey] }))
+            collapsedKey === 'hysa'
+              ? handleOpenHysa()
+              : setCollapsed((c) => {
+                  const next = { ...c, [collapsedKey]: !c[collapsedKey] };
+                  saveDropdownCollapsed(`investing_${collapsedKey}`, next[collapsedKey]);
+                  return next;
+                })
           }
         >
           <span className="section-header-left">{label}</span>

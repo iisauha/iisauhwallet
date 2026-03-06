@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatLongLocalDate, parseCents } from '../../state/calc';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
-import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting } from '../../state/storage';
+import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, getDropdownCollapsed, saveDropdownCollapsed } from '../../state/storage';
 import { Select } from '../../ui/Select';
 
 export function RecurringPage() {
@@ -66,7 +66,7 @@ export function RecurringPage() {
     return Array.from(map.entries());
   }, [expenses]);
   const [expensesCollapsed, setExpensesCollapsed] = useState<Record<string, boolean>>({});
-  const [incomeCollapsed, setIncomeCollapsed] = useState<boolean>(true);
+  const [incomeCollapsed, setIncomeCollapsed] = useState<boolean>(() => getDropdownCollapsed('recurring_income', true));
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
   return (
@@ -80,7 +80,7 @@ export function RecurringPage() {
           background: 'var(--green-light)',
           borderRadius: 10
         }}
-        onClick={() => setIncomeCollapsed((v) => !v)}
+        onClick={() => setIncomeCollapsed((v) => { const next = !v; saveDropdownCollapsed('recurring_income', next); return next; })}
       >
         <span className="section-header-left" style={{ color: 'var(--green)' }}>
           Recurring Income
@@ -186,12 +186,16 @@ export function RecurringPage() {
       </p>
       {expensesByCategory.map(([catId, items]) => {
         const headerLabel = getCategoryName(cfg, catId);
-        const collapsed = expensesCollapsed[catId] ?? true;
+        const collapsed = expensesCollapsed[catId] ?? getDropdownCollapsed(`recurring_expenses_${catId}`, true);
         return (
           <div key={catId} style={{ marginBottom: 8 }}>
             <div
               className="section-header"
-              onClick={() => setExpensesCollapsed((prev) => ({ ...prev, [catId]: !collapsed }))}
+              onClick={() => {
+                const next = !collapsed;
+                setExpensesCollapsed((prev) => ({ ...prev, [catId]: next }));
+                saveDropdownCollapsed(`recurring_expenses_${catId}`, next);
+              }}
             >
               <span className="section-header-left">
                 {headerLabel} — <span>{items.length} item{items.length === 1 ? '' : 's'}</span>

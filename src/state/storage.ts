@@ -17,6 +17,7 @@ import {
   SHOW_ZERO_CASH_KEY,
   STORAGE_KEY,
   SUB_TRACKER_KEY,
+  UI_DROPDOWN_STATE_KEY,
   UPCOMING_WINDOW_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
@@ -129,6 +130,39 @@ export function saveBoolPref(key: string, value: boolean) {
   try {
     localStorage.setItem(key, value ? '1' : '0');
   } catch (_) {}
+}
+
+export function loadDropdownState(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(UI_DROPDOWN_STATE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return parsed;
+    return {};
+  } catch (_) {
+    return {};
+  }
+}
+
+export function getDropdownOpen(id: string, defaultOpen: boolean): boolean {
+  const state = loadDropdownState();
+  return state[id] !== undefined ? state[id] : defaultOpen;
+}
+
+export function saveDropdownState(id: string, open: boolean): void {
+  try {
+    const prev = loadDropdownState();
+    const next = { ...prev, [id]: open };
+    localStorage.setItem(UI_DROPDOWN_STATE_KEY, JSON.stringify(next));
+  } catch (_) {}
+}
+
+export function getDropdownCollapsed(id: string, defaultCollapsed: boolean): boolean {
+  return !getDropdownOpen(id, !defaultCollapsed);
+}
+
+export function saveDropdownCollapsed(id: string, collapsed: boolean): void {
+  saveDropdownState(id, !collapsed);
 }
 
 export function getLastPostedBankId(kind: 'in' | 'out'): string {

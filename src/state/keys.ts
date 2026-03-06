@@ -26,5 +26,7 @@ export const COASTFIRE_KEY = 'ledgerlite_coastfire_v1';
 
 export const PHYSICAL_CASH_ID = 'physical_cash';
 
+export const UI_DROPDOWN_STATE_KEY = 'ledgerlite_ui_dropdown_state_v1';
+
 // New feature (does not replace any legacy keys).
 export const SUB_TRACKER_KEY = 'ledgerlite_subTracker_v1';

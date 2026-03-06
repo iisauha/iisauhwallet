@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
-import { getCategoryName, loadCategoryConfig } from '../../state/storage';
+import { getCategoryName, getDropdownCollapsed, loadCategoryConfig, saveDropdownCollapsed } from '../../state/storage';
 import { Select } from '../../ui/Select';
 import { AddPurchaseModal } from './AddPurchaseModal';
 import { getCategoryColor, renderSpendingPieChart } from './charts';
@@ -46,7 +46,7 @@ export function SpendingPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
-  const [purchasesCollapsed, setPurchasesCollapsed] = useState<boolean>(true);
+  const [purchasesCollapsed, setPurchasesCollapsed] = useState<boolean>(() => getDropdownCollapsed('spending_purchases', true));
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
 
@@ -246,7 +246,7 @@ export function SpendingPage() {
         <div
           className="section-header"
           style={{ margin: 0, padding: '4px 8px', flex: 1 }}
-          onClick={() => setPurchasesCollapsed((v) => !v)}
+          onClick={() => setPurchasesCollapsed((v) => { const next = !v; saveDropdownCollapsed('spending_purchases', next); return next; })}
         >
           <span className="section-header-left">Purchases</span>
           <span className="chevron">{purchasesCollapsed ? '▸' : '▾'}</span>
