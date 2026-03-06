@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
-import { loadData, loadSubTracker, loadInvesting, accrueHysaAccounts, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { loadData, loadSubTracker, loadInvesting, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
@@ -615,14 +615,19 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
                   try {
                     let inv = loadInvesting();
                     inv = accrueHysaAccounts(inv);
-                    const acc: any = inv.accounts.find(
+                    const idx = inv.accounts.findIndex(
                       (a: any) =>
                         a.id === r.investingTargetAccountId && (a.type === r.investingTargetType)
                     );
-                    if (acc) {
-                      acc.balanceCents = (acc.balanceCents || 0) + myPortionCents;
+                    if (idx !== -1) {
+                      const acc = inv.accounts[idx] as any;
+                      const newBalanceCents = (acc.balanceCents || 0) + myPortionCents;
                       if (acc.type === 'hysa') {
-                        acc.lastAccruedAt = Date.now();
+                        const now = Date.now();
+                        const updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+                        inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
+                      } else {
+                        acc.balanceCents = newBalanceCents;
                       }
                       saveInvesting(inv);
                     }
@@ -719,13 +724,18 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         if (item.meta && item.meta.kind === 'transfer' && item.meta.investingType && item.meta.investingAccountId) {
           let inv = loadInvesting();
           inv = accrueHysaAccounts(inv);
-          const acc: any = inv.accounts.find(
+          const idx = inv.accounts.findIndex(
             (a: any) => a.id === item.meta!.investingAccountId && (a.type === item.meta!.investingType)
           );
-          if (acc) {
-            acc.balanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
+          if (idx !== -1) {
+            const acc = inv.accounts[idx] as any;
+            const newBalanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
             if (acc.type === 'hysa') {
-              acc.lastAccruedAt = Date.now();
+              const now = Date.now();
+              const updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+              inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
+            } else {
+              acc.balanceCents = newBalanceCents;
             }
             saveInvesting(inv);
           }
@@ -818,13 +828,18 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (kind === 'out' && item.meta && item.meta.kind === 'transfer' && item.meta.investingType && item.meta.investingAccountId) {
         let inv = loadInvesting();
         inv = accrueHysaAccounts(inv);
-        const acc: any = inv.accounts.find(
+        const idx = inv.accounts.findIndex(
           (a: any) => a.id === item.meta!.investingAccountId && (a.type === item.meta!.investingType)
         );
-        if (acc) {
-          acc.balanceCents = (acc.balanceCents || 0) + amount;
+        if (idx !== -1) {
+          const acc = inv.accounts[idx] as any;
+          const newBalanceCents = (acc.balanceCents || 0) + amount;
           if (acc.type === 'hysa') {
-            acc.lastAccruedAt = Date.now();
+            const now = Date.now();
+            const updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+            inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
+          } else {
+            acc.balanceCents = newBalanceCents;
           }
           saveInvesting(inv);
         }

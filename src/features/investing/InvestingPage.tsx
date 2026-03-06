@@ -6,9 +6,12 @@ import {
   saveInvesting,
   accrueHysaAccounts,
   getMonthKeyFromTimestamp,
+  getStartOfMonthMs,
   loadCoastFire,
   saveCoastFire,
   COASTFIRE_DEFAULTS,
+  computeHysaMonthlyInterest,
+  recordHysaBalanceEvent,
   type InvestingState,
   type InvestingAccount,
   type HysaAccount,
@@ -842,6 +845,9 @@ export function InvestingPage() {
       }
 
       const monthKey = getMonthKeyFromTimestamp(now);
+      const monthlyBalanceEvents: { timestamp: number; balanceAfterCents: number }[] = [
+        { timestamp: getStartOfMonthMs(now), balanceAfterCents: balanceCents }
+      ];
 
       const acc: InvestingAccount = {
         id,
@@ -851,7 +857,8 @@ export function InvestingPage() {
         interestRate: 4,
         lastAccruedAt,
         monthKey,
-        interestThisMonth
+        interestThisMonth,
+        monthlyBalanceEvents
       } as any as HysaAccount;
 
       persist({ ...investing, accounts: [...investing.accounts, acc] });
@@ -876,11 +883,11 @@ export function InvestingPage() {
     const now = Date.now();
     const accounts = investing.accounts.map((a) => {
       if (a.id !== acc.id) return a;
-      const base: any = { ...a, balanceCents: cents };
       if (a.type === 'hysa') {
-        base.lastAccruedAt = now;
+        const updated = recordHysaBalanceEvent(a as HysaAccount, now, cents);
+        return { ...updated, lastAccruedAt: now };
       }
-      return base;
+      return { ...a, balanceCents: cents };
     });
     persist({ ...investing, accounts });
   }
@@ -892,13 +899,14 @@ export function InvestingPage() {
     const cents = parseCents(val);
     if (cents <= 0) return;
     const now = Date.now();
+    const newBalanceCents = (acc.balanceCents || 0) + cents;
     const accounts = investing.accounts.map((a) => {
       if (a.id !== acc.id) return a;
-      const base: any = { ...a, balanceCents: (a.balanceCents || 0) + cents };
       if (a.type === 'hysa') {
-        base.lastAccruedAt = now;
+        const updated = recordHysaBalanceEvent(a as HysaAccount, now, newBalanceCents);
+        return { ...updated, lastAccruedAt: now };
       }
-      return base;
+      return { ...a, balanceCents: newBalanceCents };
     });
     persist({ ...investing, accounts });
   }
@@ -1063,23 +1071,14 @@ export function InvestingPage() {
                   ) : null}
                   {a.type === 'hysa' ? (
                     (() => {
-                      const h = a as HysaAccount & { interestThisMonth?: number };
-                      const now = Date.now();
-                      const d = new Date(now);
-                      const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-                      const daysElapsed = Math.max(0, Math.floor((now - startOfMonth) / (24 * 60 * 60 * 1000)));
-                      const r = h.interestRate / 100;
-                      const dailyRate = r / 365;
-                      const currentInterest = Math.round((h.balanceCents || 0) * dailyRate * daysElapsed);
-                      const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-                      const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
-                      const futureInterest = Math.round((h.balanceCents || 0) * dailyRate * daysRemaining);
-                      const projected = currentInterest + futureInterest;
+                      const h = a as HysaAccount;
+                      const { interestAccruedThisMonthCents, projectedInterestThisMonthCents } =
+                        computeHysaMonthlyInterest(h, Date.now());
                       return (
                         <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
                           <div>APY {h.interestRate.toFixed(2)}%</div>
-                          <div>Interest this month so far: {formatCents(currentInterest)}</div>
-                          <div>Projected month end interest: {formatCents(projected)}</div>
+                          <div>Interest this month so far: {formatCents(interestAccruedThisMonthCents)}</div>
+                          <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
                         </div>
                       );
                     })()
