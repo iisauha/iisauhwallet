@@ -64,7 +64,7 @@ function CoastFireInfoIcon({
             top: '100%',
             marginTop: 4,
             padding: '8px 10px',
-            background: 'var(--card-bg)',
+            background: '#1e293b',
             border: '1px solid var(--border)',
             borderRadius: 6,
             fontSize: '0.75rem',
@@ -672,10 +672,15 @@ export function InvestingPage() {
     <div className="tab-panel active" id="investingContent">
       <p className="section-title">Investing</p>
 
+      {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
+      {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
+      {renderSection('401(k)', 'k401', k401Accounts, 'k401')}
+      {renderSection('General Investing', 'general', generalAccounts, 'general')}
+
       <button
         type="button"
-        className="btn btn-secondary"
-        style={{ width: '100%', marginBottom: 8 }}
+        className="btn btn-add"
+        style={{ width: '100%', marginTop: 24, marginBottom: 8 }}
         onClick={() => {
           setTransferFrom('');
           setTransferTo('');
@@ -687,11 +692,6 @@ export function InvestingPage() {
       >
         Transfer between Cash and Investing
       </button>
-
-      {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
-      {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
-      {renderSection('401(k)', 'k401', k401Accounts, 'k401')}
-      {renderSection('General Investing', 'general', generalAccounts, 'general')}
 
       <div className="card" style={{ marginTop: 24 }}>
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
@@ -1108,7 +1108,15 @@ export function InvestingPage() {
                       </span>
                     </div>
                     <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">Gap to Coast FIRE</span>
+                      <span className="k">
+                        Gap to Coast FIRE
+                        <CoastFireInfoIcon
+                          id="gap"
+                          content="Gap to Coast FIRE is the amount you would need invested today to reach your Coast FIRE number. Once your invested assets reach this level, you could stop contributing to retirement and your investments could still grow to your FIRE number by retirement age."
+                          activeId={coastFireTooltipId}
+                          onToggle={toggleTooltip}
+                        />
+                      </span>
                       <span className={`v ${result.gap > 0 && !result.realReturnWarning ? 'amount-neg' : ''}`}>
                         {result.realReturnWarning || result.gap <= 0 ? 'None' : fmt(result.gap)}
                       </span>
