@@ -112,8 +112,12 @@ export interface PreTaxDeduction {
   investingAccountId?: string;
   /** When deductionType === 'regular': custom label (e.g. Health insurance, Dental). */
   customName?: string;
-  /** Optional employer match as % of employee contribution (e.g. 5 = 5%). Only for retirement. */
+  /** Employer contribution type. Omit/legacy = treat as none or infer from employerMatchPct. */
+  employerContributionType?: 'none' | 'pct_employee' | 'pct_gross';
+  /** When employerContributionType === 'pct_employee': % of employee contribution (e.g. 5 = 5%). */
   employerMatchPct?: number;
+  /** When employerContributionType === 'pct_gross': % of recurring gross income (e.g. 5 = 5%). */
+  employerMatchPctOfGross?: number;
 }
 
 export interface RecurringItem {

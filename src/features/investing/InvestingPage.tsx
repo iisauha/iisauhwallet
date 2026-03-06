@@ -319,6 +319,7 @@ export function InvestingPage() {
       grossIncomeCents += base;
 
       if (Array.isArray(r.preTaxDeductions)) {
+        const itemGrossCents = base;
         r.preTaxDeductions.forEach((d: any) => {
           if (!d) return;
           const amt = typeof d.amountCents === 'number' ? d.amountCents : 0;
@@ -328,8 +329,14 @@ export function InvestingPage() {
           d.deductionType === 'retirement' || (!d.deductionType && d.countsAsInvesting);
           if (isRetirement) {
             preTaxInvestCents += amt;
-            const matchPct = typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? d.employerMatchPct : 0;
-            employerMatchCents += Math.round(amt * (matchPct / 100));
+            const contribType = d.employerContributionType ?? (typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? 'pct_employee' : 'none');
+            if (contribType === 'pct_employee') {
+              const matchPct = typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? d.employerMatchPct : 0;
+              employerMatchCents += Math.round(amt * (matchPct / 100));
+            } else if (contribType === 'pct_gross') {
+              const matchPctGross = typeof d.employerMatchPctOfGross === 'number' && d.employerMatchPctOfGross >= 0 ? d.employerMatchPctOfGross : 0;
+              employerMatchCents += Math.round(itemGrossCents * (matchPctGross / 100));
+            }
           }
         });
       }
@@ -372,14 +379,29 @@ export function InvestingPage() {
   const accountContributionsFromRecurring = useMemo(() => {
     const map: Record<string, { employeeCents: number; employerMatchCents: number }> = {};
     const recurring = (data as any).recurring || [];
+    const normalizeAmount = (r: any): number => {
+      if (typeof r.expectedMinCents === 'number' && typeof r.expectedMaxCents === 'number') {
+        return Math.round((r.expectedMinCents + r.expectedMaxCents) / 2);
+      }
+      if (typeof r.amountCents === 'number') return r.amountCents;
+      return 0;
+    };
     recurring.forEach((r: any) => {
       if (!r || r.type !== 'income' || !Array.isArray(r.preTaxDeductions)) return;
+      const itemGrossCents = normalizeAmount(r);
       r.preTaxDeductions.forEach((d: any) => {
         if (!d || d.deductionType !== 'retirement' || !d.investingAccountId) return;
         const amt = typeof d.amountCents === 'number' ? d.amountCents : 0;
         if (amt <= 0) return;
-        const matchPct = typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? d.employerMatchPct : 0;
-        const matchCents = Math.round(amt * (matchPct / 100));
+        const contribType = d.employerContributionType ?? (typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? 'pct_employee' : 'none');
+        let matchCents = 0;
+        if (contribType === 'pct_employee') {
+          const matchPct = typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? d.employerMatchPct : 0;
+          matchCents = Math.round(amt * (matchPct / 100));
+        } else if (contribType === 'pct_gross') {
+          const matchPctGross = typeof d.employerMatchPctOfGross === 'number' && d.employerMatchPctOfGross >= 0 ? d.employerMatchPctOfGross : 0;
+          matchCents = Math.round(itemGrossCents * (matchPctGross / 100));
+        }
         if (!map[d.investingAccountId]) map[d.investingAccountId] = { employeeCents: 0, employerMatchCents: 0 };
         map[d.investingAccountId].employeeCents += amt;
         map[d.investingAccountId].employerMatchCents += matchCents;

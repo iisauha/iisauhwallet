@@ -50,7 +50,9 @@ export function RecurringPage() {
       deductionType: 'retirement' | 'regular';
       investingAccountId?: string;
       customName?: string;
+      employerContributionType: 'none' | 'pct_employee' | 'pct_gross';
       employerMatchPct?: string;
+      employerMatchPctOfGross?: string;
     }[]
   >([]);
   const [investingTransferEnabled, setInvestingTransferEnabled] = useState(false);
@@ -151,6 +153,13 @@ export function RecurringPage() {
                                   : !!d.countsAsInvesting
                                     ? 'retirement'
                                     : 'regular';
+                              const hasLegacyMatch = typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0;
+                              const employerContributionType =
+                                d.employerContributionType === 'none' || d.employerContributionType === 'pct_employee' || d.employerContributionType === 'pct_gross'
+                                  ? d.employerContributionType
+                                  : hasLegacyMatch
+                                    ? 'pct_employee'
+                                    : 'none';
                               return {
                                 id: d.id,
                                 amount:
@@ -160,9 +169,14 @@ export function RecurringPage() {
                                 deductionType,
                                 investingAccountId: d.investingAccountId || undefined,
                                 customName: d.customName ?? d.name ?? '',
+                                employerContributionType,
                                 employerMatchPct:
                                   typeof d.employerMatchPct === 'number'
                                     ? String(d.employerMatchPct)
+                                    : '',
+                                employerMatchPctOfGross:
+                                  typeof d.employerMatchPctOfGross === 'number'
+                                    ? String(d.employerMatchPctOfGross)
                                     : ''
                               };
                             })
@@ -385,7 +399,7 @@ export function RecurringPage() {
                           const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
                           setPreTaxDeductions((prev) => [
                             ...prev,
-                            { id, amount: '', deductionType: 'regular' as const, customName: '' }
+                            { id, amount: '', deductionType: 'regular' as const, customName: '', employerContributionType: 'none' as const }
                           ]);
                         }}
                       >
@@ -400,7 +414,7 @@ export function RecurringPage() {
                     {preTaxDeductions.map((d) => (
                       <div key={d.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
                         <div className="field">
-                          <label>Deduction type</label>
+                          <label>Deduction Type</label>
                           <Select
                             value={d.deductionType}
                             onChange={(e) =>
@@ -418,27 +432,14 @@ export function RecurringPage() {
                               )
                             }
                           >
-                            <option value="retirement">Retirement account contribution</option>
+                            <option value="retirement">Employer retirement contribution</option>
                             <option value="regular">Regular deduction</option>
                           </Select>
-                        </div>
-                        <div className="field">
-                          <label>Amount ($)</label>
-                          <input
-                            value={d.amount}
-                            onChange={(e) =>
-                              setPreTaxDeductions((prev) =>
-                                prev.map((x) => (x.id === d.id ? { ...x, amount: e.target.value } : x))
-                              )
-                            }
-                            inputMode="decimal"
-                            placeholder="0.00"
-                          />
                         </div>
                         {d.deductionType === 'retirement' ? (
                           <>
                             <div className="field">
-                              <label>Retirement account</label>
+                              <label>Retirement Account</label>
                               <Select
                                 value={d.investingAccountId || ''}
                                 onChange={(e) =>
@@ -451,30 +452,65 @@ export function RecurringPage() {
                               >
                                 <option value="">— Select —</option>
                                 {investingState.accounts
-                                  .filter((a) => a.type === 'roth' || a.type === 'k401')
+                                  .filter((a) => a.type === 'k401')
                                   .map((a) => (
                                     <option key={a.id} value={a.id}>
-                                      {a.type === 'roth' ? 'Roth IRA' : 'Employer-Based Retirement'}: {a.name}
+                                      {a.name}
                                     </option>
                                   ))}
                               </Select>
                             </div>
                             <div className="field">
-                              <label>Employer match (% of this contribution)</label>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={d.employerMatchPct ?? ''}
+                              <label>Employer Match / Employer Contribution Type</label>
+                              <Select
+                                value={d.employerContributionType}
                                 onChange={(e) =>
                                   setPreTaxDeductions((prev) =>
                                     prev.map((x) =>
-                                      x.id === d.id ? { ...x, employerMatchPct: e.target.value } : x
+                                      x.id === d.id
+                                        ? { ...x, employerContributionType: e.target.value as 'none' | 'pct_employee' | 'pct_gross' }
+                                        : x
                                     )
                                   )
                                 }
-                                placeholder="e.g. 5"
-                              />
+                              >
+                                <option value="none">None</option>
+                                <option value="pct_employee">Percent of employee contribution</option>
+                                <option value="pct_gross">Percent of gross income</option>
+                              </Select>
                             </div>
+                            {d.employerContributionType === 'pct_employee' ? (
+                              <div className="field">
+                                <label>Percent of employee contribution</label>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={d.employerMatchPct ?? ''}
+                                  onChange={(e) =>
+                                    setPreTaxDeductions((prev) =>
+                                      prev.map((x) => (x.id === d.id ? { ...x, employerMatchPct: e.target.value } : x))
+                                    )
+                                  }
+                                  placeholder="e.g. 5"
+                                />
+                              </div>
+                            ) : null}
+                            {d.employerContributionType === 'pct_gross' ? (
+                              <div className="field">
+                                <label>Percent of gross income</label>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={d.employerMatchPctOfGross ?? ''}
+                                  onChange={(e) =>
+                                    setPreTaxDeductions((prev) =>
+                                      prev.map((x) => (x.id === d.id ? { ...x, employerMatchPctOfGross: e.target.value } : x))
+                                    )
+                                  }
+                                  placeholder="e.g. 5"
+                                />
+                              </div>
+                            ) : null}
                           </>
                         ) : (
                           <div className="field">
@@ -490,6 +526,19 @@ export function RecurringPage() {
                             />
                           </div>
                         )}
+                        <div className="field">
+                          <label>Amount ($)</label>
+                          <input
+                            value={d.amount}
+                            onChange={(e) =>
+                              setPreTaxDeductions((prev) =>
+                                prev.map((x) => (x.id === d.id ? { ...x, amount: e.target.value } : x))
+                              )
+                            }
+                            inputMode="decimal"
+                            placeholder="0.00"
+                          />
+                        </div>
                         <button
                           type="button"
                           className="btn-delete"
@@ -772,15 +821,20 @@ export function RecurringPage() {
                           .map((d) => {
                             const amtCents = d.amount.trim() ? parseCents(d.amount) : 0;
                             if (!(amtCents > 0)) return null;
-                            const rawMatch = d.employerMatchPct != null && d.employerMatchPct.trim() !== '' ? parseFloat(d.employerMatchPct) : NaN;
-                            const employerMatchPctVal = Number.isFinite(rawMatch) && rawMatch >= 0 ? rawMatch : undefined;
+                            const contribType = d.employerContributionType || 'none';
+                            const rawPctEmployee = d.employerMatchPct != null && d.employerMatchPct.trim() !== '' ? parseFloat(d.employerMatchPct) : NaN;
+                            const employerMatchPctVal = Number.isFinite(rawPctEmployee) && rawPctEmployee >= 0 ? rawPctEmployee : undefined;
+                            const rawPctGross = d.employerMatchPctOfGross != null && d.employerMatchPctOfGross.trim() !== '' ? parseFloat(d.employerMatchPctOfGross) : NaN;
+                            const employerMatchPctOfGrossVal = Number.isFinite(rawPctGross) && rawPctGross >= 0 ? rawPctGross : undefined;
                             return {
                               id: d.id,
                               amountCents: amtCents,
                               deductionType: d.deductionType,
                               investingAccountId: d.deductionType === 'retirement' ? d.investingAccountId : undefined,
                               customName: d.deductionType === 'regular' ? (d.customName || '').trim() || undefined : undefined,
-                              employerMatchPct: employerMatchPctVal
+                              employerContributionType: contribType,
+                              employerMatchPct: contribType === 'pct_employee' ? employerMatchPctVal : undefined,
+                              employerMatchPctOfGross: contribType === 'pct_gross' ? employerMatchPctOfGrossVal : undefined
                             };
                           })
                           .filter(Boolean)
