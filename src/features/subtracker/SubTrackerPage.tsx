@@ -9,7 +9,8 @@ import {
   type SubTrackerEntry,
   type SubTrackerTier,
   type CompletedBonus,
-  type CompletedBonusUnitType
+  type CompletedBonusUnitType,
+  type CompletedBonusBankAccountRef
 } from '../../state/storage';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -81,39 +82,65 @@ function completedBonusCashValueCents(b: CompletedBonus): number {
   return Math.round(b.rewardQuantity * (cpp / 100));
 }
 
-function AddCompletedBonusModal({
+function CompletedBonusEditorModal({
   cards,
+  banks,
+  mode,
+  initial,
   onClose,
   onSave
 }: {
   cards: { id: string; name: string }[];
+  banks: { id: string; name: string }[];
+  mode: 'add' | 'edit';
+  initial: CompletedBonus | null;
   onClose: () => void;
   onSave: (bonus: CompletedBonus) => void;
 }) {
-  const [cardMode, setCardMode] = useState<'card' | 'manual'>('card');
-  const [cardId, setCardId] = useState(cards[0]?.id || '');
-  const [manualName, setManualName] = useState('');
-  const [rewardLabel, setRewardLabel] = useState('');
-  const [rewardQuantity, setRewardQuantity] = useState('');
-  const [unitType, setUnitType] = useState<CompletedBonusUnitType>('points');
-  const [centsPerUnit, setCentsPerUnit] = useState('1');
-  const [completedAt, setCompletedAt] = useState(todayKey());
-  const [notes, setNotes] = useState('');
+  const init = initial;
+  const initCardMode: 'card' | 'manual' =
+    init?.cardId && cards.some((c) => c.id === init.cardId) ? 'card' : 'manual';
+  const [cardMode, setCardMode] = useState<'card' | 'manual'>(initCardMode);
+  const [cardId, setCardId] = useState(init?.cardId || cards[0]?.id || '');
+  const [manualName, setManualName] = useState(init?.cardName || '');
+  const [rewardLabel, setRewardLabel] = useState(init?.rewardLabel || '');
+  const [rewardQuantity, setRewardQuantity] = useState(init ? String(init.rewardQuantity) : '');
+  const [unitType, setUnitType] = useState<CompletedBonusUnitType>(init?.unitType || 'points');
+  const [centsPerUnit, setCentsPerUnit] = useState(init?.centsPerUnit != null ? String(init.centsPerUnit) : '1');
+  const [completedAt, setCompletedAt] = useState(init?.completedAt || todayKey());
+  const [notes, setNotes] = useState(init?.notes || '');
 
-  const cardName = cardMode === 'card' ? (cards.find((c) => c.id === cardId)?.name || '') : manualName.trim() || 'Card';
+  const initBankMode: 'bank' | 'manual' | 'none' =
+    init?.bankAccountRef?.type === 'bank' ? 'bank' : init?.bankAccountRef?.type === 'manual' ? 'manual' : 'none';
+  const [bankMode, setBankMode] = useState<'bank' | 'manual' | 'none'>(initBankMode);
+  const [bankId, setBankId] = useState(init?.bankAccountRef?.type === 'bank' ? init.bankAccountRef.bankId : (banks[0]?.id || ''));
+  const [manualBankName, setManualBankName] = useState(init?.bankAccountRef?.type === 'manual' ? init.bankAccountRef.name : '');
+
+  const cardName =
+    cardMode === 'card'
+      ? cards.find((c) => c.id === cardId)?.name || 'Card'
+      : manualName.trim() || 'Card';
 
   function handleSave() {
     const qty = parseFloat(rewardQuantity);
     if (!(qty >= 0)) return;
-    const cpp = unitType === 'points' || unitType === 'miles' ? (parseFloat(centsPerUnit) || 1) : undefined;
+    const cpp =
+      unitType === 'points' || unitType === 'miles'
+        ? Math.max(0, parseFloat(centsPerUnit) || 1)
+        : undefined;
+    let bankAccountRef: CompletedBonusBankAccountRef | undefined = undefined;
+    if (bankMode === 'bank' && bankId) bankAccountRef = { type: 'bank', bankId };
+    if (bankMode === 'manual' && manualBankName.trim()) bankAccountRef = { type: 'manual', name: manualBankName.trim() };
+
     const bonus: CompletedBonus = {
-      id: uid(),
+      id: init?.id || uid(),
       cardId: cardMode === 'card' ? cardId : undefined,
       cardName,
       unitType,
       rewardQuantity: qty,
       rewardLabel: rewardLabel.trim() || (unitType === 'cash' ? `$${qty}` : `${qty} ${unitType}`),
       centsPerUnit: cpp,
+      bankAccountRef,
       completedAt,
       notes: notes.trim() || undefined
     };
@@ -121,7 +148,7 @@ function AddCompletedBonusModal({
   }
 
   return (
-    <Modal open title="Add Completed Bonus" onClose={onClose}>
+    <Modal open title={mode === 'edit' ? 'Edit Completed Bonus' : 'Add Completed Bonus'} onClose={onClose}>
       <div className="field">
         <label>Card</label>
         <Select
@@ -178,10 +205,7 @@ function AddCompletedBonusModal({
       </div>
       <div className="field">
         <label>Unit type</label>
-        <Select
-          value={unitType}
-          onChange={(e) => setUnitType(e.target.value as CompletedBonusUnitType)}
-        >
+        <Select value={unitType} onChange={(e) => setUnitType(e.target.value as CompletedBonusUnitType)}>
           <option value="miles">miles</option>
           <option value="points">points</option>
           <option value="cash">cash</option>
@@ -202,23 +226,46 @@ function AddCompletedBonusModal({
           />
         </div>
       ) : null}
+
+      <div className="field">
+        <label>Checking / Bank Account</label>
+        <Select value={bankMode} onChange={(e) => setBankMode(e.target.value as any)}>
+          <option value="none">—</option>
+          <option value="bank">Use existing saved bank account</option>
+          <option value="manual">Enter account name manually</option>
+        </Select>
+      </div>
+      {bankMode === 'bank' ? (
+        <div className="field">
+          <label>Saved bank account</label>
+          <Select value={bankId} onChange={(e) => setBankId(e.target.value)}>
+            {(banks || []).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+      {bankMode === 'manual' ? (
+        <div className="field">
+          <label>Account name</label>
+          <input
+            className="ll-control"
+            value={manualBankName}
+            onChange={(e) => setManualBankName(e.target.value)}
+            placeholder="e.g. Closed checking account"
+          />
+        </div>
+      ) : null}
+
       <div className="field">
         <label>Date completed</label>
-        <input
-          className="ll-control"
-          type="date"
-          value={completedAt}
-          onChange={(e) => setCompletedAt(e.target.value)}
-        />
+        <input className="ll-control" type="date" value={completedAt} onChange={(e) => setCompletedAt(e.target.value)} />
       </div>
       <div className="field">
         <label>Notes (optional)</label>
-        <input
-          className="ll-control"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Optional"
-        />
+        <input className="ll-control" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
       </div>
       <div className="btn-row">
         <button type="button" className="btn btn-secondary" onClick={onClose}>
@@ -235,6 +282,7 @@ function AddCompletedBonusModal({
 export function SubTrackerPage() {
   const data = useLedgerStore((s) => s.data);
   const cards = data.cards || [];
+  const banks = (data.banks || []).map((b: any) => ({ id: b.id, name: b.name || 'Bank' }));
 
   const [tracker, setTracker] = useState(() => loadSubTracker());
   const [subview, setSubview] = useState<'main' | 'completed'>('main');
@@ -256,12 +304,13 @@ export function SubTrackerPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
   const [spentInput, setSpentInput] = useState<string>('0.00');
-  const [addCompletedOpen, setAddCompletedOpen] = useState(false);
+  const [completedEditor, setCompletedEditor] = useState<null | { mode: 'add' } | { mode: 'edit'; id: string }>(null);
 
   const cardNameById = useMemo(() => new Map(cards.map((c) => [c.id, c.name || 'Card'])), [cards]);
 
   const entries = (tracker.entries || []) as SubTrackerEntry[];
   const completedBonuses = (tracker.completedBonuses || []) as CompletedBonus[];
+  const bankNameById = useMemo(() => new Map((data.banks || []).map((b: any) => [b.id, b.name || 'Bank'])), [data.banks]);
 
   function persist(next: any) {
     const merged: SubTrackerData = {
@@ -317,36 +366,42 @@ export function SubTrackerPage() {
           {completedBonuses.map((b) => {
             const cashCents = completedBonusCashValueCents(b);
             const isPointsOrMiles = b.unitType === 'points' || b.unitType === 'miles';
+            const bankLabel =
+              b.bankAccountRef?.type === 'bank'
+                ? bankNameById.get(b.bankAccountRef.bankId) || 'Bank'
+                : b.bankAccountRef?.type === 'manual'
+                  ? b.bankAccountRef.name
+                  : '';
             return (
               <div className="card" key={b.id} style={{ marginBottom: 12 }}>
                 <div className="row" style={{ marginBottom: 4 }}>
                   <span className="name" style={{ fontSize: '1.05rem' }}>{b.cardName}</span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+                    onClick={() => setCompletedEditor({ mode: 'edit', id: b.id })}
+                  >
+                    Edit
+                  </button>
                 </div>
                 <div style={{ fontSize: '0.95rem', color: 'var(--muted)' }}>
                   <div><strong>Bonus:</strong> {b.rewardLabel}</div>
                   <div><strong>Date completed:</strong> {formatLongLocalDate(b.completedAt)}</div>
+                  {bankLabel ? <div><strong>Checking / bank:</strong> {bankLabel}</div> : null}
                   {isPointsOrMiles ? (
                     <div style={{ marginTop: 6 }}>
-                      <label style={{ fontSize: '0.85rem' }}>Cents per {b.unitType === 'miles' ? 'mile' : 'point'}</label>
-                      <input
-                        className="ll-control"
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        value={b.centsPerUnit ?? 1}
-                        onChange={(ev) => {
-                          const v = parseFloat(ev.target.value);
-                          const next = (tracker.completedBonuses || []).map((x) =>
-                            x.id === b.id ? { ...x, centsPerUnit: Number.isFinite(v) && v >= 0 ? v : 1 } : x
-                          );
-                          persist({ completedBonuses: next });
-                        }}
-                        style={{ width: 80, marginLeft: 8 }}
-                      />
-                      <span style={{ marginLeft: 8 }}>→ Cash value: {formatCents(cashCents)}</span>
+                      <div>
+                        <strong>Valuation:</strong> {(b.centsPerUnit ?? 1).toFixed(2)}¢ / {b.unitType === 'miles' ? 'mile' : 'point'}
+                      </div>
+                      <div style={{ marginTop: 2 }}>
+                        <strong>Estimated cash value:</strong> <span style={{ color: 'var(--green)' }}>{formatCents(cashCents)}</span>
+                      </div>
                     </div>
                   ) : (
-                    <div style={{ marginTop: 4 }}>Cash value: {formatCents(cashCents)}</div>
+                    <div style={{ marginTop: 6 }}>
+                      <strong>Cash value:</strong> <span style={{ color: 'var(--green)' }}>{formatCents(cashCents)}</span>
+                    </div>
                   )}
                   {b.notes ? <div style={{ marginTop: 4 }}>Notes: {b.notes}</div> : null}
                 </div>
@@ -357,7 +412,7 @@ export function SubTrackerPage() {
             type="button"
             className="btn btn-add"
             style={{ width: '100%', marginTop: 8, marginBottom: 16 }}
-            onClick={() => setAddCompletedOpen(true)}
+            onClick={() => setCompletedEditor({ mode: 'add' })}
           >
             Add Completed Bonus
           </button>
@@ -382,28 +437,26 @@ export function SubTrackerPage() {
               </p>
             ) : null}
           </div>
-          {addCompletedOpen ? (
-            <AddCompletedBonusModal
+          {completedEditor ? (
+            <CompletedBonusEditorModal
+              mode={completedEditor.mode}
+              initial={completedEditor.mode === 'edit' ? completedBonuses.find((b) => b.id === completedEditor.id) || null : null}
               cards={cards}
-              onClose={() => setAddCompletedOpen(false)}
+              banks={banks}
+              onClose={() => setCompletedEditor(null)}
               onSave={(bonus) => {
-                persist({ completedBonuses: [...completedBonuses, bonus] });
-                setAddCompletedOpen(false);
+                if (completedEditor.mode === 'add') {
+                  persist({ completedBonuses: [...completedBonuses, bonus] });
+                } else {
+                  persist({ completedBonuses: completedBonuses.map((x) => (x.id === bonus.id ? bonus : x)) });
+                }
+                setCompletedEditor(null);
               }}
             />
           ) : null}
         </>
       ) : (
         <>
-      <button
-        type="button"
-        className="btn btn-secondary"
-        style={{ width: '100%', marginBottom: 12 }}
-        onClick={() => setSubview('completed')}
-      >
-        See all Sign Up Bonuses Completed
-      </button>
-
       {entries.map((e) => {
         const name = entryDisplayName(e);
         const start = toDate(e.startDate);
@@ -622,7 +675,7 @@ export function SubTrackerPage() {
       <button
         type="button"
         className="btn btn-add"
-        style={{ width: '100%', marginTop: 16 }}
+        style={{ width: '100%', marginTop: 12 }}
         onClick={() => {
           setCardMode('card');
           setCardId(cards[0]?.id || '');
@@ -640,6 +693,15 @@ export function SubTrackerPage() {
         }}
       >
         + Add tracked card
+      </button>
+
+      <button
+        type="button"
+        className="btn btn-add"
+        style={{ width: '100%', marginTop: 10 }}
+        onClick={() => setSubview('completed')}
+      >
+        See all Sign Up Bonuses Completed
       </button>
 
       <Modal

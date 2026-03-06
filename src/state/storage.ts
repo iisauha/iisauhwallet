@@ -456,6 +456,10 @@ export type SubTrackerEntry = {
 
 export type CompletedBonusUnitType = 'miles' | 'points' | 'cash' | 'other';
 
+export type CompletedBonusBankAccountRef =
+  | { type: 'bank'; bankId: string }
+  | { type: 'manual'; name: string };
+
 export type CompletedBonus = {
   id: string;
   cardId?: string;
@@ -464,6 +468,7 @@ export type CompletedBonus = {
   rewardQuantity: number;
   rewardLabel: string;
   centsPerUnit?: number;
+  bankAccountRef?: CompletedBonusBankAccountRef;
   completedAt: string;
   notes?: string;
 };
