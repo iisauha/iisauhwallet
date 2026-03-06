@@ -77,7 +77,8 @@ function CoastFireInfoIcon({
             lineHeight: 1.4,
             color: 'var(--text)',
             zIndex: 10001,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+            whiteSpace: 'pre-line'
           }}
         >
           {content}
@@ -1082,17 +1083,13 @@ export function InvestingPage() {
                         color: result.coastReached ? 'var(--green)' : 'var(--red)'
                       }}
                     >
-                      {result.coastReached ? 'You have reached Coast FIRE' : 'You have not yet reached Coast FIRE'}
+                      {result.coastReached
+                        ? (result.coastAge != null ? `COAST FIRE AGE IS ${result.coastAge}` : 'You have reached Coast FIRE')
+                        : 'YOU HAVE NOT YET REACHED COAST FIRE'}
                     </p>
                   ) : null}
 
-                  <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', marginTop: 16, marginBottom: 4 }}>
-                    Coast FIRE (stop contributing today)
-                  </p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
-                    Assumes you stop contributing today
-                  </p>
-                  <div className="summary-compact" style={{ marginTop: 4 }}>
+                  <div className="summary-compact" style={{ marginTop: 16 }}>
                     <div className="summary-kv" style={{ marginTop: 8 }}>
                       <span className="k">
                         Current Invested Assets
@@ -1116,20 +1113,6 @@ export function InvestingPage() {
                         />
                       </span>
                       <span className="v amount-pos">{fmt(result.fireNumber)}</span>
-                    </div>
-                    <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">
-                        Coast FIRE Number
-                        <CoastFireInfoIcon
-                          id="coastFireNumber"
-                          content="The amount you would need invested today so it can grow to your FIRE Number by retirement age without any new contributions."
-                          activeId={coastFireTooltipId}
-                          onToggle={toggleTooltip}
-                        />
-                      </span>
-                      <span className="v amount-pos">
-                        {result.realReturnWarning ? '—' : fmt(result.coastFireNumber)}
-                      </span>
                     </div>
                     <div className="summary-kv" style={{ marginTop: 8 }}>
                       <span className="k">
@@ -1159,56 +1142,6 @@ export function InvestingPage() {
                         {result.realReturnWarning ? '—' : fmt(result.fvIfStopNow)}
                       </span>
                     </div>
-                    <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">
-                        Inflation assumption
-                        <CoastFireInfoIcon
-                          id="inflation"
-                          content="Your expected long-term annual inflation rate."
-                          activeId={coastFireTooltipId}
-                          onToggle={toggleTooltip}
-                        />
-                      </span>
-                      <span className="v">{a.inflationPercent}%</span>
-                    </div>
-                    <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">
-                        Investment return assumption
-                        <CoastFireInfoIcon
-                          id="investmentReturn"
-                          content="Your expected long-term annual investment growth rate before inflation."
-                          activeId={coastFireTooltipId}
-                          onToggle={toggleTooltip}
-                        />
-                      </span>
-                      <span className="v">{a.investmentReturnPercent}%</span>
-                    </div>
-                    <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">
-                        Inflation-adjusted return
-                        <CoastFireInfoIcon
-                          id="realReturn"
-                          content="Your real return after subtracting inflation from investment growth."
-                          activeId={coastFireTooltipId}
-                          onToggle={toggleTooltip}
-                        />
-                      </span>
-                      <span className="v">
-                        {result.realReturnWarning ? '—' : `${result.realReturnPercent.toFixed(1)}%`}
-                      </span>
-                    </div>
-                    <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">
-                        Safe withdrawal rate (SWR)
-                        <CoastFireInfoIcon
-                          id="swr"
-                          content="The percentage of your retirement portfolio you expect to withdraw annually in retirement."
-                          activeId={coastFireTooltipId}
-                          onToggle={toggleTooltip}
-                        />
-                      </span>
-                      <span className="v">{a.swrPercent}%</span>
-                    </div>
                   </div>
 
                   <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', marginTop: 20, marginBottom: 4 }}>
@@ -1229,10 +1162,20 @@ export function InvestingPage() {
                     </div>
                     <div className="summary-kv" style={{ marginTop: 8 }}>
                       <span className="k">
-                        Projected value at retirement if you keep contributing
+                        Projected value at retirement if you continue contributing
                         <CoastFireInfoIcon
                           id="fvWithContrib"
-                          content="The projected value of your portfolio at retirement age if you continue making monthly contributions at the current rate."
+                          content={(() => {
+                            const yearsToRetirement = a.retirementAge - a.currentAge;
+                            const annualContrib = monthlyContrib * 12;
+                            const rPct = result.realReturnPercent;
+                            const rDec = rPct / 100;
+                            const pvStr = fmt(result.pv);
+                            const monthlyStr = fmt(monthlyContrib);
+                            const annualStr = fmt(annualContrib);
+                            const fvStr = result.realReturnWarning ? '—' : fmt(result.fvWithContrib);
+                            return `This projection uses your current invested assets, your monthly contribution amount, and your inflation-adjusted return to estimate your portfolio value at retirement if you continue contributing at the same rate.\n\nFormula:\nFV = PV(1+r)^t + C × [((1+r)^t − 1) / r]\n\nWhere:\n• PV = current invested assets\n• r = inflation-adjusted annual return\n• t = years until retirement\n• C = annual contribution amount (monthly × 12)\n\nUsing your values:\n• PV = ${pvStr}\n• Monthly contribution = ${monthlyStr}\n• Annual contribution = ${annualStr}\n• r = ${rPct.toFixed(1)}%\n• t = ${yearsToRetirement} years\n\nProjected value = ${fvStr}`;
+                          })()}
                           activeId={coastFireTooltipId}
                           onToggle={toggleTooltip}
                         />
@@ -1241,20 +1184,6 @@ export function InvestingPage() {
                         {result.realReturnWarning ? '—' : fmt(result.fvWithContrib)}
                       </span>
                     </div>
-                    {result.coastAge != null && !result.realReturnWarning ? (
-                      <div className="summary-kv" style={{ marginTop: 8 }}>
-                        <span className="k">
-                          Estimated age you reach Coast FIRE if contributions continue
-                          <CoastFireInfoIcon
-                            id="coastAge"
-                            content="The estimated age at which your portfolio would reach your FIRE number if you keep contributing at the current monthly rate."
-                            activeId={coastFireTooltipId}
-                            onToggle={toggleTooltip}
-                          />
-                        </span>
-                        <span className="v">{result.coastAge}</span>
-                      </div>
-                    ) : null}
                   </div>
                   <div className="btn-row" style={{ marginTop: 16 }}>
                     <button
