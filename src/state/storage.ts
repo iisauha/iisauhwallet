@@ -2,6 +2,7 @@ import {
   CASH_STORAGE_KEY,
   CATEGORY_COLOR_MAP_KEY,
   CATEGORY_STORAGE_KEY,
+  COASTFIRE_KEY,
   EXPECTED_COSTS_KEY,
   EXPECTED_INCOME_KEY,
   INVESTING_KEY,
@@ -616,4 +617,76 @@ export function accrueHysaAccounts(state: InvestingState, now?: number): Investi
   if (!changed) return state;
   return { ...state, accounts };
 }
+
+export type CoastFireAssumptions = {
+  currentAge: number;
+  retirementAge: number;
+  annualSpendingDollars: number;
+  swrPercent: number;
+  realReturnPercent: number;
+  includeRoth: boolean;
+  include401k: boolean;
+  includeGeneral: boolean;
+  includeHysa: boolean;
+  useDetectedContributions: boolean;
+  manualMonthlyContributionDollars: number;
+};
+
+const COASTFIRE_DEFAULTS: CoastFireAssumptions = {
+  currentAge: 30,
+  retirementAge: 65,
+  annualSpendingDollars: 50000,
+  swrPercent: 4,
+  realReturnPercent: 5,
+  includeRoth: true,
+  include401k: true,
+  includeGeneral: false,
+  includeHysa: false,
+  useDetectedContributions: true,
+  manualMonthlyContributionDollars: 0
+};
+
+export function loadCoastFire(): CoastFireAssumptions | null {
+  try {
+    const raw = localStorage.getItem(COASTFIRE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const a = parsed as any;
+    const currentAge = typeof a.currentAge === 'number' ? a.currentAge : COASTFIRE_DEFAULTS.currentAge;
+    const retirementAge = typeof a.retirementAge === 'number' ? a.retirementAge : COASTFIRE_DEFAULTS.retirementAge;
+    const annualSpendingDollars = typeof a.annualSpendingDollars === 'number' ? a.annualSpendingDollars : COASTFIRE_DEFAULTS.annualSpendingDollars;
+    const swrPercent = typeof a.swrPercent === 'number' ? a.swrPercent : COASTFIRE_DEFAULTS.swrPercent;
+    const realReturnPercent = typeof a.realReturnPercent === 'number' ? a.realReturnPercent : COASTFIRE_DEFAULTS.realReturnPercent;
+    const includeRoth = typeof a.includeRoth === 'boolean' ? a.includeRoth : COASTFIRE_DEFAULTS.includeRoth;
+    const include401k = typeof a.include401k === 'boolean' ? a.include401k : COASTFIRE_DEFAULTS.include401k;
+    const includeGeneral = typeof a.includeGeneral === 'boolean' ? a.includeGeneral : COASTFIRE_DEFAULTS.includeGeneral;
+    const includeHysa = typeof a.includeHysa === 'boolean' ? a.includeHysa : COASTFIRE_DEFAULTS.includeHysa;
+    const useDetectedContributions = typeof a.useDetectedContributions === 'boolean' ? a.useDetectedContributions : COASTFIRE_DEFAULTS.useDetectedContributions;
+    const manualMonthlyContributionDollars = typeof a.manualMonthlyContributionDollars === 'number' ? a.manualMonthlyContributionDollars : COASTFIRE_DEFAULTS.manualMonthlyContributionDollars;
+    return {
+      currentAge,
+      retirementAge,
+      annualSpendingDollars,
+      swrPercent,
+      realReturnPercent,
+      includeRoth,
+      include401k,
+      includeGeneral,
+      includeHysa,
+      useDetectedContributions,
+      manualMonthlyContributionDollars
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveCoastFire(assumptions: CoastFireAssumptions) {
+  try {
+    localStorage.setItem(COASTFIRE_KEY, JSON.stringify(assumptions));
+  } catch (_) {}
+}
+
+export { COASTFIRE_DEFAULTS };
 

@@ -22,6 +22,7 @@ export const EXPECTED_INCOME_KEY = 'expectedIncome_v1';
 export const UPCOMING_WINDOW_KEY = 'upcomingCashflow_window_v1';
 export const LAST_ADJUSTMENTS_KEY = 'ledgerlite_lastAdjustments';
 export const INVESTING_KEY = 'ledgerlite_investing_v1';
+export const COASTFIRE_KEY = 'ledgerlite_coastfire_v1';
 
 export const PHYSICAL_CASH_ID = 'physical_cash';
 

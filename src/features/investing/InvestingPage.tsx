@@ -6,12 +6,77 @@ import {
   saveInvesting,
   accrueHysaAccounts,
   getMonthKeyFromTimestamp,
+  loadCoastFire,
+  saveCoastFire,
+  COASTFIRE_DEFAULTS,
   type InvestingState,
   type InvestingAccount,
-  type HysaAccount
+  type HysaAccount,
+  type CoastFireAssumptions
 } from '../../state/storage';
 import { Select } from '../../ui/Select';
 import { loadCategoryConfig, getCategoryName } from '../../state/storage';
+
+function computeCoastFire(
+  assumptions: CoastFireAssumptions,
+  pvDollars: number,
+  monthlyContributionDollars: number
+): {
+  target: number;
+  pv: number;
+  monthlyContribution: number;
+  coastNow: boolean;
+  coastAge: number | null;
+  fvIfStopNow: number;
+  notReachable: boolean;
+  pvNeededToday: number;
+  gap: number;
+} {
+  const r = assumptions.realReturnPercent / 100;
+  const swr = assumptions.swrPercent / 100;
+  const target = assumptions.annualSpendingDollars / swr;
+  const currentAge = assumptions.currentAge;
+  const retirementAge = assumptions.retirementAge;
+  const N = Math.max(0, retirementAge - currentAge);
+  const C = monthlyContributionDollars * 12;
+
+  const fvIfStopNow = N <= 0 ? pvDollars : pvDollars * Math.pow(1 + r, N);
+  const coastNow = fvIfStopNow >= target;
+
+  let coastAge: number | null = null;
+  if (coastNow) {
+    coastAge = currentAge;
+  } else if (N > 0) {
+    for (let A = currentAge; A <= retirementAge; A++) {
+      const t = A - currentAge;
+      const N2 = retirementAge - A;
+      const growthFromPV = pvDollars * Math.pow(1 + r, t);
+      const annuityFV = r === 0 ? C * t : C * (Math.pow(1 + r, t) - 1) / r;
+      const pvA = growthFromPV + annuityFV;
+      const fv = N2 <= 0 ? pvA : pvA * Math.pow(1 + r, N2);
+      if (fv >= target) {
+        coastAge = A;
+        break;
+      }
+    }
+  }
+
+  const notReachable = coastAge === null && N > 0;
+  const pvNeededToday = N > 0 && r > -1 ? target / Math.pow(1 + r, N) : target;
+  const gap = notReachable ? Math.max(0, pvNeededToday - pvDollars) : 0;
+
+  return {
+    target,
+    pv: pvDollars,
+    monthlyContribution: monthlyContributionDollars,
+    coastNow,
+    coastAge,
+    fvIfStopNow,
+    notReachable,
+    pvNeededToday,
+    gap
+  };
+}
 
 export function InvestingPage() {
   const data = useLedgerStore((s) => s.data);
@@ -38,6 +103,11 @@ export function InvestingPage() {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
   const [transferError, setTransferError] = useState<string | null>(null);
+
+  const [coastFireOpen, setCoastFireOpen] = useState(false);
+  const [coastFireEditForm, setCoastFireEditForm] = useState(false);
+  const [coastFireAssumptions, setCoastFireAssumptions] = useState<CoastFireAssumptions | null>(() => loadCoastFire());
+  const [coastFireForm, setCoastFireForm] = useState<CoastFireAssumptions>(() => loadCoastFire() || COASTFIRE_DEFAULTS);
 
   const hysaAccounts = useMemo(
     () => investing.accounts.filter((a) => a.type === 'hysa'),
@@ -131,6 +201,10 @@ export function InvestingPage() {
     const totalAll = totalHYSA + totalRoth + total401k + totalGeneral;
     return { totalHYSA, totalRoth, total401k, totalGeneral, totalAll };
   }, [hysaAccounts, rothAccounts, k401Accounts, generalAccounts]);
+
+  const detectedMonthlyRetirementDollars = useMemo(() => {
+    return (contribution.totalInvestCents || 0) / 100;
+  }, [contribution.totalInvestCents]);
 
   function persist(next: InvestingState) {
     setInvesting(next);
@@ -477,6 +551,32 @@ export function InvestingPage() {
 
       <div className="card" style={{ marginTop: 24 }}>
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
+          Investing Summary
+        </p>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--green)' }}>Total HYSA</span>
+          <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--green)' }}>Total Roth IRA</span>
+          <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--green)' }}>Total 401(k)</span>
+          <span className="v amount-pos">{formatCents(totals.total401k)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--green)' }}>Total General Investing</span>
+          <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--green)' }}>Total Investing</span>
+          <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
           Investing Contribution
         </p>
         {contribution.incomeMarkedCount === 0 || contribution.grossIncomeCents <= 0 ? (
@@ -524,31 +624,276 @@ export function InvestingPage() {
         )}
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
-          Investing Summary
-        </p>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total HYSA</span>
-          <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total Roth IRA</span>
-          <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total 401(k)</span>
-          <span className="v amount-pos">{formatCents(totals.total401k)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total General Investing</span>
-          <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total Investing</span>
-          <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
-        </div>
+      <div style={{ marginTop: 16 }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ width: '100%' }}
+          onClick={() => {
+            if (coastFireAssumptions) setCoastFireForm({ ...coastFireAssumptions });
+            setCoastFireOpen(true);
+          }}
+        >
+          See more: Coast FIRE
+        </button>
       </div>
+
+      {coastFireOpen ? (
+        <div className="modal-overlay" onClick={() => setCoastFireOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Coast FIRE</h3>
+            {!coastFireAssumptions || coastFireEditForm ? (
+              <>
+                <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
+                  Coast FIRE age is the earliest age you can stop adding new retirement contributions and still reach
+                  your retirement target by retirement age, assuming real growth and SWR withdrawal rate.
+                </p>
+                <div className="field">
+                  <label>Current age</label>
+                  <input
+                    type="number"
+                    className="ll-control"
+                    min={1}
+                    max={120}
+                    value={coastFireForm.currentAge}
+                    onChange={(e) =>
+                      setCoastFireForm((f) => ({ ...f, currentAge: parseInt(e.target.value, 10) || 0 }))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>Retirement age</label>
+                  <input
+                    type="number"
+                    className="ll-control"
+                    min={1}
+                    max={120}
+                    value={coastFireForm.retirementAge}
+                    onChange={(e) =>
+                      setCoastFireForm((f) => ({ ...f, retirementAge: parseInt(e.target.value, 10) || 0 }))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>Annual retirement spending (today&apos;s $)</label>
+                  <input
+                    type="number"
+                    className="ll-control"
+                    min={0}
+                    step={1000}
+                    value={coastFireForm.annualSpendingDollars || ''}
+                    onChange={(e) =>
+                      setCoastFireForm((f) => ({
+                        ...f,
+                        annualSpendingDollars: parseFloat(e.target.value) || 0
+                      }))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>Safe withdrawal rate SWR (%)</label>
+                  <input
+                    type="number"
+                    className="ll-control"
+                    min={0.1}
+                    step={0.5}
+                    value={coastFireForm.swrPercent || ''}
+                    onChange={(e) =>
+                      setCoastFireForm((f) => ({ ...f, swrPercent: parseFloat(e.target.value) || 0 }))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>Real return rate r (%)</label>
+                  <input
+                    type="number"
+                    className="ll-control"
+                    step={0.5}
+                    value={coastFireForm.realReturnPercent ?? ''}
+                    onChange={(e) =>
+                      setCoastFireForm((f) => ({
+                        ...f,
+                        realReturnPercent: parseFloat(e.target.value) ?? 0
+                      }))
+                    }
+                  />
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>Include in retirement portfolio</label>
+                  <div className="toggle-row">
+                    <input
+                      type="checkbox"
+                      id="cfRoth"
+                      checked={coastFireForm.includeRoth}
+                      onChange={(e) => setCoastFireForm((f) => ({ ...f, includeRoth: e.target.checked }))}
+                    />
+                    <label htmlFor="cfRoth">Roth IRA</label>
+                  </div>
+                  <div className="toggle-row">
+                    <input
+                      type="checkbox"
+                      id="cf401k"
+                      checked={coastFireForm.include401k}
+                      onChange={(e) => setCoastFireForm((f) => ({ ...f, include401k: e.target.checked }))}
+                    />
+                    <label htmlFor="cf401k">401(k)</label>
+                  </div>
+                  <div className="toggle-row">
+                    <input
+                      type="checkbox"
+                      id="cfGeneral"
+                      checked={coastFireForm.includeGeneral}
+                      onChange={(e) => setCoastFireForm((f) => ({ ...f, includeGeneral: e.target.checked }))}
+                    />
+                    <label htmlFor="cfGeneral">General Investing</label>
+                  </div>
+                  <div className="toggle-row">
+                    <input
+                      type="checkbox"
+                      id="cfHysa"
+                      checked={coastFireForm.includeHysa}
+                      onChange={(e) => setCoastFireForm((f) => ({ ...f, includeHysa: e.target.checked }))}
+                    />
+                    <label htmlFor="cfHysa">HYSA</label>
+                  </div>
+                </div>
+                <div className="toggle-row" style={{ marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    id="cfUseDetected"
+                    checked={coastFireForm.useDetectedContributions}
+                    onChange={(e) =>
+                      setCoastFireForm((f) => ({ ...f, useDetectedContributions: e.target.checked }))
+                    }
+                  />
+                  <label htmlFor="cfUseDetected">Use detected monthly retirement contributions</label>
+                </div>
+                {!coastFireForm.useDetectedContributions ? (
+                  <div className="field">
+                    <label>Manual monthly contribution ($)</label>
+                    <input
+                      type="number"
+                      className="ll-control"
+                      min={0}
+                      step={100}
+                      value={coastFireForm.manualMonthlyContributionDollars ?? ''}
+                      onChange={(e) =>
+                        setCoastFireForm((f) => ({
+                          ...f,
+                          manualMonthlyContributionDollars: parseFloat(e.target.value) || 0
+                        }))
+                      }
+                    />
+                  </div>
+                ) : null}
+                <div className="btn-row" style={{ marginTop: 12 }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setCoastFireOpen(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const a = { ...coastFireForm };
+                      if (a.currentAge < 1) a.currentAge = COASTFIRE_DEFAULTS.currentAge;
+                      if (a.retirementAge < 1) a.retirementAge = COASTFIRE_DEFAULTS.retirementAge;
+                      saveCoastFire(a);
+                      setCoastFireAssumptions(a);
+                      setCoastFireEditForm(false);
+                    }}
+                  >
+                    Save Assumptions
+                  </button>
+                </div>
+              </>
+            ) : (() => {
+              const a = coastFireAssumptions;
+              const pvDollars =
+                (a.includeRoth ? totals.totalRoth / 100 : 0) +
+                (a.include401k ? totals.total401k / 100 : 0) +
+                (a.includeGeneral ? totals.totalGeneral / 100 : 0) +
+                (a.includeHysa ? totals.totalHYSA / 100 : 0);
+              const monthlyContrib =
+                a.useDetectedContributions ? detectedMonthlyRetirementDollars : a.manualMonthlyContributionDollars;
+              const result = computeCoastFire(a, pvDollars, monthlyContrib);
+              const fmt = (x: number) => `$${Math.round(x).toLocaleString()}`;
+              return (
+                <>
+                  <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
+                    Coast FIRE age is the earliest age you can stop adding new retirement contributions and still
+                    reach your retirement target by retirement age, assuming {a.realReturnPercent}% real growth and{' '}
+                    {a.swrPercent}% withdrawal rate.
+                  </p>
+                  <div className="summary-compact" style={{ marginTop: 12 }}>
+                    <div className="summary-kv">
+                      <span className="k">Target portfolio at retirement</span>
+                      <span className="v amount-pos">{fmt(result.target)}</span>
+                    </div>
+                    <div className="summary-kv">
+                      <span className="k">Current retirement portfolio (selected)</span>
+                      <span className="v amount-pos">{fmt(result.pv)}</span>
+                    </div>
+                    <div className="summary-kv">
+                      <span className="k">Monthly retirement contributions used</span>
+                      <span className="v">
+                        {fmt(result.monthlyContribution)}{' '}
+                        <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+                          {a.useDetectedContributions ? '(detected)' : '(manual)'}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="summary-kv">
+                      <span className="k">Coast FIRE today?</span>
+                      <span className="v">{result.coastNow ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div className="summary-kv">
+                      <span className="k">Coast FIRE age</span>
+                      <span className="v">
+                        {result.coastAge != null
+                          ? result.coastAge
+                          : result.notReachable
+                            ? 'Not reachable with current assumptions'
+                            : '—'}
+                      </span>
+                    </div>
+                    <div className="summary-kv">
+                      <span className="k">If you stop contributing today, projected at retirement</span>
+                      <span className="v amount-pos">{fmt(result.fvIfStopNow)}</span>
+                    </div>
+                    {result.notReachable ? (
+                      <>
+                        <div className="summary-kv">
+                          <span className="k">Coast number today (PV needed)</span>
+                          <span className="v">{fmt(result.pvNeededToday)}</span>
+                        </div>
+                        <div className="summary-kv">
+                          <span className="k">Gap</span>
+                          <span className="v amount-neg">{fmt(result.gap)}</span>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="btn-row" style={{ marginTop: 12 }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCoastFireOpen(false)}>
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        if (coastFireAssumptions) setCoastFireForm({ ...coastFireAssumptions });
+                        setCoastFireEditForm(true);
+                      }}
+                    >
+                      Edit assumptions
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      ) : null}
 
       {transferOpen ? (
         <div className="modal-overlay">
