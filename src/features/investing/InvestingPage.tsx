@@ -58,20 +58,24 @@ function CoastFireInfoIcon({
       </button>
       {open ? (
         <div
+          onClick={(e) => e.stopPropagation()}
           style={{
-            position: 'absolute',
-            left: 0,
-            top: '100%',
-            marginTop: 4,
-            padding: '8px 10px',
+            position: 'fixed',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            minWidth: 260,
+            maxWidth: 320,
+            width: 'max-content',
+            padding: '12px 14px',
             background: '#1e293b',
             border: '1px solid var(--border)',
-            borderRadius: 6,
-            fontSize: '0.75rem',
+            borderRadius: 8,
+            fontSize: '0.8rem',
+            lineHeight: 1.4,
             color: 'var(--text)',
-            maxWidth: 280,
-            zIndex: 10,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            zIndex: 10001,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
           }}
         >
           {content}
@@ -96,6 +100,7 @@ function computeCoastFire(
   realReturnWarning: boolean;
   coastAge: number | null;
   fvIfStopNow: number;
+  fvWithContrib: number;
 } {
   const annualSpending = assumptions.annualSpendingDollars;
   const swrDecimal = assumptions.swrPercent / 100;
@@ -118,7 +123,8 @@ function computeCoastFire(
       validationError: 'Retirement age must be greater than current age.',
       realReturnWarning: false,
       coastAge: null,
-      fvIfStopNow: pvDollars
+      fvIfStopNow: pvDollars,
+      fvWithContrib: pvDollars
     };
   }
   if (annualSpending <= 0) {
@@ -132,7 +138,8 @@ function computeCoastFire(
       validationError: 'Annual spending must be positive.',
       realReturnWarning: false,
       coastAge: null,
-      fvIfStopNow: pvDollars
+      fvIfStopNow: pvDollars,
+      fvWithContrib: pvDollars
     };
   }
   if (swrDecimal <= 0) {
@@ -146,7 +153,8 @@ function computeCoastFire(
       validationError: 'Safe withdrawal rate must be positive.',
       realReturnWarning: false,
       coastAge: null,
-      fvIfStopNow: pvDollars
+      fvIfStopNow: pvDollars,
+      fvWithContrib: pvDollars
     };
   }
 
@@ -169,6 +177,19 @@ function computeCoastFire(
 
   let coastAge: number | null = null;
   const C = monthlyContributionDollars * 12;
+  let fvWithContrib = pvDollars;
+  if (!realReturnWarning && yearsToRetirement > 0) {
+    if (realReturnDecimal <= -1) {
+      fvWithContrib = pvDollars;
+    } else {
+      const growthFromPV = pvDollars * Math.pow(1 + realReturnDecimal, yearsToRetirement);
+      const annuityFV =
+        realReturnDecimal === 0
+          ? C * yearsToRetirement
+          : (C * (Math.pow(1 + realReturnDecimal, yearsToRetirement) - 1)) / realReturnDecimal;
+      fvWithContrib = growthFromPV + annuityFV;
+    }
+  }
   if (!realReturnWarning && realReturnDecimal > 0 && yearsToRetirement > 0) {
     if (pvDollars >= coastFireNumber) {
       coastAge = currentAge;
@@ -201,7 +222,8 @@ function computeCoastFire(
     validationError: null,
     realReturnWarning,
     coastAge,
-    fvIfStopNow
+    fvIfStopNow,
+    fvWithContrib
   };
 }
 
@@ -1013,11 +1035,21 @@ export function InvestingPage() {
 
               return (
                 <>
+                  {coastFireTooltipId ? (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 10000,
+                        background: 'transparent'
+                      }}
+                      onClick={() => setCoastFireTooltipId(null)}
+                    />
+                  ) : null}
                   <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
                     Coast FIRE means you already have enough invested today that, even if you stop making new
                     retirement contributions, your investments could still grow to your retirement target by
-                    retirement age. This calculator adjusts returns for inflation so all values are shown in today&apos;s
-                    dollars.
+                    retirement age. Values are in today&apos;s dollars.
                   </p>
                   {result.validationError ? (
                     <p style={{ color: 'var(--red)', fontSize: '0.9rem', marginTop: 8 }}>{result.validationError}</p>
@@ -1042,7 +1074,13 @@ export function InvestingPage() {
                     </p>
                   ) : null}
 
-                  <div className="summary-compact" style={{ marginTop: 16 }}>
+                  <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', marginTop: 16, marginBottom: 4 }}>
+                    Coast FIRE (stop contributing today)
+                  </p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
+                    Assumes you stop contributing today
+                  </p>
+                  <div className="summary-compact" style={{ marginTop: 4 }}>
                     <div className="summary-kv" style={{ marginTop: 8 }}>
                       <span className="k">
                         Current Invested Assets
@@ -1054,32 +1092,6 @@ export function InvestingPage() {
                         />
                       </span>
                       <span className="v amount-pos">{fmt(result.pv)}</span>
-                    </div>
-                    <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">
-                        Current Monthly Contributions
-                        <CoastFireInfoIcon
-                          id="monthlyContrib"
-                          content="The monthly retirement contribution amount currently used in this Coast FIRE calculation."
-                          activeId={coastFireTooltipId}
-                          onToggle={toggleTooltip}
-                        />
-                      </span>
-                      <span className="v amount-pos">{fmt(monthlyContrib)}</span>
-                    </div>
-                    <div className="summary-kv" style={{ marginTop: 8 }}>
-                      <span className="k">
-                        If you stop contributing today, projected at retirement
-                        <CoastFireInfoIcon
-                          id="fvIfStopNow"
-                          content="The projected value of your selected retirement assets at retirement age if you make no additional contributions starting today."
-                          activeId={coastFireTooltipId}
-                          onToggle={toggleTooltip}
-                        />
-                      </span>
-                      <span className="v amount-pos">
-                        {result.realReturnWarning ? '—' : fmt(result.fvIfStopNow)}
-                      </span>
                     </div>
                     <div className="summary-kv" style={{ marginTop: 8 }}>
                       <span className="k">
@@ -1119,6 +1131,20 @@ export function InvestingPage() {
                       </span>
                       <span className={`v ${result.gap > 0 && !result.realReturnWarning ? 'amount-neg' : ''}`}>
                         {result.realReturnWarning || result.gap <= 0 ? 'None' : fmt(result.gap)}
+                      </span>
+                    </div>
+                    <div className="summary-kv" style={{ marginTop: 8 }}>
+                      <span className="k">
+                        If you stop contributing today, projected at retirement
+                        <CoastFireInfoIcon
+                          id="fvIfStopNow"
+                          content="The projected value of your selected retirement assets at retirement age if you make no additional contributions starting today."
+                          activeId={coastFireTooltipId}
+                          onToggle={toggleTooltip}
+                        />
+                      </span>
+                      <span className="v amount-pos">
+                        {result.realReturnWarning ? '—' : fmt(result.fvIfStopNow)}
                       </span>
                     </div>
                     <div className="summary-kv" style={{ marginTop: 8 }}>
@@ -1171,6 +1197,52 @@ export function InvestingPage() {
                       </span>
                       <span className="v">{a.swrPercent}%</span>
                     </div>
+                  </div>
+
+                  <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', marginTop: 20, marginBottom: 4 }}>
+                    If you continue contributing
+                  </p>
+                  <div className="summary-compact" style={{ marginTop: 4 }}>
+                    <div className="summary-kv" style={{ marginTop: 8 }}>
+                      <span className="k">
+                        Current Monthly Contributions
+                        <CoastFireInfoIcon
+                          id="monthlyContrib"
+                          content="The monthly retirement contribution amount currently used in this projection."
+                          activeId={coastFireTooltipId}
+                          onToggle={toggleTooltip}
+                        />
+                      </span>
+                      <span className="v amount-pos">{fmt(monthlyContrib)}</span>
+                    </div>
+                    <div className="summary-kv" style={{ marginTop: 8 }}>
+                      <span className="k">
+                        Projected value at retirement if you keep contributing
+                        <CoastFireInfoIcon
+                          id="fvWithContrib"
+                          content="The projected value of your portfolio at retirement age if you continue making monthly contributions at the current rate."
+                          activeId={coastFireTooltipId}
+                          onToggle={toggleTooltip}
+                        />
+                      </span>
+                      <span className="v amount-pos">
+                        {result.realReturnWarning ? '—' : fmt(result.fvWithContrib)}
+                      </span>
+                    </div>
+                    {result.coastAge != null && !result.realReturnWarning ? (
+                      <div className="summary-kv" style={{ marginTop: 8 }}>
+                        <span className="k">
+                          Estimated age you reach Coast FIRE if contributions continue
+                          <CoastFireInfoIcon
+                            id="coastAge"
+                            content="The estimated age at which your portfolio would reach your FIRE number if you keep contributing at the current monthly rate."
+                            activeId={coastFireTooltipId}
+                            onToggle={toggleTooltip}
+                          />
+                        </span>
+                        <span className="v">{result.coastAge}</span>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="btn-row" style={{ marginTop: 16 }}>
                     <button
