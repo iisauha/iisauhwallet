@@ -839,9 +839,17 @@ export function InvestingPage() {
 
       const interestInput = window.prompt('Interest already credited this month ($, optional)', '');
       let interestThisMonth = 0;
+      let manualInterestBaselineThisMonth: number | undefined;
+      let manualInterestBaselineSetAt: number | undefined;
+      let manualInterestBaselineMonthKey: string | undefined;
       if (interestInput != null && interestInput.trim() !== '') {
         const parsed = parseCents(interestInput);
-        if (parsed >= 0) interestThisMonth = parsed;
+        if (parsed >= 0) {
+          interestThisMonth = parsed;
+          manualInterestBaselineThisMonth = parsed;
+          manualInterestBaselineSetAt = now;
+          manualInterestBaselineMonthKey = getMonthKeyFromTimestamp(now);
+        }
       }
 
       const monthKey = getMonthKeyFromTimestamp(now);
@@ -858,7 +866,12 @@ export function InvestingPage() {
         lastAccruedAt,
         monthKey,
         interestThisMonth,
-        monthlyBalanceEvents
+        monthlyBalanceEvents,
+        ...(manualInterestBaselineThisMonth !== undefined && {
+          manualInterestBaselineThisMonth,
+          manualInterestBaselineSetAt: manualInterestBaselineSetAt!,
+          manualInterestBaselineMonthKey: manualInterestBaselineMonthKey!
+        })
       } as any as HysaAccount;
 
       persist({ ...investing, accounts: [...investing.accounts, acc] });
@@ -885,7 +898,20 @@ export function InvestingPage() {
       if (a.id !== acc.id) return a;
       if (a.type === 'hysa') {
         const updated = recordHysaBalanceEvent(a as HysaAccount, now, cents);
-        return { ...updated, lastAccruedAt: now };
+        let next = { ...updated, lastAccruedAt: now };
+        const interestVal = window.prompt('Interest accrued this month so far ($, optional - leave blank to keep current)', '');
+        if (interestVal != null && interestVal.trim() !== '') {
+          const interestCents = parseCents(interestVal);
+          if (interestCents >= 0) {
+            next = {
+              ...next,
+              manualInterestBaselineThisMonth: interestCents,
+              manualInterestBaselineSetAt: now,
+              manualInterestBaselineMonthKey: getMonthKeyFromTimestamp(now)
+            };
+          }
+        }
+        return next;
       }
       return { ...a, balanceCents: cents };
     });

@@ -557,6 +557,10 @@ export type HysaAccount = InvestingAccountBase & {
   interestThisMonth?: number; // cents of interest accrued in monthKey
   /** Optional: balance-change events within the current month for daily-balance interest accuracy */
   monthlyBalanceEvents?: HysaBalanceEvent[];
+  /** Optional: user-provided baseline for "interest accrued this month"; display = baseline + accrual since baseline */
+  manualInterestBaselineThisMonth?: number;
+  manualInterestBaselineSetAt?: number;
+  manualInterestBaselineMonthKey?: string;
 };
 
 export type OtherInvestAccount = InvestingAccountBase & {
@@ -633,12 +637,41 @@ export function computeHysaMonthlyInterest(
 ): { interestAccruedThisMonthCents: number; projectedInterestThisMonthCents: number } {
   const rate = typeof a.interestRate === 'number' ? a.interestRate : 0;
   const balanceCents = typeof a.balanceCents === 'number' ? a.balanceCents : 0;
+  const currentMonthKey = getMonthKeyFromTimestamp(now);
+  const monthStartMs = getStartOfMonthMs(now);
+
+  const baselineCents =
+    typeof a.manualInterestBaselineThisMonth === 'number' && a.manualInterestBaselineThisMonth >= 0
+      ? a.manualInterestBaselineThisMonth
+      : null;
+  const baselineMonthKey = a.manualInterestBaselineMonthKey || null;
+  const baselineSetAt = typeof a.manualInterestBaselineSetAt === 'number' ? a.manualInterestBaselineSetAt : null;
+
+  if (baselineCents !== null && baselineMonthKey === currentMonthKey && baselineSetAt !== null) {
+    const daysSinceBaseline = Math.max(
+      0,
+      Math.floor((now - baselineSetAt) / MS_PER_DAY)
+    );
+    const r = rate / 100;
+    const dailyRate = r / 365;
+    const newAccrualCents =
+      rate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysSinceBaseline);
+    const interestAccruedThisMonthCents = baselineCents + newAccrualCents;
+    const d = new Date(now);
+    const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
+    const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
+    const projectedRemaining =
+      rate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysRemaining);
+    const projectedInterestThisMonthCents = interestAccruedThisMonthCents + projectedRemaining;
+    return { interestAccruedThisMonthCents, projectedInterestThisMonthCents };
+  }
+
   if (rate <= 0) {
     return { interestAccruedThisMonthCents: 0, projectedInterestThisMonthCents: 0 };
   }
   const r = rate / 100;
   const dailyRate = r / 365;
-  const monthStartMs = getStartOfMonthMs(now);
   const events = ensureMonthlyBalanceEventsForCurrentMonth(a, now);
 
   let interestAccruedThisMonthCents: number;
