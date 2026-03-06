@@ -42,10 +42,16 @@ export function RecurringPage() {
   const [myPortion, setMyPortion] = useState('');
   const [useLastDayOfMonth, setUseLastDayOfMonth] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [countsForInvestingPct, setCountsForInvestingPct] = useState(false);
   const [isFullTimeJob, setIsFullTimeJob] = useState(false);
   const [preTaxDeductions, setPreTaxDeductions] = useState<
-    { id: string; name: string; amount: string; countsAsInvesting: boolean }[]
+    {
+      id: string;
+      amount: string;
+      deductionType: 'retirement' | 'regular';
+      investingAccountId?: string;
+      customName?: string;
+      employerMatchPct?: string;
+    }[]
   >([]);
   const [investingTransferEnabled, setInvestingTransferEnabled] = useState(false);
   const [investingFromBankId, setInvestingFromBankId] = useState('');
@@ -135,19 +141,31 @@ export function RecurringPage() {
                         : ''
                     );
                       setUseLastDayOfMonth(!!r.useLastDayOfMonth);
-                      setCountsForInvestingPct(!!r.countsForInvestingPct);
                       setIsFullTimeJob(!!r.isFullTimeJob);
                       setPreTaxDeductions(
                         Array.isArray(r.preTaxDeductions)
-                          ? r.preTaxDeductions.map((d: any) => ({
-                              id: d.id,
-                              name: d.name || '',
-                              amount:
-                                typeof d.amountCents === 'number'
-                                  ? (d.amountCents / 100).toFixed(2)
-                                  : '',
-                              countsAsInvesting: !!d.countsAsInvesting
-                            }))
+                          ? r.preTaxDeductions.map((d: any) => {
+                              const deductionType =
+                                d.deductionType === 'retirement' || d.deductionType === 'regular'
+                                  ? d.deductionType
+                                  : !!d.countsAsInvesting
+                                    ? 'retirement'
+                                    : 'regular';
+                              return {
+                                id: d.id,
+                                amount:
+                                  typeof d.amountCents === 'number'
+                                    ? (d.amountCents / 100).toFixed(2)
+                                    : '',
+                                deductionType,
+                                investingAccountId: d.investingAccountId || undefined,
+                                customName: d.customName ?? d.name ?? '',
+                                employerMatchPct:
+                                  typeof d.employerMatchPct === 'number'
+                                    ? String(d.employerMatchPct)
+                                    : ''
+                              };
+                            })
                           : []
                       );
                       setInvestingTransferEnabled(!!r.investingTransferEnabled);
@@ -297,7 +315,6 @@ export function RecurringPage() {
           setIsSplit(false);
           setMyPortion('');
           setUseLastDayOfMonth(false);
-          setCountsForInvestingPct(false);
           setIsFullTimeJob(false);
           setPreTaxDeductions([]);
           setInvestingTransferEnabled(false);
@@ -348,15 +365,6 @@ export function RecurringPage() {
                 <div className="toggle-row">
                   <input
                     type="checkbox"
-                    id="recCountsInvestPct"
-                    checked={countsForInvestingPct}
-                    onChange={(e) => setCountsForInvestingPct(e.target.checked)}
-                  />
-                  <label htmlFor="recCountsInvestPct">Use this income for investing %</label>
-                </div>
-                <div className="toggle-row">
-                  <input
-                    type="checkbox"
                     id="recFullTimeJob"
                     checked={isFullTimeJob}
                     onChange={(e) => setIsFullTimeJob(e.target.checked)}
@@ -377,7 +385,7 @@ export function RecurringPage() {
                           const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
                           setPreTaxDeductions((prev) => [
                             ...prev,
-                            { id, name: '', amount: '', countsAsInvesting: false }
+                            { id, amount: '', deductionType: 'regular' as const, customName: '' }
                           ]);
                         }}
                       >
@@ -390,18 +398,29 @@ export function RecurringPage() {
                       </p>
                     ) : null}
                     {preTaxDeductions.map((d) => (
-                      <div key={d.id} style={{ marginBottom: 8 }}>
+                      <div key={d.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
                         <div className="field">
-                          <label>Name</label>
-                          <input
-                            value={d.name}
+                          <label>Deduction type</label>
+                          <Select
+                            value={d.deductionType}
                             onChange={(e) =>
                               setPreTaxDeductions((prev) =>
-                                prev.map((x) => (x.id === d.id ? { ...x, name: e.target.value } : x))
+                                prev.map((x) =>
+                                  x.id === d.id
+                                    ? {
+                                        ...x,
+                                        deductionType: e.target.value as 'retirement' | 'regular',
+                                        investingAccountId: e.target.value === 'retirement' ? x.investingAccountId : undefined,
+                                        customName: e.target.value === 'regular' ? (x.customName ?? '') : undefined
+                                      }
+                                    : x
+                                )
                               )
                             }
-                            placeholder="e.g. 401k"
-                          />
+                          >
+                            <option value="retirement">Retirement account contribution</option>
+                            <option value="regular">Regular deduction</option>
+                          </Select>
                         </div>
                         <div className="field">
                           <label>Amount ($)</label>
@@ -416,24 +435,65 @@ export function RecurringPage() {
                             placeholder="0.00"
                           />
                         </div>
-                        <div className="toggle-row">
-                          <input
-                            type="checkbox"
-                            id={`ded-${d.id}-invest`}
-                            checked={d.countsAsInvesting}
-                            onChange={(e) =>
-                              setPreTaxDeductions((prev) =>
-                                prev.map((x) =>
-                                  x.id === d.id ? { ...x, countsAsInvesting: e.target.checked } : x
+                        {d.deductionType === 'retirement' ? (
+                          <>
+                            <div className="field">
+                              <label>Retirement account</label>
+                              <Select
+                                value={d.investingAccountId || ''}
+                                onChange={(e) =>
+                                  setPreTaxDeductions((prev) =>
+                                    prev.map((x) =>
+                                      x.id === d.id ? { ...x, investingAccountId: e.target.value || undefined } : x
+                                    )
+                                  )
+                                }
+                              >
+                                <option value="">— Select —</option>
+                                {investingState.accounts
+                                  .filter((a) => a.type === 'roth' || a.type === 'k401')
+                                  .map((a) => (
+                                    <option key={a.id} value={a.id}>
+                                      {a.type === 'roth' ? 'Roth IRA' : 'Employer-Based Retirement'}: {a.name}
+                                    </option>
+                                  ))}
+                              </Select>
+                            </div>
+                            <div className="field">
+                              <label>Employer match (% of this contribution)</label>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={d.employerMatchPct ?? ''}
+                                onChange={(e) =>
+                                  setPreTaxDeductions((prev) =>
+                                    prev.map((x) =>
+                                      x.id === d.id ? { ...x, employerMatchPct: e.target.value } : x
+                                    )
+                                  )
+                                }
+                                placeholder="e.g. 5"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="field">
+                            <label>Deduction name</label>
+                            <input
+                              value={d.customName ?? ''}
+                              onChange={(e) =>
+                                setPreTaxDeductions((prev) =>
+                                  prev.map((x) => (x.id === d.id ? { ...x, customName: e.target.value } : x))
                                 )
-                              )
-                            }
-                          />
-                          <label htmlFor={`ded-${d.id}-invest`}>Counts as investing contribution</label>
-                        </div>
+                              }
+                              placeholder="e.g. Health insurance, Dental, Transit"
+                            />
+                          </div>
+                        )}
                         <button
                           type="button"
                           className="btn-delete"
+                          style={{ marginTop: 8 }}
                           onClick={() => {
                             if (!window.confirm('Remove this deduction?')) return;
                             setPreTaxDeductions((prev) => prev.filter((x) => x.id !== d.id));
@@ -441,13 +501,6 @@ export function RecurringPage() {
                         >
                           Delete deduction
                         </button>
-                        <hr
-                          style={{
-                            borderColor: 'var(--border)',
-                            marginTop: 12,
-                            marginBottom: 8
-                          }}
-                        />
                       </div>
                     ))}
                   </div>
@@ -719,11 +772,17 @@ export function RecurringPage() {
                           .map((d) => {
                             const amtCents = d.amount.trim() ? parseCents(d.amount) : 0;
                             if (!(amtCents > 0)) return null;
+                            const employerMatchPct =
+                              d.employerMatchPct != null && d.employerMatchPct.trim() !== ''
+                                ? parseFloat(d.employerMatchPct)
+                                : undefined;
                             return {
                               id: d.id,
-                              name: d.name || '',
                               amountCents: amtCents,
-                              countsAsInvesting: d.countsAsInvesting || undefined
+                              deductionType: d.deductionType,
+                              investingAccountId: d.deductionType === 'retirement' ? d.investingAccountId : undefined,
+                              customName: d.deductionType === 'regular' ? (d.customName || '').trim() || undefined : undefined,
+                              employerMatchPct: Number.isFinite(employerMatchPct) && employerMatchPct >= 0 ? employerMatchPct : undefined
                             };
                           })
                           .filter(Boolean)
@@ -749,7 +808,6 @@ export function RecurringPage() {
                     notes: notes || undefined,
                     isSplit: type !== 'income' && isSplit ? true : undefined,
                     myPortionCents: type !== 'income' && isSplit ? parseCents(myPortion) : undefined,
-                    countsForInvestingPct: type === 'income' && countsForInvestingPct ? true : undefined,
                     isFullTimeJob: type === 'income' && isFullTimeJob ? true : undefined,
                     preTaxDeductions: type === 'income' && preTax.length ? (preTax as any) : undefined,
                     investingTransferEnabled:

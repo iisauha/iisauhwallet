@@ -307,23 +307,30 @@ export function InvestingPage() {
     let grossIncomeCents = 0;
     let preTaxTotalCents = 0;
     let preTaxInvestCents = 0;
+    let employerMatchCents = 0;
     let postTaxInvestCents = 0;
     let incomeMarkedCount = 0;
 
     recurring.forEach((r) => {
       if (!r || r.type !== 'income') return;
-      if (!r.countsForInvestingPct) return;
+      if (!r.isFullTimeJob && !r.countsForInvestingPct) return;
       incomeMarkedCount += 1;
       const base = normalizeAmount(r);
       grossIncomeCents += base;
 
-      if (r.isFullTimeJob && Array.isArray(r.preTaxDeductions)) {
+      if (Array.isArray(r.preTaxDeductions)) {
         r.preTaxDeductions.forEach((d: any) => {
           if (!d) return;
           const amt = typeof d.amountCents === 'number' ? d.amountCents : 0;
           if (amt <= 0) return;
           preTaxTotalCents += amt;
-          if (d.countsAsInvesting) preTaxInvestCents += amt;
+          const isRetirement =
+          d.deductionType === 'retirement' || (!d.deductionType && d.countsAsInvesting);
+          if (isRetirement) {
+            preTaxInvestCents += amt;
+            const matchPct = typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? d.employerMatchPct : 0;
+            employerMatchCents += Math.round(amt * (matchPct / 100));
+          }
         });
       }
     });
@@ -345,19 +352,41 @@ export function InvestingPage() {
 
     const preTaxPctGross = pct(preTaxInvestCents, grossIncomeCents);
     const postTaxPctNet = pct(postTaxInvestCents, netIncomeCents);
-    const totalInvestCents = preTaxInvestCents + postTaxInvestCents;
+    const totalPreTaxRetirementCents = preTaxInvestCents + employerMatchCents;
+    const totalInvestCents = totalPreTaxRetirementCents + postTaxInvestCents;
 
     return {
       incomeMarkedCount,
       grossIncomeCents,
       netIncomeCents,
       preTaxInvestCents,
+      employerMatchCents,
+      totalPreTaxRetirementCents,
       postTaxInvestCents,
       totalInvestCents,
       preTaxPctGross,
       postTaxPctNet
     };
   }, [data, cfg]);
+
+  const accountContributionsFromRecurring = useMemo(() => {
+    const map: Record<string, { employeeCents: number; employerMatchCents: number }> = {};
+    const recurring = (data as any).recurring || [];
+    recurring.forEach((r: any) => {
+      if (!r || r.type !== 'income' || !Array.isArray(r.preTaxDeductions)) return;
+      r.preTaxDeductions.forEach((d: any) => {
+        if (!d || d.deductionType !== 'retirement' || !d.investingAccountId) return;
+        const amt = typeof d.amountCents === 'number' ? d.amountCents : 0;
+        if (amt <= 0) return;
+        const matchPct = typeof d.employerMatchPct === 'number' && d.employerMatchPct >= 0 ? d.employerMatchPct : 0;
+        const matchCents = Math.round(amt * (matchPct / 100));
+        if (!map[d.investingAccountId]) map[d.investingAccountId] = { employeeCents: 0, employerMatchCents: 0 };
+        map[d.investingAccountId].employeeCents += amt;
+        map[d.investingAccountId].employerMatchCents += matchCents;
+      });
+    });
+    return map;
+  }, [data]);
 
   const totals = useMemo(() => {
     const sum = (xs: InvestingAccount[]) => xs.reduce((s, a) => s + (a.balanceCents || 0), 0);
@@ -539,7 +568,7 @@ export function InvestingPage() {
 
     // Disallow Roth/401k as transfer sources.
     if (fromKind === 'roth' || fromKind === 'k401') {
-      setTransferError('Cannot transfer out of Roth IRA or 401(k).');
+      setTransferError('Cannot transfer out of Roth IRA or Employer-Based Retirement.');
       return;
     }
 
@@ -622,6 +651,14 @@ export function InvestingPage() {
                     <span className="name bank-card-name">{a.name}</span>
                     <span className="amount amount-pos">{formatCents(a.balanceCents || 0)}</span>
                   </div>
+                  {(a.type === 'roth' || a.type === 'k401') && accountContributionsFromRecurring[a.id] ? (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
+                      <div>Employee contrib: {formatCents(accountContributionsFromRecurring[a.id].employeeCents)}</div>
+                      {accountContributionsFromRecurring[a.id].employerMatchCents > 0 ? (
+                        <div>Employer match: {formatCents(accountContributionsFromRecurring[a.id].employerMatchCents)}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {a.type === 'hysa' ? (
                     (() => {
                       const h = a as HysaAccount & { interestThisMonth?: number };
@@ -700,7 +737,7 @@ export function InvestingPage() {
 
       {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
       {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
-      {renderSection('401(k)', 'k401', k401Accounts, 'k401')}
+      {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, 'k401')}
       {renderSection('General Investing', 'general', generalAccounts, 'general')}
 
       <button
@@ -732,7 +769,7 @@ export function InvestingPage() {
           <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total 401(k)</span>
+          <span className="k" style={{ color: 'var(--green)' }}>Total Employer-Based Retirement</span>
           <span className="v amount-pos">{formatCents(totals.total401k)}</span>
         </div>
         <div className="summary-kv">
@@ -751,7 +788,7 @@ export function InvestingPage() {
         </p>
         {contribution.incomeMarkedCount === 0 || contribution.grossIncomeCents <= 0 ? (
           <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-            No income sources marked for investing %. Mark eligible recurring income in the Recurring tab.
+            No full-time job income with pre-tax deductions. Add recurring income marked as Full-time job in the Recurring tab.
           </p>
         ) : (
           <div className="summary-compact">
@@ -764,13 +801,23 @@ export function InvestingPage() {
               <span className="v">{formatCents(contribution.netIncomeCents)}</span>
             </div>
             <div className="summary-kv">
-              <span className="k">Pre-tax investing contributions</span>
+              <span className="k">Pre-tax employee contributions</span>
               <span className="v">
                 {formatCents(contribution.preTaxInvestCents)}{' '}
                 <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
                   ({contribution.preTaxPctGross.toFixed(1)}% of gross)
                 </span>
               </span>
+            </div>
+            {contribution.employerMatchCents > 0 ? (
+              <div className="summary-kv">
+                <span className="k">Employer match contributions</span>
+                <span className="v amount-pos">{formatCents(contribution.employerMatchCents)}</span>
+              </div>
+            ) : null}
+            <div className="summary-kv">
+              <span className="k">Total pre-tax retirement contributions</span>
+              <span className="v">{formatCents(contribution.totalPreTaxRetirementCents)}</span>
             </div>
             <div className="summary-kv">
               <span className="k">Post-tax investing contributions</span>
@@ -917,7 +964,7 @@ export function InvestingPage() {
                       checked={coastFireForm.include401k}
                       onChange={(e) => setCoastFireForm((f) => ({ ...f, include401k: e.target.checked }))}
                     />
-                    <label htmlFor="cf401k">401(k)</label>
+                    <label htmlFor="cf401k">Employer-Based Retirement Accounts</label>
                   </div>
                   <div className="toggle-row">
                     <input

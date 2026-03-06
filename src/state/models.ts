@@ -97,11 +97,23 @@ export interface Purchase {
 export type RecurringType = 'expense' | 'income';
 export type RecurringFrequency = 'monthly' | 'weekly' | 'biweekly' | 'yearly' | 'every_n_days';
 
+export type PreTaxDeductionType = 'retirement' | 'regular';
+
 export interface PreTaxDeduction {
   id: string;
-  name: string;
+  /** @deprecated use deductionType + investingAccountId or customName */
+  name?: string;
   amountCents: number;
+  /** @deprecated use deductionType === 'retirement' */
   countsAsInvesting?: boolean;
+  /** New: 'retirement' = link to investing account, 'regular' = custom deduction. Omit = legacy (treat as regular with name). */
+  deductionType?: PreTaxDeductionType;
+  /** When deductionType === 'retirement': id of the investing account (roth or k401). */
+  investingAccountId?: string;
+  /** When deductionType === 'regular': custom label (e.g. Health insurance, Dental). */
+  customName?: string;
+  /** Optional employer match as % of employee contribution (e.g. 5 = 5%). Only for retirement. */
+  employerMatchPct?: number;
 }
 
 export interface RecurringItem {
