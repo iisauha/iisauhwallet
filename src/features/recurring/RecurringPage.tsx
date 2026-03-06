@@ -772,17 +772,15 @@ export function RecurringPage() {
                           .map((d) => {
                             const amtCents = d.amount.trim() ? parseCents(d.amount) : 0;
                             if (!(amtCents > 0)) return null;
-                            const employerMatchPct =
-                              d.employerMatchPct != null && d.employerMatchPct.trim() !== ''
-                                ? parseFloat(d.employerMatchPct)
-                                : undefined;
+                            const rawMatch = d.employerMatchPct != null && d.employerMatchPct.trim() !== '' ? parseFloat(d.employerMatchPct) : NaN;
+                            const employerMatchPctVal = Number.isFinite(rawMatch) && rawMatch >= 0 ? rawMatch : undefined;
                             return {
                               id: d.id,
                               amountCents: amtCents,
                               deductionType: d.deductionType,
                               investingAccountId: d.deductionType === 'retirement' ? d.investingAccountId : undefined,
                               customName: d.deductionType === 'regular' ? (d.customName || '').trim() || undefined : undefined,
-                              employerMatchPct: Number.isFinite(employerMatchPct) && employerMatchPct >= 0 ? employerMatchPct : undefined
+                              employerMatchPct: employerMatchPctVal
                             };
                           })
                           .filter(Boolean)
