@@ -623,7 +623,8 @@ export type CoastFireAssumptions = {
   retirementAge: number;
   annualSpendingDollars: number;
   swrPercent: number;
-  realReturnPercent: number;
+  investmentReturnPercent: number;
+  inflationPercent: number;
   includeRoth: boolean;
   include401k: boolean;
   includeGeneral: boolean;
@@ -637,7 +638,8 @@ const COASTFIRE_DEFAULTS: CoastFireAssumptions = {
   retirementAge: 65,
   annualSpendingDollars: 50000,
   swrPercent: 4,
-  realReturnPercent: 5,
+  investmentReturnPercent: 7,
+  inflationPercent: 3,
   includeRoth: true,
   include401k: true,
   includeGeneral: false,
@@ -657,7 +659,12 @@ export function loadCoastFire(): CoastFireAssumptions | null {
     const retirementAge = typeof a.retirementAge === 'number' ? a.retirementAge : COASTFIRE_DEFAULTS.retirementAge;
     const annualSpendingDollars = typeof a.annualSpendingDollars === 'number' ? a.annualSpendingDollars : COASTFIRE_DEFAULTS.annualSpendingDollars;
     const swrPercent = typeof a.swrPercent === 'number' ? a.swrPercent : COASTFIRE_DEFAULTS.swrPercent;
-    const realReturnPercent = typeof a.realReturnPercent === 'number' ? a.realReturnPercent : COASTFIRE_DEFAULTS.realReturnPercent;
+    let investmentReturnPercent = typeof a.investmentReturnPercent === 'number' ? a.investmentReturnPercent : COASTFIRE_DEFAULTS.investmentReturnPercent;
+    let inflationPercent = typeof a.inflationPercent === 'number' ? a.inflationPercent : COASTFIRE_DEFAULTS.inflationPercent;
+    if (typeof a.realReturnPercent === 'number' && typeof a.investmentReturnPercent !== 'number') {
+      investmentReturnPercent = 7;
+      inflationPercent = Math.max(0, Math.min(10, 7 - a.realReturnPercent));
+    }
     const includeRoth = typeof a.includeRoth === 'boolean' ? a.includeRoth : COASTFIRE_DEFAULTS.includeRoth;
     const include401k = typeof a.include401k === 'boolean' ? a.include401k : COASTFIRE_DEFAULTS.include401k;
     const includeGeneral = typeof a.includeGeneral === 'boolean' ? a.includeGeneral : COASTFIRE_DEFAULTS.includeGeneral;
@@ -669,7 +676,8 @@ export function loadCoastFire(): CoastFireAssumptions | null {
       retirementAge,
       annualSpendingDollars,
       swrPercent,
-      realReturnPercent,
+      investmentReturnPercent,
+      inflationPercent,
       includeRoth,
       include401k,
       includeGeneral,

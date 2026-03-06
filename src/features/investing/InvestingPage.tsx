@@ -22,59 +22,122 @@ function computeCoastFire(
   pvDollars: number,
   monthlyContributionDollars: number
 ): {
-  target: number;
+  fireNumber: number;
+  coastFireNumber: number;
   pv: number;
-  monthlyContribution: number;
-  coastNow: boolean;
+  realReturnPercent: number;
+  coastReached: boolean;
+  gap: number;
+  validationError: string | null;
+  realReturnWarning: boolean;
   coastAge: number | null;
   fvIfStopNow: number;
-  notReachable: boolean;
-  pvNeededToday: number;
-  gap: number;
 } {
-  const r = assumptions.realReturnPercent / 100;
-  const swr = assumptions.swrPercent / 100;
-  const target = assumptions.annualSpendingDollars / swr;
+  const annualSpending = assumptions.annualSpendingDollars;
+  const swrDecimal = assumptions.swrPercent / 100;
+  const investmentReturnDecimal = assumptions.investmentReturnPercent / 100;
+  const inflationDecimal = assumptions.inflationPercent / 100;
+  const realReturnDecimal = investmentReturnDecimal - inflationDecimal;
+  const realReturnPercent = assumptions.investmentReturnPercent - assumptions.inflationPercent;
   const currentAge = assumptions.currentAge;
   const retirementAge = assumptions.retirementAge;
-  const N = Math.max(0, retirementAge - currentAge);
-  const C = monthlyContributionDollars * 12;
+  const yearsToRetirement = retirementAge - currentAge;
 
-  const fvIfStopNow = N <= 0 ? pvDollars : pvDollars * Math.pow(1 + r, N);
-  const coastNow = fvIfStopNow >= target;
+  if (retirementAge <= currentAge) {
+    return {
+      fireNumber: 0,
+      coastFireNumber: 0,
+      pv: pvDollars,
+      realReturnPercent: 0,
+      coastReached: false,
+      gap: 0,
+      validationError: 'Retirement age must be greater than current age.',
+      realReturnWarning: false,
+      coastAge: null,
+      fvIfStopNow: pvDollars
+    };
+  }
+  if (annualSpending <= 0) {
+    return {
+      fireNumber: 0,
+      coastFireNumber: 0,
+      pv: pvDollars,
+      realReturnPercent: realReturnPercent,
+      coastReached: false,
+      gap: 0,
+      validationError: 'Annual spending must be positive.',
+      realReturnWarning: false,
+      coastAge: null,
+      fvIfStopNow: pvDollars
+    };
+  }
+  if (swrDecimal <= 0) {
+    return {
+      fireNumber: 0,
+      coastFireNumber: 0,
+      pv: pvDollars,
+      realReturnPercent: realReturnPercent,
+      coastReached: false,
+      gap: 0,
+      validationError: 'Safe withdrawal rate must be positive.',
+      realReturnWarning: false,
+      coastAge: null,
+      fvIfStopNow: pvDollars
+    };
+  }
+
+  const fireNumber = annualSpending / swrDecimal;
+  const realReturnWarning = realReturnDecimal <= 0;
+
+  let coastFireNumber = 0;
+  if (!realReturnWarning && realReturnDecimal > -1) {
+    coastFireNumber =
+      annualSpending / (swrDecimal * Math.pow(1 + realReturnDecimal, yearsToRetirement));
+  }
+
+  const coastReached = !realReturnWarning && pvDollars >= coastFireNumber;
+  const gap = !realReturnWarning && coastFireNumber > pvDollars ? coastFireNumber - pvDollars : 0;
+
+  const fvIfStopNow =
+    realReturnDecimal <= -1 || yearsToRetirement <= 0
+      ? pvDollars
+      : pvDollars * Math.pow(1 + realReturnDecimal, yearsToRetirement);
 
   let coastAge: number | null = null;
-  if (coastNow) {
-    coastAge = currentAge;
-  } else if (N > 0) {
-    for (let A = currentAge; A <= retirementAge; A++) {
-      const t = A - currentAge;
-      const N2 = retirementAge - A;
-      const growthFromPV = pvDollars * Math.pow(1 + r, t);
-      const annuityFV = r === 0 ? C * t : C * (Math.pow(1 + r, t) - 1) / r;
-      const pvA = growthFromPV + annuityFV;
-      const fv = N2 <= 0 ? pvA : pvA * Math.pow(1 + r, N2);
-      if (fv >= target) {
-        coastAge = A;
-        break;
+  const C = monthlyContributionDollars * 12;
+  if (!realReturnWarning && realReturnDecimal > 0 && yearsToRetirement > 0) {
+    if (pvDollars >= coastFireNumber) {
+      coastAge = currentAge;
+    } else {
+      for (let A = currentAge; A <= retirementAge; A++) {
+        const t = A - currentAge;
+        const N2 = retirementAge - A;
+        const growthFromPV = pvDollars * Math.pow(1 + realReturnDecimal, t);
+        const annuityFV =
+          realReturnDecimal === 0
+            ? C * t
+            : C * (Math.pow(1 + realReturnDecimal, t) - 1) / realReturnDecimal;
+        const pvA = growthFromPV + annuityFV;
+        const fv = N2 <= 0 ? pvA : pvA * Math.pow(1 + realReturnDecimal, N2);
+        if (fv >= fireNumber) {
+          coastAge = A;
+          break;
+        }
       }
     }
   }
 
-  const notReachable = coastAge === null && N > 0;
-  const pvNeededToday = N > 0 && r > -1 ? target / Math.pow(1 + r, N) : target;
-  const gap = notReachable ? Math.max(0, pvNeededToday - pvDollars) : 0;
-
   return {
-    target,
+    fireNumber,
+    coastFireNumber,
     pv: pvDollars,
-    monthlyContribution: monthlyContributionDollars,
-    coastNow,
+    realReturnPercent,
+    coastReached,
+    gap,
+    validationError: null,
+    realReturnWarning,
     coastAge,
-    fvIfStopNow,
-    notReachable,
-    pvNeededToday,
-    gap
+    fvIfStopNow
   };
 }
 
@@ -645,8 +708,9 @@ export function InvestingPage() {
             {!coastFireAssumptions || coastFireEditForm ? (
               <>
                 <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
-                  Coast FIRE age is the earliest age you can stop adding new retirement contributions and still reach
-                  your retirement target by retirement age, assuming real growth and SWR withdrawal rate.
+                  Coast FIRE means you already have enough invested today that, even if you stop making new
+                  retirement contributions, your investments could still grow to your retirement target. Uses
+                  inflation-adjusted returns so values are in today&apos;s dollars.
                 </p>
                 <div className="field">
                   <label>Current age</label>
@@ -704,16 +768,31 @@ export function InvestingPage() {
                   />
                 </div>
                 <div className="field">
-                  <label>Real return rate r (%)</label>
+                  <label>Investment return (%)</label>
                   <input
                     type="number"
                     className="ll-control"
                     step={0.5}
-                    value={coastFireForm.realReturnPercent ?? ''}
+                    value={coastFireForm.investmentReturnPercent ?? ''}
                     onChange={(e) =>
                       setCoastFireForm((f) => ({
                         ...f,
-                        realReturnPercent: parseFloat(e.target.value) ?? 0
+                        investmentReturnPercent: parseFloat(e.target.value) ?? 0
+                      }))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>Inflation rate (%)</label>
+                  <input
+                    type="number"
+                    className="ll-control"
+                    step={0.5}
+                    value={coastFireForm.inflationPercent ?? ''}
+                    onChange={(e) =>
+                      setCoastFireForm((f) => ({
+                        ...f,
+                        inflationPercent: parseFloat(e.target.value) ?? 0
                       }))
                     }
                   />
@@ -797,6 +876,21 @@ export function InvestingPage() {
                       const a = { ...coastFireForm };
                       if (a.currentAge < 1) a.currentAge = COASTFIRE_DEFAULTS.currentAge;
                       if (a.retirementAge < 1) a.retirementAge = COASTFIRE_DEFAULTS.retirementAge;
+                      if (typeof a.investmentReturnPercent !== 'number') a.investmentReturnPercent = COASTFIRE_DEFAULTS.investmentReturnPercent;
+                      if (typeof a.inflationPercent !== 'number') a.inflationPercent = COASTFIRE_DEFAULTS.inflationPercent;
+                      const y = a.retirementAge - a.currentAge;
+                      if (y <= 0) {
+                        window.alert('Retirement age must be greater than current age.');
+                        return;
+                      }
+                      if (a.annualSpendingDollars <= 0) {
+                        window.alert('Annual spending must be positive.');
+                        return;
+                      }
+                      if (a.swrPercent <= 0) {
+                        window.alert('Safe withdrawal rate must be positive.');
+                        return;
+                      }
                       saveCoastFire(a);
                       setCoastFireAssumptions(a);
                       setCoastFireEditForm(false);
@@ -820,57 +914,73 @@ export function InvestingPage() {
               return (
                 <>
                   <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
-                    Coast FIRE age is the earliest age you can stop adding new retirement contributions and still
-                    reach your retirement target by retirement age, assuming {a.realReturnPercent}% real growth and{' '}
-                    {a.swrPercent}% withdrawal rate.
+                    Coast FIRE means you already have enough invested today that, even if you stop making new
+                    retirement contributions, your investments could still grow to your retirement target by
+                    retirement age. This calculator adjusts returns for inflation so all values are shown in today&apos;s
+                    dollars.
                   </p>
+                  {result.validationError ? (
+                    <p style={{ color: 'var(--red)', fontSize: '0.9rem', marginTop: 8 }}>{result.validationError}</p>
+                  ) : null}
+                  {result.realReturnWarning ? (
+                    <p style={{ color: 'var(--red)', fontSize: '0.9rem', marginTop: 8 }}>
+                      Inflation-adjusted return must be positive to compute Coast FIRE growth.
+                    </p>
+                  ) : null}
                   <div className="summary-compact" style={{ marginTop: 12 }}>
                     <div className="summary-kv">
-                      <span className="k">Target portfolio at retirement</span>
-                      <span className="v amount-pos">{fmt(result.target)}</span>
-                    </div>
-                    <div className="summary-kv">
-                      <span className="k">Current retirement portfolio (selected)</span>
+                      <span className="k">Current Invested Assets</span>
                       <span className="v amount-pos">{fmt(result.pv)}</span>
                     </div>
                     <div className="summary-kv">
-                      <span className="k">Monthly retirement contributions used</span>
-                      <span className="v">
-                        {fmt(result.monthlyContribution)}{' '}
-                        <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-                          {a.useDetectedContributions ? '(detected)' : '(manual)'}
-                        </span>
+                      <span className="k">FIRE Number</span>
+                      <span className="v amount-pos">{fmt(result.fireNumber)}</span>
+                    </div>
+                    <div className="summary-kv">
+                      <span className="k">Coast FIRE Number</span>
+                      <span className="v amount-pos">
+                        {result.realReturnWarning ? '—' : fmt(result.coastFireNumber)}
                       </span>
                     </div>
                     <div className="summary-kv">
-                      <span className="k">Coast FIRE today?</span>
-                      <span className="v">{result.coastNow ? 'Yes' : 'No'}</span>
-                    </div>
-                    <div className="summary-kv">
-                      <span className="k">Coast FIRE age</span>
+                      <span className="k">Coast FIRE Status</span>
                       <span className="v">
-                        {result.coastAge != null
-                          ? result.coastAge
-                          : result.notReachable
-                            ? 'Not reachable with current assumptions'
-                            : '—'}
+                        {result.realReturnWarning
+                          ? '—'
+                          : result.coastReached
+                            ? 'You have reached Coast FIRE'
+                            : 'You have not yet reached Coast FIRE'}
                       </span>
                     </div>
+                    {!result.realReturnWarning && !result.coastReached && result.gap > 0 ? (
+                      <div className="summary-kv">
+                        <span className="k">Gap to Coast FIRE</span>
+                        <span className="v amount-neg">{fmt(result.gap)}</span>
+                      </div>
+                    ) : null}
                     <div className="summary-kv">
-                      <span className="k">If you stop contributing today, projected at retirement</span>
-                      <span className="v amount-pos">{fmt(result.fvIfStopNow)}</span>
+                      <span className="k">Investment return assumption</span>
+                      <span className="v">{a.investmentReturnPercent}%</span>
                     </div>
-                    {result.notReachable ? (
-                      <>
-                        <div className="summary-kv">
-                          <span className="k">Coast number today (PV needed)</span>
-                          <span className="v">{fmt(result.pvNeededToday)}</span>
-                        </div>
-                        <div className="summary-kv">
-                          <span className="k">Gap</span>
-                          <span className="v amount-neg">{fmt(result.gap)}</span>
-                        </div>
-                      </>
+                    <div className="summary-kv">
+                      <span className="k">Inflation assumption</span>
+                      <span className="v">{a.inflationPercent}%</span>
+                    </div>
+                    <div className="summary-kv">
+                      <span className="k">Inflation-adjusted return</span>
+                      <span className="v">{result.realReturnPercent.toFixed(1)}%</span>
+                    </div>
+                    {result.coastAge != null && !result.realReturnWarning ? (
+                      <div className="summary-kv">
+                        <span className="k">Coast FIRE age (with contributions)</span>
+                        <span className="v">{result.coastAge}</span>
+                      </div>
+                    ) : null}
+                    {!result.realReturnWarning ? (
+                      <div className="summary-kv">
+                        <span className="k">If you stop contributing today, projected at retirement</span>
+                        <span className="v amount-pos">{fmt(result.fvIfStopNow)}</span>
+                      </div>
                     ) : null}
                   </div>
                   <div className="btn-row" style={{ marginTop: 12 }}>
