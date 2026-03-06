@@ -454,23 +454,48 @@ export type SubTrackerEntry = {
   updatedAt?: string;
 };
 
-export type SubTrackerData = { version: 1; entries: SubTrackerEntry[] };
+export type CompletedBonusUnitType = 'miles' | 'points' | 'cash' | 'other';
+
+export type CompletedBonus = {
+  id: string;
+  cardId?: string;
+  cardName: string;
+  unitType: CompletedBonusUnitType;
+  rewardQuantity: number;
+  rewardLabel: string;
+  centsPerUnit?: number;
+  completedAt: string;
+  notes?: string;
+};
+
+export type SubTrackerData = {
+  version: 1;
+  entries: SubTrackerEntry[];
+  completedBonuses?: CompletedBonus[];
+};
 
 export function loadSubTracker(): SubTrackerData {
   try {
     const raw = localStorage.getItem(SUB_TRACKER_KEY);
-    if (!raw) return { version: 1, entries: [] };
+    if (!raw) return { version: 1, entries: [], completedBonuses: [] };
     const parsed = JSON.parse(raw) as any;
     const entries = Array.isArray(parsed?.entries) ? parsed.entries : Array.isArray(parsed) ? parsed : [];
-    return { version: 1, entries };
+    const completedBonuses = Array.isArray(parsed?.completedBonuses) ? parsed.completedBonuses : [];
+    return { version: 1, entries, completedBonuses };
   } catch (_) {
-    return { version: 1, entries: [] };
+    return { version: 1, entries: [], completedBonuses: [] };
   }
 }
 
-export function saveSubTracker(next: SubTrackerData) {
+export function saveSubTracker(next: Partial<SubTrackerData> & { version: 1 }) {
   try {
-    localStorage.setItem(SUB_TRACKER_KEY, JSON.stringify(next));
+    const current = loadSubTracker();
+    const merged: SubTrackerData = {
+      version: 1,
+      entries: next.entries !== undefined ? next.entries : current.entries,
+      completedBonuses: next.completedBonuses !== undefined ? next.completedBonuses : (current.completedBonuses ?? [])
+    };
+    localStorage.setItem(SUB_TRACKER_KEY, JSON.stringify(merged));
   } catch (_) {}
 }
 
