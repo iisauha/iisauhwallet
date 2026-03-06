@@ -421,6 +421,17 @@ export function RecurringPage() {
                 </div>
                 {isFullTimeJob ? (
                   <div className="card" style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 10 }}>
+                      Need an estimate of your taxes? Use{' '}
+                      <a
+                        href="https://www.adp.com/resources/tools/calculators/salary-paycheck-calculator.aspx"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--accent)', textDecoration: 'underline' }}
+                      >
+                        this website
+                      </a>
+                    </div>
                     <div className="row" style={{ marginBottom: 6 }}>
                       <span className="name" style={{ fontSize: '0.95rem' }}>
                         Pre-tax deductions

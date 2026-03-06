@@ -561,6 +561,10 @@ export type HysaAccount = InvestingAccountBase & {
   manualInterestBaselineThisMonth?: number;
   manualInterestBaselineSetAt?: number;
   manualInterestBaselineMonthKey?: string;
+  /** Optional: user override for projected month-end interest (cents) for current month */
+  manualProjectedInterestThisMonthCents?: number;
+  /** Optional: month key when manualProjectedInterestThisMonthCents was set (YYYY-MM) */
+  manualProjectedInterestMonthKey?: string;
 };
 
 export type OtherInvestAccount = InvestingAccountBase & {
@@ -657,13 +661,20 @@ export function computeHysaMonthlyInterest(
     const newAccrualCents =
       rate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysSinceBaseline);
     const interestAccruedThisMonthCents = baselineCents + newAccrualCents;
-    const d = new Date(now);
-    const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
-    const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
-    const projectedRemaining =
-      rate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysRemaining);
-    const projectedInterestThisMonthCents = interestAccruedThisMonthCents + projectedRemaining;
+    const useManualProjected =
+      typeof a.manualProjectedInterestThisMonthCents === 'number' &&
+      a.manualProjectedInterestMonthKey === currentMonthKey;
+    const projectedInterestThisMonthCents = useManualProjected
+      ? a.manualProjectedInterestThisMonthCents!
+      : (() => {
+          const d = new Date(now);
+          const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+          const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
+          const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
+          const projectedRemaining =
+            rate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysRemaining);
+          return interestAccruedThisMonthCents + projectedRemaining;
+        })();
     return { interestAccruedThisMonthCents, projectedInterestThisMonthCents };
   }
 
@@ -718,7 +729,12 @@ export function computeHysaMonthlyInterest(
   );
   const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
   const projectedRemaining = Math.round(balanceCents * dailyRate * daysRemaining);
-  const projectedInterestThisMonthCents = interestAccruedThisMonthCents + projectedRemaining;
+  const useManualProjected =
+    typeof a.manualProjectedInterestThisMonthCents === 'number' &&
+    a.manualProjectedInterestMonthKey === currentMonthKey;
+  const projectedInterestThisMonthCents = useManualProjected
+    ? a.manualProjectedInterestThisMonthCents!
+    : interestAccruedThisMonthCents + projectedRemaining;
 
   return { interestAccruedThisMonthCents, projectedInterestThisMonthCents };
 }

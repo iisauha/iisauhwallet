@@ -825,6 +825,10 @@ export function InvestingPage() {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
 
     if (type === 'hysa') {
+      const now = Date.now();
+      const nowDate = new Date(now);
+      const monthStartMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
+
       const balanceInput = window.prompt('Starting balance ($)', '0.00');
       let balanceCents = 0;
       if (balanceInput != null && balanceInput.trim() !== '') {
@@ -832,14 +836,33 @@ export function InvestingPage() {
         if (parsed >= 0) balanceCents = parsed;
       }
 
-      const whenInput = window.prompt('Balance is as of:\n1) Today (default)\n2) Start of this month', '1');
-      const now = Date.now();
-      const nowDate = new Date(now);
-      const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
-      const asOfStart = whenInput === '2';
-      const lastAccruedAt = asOfStart ? monthStart : now;
+      const aprInput = window.prompt('APR / interest rate (%)', '4');
+      let interestRate = 4;
+      if (aprInput != null && aprInput.trim() !== '') {
+        const parsed = parseFloat(aprInput);
+        if (Number.isFinite(parsed) && parsed >= 0) interestRate = parsed;
+      }
 
-      const interestInput = window.prompt('Interest already credited this month ($, optional)', '');
+      const whenInput = window.prompt(
+        'When is this balance valid?\n1) Today (default)\n2) Start of this month\n3) Specific date',
+        '1'
+      );
+      let lastAccruedAt: number;
+      if (whenInput === '3') {
+        const dateStr = window.prompt('Date (YYYY-MM-DD)', nowDate.toISOString().slice(0, 10));
+        if (dateStr != null && dateStr.trim() !== '') {
+          const d = new Date(dateStr + 'T12:00:00');
+          lastAccruedAt = Number.isFinite(d.getTime()) ? d.getTime() : now;
+        } else {
+          lastAccruedAt = now;
+        }
+      } else if (whenInput === '2') {
+        lastAccruedAt = monthStartMs;
+      } else {
+        lastAccruedAt = now;
+      }
+
+      const interestInput = window.prompt('Interest this month so far ($, optional)', '');
       let interestThisMonth = 0;
       let manualInterestBaselineThisMonth: number | undefined;
       let manualInterestBaselineSetAt: number | undefined;
@@ -864,7 +887,7 @@ export function InvestingPage() {
         type: 'hysa',
         name: name.trim(),
         balanceCents: balanceCents,
-        interestRate: 4,
+        interestRate,
         lastAccruedAt,
         monthKey,
         interestThisMonth,
@@ -955,6 +978,47 @@ export function InvestingPage() {
     const accounts = investing.accounts.map((a) =>
       a.id === acc.id ? { ...(a as HysaAccount), interestRate: rate, lastAccruedAt: now } : a
     );
+    persist({ ...investing, accounts });
+  }
+
+  function editHysaInterest(acc: HysaAccount) {
+    accrueNow();
+    const { interestAccruedThisMonthCents, projectedInterestThisMonthCents } = computeHysaMonthlyInterest(
+      acc,
+      Date.now()
+    );
+    const currentAccruedStr = (interestAccruedThisMonthCents / 100).toFixed(2);
+    const currentProjStr = (projectedInterestThisMonthCents / 100).toFixed(2);
+    const interestVal = window.prompt('Interest this month so far ($)', currentAccruedStr);
+    if (interestVal == null) return;
+    const interestCents = parseCents(interestVal);
+    if (interestCents < 0) return;
+    const projectedVal = window.prompt('Projected month-end interest ($, optional - leave blank to use calculated)', currentProjStr);
+    const now = Date.now();
+    const monthKey = getMonthKeyFromTimestamp(now);
+    const accounts = investing.accounts.map((a) => {
+      if (a.id !== acc.id || a.type !== 'hysa') return a;
+      const h = a as HysaAccount;
+      let next: HysaAccount = {
+        ...h,
+        manualInterestBaselineThisMonth: interestCents,
+        manualInterestBaselineSetAt: now,
+        manualInterestBaselineMonthKey: monthKey
+      };
+      if (projectedVal != null && projectedVal.trim() !== '') {
+        const projCents = parseCents(projectedVal);
+        if (projCents >= 0) {
+          next = {
+            ...next,
+            manualProjectedInterestThisMonthCents: projCents,
+            manualProjectedInterestMonthKey: monthKey
+          };
+        }
+      } else {
+        next = { ...next, manualProjectedInterestThisMonthCents: undefined, manualProjectedInterestMonthKey: undefined };
+      }
+      return next;
+    });
     persist({ ...investing, accounts });
   }
 
@@ -1127,13 +1191,22 @@ export function InvestingPage() {
                       Add
                     </button>
                     {a.type === 'hysa' ? (
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => setHysaRate(a as HysaAccount)}
-                      >
-                        APY
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => setHysaRate(a as HysaAccount)}
+                        >
+                          APY
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => editHysaInterest(a as HysaAccount)}
+                        >
+                          Edit interest
+                        </button>
+                      </>
                     ) : null}
                     <button
                       type="button"
