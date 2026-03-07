@@ -642,7 +642,7 @@ export function InvestingPage() {
   useEffect(() => {
     if (detected?.launchFlow?.flow === 'transfer') {
       setTransferOpen(true);
-      if (detected.launchFlow.item?.amountCents) setTransferAmount((detected.launchFlow.item.amountCents / 100).toFixed(2));
+      if (detected.launchFlow.item?.amountCents) setTransferAmount((Math.abs(detected.launchFlow.item.amountCents) / 100).toFixed(2));
     }
   }, [detected?.launchFlow?.flow, detected?.launchFlow?.item?.amountCents]);
 

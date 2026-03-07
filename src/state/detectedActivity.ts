@@ -78,12 +78,12 @@ function seedMockItems(): DetectedActivityItem[] {
     {
       id: uid(),
       title: 'Starbucks',
-      amountCents: 862,
+      amountCents: -862,
       dateISO: today,
-      accountName: 'Amex Delta Gold',
+      accountName: 'Amex Gold',
       accountType: 'credit_card',
       pending: true,
-      status: 'new'
+      status: 'new',
     },
     {
       id: uid(),
@@ -93,28 +93,28 @@ function seedMockItems(): DetectedActivityItem[] {
       accountName: 'Chase Checking',
       accountType: 'checking',
       pending: true,
-      status: 'new'
+      status: 'new',
     },
     {
       id: uid(),
       title: 'Utilities',
-      amountCents: 12431,
+      amountCents: -12431,
       dateISO: today,
       accountName: 'Chase Checking',
       accountType: 'checking',
       pending: false,
-      status: 'new'
+      status: 'new',
     },
     {
       id: uid(),
-      title: 'Transfer to HYSA',
-      amountCents: 50000,
+      title: 'Transfer $500 from Chase Checking to HYSA',
+      amountCents: -50000,
       dateISO: today,
       accountName: 'Chase Checking',
       accountType: 'checking',
       pending: true,
-      status: 'new'
-    }
+      status: 'new',
+    },
   ];
 }
 

@@ -6,7 +6,7 @@ import { UpcomingPage } from './features/upcoming/UpcomingPage';
 import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
 import { InvestingPage } from './features/investing/InvestingPage';
 import { SettingsPage } from './features/settings/SettingsPage';
-import { DetectedActivityInbox, DetectedActivityBadge } from './features/detected-activity/DetectedActivityInbox';
+import { DetectedActivityInbox, DetectedActivityButtonLabel } from './features/detected-activity/DetectedActivityInbox';
 import { DropdownStateProvider } from './state/DropdownStateContext';
 import { DetectedActivityProvider } from './state/DetectedActivityContext';
 
@@ -37,8 +37,7 @@ export function App() {
               style={{ fontSize: '0.85rem', padding: '6px 12px' }}
               onClick={() => setDetectedInboxOpen(true)}
             >
-              Detected Activity
-              <DetectedActivityBadge />
+              <DetectedActivityButtonLabel />
             </button>
           </div>
         {content}

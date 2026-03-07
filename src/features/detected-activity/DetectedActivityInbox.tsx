@@ -350,7 +350,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
           })}
         </div>
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0, marginBottom: 12 }}>
-          {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Mock inbox — what do you want to do with each?'}
+          {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Detected activity (sample data) — what do you want to do with each?'}
         </p>
         {apiConfigured ? (
           <div style={{ marginBottom: 12 }}>
@@ -878,7 +878,7 @@ function DetectedCard({
             style={{ fontSize: '0.8rem', padding: '6px 10px' }}
             onClick={() => onAction(item, 'transfer')}
           >
-            Transfer
+            Transfer between cash and investing
           </button>
           <button
             type="button"
@@ -905,13 +905,13 @@ function DetectedCard({
   );
 }
 
-export function DetectedActivityBadge() {
+/** Button label: "Detected Activity" or "Detected Activity (N)" when there are unresolved items. */
+export function DetectedActivityButtonLabel() {
   const { items } = useDetectedActivity();
   const count = getActiveDetectedCount(items);
-  if (count <= 0) return null;
   return (
-    <span style={{ marginLeft: 6, background: 'var(--accent)', color: 'var(--bg)', borderRadius: 999, padding: '2px 8px', fontSize: '0.75rem', fontWeight: 600 }}>
-      {count}
-    </span>
+    <>
+      Detected Activity{count > 0 ? ` (${count})` : ''}
+    </>
   );
 }
