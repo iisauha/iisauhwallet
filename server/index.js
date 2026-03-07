@@ -15,6 +15,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.PORT) || 3001;
+// Plaid credentials: backend env only. Do not hardcode or expose to frontend.
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
 const PLAID_ENV = (process.env.PLAID_ENV || 'sandbox').toLowerCase();
@@ -506,12 +507,13 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// POST /api/plaid/create_link_token
+// POST /api/plaid/create_link_token — backend only; no secrets sent to client.
 app.post('/api/plaid/create_link_token', async (req, res) => {
   try {
     const client = getPlaidClient();
+    const isProduction = PLAID_ENV.toLowerCase() === 'production';
     const response = await client.linkTokenCreate({
-      user: { client_user_id: 'ledgerlite-sandbox' },
+      user: { client_user_id: isProduction ? 'ledgerlite-pilot' : 'ledgerlite-sandbox' },
       client_name: 'LedgerLite',
       products: ['transactions'],
       country_codes: ['US'],

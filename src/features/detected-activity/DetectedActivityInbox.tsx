@@ -267,7 +267,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
       const list = await syncAndGetDetectedActivity();
       setBackendItems(list.map(toDetectedItem));
       setSyncStatus('ok');
-      setSyncMessage(`Loaded ${list.length} item(s) from Plaid sandbox.`);
+      setSyncMessage(`Loaded ${list.length} detected item(s).`);
       await loadPilotStatus();
     } catch (e) {
       setSyncStatus('error');
@@ -333,6 +333,11 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
             ) : plaidMode != null ? (
               <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0', fontWeight: 500 }}>
                 Plaid Mode: {plaidMode === 'production' ? 'Real Pilot' : 'Sandbox'}
+              </p>
+            ) : null}
+            {plaidMode === 'production' ? (
+              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+                Pilot: one real account only. To link another, disconnect the current one first.
               </p>
             ) : null}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
