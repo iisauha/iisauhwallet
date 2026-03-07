@@ -1,7 +1,14 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerStore } from '../../state/store';
-import { exportJSON, importJSON, loadCategoryConfig, saveCategoryConfig } from '../../state/storage';
+import {
+  exportJSON,
+  importJSON,
+  loadCategoryConfig,
+  saveCategoryConfig,
+  loadBirthdateISO,
+  saveBirthdateISO
+} from '../../state/storage';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 
 function downloadJsonFile(filename: string, text: string) {
@@ -20,10 +27,38 @@ export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const [manageOpen, setManageOpen] = useState(false);
+  const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
 
   return (
     <div className="tab-panel active" id="settingsContent">
-      <p className="section-title">Privacy</p>
+      <p className="section-title">Profile</p>
+      <div className="settings-section">
+        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+          Date of birth
+        </label>
+        <input
+          type="date"
+          value={birthdate}
+          onChange={(e) => {
+            const v = e.target.value;
+            setBirthdate(v);
+            saveBirthdateISO(v || null);
+          }}
+          style={{
+            padding: '6px 8px',
+            borderRadius: 4,
+            border: '1px solid var(--border)',
+            background: 'var(--bg)',
+            color: 'var(--text)',
+            fontSize: '0.9rem'
+          }}
+        />
+        <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          Used for age-aware projections (e.g. loans, FIRE). Stored only on this device.
+        </p>
+      </div>
+
+      <p className="section-title" style={{ marginTop: 24 }}>Privacy</p>
       <div className="settings-section">
         <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
           Privacy Policy

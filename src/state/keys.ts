@@ -28,8 +28,12 @@ export const PHYSICAL_CASH_ID = 'physical_cash';
 
 export const UI_DROPDOWN_STATE_KEY = 'ledgerlite_ui_dropdown_state_v1';
 
-// New feature (does not replace any legacy keys).
+// New features (do not replace any legacy keys).
 export const SUB_TRACKER_KEY = 'ledgerlite_subTracker_v1';
+
+// Loans + profile-related keys.
+export const LOANS_KEY = 'iisauhwallet_loans_v1';
+export const BIRTHDATE_KEY = 'iisauhwallet_birthdate_v1';
 
 // Detected activity inbox (optional backend when configured).
 export const DETECTED_ACTIVITY_KEY = 'iisauhwallet_detected_activity_v1';

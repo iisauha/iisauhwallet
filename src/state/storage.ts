@@ -18,7 +18,9 @@ import {
   STORAGE_KEY,
   SUB_TRACKER_KEY,
   UI_DROPDOWN_STATE_KEY,
-  UPCOMING_WINDOW_KEY
+  UPCOMING_WINDOW_KEY,
+  LOANS_KEY,
+  BIRTHDATE_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -601,6 +603,65 @@ export function saveInvesting(state: InvestingState) {
   } catch (_) {}
 }
 
+// ===== Loans =====
+
+export type LoanCategory = 'public' | 'private';
+export type LoanRateType = 'fixed' | 'variable';
+export type LoanRepaymentStatus =
+  | 'in_school_interest_only'
+  | 'grace_interest_only'
+  | 'full_repayment'
+  | 'idr'
+  | 'deferred_forbearance'
+  | 'custom_payment';
+
+export type Loan = {
+  id: string;
+  name: string;
+  lender?: string;
+  category: LoanCategory;
+  balanceCents: number;
+  interestRatePercent: number; // APR, e.g. 6.8 = 6.8%
+  rateType: LoanRateType;
+  termMonths?: number; // custom repayment term in months
+  repaymentStatus: LoanRepaymentStatus;
+  nextPaymentCents?: number;
+  nextPaymentDate?: string; // YYYY-MM-DD
+  notes?: string;
+  active?: boolean;
+  // IDR-related (public loans).
+  idrUseManualIncome?: boolean;
+  idrManualAnnualIncomeCents?: number;
+};
+
+export type LoansState = {
+  version: 1;
+  loans: Loan[];
+};
+
+export function loadLoans(): LoansState {
+  try {
+    const raw = localStorage.getItem(LOANS_KEY);
+    if (!raw) return { version: 1, loans: [] };
+    const parsed = JSON.parse(raw) as any;
+    if (Array.isArray(parsed)) {
+      return { version: 1, loans: parsed as Loan[] };
+    }
+    if (parsed && Array.isArray(parsed.loans)) {
+      return { version: 1, loans: parsed.loans as Loan[] };
+    }
+    return { version: 1, loans: [] };
+  } catch (_) {
+    return { version: 1, loans: [] };
+  }
+}
+
+export function saveLoans(state: LoansState) {
+  try {
+    localStorage.setItem(LOANS_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function getMonthKeyFromTimestamp(ts: number): string {
@@ -929,4 +990,26 @@ export function saveCoastFire(assumptions: CoastFireAssumptions) {
 }
 
 export { COASTFIRE_DEFAULTS };
+
+// ===== Profile / birthdate =====
+
+export function loadBirthdateISO(): string | null {
+  try {
+    const raw = localStorage.getItem(BIRTHDATE_KEY);
+    if (typeof raw !== 'string' || !raw) return null;
+    return raw;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveBirthdateISO(iso: string | null) {
+  try {
+    if (!iso) {
+      localStorage.removeItem(BIRTHDATE_KEY);
+    } else {
+      localStorage.setItem(BIRTHDATE_KEY, iso);
+    }
+  } catch (_) {}
+}
 
