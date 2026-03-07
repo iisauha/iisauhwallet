@@ -41,14 +41,30 @@ function writeJson(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
-// In-memory for sandbox prototype: item_id -> access_token
+// item_id -> access_token (legacy string) or { accessToken, environment }
 function getStoredAccessTokens() {
   return readJson(ACCESS_TOKENS_FILE, {});
 }
 
-function setAccessToken(itemId, accessToken) {
+/** Returns list of { itemId, accessToken, environment } for iteration. Supports legacy string tokens. */
+function getAccessTokensList() {
+  const raw = getStoredAccessTokens();
+  return Object.entries(raw).map(([itemId, val]) => {
+    if (typeof val === 'string') {
+      return { itemId, accessToken: val, environment: 'sandbox' };
+    }
+    return {
+      itemId,
+      accessToken: val?.accessToken || '',
+      environment: (val?.environment || 'sandbox').toLowerCase(),
+    };
+  }).filter((e) => e.accessToken);
+}
+
+function setAccessToken(itemId, accessToken, environment = PLAID_ENV) {
   const tokens = getStoredAccessTokens();
-  tokens[itemId] = accessToken;
+  const env = (environment || PLAID_ENV || 'sandbox').toLowerCase();
+  tokens[itemId] = { accessToken, environment: env };
   writeJson(ACCESS_TOKENS_FILE, tokens);
 }
 
@@ -61,13 +77,15 @@ function setDetectedItems(items) {
   writeJson(DETECTED_FILE, items);
 }
 
-function normalizePlaidTransaction(tx, accountName, accountType, existingItem = null) {
+function normalizePlaidTransaction(tx, accountName, accountType, existingItem = null, environment = 'sandbox') {
   const amountCents = Math.round(Math.abs((tx.amount || 0) * 100));
   const isDebit = (tx.amount || 0) < 0;
   const amount = isDebit ? -amountCents : amountCents;
   const title = tx.merchant_name || tx.name || tx.payment_channel || 'Transaction';
   const dateISO = (tx.date || '').slice(0, 10);
   const wasPendingNowPosted = existingItem?.pending && !tx.pending;
+  const env = (environment || 'sandbox').toLowerCase();
+  const sourceMode = env === 'sandbox' ? 'sandbox' : 'real_pilot';
   const base = {
     id: existingItem?.id ?? `plaid_${tx.transaction_id}`,
     plaidTransactionId: tx.transaction_id,
@@ -78,7 +96,11 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
     accountType: accountType || 'unknown',
     pending: !!tx.pending,
     source: 'plaid',
+    sourceEnvironment: env,
+    sourceMode,
     ...(wasPendingNowPosted ? { updatedFromPending: true } : {}),
+    ...(existingItem?.detectedAt ? { detectedAt: existingItem.detectedAt } : {}),
+    ...(!existingItem ? { detectedAt: new Date().toISOString() } : {}),
   };
   if (existingItem) {
     return { ...base, status: existingItem.status, resolvedAs: existingItem.resolvedAs };
@@ -92,15 +114,16 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
  * Matches only items that are currently pending (so we merge posted tx into a pending item).
  * Preserves status (new/ignored/resolved) when merging.
  */
-function findMatchingDetectedItem(existing, amountCents, dateISO, name, accountName) {
+function findMatchingDetectedItem(existing, amountCents, dateISO, name, accountName, sourceMode = 'sandbox') {
   const nameNorm = (n) => (n || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 40);
   const txName = nameNorm(name);
   const dateTs = dateISO ? new Date(dateISO).getTime() : 0;
   const dayMs = 24 * 60 * 60 * 1000;
   const amountTolerance = 5;
+  const sameMode = existing.filter((i) => (i.sourceMode || 'sandbox') === sourceMode);
   const accountNorm = (a) => (a || '').toLowerCase().trim();
   const txAccount = accountNorm(accountName);
-  for (const item of existing) {
+  for (const item of sameMode) {
     if (item.source !== 'plaid' || !item.plaidTransactionId) continue;
     if (!item.pending) continue;
     if (txAccount && accountNorm(item.accountName) !== txAccount) continue;
@@ -117,8 +140,11 @@ function findMatchingDetectedItem(existing, amountCents, dateISO, name, accountN
  * Reuses normalization; preserves resolved/ignored; merges pending->posted.
  */
 async function refreshDetectedActivityFromPlaid(itemIds = []) {
-  const tokens = getStoredAccessTokens();
-  const idsToRefresh = itemIds.length > 0 ? itemIds.filter((id) => tokens[id]) : Object.keys(tokens);
+  const list = getAccessTokensList();
+  const env = PLAID_ENV.toLowerCase();
+  const idsToRefresh = itemIds.length > 0
+    ? list.filter((e) => itemIds.includes(e.itemId) && e.environment === env).map((e) => e.itemId)
+    : list.filter((e) => e.environment === env).map((e) => e.itemId);
   if (idsToRefresh.length === 0) return;
   const client = getPlaidClient();
   const now = new Date();
@@ -127,9 +153,11 @@ async function refreshDetectedActivityFromPlaid(itemIds = []) {
   let existing = getDetectedItems();
   const byPlaidId = new Map(existing.filter((i) => i.plaidTransactionId).map((i) => [i.plaidTransactionId, i]));
 
+  const listById = new Map(list.map((e) => [e.itemId, e]));
   for (const itemId of idsToRefresh) {
-    const accessToken = tokens[itemId];
-    if (!accessToken) continue;
+    const entry = listById.get(itemId);
+    if (!entry || entry.environment !== env) continue;
+    const { accessToken, environment } = entry;
     let accounts = [];
     try {
       const acctRes = await client.accountsGet({ access_token: accessToken });
@@ -168,11 +196,12 @@ async function refreshDetectedActivityFromPlaid(itemIds = []) {
         existingItem = byPlaidId.get(tx.pending_transaction_id) || null;
         if (existingItem) byPlaidId.delete(tx.pending_transaction_id);
       }
+      const sourceMode = environment === 'sandbox' ? 'sandbox' : 'real_pilot';
       if (!existingItem && !tx.pending) {
-        const fallback = findMatchingDetectedItem(existing, amount, dateISO, name, accountName);
+        const fallback = findMatchingDetectedItem(existing, amount, dateISO, name, accountName, sourceMode);
         if (fallback) existingItem = fallback;
       }
-      const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined);
+      const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined, environment);
       if (existingItem) {
         if (existingItem.plaidTransactionId && existingItem.plaidTransactionId !== tx.transaction_id) {
           byPlaidId.delete(existingItem.plaidTransactionId);
@@ -237,11 +266,21 @@ app.post('/api/plaid/exchange_public_token', async (req, res) => {
   const { public_token } = req.body || {};
   if (!public_token) return res.status(400).json({ error: 'public_token required' });
   try {
+    const env = PLAID_ENV.toLowerCase();
+    if (env !== 'sandbox') {
+      const list = getAccessTokensList();
+      const realCount = list.filter((e) => e.environment !== 'sandbox').length;
+      if (realCount >= 1) {
+        return res.status(400).json({
+          error: 'Pilot mode is limited to one real account. Disconnect the existing real account first to link another.',
+        });
+      }
+    }
     const client = getPlaidClient();
     const response = await client.itemPublicTokenExchange({ public_token });
     const accessToken = response.data.access_token;
     const itemId = response.data.item_id;
-    setAccessToken(itemId, accessToken);
+    setAccessToken(itemId, accessToken, env);
     return res.json({ item_id: itemId, ok: true });
   } catch (err) {
     const data = err.response?.data || { error_message: err.message };
@@ -253,8 +292,8 @@ app.post('/api/plaid/exchange_public_token', async (req, res) => {
 // POST /api/plaid/sync_transactions (manual fallback; webhooks also trigger refresh)
 app.post('/api/plaid/sync_transactions', async (req, res) => {
   try {
-    const tokens = getStoredAccessTokens();
-    if (Object.keys(tokens).length === 0) {
+    const list = getAccessTokensList();
+    if (list.length === 0) {
       return res.json({ synced: 0, message: 'No linked items' });
     }
     await refreshDetectedActivityFromPlaid([]);
@@ -285,7 +324,8 @@ app.post('/api/plaid/webhook', (req, res) => {
   });
   res.status(200).json({ received: true });
   const tokens = getStoredAccessTokens();
-  const shouldRefresh = itemId && tokens[itemId];
+  const hasToken = itemId && (typeof tokens[itemId] === 'string' ? tokens[itemId] : tokens[itemId]?.accessToken);
+  const shouldRefresh = !!hasToken;
   const removedSet = Array.isArray(removedIds) && removedIds.length ? new Set(removedIds) : null;
   setImmediate(() => {
     (async () => {

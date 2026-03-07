@@ -15,6 +15,9 @@ export type DetectedSuggestedAction =
   | 'transfer'
   | 'review_manually';
 
+/** Sandbox vs real pilot; used to keep items separate in UI. */
+export type DetectedSourceMode = 'sandbox' | 'real_pilot';
+
 export type DetectedActivityItem = {
   id: string;
   title: string;
@@ -30,6 +33,12 @@ export type DetectedActivityItem = {
   possibleTransferMatchId?: string;
   /** True when this item was reconciled from pending to posted (single queue item). */
   updatedFromPending?: boolean;
+  /** Plaid environment (sandbox vs production). */
+  sourceEnvironment?: 'sandbox' | 'production';
+  /** UI-facing mode: sandbox vs real_pilot. */
+  sourceMode?: DetectedSourceMode;
+  /** When this item was first detected (real pilot debug). */
+  detectedAt?: string;
 };
 
 function uid(): string {

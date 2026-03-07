@@ -9,7 +9,9 @@ import {
   exchangePublicToken,
   getDetectedActivity,
   syncAndGetDetectedActivity,
-  type DetectedActivityItemFromApi
+  getPlaidMode,
+  type DetectedActivityItemFromApi,
+  type PlaidMode,
 } from '../../api/detectedActivityApi';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
@@ -32,6 +34,9 @@ function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
     suggestedAction: a.suggestedAction as DetectedSuggestedAction | undefined,
     possibleTransferMatchId: a.possibleTransferMatchId,
     updatedFromPending: a.updatedFromPending,
+    sourceEnvironment: a.sourceEnvironment,
+    sourceMode: a.sourceMode,
+    detectedAt: a.detectedAt,
   };
 }
 
@@ -62,6 +67,7 @@ function getSuggestedActionLabel(action: DetectedSuggestedAction): string {
 }
 
 type InboxFilter = 'new' | 'ignored' | 'resolved' | 'all';
+type SourceViewFilter = 'all' | 'sandbox' | 'real_pilot';
 
 function sortByNewestFirst(a: DetectedActivityItem, b: DetectedActivityItem): number {
   const dateA = a.dateISO ? new Date(a.dateISO).getTime() : 0;
@@ -77,8 +83,19 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [refreshStatus, setRefreshStatus] = useState<'idle' | 'loading' | 'ok'>('idle');
   const [filter, setFilter] = useState<InboxFilter>('new');
+  const [sourceView, setSourceView] = useState<SourceViewFilter>('all');
+  const [plaidMode, setPlaidMode] = useState<PlaidMode | null>(null);
   const apiConfigured = hasApiBase();
 
+  React.useEffect(() => {
+    if (!apiConfigured) return;
+    getPlaidMode().then(setPlaidMode).catch(() => setPlaidMode('sandbox'));
+  }, [apiConfigured]);
+
+  const bySourceView = (list: DetectedActivityItem[]) => {
+    if (sourceView === 'all') return list;
+    return list.filter((i) => (i.sourceMode || 'sandbox') === sourceView);
+  };
   const newItems = items.filter((i) => i.status === 'new' || i.status === 'in_progress');
   const ignoredItems = items.filter((i) => i.status === 'ignored');
   const resolvedItems = items.filter((i) => i.status === 'resolved');
@@ -88,8 +105,10 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
       : filter === 'ignored' ? ignoredItems
       : filter === 'resolved' ? resolvedItems
       : items;
-    return [...list].sort(sortByNewestFirst);
+    return [...bySourceView(list)].sort(sortByNewestFirst);
   })();
+  const sandboxCount = items.filter((i) => (i.sourceMode || 'sandbox') === 'sandbox').length;
+  const realPilotCount = items.filter((i) => i.sourceMode === 'real_pilot').length;
 
   function handleAction(item: DetectedActivityItem, flow: LaunchFlowType) {
     const tab: TabKey =
@@ -161,9 +180,14 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
         </div>
         {apiConfigured ? (
           <div style={{ marginBottom: 16 }}>
+            {plaidMode != null && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0', fontWeight: 500 }}>
+                Plaid Mode: {plaidMode === 'production' ? 'Real Pilot' : 'Sandbox'}
+              </p>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={handleConnectPlaid}>
-                Connect Plaid Sandbox
+                {plaidMode === 'production' ? 'Connect Plaid (1 real account)' : 'Connect Plaid Sandbox'}
               </button>
               <button
                 type="button"
@@ -191,6 +215,25 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                 {syncMessage}
               </p>
             ) : null}
+          </div>
+        ) : null}
+        {apiConfigured && (sandboxCount > 0 || realPilotCount > 0) ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            {(['all', 'sandbox', 'real_pilot'] as const).map((s) => {
+              const count = s === 'all' ? items.length : s === 'sandbox' ? sandboxCount : realPilotCount;
+              const label = s === 'all' ? 'All' : s === 'sandbox' ? 'Sandbox' : 'Real Pilot';
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  className={sourceView === s ? 'tab active' : 'tab'}
+                  style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                  onClick={() => setSourceView(s)}
+                >
+                  {label} ({count})
+                </button>
+              );
+            })}
           </div>
         ) : null}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -297,6 +340,11 @@ function DetectedCard({
           <span style={{ marginLeft: 4, fontStyle: 'italic' }}>· Updated from pending to posted</span>
         )}
       </div>
+      {item.sourceMode === 'real_pilot' && item.detectedAt && (
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>
+          Detected {new Date(item.detectedAt).toLocaleString()}
+        </div>
+      )}
       <div style={{ fontSize: '0.75rem', marginBottom: 8, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
         <span
           style={{

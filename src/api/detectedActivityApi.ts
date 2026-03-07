@@ -20,10 +20,23 @@ export type DetectedActivityItemFromApi = {
   suggestedAction?: string;
   possibleTransferMatchId?: string;
   updatedFromPending?: boolean;
+  sourceEnvironment?: 'sandbox' | 'production';
+  sourceMode?: 'sandbox' | 'real_pilot';
+  detectedAt?: string;
 };
 
 export function hasApiBase(): boolean {
   return typeof BASE === 'string' && BASE.length > 0;
+}
+
+export type PlaidMode = 'sandbox' | 'production';
+
+export async function getPlaidMode(): Promise<PlaidMode> {
+  const res = await fetchApi('/api/health');
+  if (!res.ok) return 'sandbox';
+  const data = await res.json().catch(() => ({}));
+  const env = (data.env ?? data.plaid_env ?? 'sandbox').toLowerCase();
+  return env === 'production' ? 'production' : 'sandbox';
 }
 
 async function fetchApi(path: string, options: RequestInit = {}): Promise<Response> {
@@ -50,7 +63,8 @@ export async function exchangePublicToken(publicToken: string): Promise<{ ok: bo
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).error || res.statusText || 'Exchange failed');
+    const msg = (err as { error?: string }).error || res.statusText || 'Exchange failed';
+    throw new Error(msg);
   }
   return res.json();
 }
