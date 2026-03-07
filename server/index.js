@@ -23,6 +23,45 @@ const STORE_DIR = path.join(__dirname, '.store');
 const ACCESS_TOKENS_FILE = path.join(STORE_DIR, 'access_tokens.json');
 const DETECTED_FILE = path.join(STORE_DIR, 'detected_activity.json');
 const RULES_FILE = path.join(STORE_DIR, 'detected_activity_rules.json');
+const SYNC_STATE_FILE = path.join(STORE_DIR, 'plaid_sync_state.json');
+
+const MIN_SYNC_INTERVAL_MS = 20 * 1000; // 20 seconds between syncs per item
+const SYNC_LOCK_EXPIRY_MS = 5 * 60 * 1000; // 5 min max lock
+
+let syncLock = null;
+
+function getSyncState() {
+  const raw = readJson(SYNC_STATE_FILE, {});
+  return typeof raw === 'object' && raw !== null ? raw : {};
+}
+
+function setSyncStateItem(itemId, data) {
+  const state = getSyncState();
+  state[itemId] = { ...state[itemId], ...data };
+  writeJson(SYNC_STATE_FILE, state);
+}
+
+function acquireSyncLock() {
+  const now = Date.now();
+  if (syncLock) {
+    if (now < syncLock.expiresAt) return false;
+    syncLock = null;
+  }
+  syncLock = { lockedAt: now, expiresAt: now + SYNC_LOCK_EXPIRY_MS };
+  return true;
+}
+
+function releaseSyncLock() {
+  syncLock = null;
+}
+
+function isRateLimited(itemId) {
+  const state = getSyncState();
+  const item = state[itemId];
+  if (!item || !item.lastSyncTime) return false;
+  const elapsed = Date.now() - new Date(item.lastSyncTime).getTime();
+  return elapsed < MIN_SYNC_INTERVAL_MS;
+}
 
 function ensureStore() {
   if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
@@ -198,22 +237,48 @@ function findMatchingDetectedItem(existing, amountCents, dateISO, name, accountN
 }
 
 /**
- * Refresh detected activity from Plaid for given item(s). If itemIds is empty, refresh all.
- * Reuses normalization; preserves resolved/ignored; merges pending->posted.
+ * Find existing detected item by account + amount + date proximity (duplicate prevention).
+ * Only matches plaid items in same sourceMode. Does not match resolved/ignored (preserve user state).
  */
-async function refreshDetectedActivityFromPlaid(itemIds = []) {
+function findExistingByAccountAmountDate(existing, accountName, amountCents, dateISO, sourceMode) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const amountTolerance = 5;
+  const dateTs = dateISO ? new Date(dateISO).getTime() : 0;
+  const accountNorm = (a) => (a || '').toLowerCase().trim();
+  const txAccount = accountNorm(accountName);
+  for (const i of existing) {
+    if (i.source !== 'plaid') continue;
+    if ((i.sourceMode || 'sandbox') !== sourceMode) continue;
+    if (i.status === 'resolved' || i.status === 'ignored') continue;
+    if (txAccount && accountNorm(i.accountName) !== txAccount) continue;
+    if (Math.abs((i.amountCents || 0) - amountCents) > amountTolerance) continue;
+    if (i.dateISO && dateTs && Math.abs(new Date(i.dateISO).getTime() - dateTs) > 2 * dayMs) continue;
+    return i;
+  }
+  return null;
+}
+
+/**
+ * Core refresh: fetch from Plaid and merge into detected activity.
+ * Preserves resolved/ignored; merges pending->posted; prevents duplicates.
+ * Caller must hold sync lock and handle rate limit.
+ */
+async function refreshDetectedActivityFromPlaidCore(itemIds = []) {
   const list = getAccessTokensList();
   const env = PLAID_ENV.toLowerCase();
   const idsToRefresh = itemIds.length > 0
     ? list.filter((e) => itemIds.includes(e.itemId) && e.environment === env).map((e) => e.itemId)
     : list.filter((e) => e.environment === env).map((e) => e.itemId);
-  if (idsToRefresh.length === 0) return;
+  if (idsToRefresh.length === 0) return { processed: 0, duplicatesPrevented: 0 };
+
   const client = getPlaidClient();
   const now = new Date();
   const endDate = now.toISOString().slice(0, 10);
   const startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   let existing = getDetectedItems();
   const byPlaidId = new Map(existing.filter((i) => i.plaidTransactionId).map((i) => [i.plaidTransactionId, i]));
+  let totalProcessed = 0;
+  let duplicatesPrevented = 0;
 
   const listById = new Map(list.map((e) => [e.itemId, e]));
   for (const itemId of idsToRefresh) {
@@ -225,7 +290,7 @@ async function refreshDetectedActivityFromPlaid(itemIds = []) {
       const acctRes = await client.accountsGet({ access_token: accessToken });
       accounts = acctRes.data.accounts || [];
     } catch (e) {
-      console.error('webhook/sync accountsGet error', itemId, e.response?.data?.error_message || e.message);
+      console.error('[plaid sync] accountsGet error', itemId.slice(0, 8) + '...', e.response?.data?.error_message || e.message);
       continue;
     }
     const accountById = new Map(accounts.map((a) => [a.account_id, a]));
@@ -240,9 +305,11 @@ async function refreshDetectedActivityFromPlaid(itemIds = []) {
       transactions = txRes.data.transactions || [];
     } catch (e) {
       if (e.response?.data?.error_code === 'PRODUCT_NOT_READY') continue;
-      console.error('webhook/sync transactionsGet error', itemId, e.response?.data?.error_message || e.message);
+      console.error('[plaid sync] transactionsGet error', itemId.slice(0, 8) + '...', e.response?.data?.error_message || e.message);
       continue;
     }
+
+    const sourceMode = environment === 'sandbox' ? 'sandbox' : 'real_pilot';
     for (const tx of transactions) {
       const acc = accountById.get(tx.account_id);
       const accountName = acc?.name || 'Unknown';
@@ -258,10 +325,16 @@ async function refreshDetectedActivityFromPlaid(itemIds = []) {
         existingItem = byPlaidId.get(tx.pending_transaction_id) || null;
         if (existingItem) byPlaidId.delete(tx.pending_transaction_id);
       }
-      const sourceMode = environment === 'sandbox' ? 'sandbox' : 'real_pilot';
       if (!existingItem && !tx.pending) {
         const fallback = findMatchingDetectedItem(existing, amount, dateISO, name, accountName, sourceMode);
         if (fallback) existingItem = fallback;
+      }
+      if (!existingItem) {
+        const dup = findExistingByAccountAmountDate(existing, accountName, amount, dateISO, sourceMode);
+        if (dup) {
+          existingItem = dup;
+          duplicatesPrevented += 1;
+        }
       }
       const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined, environment);
       if (existingItem) {
@@ -275,9 +348,64 @@ async function refreshDetectedActivityFromPlaid(itemIds = []) {
         byPlaidId.set(tx.transaction_id, item);
         existing.push(item);
       }
+      totalProcessed += 1;
     }
+
+    setSyncStateItem(itemId, {
+      lastSyncTime: new Date().toISOString(),
+      lastTransactionFetchCount: transactions.length,
+    });
   }
   setDetectedItems(existing);
+  return { processed: totalProcessed, duplicatesPrevented };
+}
+
+/**
+ * Single entry point for sync: lock, rate limit, then core refresh.
+ * Used by both webhook and manual sync. Returns { skipped } when no work done (lock or rate limit).
+ */
+async function refreshDetectedActivityFromPlaid(itemIds = [], options = {}) {
+  const { fromWebhook = false } = options;
+  const list = getAccessTokensList();
+  const env = PLAID_ENV.toLowerCase();
+  const idsToRun = itemIds.length > 0
+    ? list.filter((e) => itemIds.includes(e.itemId) && e.environment === env).map((e) => e.itemId)
+    : list.filter((e) => e.environment === env).map((e) => e.itemId);
+
+  if (idsToRun.length === 0) {
+    if (fromWebhook) console.log('[plaid sync] webhook: no items to sync');
+    return { skipped: false };
+  }
+
+  if (!acquireSyncLock()) {
+    console.log('[plaid sync] skipped: sync already running');
+    return { skipped: true };
+  }
+  const toRefresh = idsToRun.filter((id) => !isRateLimited(id));
+  const skippedRateLimit = idsToRun.length - toRefresh.length;
+  if (skippedRateLimit > 0) {
+    console.log('[plaid sync] rate limited: skipped', skippedRateLimit, 'item(s)');
+  }
+  if (toRefresh.length === 0) {
+    releaseSyncLock();
+    return { skipped: true };
+  }
+
+  try {
+    if (fromWebhook) {
+      console.log('[plaid sync] webhook-triggered sync started', toRefresh.map((id) => id.slice(0, 8) + '...'));
+    } else {
+      console.log('[plaid sync] sync started', toRefresh.length, 'item(s)');
+    }
+    const result = await refreshDetectedActivityFromPlaidCore(toRefresh.length ? toRefresh : []);
+    console.log('[plaid sync] sync completed', 'transactions_processed:', result.processed, 'duplicates_prevented:', result.duplicatesPrevented);
+    return { skipped: false };
+  } catch (err) {
+    console.error('[plaid sync] sync failed', err.message);
+    return { skipped: false };
+  } finally {
+    releaseSyncLock();
+  }
 }
 
 let plaidClient = null;
@@ -351,19 +479,21 @@ app.post('/api/plaid/exchange_public_token', async (req, res) => {
   }
 });
 
-// POST /api/plaid/sync_transactions (manual fallback; webhooks also trigger refresh)
+// POST /api/plaid/sync_transactions (manual; same pipeline as webhook)
 app.post('/api/plaid/sync_transactions', async (req, res) => {
   try {
     const list = getAccessTokensList();
     if (list.length === 0) {
       return res.json({ synced: 0, message: 'No linked items' });
     }
-    await refreshDetectedActivityFromPlaid([]);
+    const result = await refreshDetectedActivityFromPlaid([], { fromWebhook: false });
     const existing = getDetectedItems();
-    return res.json({ synced: existing.filter((i) => i.source === 'plaid').length, total: existing.length });
+    const payload = { synced: existing.filter((i) => i.source === 'plaid').length, total: existing.length };
+    if (result?.skipped) payload.skipped = true;
+    return res.json(payload);
   } catch (err) {
     const data = err.response?.data || { error_message: err.message };
-    console.error('sync_transactions error', data);
+    console.error('[plaid sync] sync_transactions error', data);
     return res.status(500).json({ error: data.error_message || 'Sync failed' });
   }
 });
@@ -391,9 +521,11 @@ app.post('/api/plaid/webhook', (req, res) => {
   const removedSet = Array.isArray(removedIds) && removedIds.length ? new Set(removedIds) : null;
   setImmediate(() => {
     (async () => {
-      if (shouldRefresh) await refreshDetectedActivityFromPlaid([itemId]).catch((err) => {
-        console.error('[plaid webhook] refresh failed', err.message);
-      });
+      if (shouldRefresh) {
+        await refreshDetectedActivityFromPlaid([itemId], { fromWebhook: true }).catch((err) => {
+          console.error('[plaid sync] webhook refresh failed', err.message);
+        });
+      }
       if (removedSet && removedSet.size > 0) {
         const existing = getDetectedItems();
         const next = existing.filter((i) => !i.plaidTransactionId || !removedSet.has(i.plaidTransactionId));
