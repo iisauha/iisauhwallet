@@ -1,5 +1,5 @@
 /**
- * Minimal Plaid sandbox backend for LedgerLite.
+ * Minimal Plaid sandbox backend for iisauhwallet.
  * - Creates link tokens, exchanges public token, fetches transactions.
  * - Normalizes transactions into detected-activity queue; never exposes secrets.
  */
@@ -566,8 +566,8 @@ app.post('/api/plaid/create_link_token', async (req, res) => {
     const client = getPlaidClient();
     const isProduction = PLAID_ENV.toLowerCase() === 'production';
     const response = await client.linkTokenCreate({
-      user: { client_user_id: isProduction ? 'ledgerlite-pilot' : 'ledgerlite-sandbox' },
-      client_name: 'IisauhWallet',
+      user: { client_user_id: isProduction ? 'iisauhwallet-pilot' : 'iisauhwallet-sandbox' },
+      client_name: 'iisauhwallet',
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en',
@@ -1270,7 +1270,7 @@ app.get('/api/health', (req, res) => {
 ensureStore();
 
 app.listen(PORT, () => {
-  console.log(`LedgerLite backend listening on http://localhost:${PORT}`);
+  console.log(`iisauhwallet backend listening on http://localhost:${PORT}`);
   if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
     console.warn('WARN: PLAID_CLIENT_ID or PLAID_SECRET not set. Plaid endpoints will fail.');
   }

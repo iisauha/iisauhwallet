@@ -1,6 +1,6 @@
-## LedgerLite (React refactor)
+## iisauhwallet (React refactor)
 
-This repository contains a maintainable **Vite + React + TypeScript** version of the LedgerLite PWA.
+This repository contains a maintainable **Vite + React + TypeScript** version of the iisauhwallet PWA.
 
 - **Legacy single-file app** is preserved in `legacy/` for reference.
 - **Local data compatibility** is preserved: the React app uses the **same `localStorage` keys** as the legacy app (no key renames; no automatic wipes).
@@ -33,7 +33,7 @@ npm run preview
 
 This repo is configured to deploy via **GitHub Actions** on every push to `main`.
 
-- **Vite base path** is set to `"/ledgerlite-copy/"` in `vite.config.ts`.
+- **Vite base path** is set to `"/iisauhwallet/"` in `vite.config.ts`.
 - Workflow: `.github/workflows/deploy.yml` builds and deploys `/dist` to GitHub Pages.
 
 ### One-time GitHub Pages setting
@@ -47,5 +47,5 @@ In the GitHub repo settings:
 
 Once Pages is enabled, the app will be hosted at:
 
-`https://iisauha.github.io/ledgerlite-copy/`
+`https://iisauha.github.io/iisauhwallet/`
 

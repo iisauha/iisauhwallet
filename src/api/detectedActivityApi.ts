@@ -1,5 +1,5 @@
 /**
- * API client for the LedgerLite backend (Plaid sandbox).
+ * API client for the iisauhwallet backend (Plaid sandbox).
  * Only used when VITE_API_BASE_URL is set. No secrets are sent or stored in the frontend.
  */
 

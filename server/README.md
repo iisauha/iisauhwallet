@@ -1,4 +1,4 @@
-# LedgerLite backend (Plaid sandbox)
+# iisauhwallet backend (Plaid sandbox)
 
 Minimal Node/Express server for **sandbox-only** Plaid integration. It creates link tokens, exchanges public tokens, fetches transactions, and exposes a detected-activity queue to the frontend. Webhooks allow Plaid to push transaction updates so the queue stays up to date without manual sync. No secrets are ever sent to the client.
 

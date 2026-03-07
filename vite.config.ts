@@ -14,7 +14,7 @@ const devCspPermissive = [
 ].join('; ');
 
 export default defineConfig({
-  base: '/ledgerlite-copy/',
+  base: '/iisauhwallet/',
   server: {
     proxy: {
       '/api': {
@@ -55,7 +55,7 @@ export default defineConfig({
       },
       workbox: {
         mode: 'development',
-        navigateFallback: '/ledgerlite-copy/index.html'
+        navigateFallback: '/iisauhwallet/index.html'
       }
     })
   ]
