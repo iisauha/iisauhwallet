@@ -334,15 +334,37 @@ export function SnapshotPage() {
             <span className="k">Credit Card Credit</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.ccCreditCents)}</span>
           </div>
-          {pendingCcPaymentCents > 0 ? (
-            <div className="summary-kv">
-              <span className="k">Pending Credit Card Payments</span>
-              <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingCcPaymentCents)}</span>
-            </div>
-          ) : null}
           <div className="summary-kv">
-            <span className="k">Total Pending Outbound</span>
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingOutNonCcCents)}</span>
+            <span className="k">Pending Outbound</span>
+            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.pendingOutCents)}</span>
+          </div>
+          <div
+            className="summary-kv"
+            style={{
+              marginTop: 2,
+              marginBottom: 0,
+              paddingTop: 0,
+              fontSize: '0.9rem',
+              color: 'var(--muted)'
+            }}
+          >
+            <span className="k" style={{ paddingLeft: 12 }}>
+              ↳ Credit card payments
+            </span>
+            <span className="v">{formatCents(pendingCcPaymentCents)}</span>
+          </div>
+          <div
+            className="summary-kv"
+            style={{
+              marginTop: 0,
+              fontSize: '0.9rem',
+              color: 'var(--muted)'
+            }}
+          >
+            <span className="k" style={{ paddingLeft: 12 }}>
+              ↳ Other pending outbound
+            </span>
+            <span className="v">{formatCents(pendingOutNonCcCents)}</span>
           </div>
           <div className="summary-kv">
             <span className="k">Total Pending Inbound</span>
