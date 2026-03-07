@@ -300,12 +300,28 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   return (
     <div className="modal-overlay" onClick={() => onClose()}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Detected Activity</h3>
-          <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '6px 12px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 12, minHeight: 0 }}>
+          <h3 style={{ margin: 0, flexShrink: 0 }}>Detected Activity</h3>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ padding: '6px 12px', fontSize: '0.85rem', flexShrink: 0 }}
+            onClick={() => {
+              if (!apiConfigured) {
+                setLinkError('Backend not configured. Set VITE_API_BASE_URL to connect.');
+                return;
+              }
+              handleConnectPlaid();
+            }}
+            disabled={false}
+          >
+            Connect Bank
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '6px 12px', marginLeft: 'auto' }}>
             Close
           </button>
         </div>
+        {linkError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{linkError}</p> : null}
         {apiConfigured ? (
           <div style={{ marginBottom: 16 }}>
             {pilotStatus ? (
