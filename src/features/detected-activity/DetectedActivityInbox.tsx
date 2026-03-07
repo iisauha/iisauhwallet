@@ -253,6 +253,8 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
           try {
             await exchangePublicToken(public_token);
             setLinkError(null);
+            const list = await syncAndGetDetectedActivity();
+            setBackendItems(list.map(toDetectedItem));
           } catch (e) {
             setLinkError(e instanceof Error ? e.message : 'Exchange failed');
           }
@@ -346,7 +348,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
             ) : null}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={handleConnectPlaid}>
-                {plaidMode === 'production' ? 'Connect Plaid (1 real account)' : 'Connect Plaid Sandbox'}
+                Connect Bank{plaidMode === 'production' ? ' (1 real account)' : ''}
               </button>
               <button
                 type="button"

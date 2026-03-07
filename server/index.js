@@ -514,7 +514,7 @@ app.post('/api/plaid/create_link_token', async (req, res) => {
     const isProduction = PLAID_ENV.toLowerCase() === 'production';
     const response = await client.linkTokenCreate({
       user: { client_user_id: isProduction ? 'ledgerlite-pilot' : 'ledgerlite-sandbox' },
-      client_name: 'LedgerLite',
+      client_name: 'IisauhWallet',
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en',
@@ -570,6 +570,24 @@ app.post('/api/plaid/sync_transactions', async (req, res) => {
   } catch (err) {
     const data = err.response?.data || { error_message: err.message };
     console.error('[plaid sync] sync_transactions error', data);
+    return res.status(500).json({ error: data.error_message || 'Sync failed' });
+  }
+});
+
+// GET /api/plaid/transactions/sync — trigger transactions sync and return queue counts (same as POST sync_transactions).
+app.get('/api/plaid/transactions/sync', async (req, res) => {
+  try {
+    const list = getAccessTokensList();
+    if (list.length === 0) {
+      return res.json({ synced: 0, total: 0, message: 'No linked items' });
+    }
+    await refreshDetectedActivityFromPlaid([], { fromWebhook: false });
+    const existing = getDetectedItems();
+    const synced = existing.filter((i) => i.source === 'plaid').length;
+    return res.json({ synced, total: existing.length });
+  } catch (err) {
+    const data = err.response?.data || { error_message: err.message };
+    console.error('[plaid sync] transactions/sync error', data);
     return res.status(500).json({ error: data.error_message || 'Sync failed' });
   }
 });
