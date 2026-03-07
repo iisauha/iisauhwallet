@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { SnapshotPage } from './features/snapshot/SnapshotPage';
 import { SpendingPage } from './features/spending/SpendingPage';
@@ -15,34 +15,6 @@ type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' 
 
 function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
-
-  useEffect(() => {
-    const isDev = import.meta.env.DEV;
-    const mode = isDev ? 'local/dev' : 'public/deployed';
-    const host = typeof window !== 'undefined' ? window.location.host : '';
-    // Debug-only: report how the app is classifying its mode.
-    console.log(`App mode: ${mode}`, { dev: isDev, host });
-    // #region agent log
-    if (typeof fetch !== 'undefined') {
-      fetch('http://127.0.0.1:7458/ingest/27b509c0-59e8-4a4f-9012-8a8e58914640', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': 'e20ffd',
-        },
-        body: JSON.stringify({
-          sessionId: 'e20ffd',
-          runId: 'pre-fix',
-          hypothesisId: 'H1',
-          location: 'src/App.tsx:19-25',
-          message: 'App mode classification',
-          data: { dev: isDev, host, mode },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
-  }, []);
 
   const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;

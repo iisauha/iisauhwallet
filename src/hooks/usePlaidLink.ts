@@ -1,7 +1,6 @@
 /**
- * Minimal Plaid Link hook: create link token → open Plaid Link → exchange public token → sync transactions.
- * Does not change financial logic or auto-import into ledger; only links account and populates Detected Activity queue.
- * onSuccess is synchronous so the Plaid SDK reliably invokes it; async exchange/sync run after return.
+ * Link hook: create link token → open Link → exchange public token → sync transactions.
+ * Does not change financial logic or auto-import into ledger; only links account and populates Detected Activity queue when backend is configured.
  */
 
 import { useCallback, useRef, useState } from 'react';
@@ -36,13 +35,8 @@ export function usePlaidLink() {
       }
 
       successHandlerRef.current = (public_token: string) => {
-        console.log('Plaid Link success');
-        console.log('Exchanging public token');
         exchangePublicToken(public_token)
-          .then(() => {
-            console.log('Syncing Plaid transactions');
-            return syncTransactions();
-          })
+          .then(() => syncTransactions())
           .then(() => {
             setError(null);
           })
@@ -56,20 +50,11 @@ export function usePlaidLink() {
 
       const config: PlaidCreateConfig = {
         token: link_token,
-        onSuccess: (public_token: string, metadata?: unknown) => {
-          console.log('Plaid onSuccess reached');
-          if (public_token) console.log('[Plaid] public_token received (length:', public_token.length, ')');
-          if (metadata != null) console.log('[Plaid] onSuccess metadata', metadata);
+        onSuccess: (public_token: string) => {
           successHandlerRef.current(public_token);
         },
-        onExit: (err, metadata) => {
-          console.log('Plaid onExit reached');
-          console.log('[Plaid] onExit err:', err != null ? err : '(none)');
-          if (metadata != null) console.log('[Plaid] onExit metadata:', metadata);
+        onExit: () => {
           setLoading(false);
-        },
-        onEvent: (eventName: string, metadata?: unknown) => {
-          console.log('[Plaid] onEvent', eventName, metadata != null ? metadata : '');
         },
       };
 

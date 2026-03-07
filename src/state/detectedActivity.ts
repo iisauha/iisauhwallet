@@ -1,6 +1,5 @@
 /**
- * Mock/prototype "Detected Activity" inbox only.
- * No Plaid or real API; UI-only for testing the feature.
+ * Detected Activity inbox state and types.
  */
 
 import { DETECTED_ACTIVITY_KEY } from './keys';
@@ -45,7 +44,7 @@ export type DetectedActivityItem = {
   sourceEnvironment?: 'sandbox' | 'production';
   /** UI-facing mode: sandbox vs real_pilot. */
   sourceMode?: DetectedSourceMode;
-  /** When this item was first detected (real pilot debug). */
+  /** When this item was first detected. */
   detectedAt?: string;
   /** True when suggestedAction came from a saved rule. */
   suggestedFromRule?: boolean;

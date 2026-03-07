@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Local dev only: maximally permissive CSP so Plaid Link + reCAPTCHA are never blocked
+// Local dev: permissive CSP for third-party scripts
 const devCspPermissive = [
   "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:",
   "script-src * 'unsafe-inline' 'unsafe-eval' blob:",

@@ -12,89 +12,65 @@ export function PrivacyPage() {
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Information We Collect
+          Manual input
         </h2>
-        <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--text)', lineHeight: 1.6 }}>
-          <li>Financial account information accessed through Plaid</li>
-          <li>Transaction data such as merchant name, amount, and date</li>
-          <li>User-entered financial data including budgets, recurring income, investments, and account balances</li>
-        </ul>
-        <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: 'var(--muted)', fontStyle: 'italic' }}>
-          IisauhWallet does NOT collect bank usernames or passwords. Bank authentication is handled securely through Plaid.
+        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
+          All financial data in this application is entered manually by you. The app does not pull in transactions or balances from your accounts on its own.
         </p>
       </section>
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          How We Use Information
+          No automatic financial data collection
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          Information is used only to:
-        </p>
-        <ul style={{ margin: '8px 0 0 0', paddingLeft: 20, color: 'var(--text)', lineHeight: 1.6 }}>
-          <li>Display financial account activity</li>
-          <li>Track spending and financial goals</li>
-          <li>Provide budgeting insights</li>
-          <li>Allow users to categorize transactions</li>
-        </ul>
-      </section>
-
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Data Storage
-        </h2>
-        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          Financial data retrieved through Plaid is used only for application functionality. Access tokens and credentials are never exposed to the frontend.
+          The public version of this app does not automatically retrieve bank account data. You decide what information to record.
         </p>
       </section>
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Data Sharing
+          Data storage
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          IisauhWallet does NOT sell or share financial data with third parties.
+          Your financial entries are stored locally in your browser (e.g. on your device). The application does not transmit your financial records to external servers. The developer does not have access to your financial information.
         </p>
       </section>
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          User Control
+          No financial credential collection
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          Users may disconnect accounts at any time, which stops further data retrieval.
+          This app does not collect bank login credentials, account authentication information, or any other sensitive financial access data.
         </p>
       </section>
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Security
+          Your responsibility
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          All communications use HTTPS encryption (TLS 1.2+).
+          You control what information you enter. You are responsible for keeping your device and browser secure so that your local data remains under your control.
         </p>
       </section>
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Third Party Services
+          Transparency
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          IisauhWallet uses Plaid to connect financial institutions.
-        </p>
-        <p style={{ margin: '8px 0 0 0', color: 'var(--text)', lineHeight: 1.6 }}>
-          Plaid privacy policy: <a href="https://plaid.com/legal/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>https://plaid.com/legal/</a>
+          This application is a personal finance tracking tool. It does not provide financial advice and is not a financial institution.
         </p>
       </section>
 
       <section className="card" style={{ padding: 20, marginBottom: 24 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Contact
+          Questions / contact
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          Isaiah<br />
-          Developer – IisauhWallet<br />
-          Email: your@email.com
+          If you have any questions about this Privacy Policy, you may contact:<br />
+          <a href="mailto:isaiahaaguilar1@gmail.com" style={{ color: 'var(--accent)' }}>isaiahaaguilar1@gmail.com</a>
         </p>
       </section>
 

@@ -14,7 +14,7 @@ export type LaunchFlow = {
 };
 
 type ContextValue = {
-  /** Merged list: local (mock) + backend (Plaid sandbox). */
+  /** Merged list: local items plus optional backend when configured. */
   items: DetectedActivityItem[];
   setItems: (items: DetectedActivityItem[] | ((prev: DetectedActivityItem[]) => DetectedActivityItem[])) => void;
   /** Backend-sourced items only (in-memory). Updated after sync. */

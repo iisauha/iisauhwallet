@@ -1,51 +1,113 @@
-## iisauhwallet (React refactor)
+# iisauhwallet
 
-This repository contains a maintainable **Vite + React + TypeScript** version of the iisauhwallet PWA.
+**iisauhwallet** is a manual-first personal finance tracker designed to help you manage spending, balances, pending transfers, recurring income and expenses, subscription or spending goals, investment tracking, and financial planning—all with you in control.
 
-- **Legacy single-file app** is preserved in `legacy/` for reference.
-- **Local data compatibility** is preserved: the React app uses the **same `localStorage` keys** as the legacy app (no key renames; no automatic wipes).
+The app is intentionally **manual-first**: you decide what to enter and when. No automatic pulling of bank data in the public version; you stay in the driver’s seat.
 
-**Developer note:** Real banking integrations are not yet implemented in a production-safe form. A **sandbox-only** Plaid backend is included for testing the Detected Activity flow. See `SECURITY_NOTES.md` and `PLAID_BACKEND_PLAN.md`.
+---
 
-## Run locally
+## Why this app exists
 
-**Frontend only (mock mode):**
-```bash
-npm install
-npm run dev
-```
-Vite will print the local URL (it includes the repo base path). The Detected Activity inbox uses mock data from localStorage.
+- Many finance apps are heavily automated and can feel opaque or out of your control.
+- Spreadsheets are powerful but often awkward to use on a phone.
+- A lot of people want full control over what gets recorded and when.
+- iisauhwallet focuses on **speed**, **clarity**, and **manual control** so you can track your money the way you like.
 
-**With Plaid sandbox backend (optional):**
-1. In `server/`: copy `server/.env.example` to `server/.env` and set `PLAID_CLIENT_ID`, `PLAID_SECRET` (sandbox keys from [Plaid Dashboard](https://dashboard.plaid.com/developers/keys)), and `PORT=3001`.
-2. Start the backend on **port 3001**: `cd server && npm install && npm start`. The backend must be running at `http://localhost:3001` for Connect Bank to work.
-3. Run the frontend: `npm run dev`. The Vite dev server **proxies `/api` to `http://localhost:3001`**, so you do not need to set `VITE_API_BASE_URL` for local development. (Optional: set `VITE_API_BASE_URL=http://localhost:3001` in `.env.local` to call the backend directly.)
-4. Open the app, click **Connect Bank** (or **Detected Activity** → **Connect Bank**) to link a sandbox account, then **Sync Detected Activity** to load transactions (or use **Refresh** after webhook-driven updates). The backend supports Plaid webhooks for automatic queue updates; see `server/README.md` for local webhook setup (e.g. ngrok). No production credentials; sandbox only.
+---
 
-## Build locally
+## Why it’s safe
 
-```bash
-npm run build
-npm run preview
-```
+- The app relies on **manual input**. You choose what to record.
+- **No financial account credentials** are collected. You never enter bank usernames or passwords into the app.
+- The application **does not automatically retrieve** your bank data. What you see is what you enter (and what you choose to store locally).
 
-## Deploy (GitHub Pages)
+---
 
-This repo is configured to deploy via **GitHub Actions** on every push to `main`.
+## Core features
 
-- **Vite base path** is set to `"/iisauhwallet/"` in `vite.config.ts`.
-- Workflow: `.github/workflows/deploy.yml` builds and deploys `/dist` to GitHub Pages.
+### Snapshot
 
-### One-time GitHub Pages setting
+A single-screen overview of your balances and financial picture: cash, accounts, and a quick view of where things stand.
 
-In the GitHub repo settings:
+### Spending
 
-- Go to **Settings → Pages**
-- Set **Build and deployment** → **Source** to **GitHub Actions**
+Log purchases and expenses manually as they happen. Add amount, category, and optional notes. Great for tracking daily spending without waiting for bank updates.
 
-## Live site URL
+### Pending inbound / Pending outbound
 
-Once Pages is enabled, the app will be hosted at:
+Track transfers that are in progress—money moving between your accounts or to/from elsewhere. You can record them as soon as you initiate them and clear them when they settle.
 
-`https://iisauha.github.io/iisauhwallet/`
+### Upcoming
 
+See future scheduled payments or transfers so you can plan around bills and known expenses.
+
+### Recurring
+
+Define recurring income (e.g. salary) and recurring expenses (e.g. rent, subscriptions). The app uses these to help you plan and to show expected cash flow.
+
+### SUB Tracker
+
+Track spending goals such as credit card bonus progress (e.g. “spend $X in 3 months”). You set the target and log spending; the app shows how close you are.
+
+### Investing
+
+Manually track investment account balances over time. No automatic sync—you enter the numbers when you want to update.
+
+### Settings
+
+Manage categories, colors, and other configuration so the app matches how you think about your money.
+
+---
+
+## Example real-life scenarios
+
+- **Log a purchase right away** — You buy coffee; you add it in Spending immediately instead of waiting for the bank to show it.
+- **Track a transfer before it settles** — You move money from checking to savings. You add it as pending outbound (and later pending inbound or as an adjustment) so your snapshot stays accurate.
+- **Monitor progress toward a spending goal** — You’re working on a card bonus; you use SUB Tracker to see how much you’ve spent and how much is left.
+- **Plan around upcoming bills** — You add rent and utilities in Upcoming so you know what’s due and when.
+- **Replace spreadsheets on the go** — You get a mobile-friendly tracker that works in the browser without tying you to a desktop spreadsheet.
+
+---
+
+## How to use
+
+1. **Set your balances** — In Snapshot, enter or adjust your cash and account balances so the app reflects reality.
+2. **Add categories** — In Settings, create or edit categories so you can tag spending and recurring items.
+3. **Log spending** — Use Spending to record purchases and expenses as they happen.
+4. **Track transfers** — Use Pending inbound / Pending outbound for money in motion; clear or resolve them when they settle.
+5. **Manage recurring items** — In Recurring, add income and expenses that repeat (e.g. monthly rent, paychecks).
+6. **Review your snapshot** — Use Snapshot and Upcoming to see where you stand and what’s coming.
+
+---
+
+## Running locally
+
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+3. **Open the app**  
+   Vite will print a local URL (e.g. `http://localhost:5173/iisauhwallet/`). Open it in your browser.
+
+4. **Optional backend**  
+   The app works fully without a backend. If you use the optional server for extra features, see `server/README.md` for setup (e.g. run on port 3001; the dev server can proxy `/api` to it).
+
+---
+
+## Project philosophy
+
+- **Manual-first** — You enter and control your data.
+- **Transparent** — No hidden automation; you see what you’ve entered.
+- **Flexible** — Use as much or as little of the app as you need.
+- **Mobile-friendly** — Use it on your phone or desktop in the browser.
+- **You stay in control** — Your information stays in your browser unless you choose otherwise.
+
+---
+
+For privacy practices, see the in-app **Privacy** page (e.g. via Settings or the privacy route).

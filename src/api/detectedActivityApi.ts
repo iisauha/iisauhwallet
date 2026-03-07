@@ -1,5 +1,5 @@
 /**
- * API client for the iisauhwallet backend (Plaid sandbox).
+ * API client for optional iisauhwallet backend.
  * Only used when VITE_API_BASE_URL is set. No secrets are sent or stored in the frontend.
  */
 
@@ -79,7 +79,6 @@ export async function createLinkToken(): Promise<{ link_token: string }> {
   const path = '/api/plaid/create_link_token';
   const base = BASE.replace(/\/$/, '');
   const url = base ? `${base}${path}` : path;
-  console.log('[Plaid] create_link_token request URL:', url);
   let res: Response;
   try {
     res = await fetch(url, {
@@ -87,13 +86,10 @@ export async function createLinkToken(): Promise<{ link_token: string }> {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    console.error('[Plaid] create_link_token failed (network):', e);
     throw new Error('Plaid backend not reachable');
   }
-  console.log('[Plaid] create_link_token response status:', res.status, res.statusText);
   if (!res.ok) {
     if (res.status === 404) {
-      console.error('[Plaid] create_link_token 404 — backend route not found or proxy not forwarding');
       throw new Error('Plaid backend not reachable');
     }
     const err = await res.json().catch(() => ({}));
@@ -111,7 +107,6 @@ export async function exchangePublicToken(publicToken: string): Promise<{ ok: bo
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = (err as { error?: string }).error || res.statusText || 'Exchange failed';
-    console.error('[Plaid] exchange_public_token failed', res.status, res.statusText, err);
     throw new Error(msg);
   }
   return res.json();
@@ -196,7 +191,7 @@ export async function resetDetectedItem(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to reset item');
 }
 
-/** Sync transactions from Plaid then return normalized detected-activity items. */
+/** Sync transactions then return normalized detected-activity items. */
 export async function syncAndGetDetectedActivity(): Promise<DetectedActivityItemFromApi[]> {
   await syncTransactions();
   const { items } = await getDetectedActivity();
@@ -248,7 +243,7 @@ export async function deleteDetectedActivityRule(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete rule');
 }
 
-// --- Plaid pilot diagnostics and recovery (queue only; no ledger) ---
+// Optional backend: queue diagnostics and recovery (queue only; no ledger)
 export type PilotStatus = {
   plaidMode: 'sandbox' | 'production';
   lastManualSyncAt: string | null;
