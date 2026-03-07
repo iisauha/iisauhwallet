@@ -117,6 +117,13 @@ function setAccessToken(itemId, accessToken, environment = PLAID_ENV) {
   writeJson(ACCESS_TOKENS_FILE, tokens);
 }
 
+// Return the first stored access token entry for the current Plaid environment.
+function getPrimaryAccessTokenForEnv() {
+  const env = (PLAID_ENV || 'sandbox').toLowerCase();
+  const list = getAccessTokensList();
+  return list.find((e) => (e.environment || 'sandbox') === env) || null;
+}
+
 // Remove all non-sandbox (real pilot) access tokens and their sync state,
 // and optionally clear real-pilot detected items for pilot debugging.
 function clearRealPilotAccessTokensAndItems() {
@@ -617,6 +624,136 @@ app.post('/api/plaid/sync_transactions', async (req, res) => {
     const data = err.response?.data || { error_message: err.message };
     console.error('[plaid sync] sync_transactions error', data);
     return res.status(500).json({ error: data.error_message || 'Sync failed' });
+  }
+});
+
+// GET /api/plaid/accounts — snapshot of Plaid accounts and balances (assets/liabilities only; no ledger changes)
+app.get('/api/plaid/accounts', async (req, res) => {
+  try {
+    const primary = getPrimaryAccessTokenForEnv();
+    if (!primary) {
+      return res.json({
+        ok: true,
+        environment: PLAID_ENV,
+        institutionName: null,
+        accounts: [],
+        summary: null,
+        message: 'No linked Plaid items',
+      });
+    }
+
+    const client = getPlaidClient();
+    const accessToken = primary.accessToken;
+    const env = (primary.environment || PLAID_ENV || 'sandbox').toLowerCase();
+    let institutionName = null;
+
+    try {
+      const itemRes = await client.itemGet({ access_token: accessToken });
+      const institutionId = itemRes.data.item?.institution_id;
+      if (institutionId) {
+        const instRes = await client.institutionsGetById({
+          institution_id: institutionId,
+          country_codes: ['US'],
+        });
+        institutionName = instRes.data.institution?.name || null;
+      }
+    } catch (e) {
+      console.warn('[plaid accounts] failed to fetch institution metadata', e.response?.data || e.message);
+    }
+
+    const accountsRes = await client.accountsGet({ access_token: accessToken });
+    const rawAccounts = accountsRes.data.accounts || [];
+
+    function toNumberOrNull(value) {
+      if (value === null || value === undefined) return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    const sourceMode = env === 'sandbox' ? 'sandbox' : 'real_pilot';
+    const normalized = rawAccounts.map((a) => {
+      const current = toNumberOrNull(a.balances?.current ?? a.balances?.available);
+      const available = toNumberOrNull(a.balances?.available);
+      const isoCurrencyCode =
+        a.balances?.iso_currency_code || a.balances?.unofficial_currency_code || null;
+      return {
+        institutionName,
+        accountId: a.account_id,
+        name: a.name || '',
+        officialName: a.official_name || null,
+        mask: a.mask || null,
+        type: a.type || '',
+        subtype: a.subtype || null,
+        currentBalance: current,
+        availableBalance: available,
+        isoCurrencyCode,
+        source: 'plaid',
+        sourceMode,
+      };
+    });
+
+    function isLiability(acc) {
+      const t = (acc.type || '').toLowerCase();
+      const s = (acc.subtype || '').toLowerCase();
+      return t === 'credit' || t === 'loan' || s === 'credit card' || s === 'credit';
+    }
+
+    function isCash(acc) {
+      const t = (acc.type || '').toLowerCase();
+      const s = (acc.subtype || '').toLowerCase();
+      return t === 'depository' && ['checking', 'savings', 'money market'].includes(s);
+    }
+
+    function isInvestment(acc) {
+      const t = (acc.type || '').toLowerCase();
+      const s = (acc.subtype || '').toLowerCase();
+      return (
+        t === 'investment' ||
+        ['brokerage', '401k', 'ira', 'roth', 'hsa'].some((k) => s.includes(k))
+      );
+    }
+
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalCash = 0;
+    let totalCredit = 0;
+    let totalInvestments = 0;
+
+    for (const acc of normalized) {
+      const bal = typeof acc.currentBalance === 'number' ? acc.currentBalance : 0;
+      if (!Number.isFinite(bal)) continue;
+
+      if (isLiability(acc)) {
+        const liability = bal < 0 ? -bal : bal;
+        totalLiabilities += liability;
+        totalCredit += liability;
+      } else {
+        if (bal > 0) totalAssets += bal;
+        if (isCash(acc)) totalCash += bal;
+        if (isInvestment(acc)) totalInvestments += bal;
+      }
+    }
+
+    const netWorth = totalAssets - totalLiabilities;
+
+    return res.json({
+      ok: true,
+      environment: env,
+      institutionName,
+      accounts: normalized,
+      summary: {
+        totalAssets,
+        totalLiabilities,
+        totalCash,
+        totalCredit,
+        totalInvestments,
+        netWorth,
+      },
+    });
+  } catch (e) {
+    const msg = e.response?.data?.error_message || e.message || 'Failed to fetch Plaid accounts';
+    console.error('[plaid accounts] error', e.response?.data || e.message);
+    return res.status(500).json({ error: msg });
   }
 });
 

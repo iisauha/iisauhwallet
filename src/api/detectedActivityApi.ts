@@ -260,6 +260,39 @@ export type PilotStatus = {
   };
 };
 
+export type PlaidAccountSnapshotItem = {
+  institutionName: string | null;
+  accountId: string;
+  name: string;
+  officialName?: string | null;
+  mask?: string | null;
+  type: string;
+  subtype?: string | null;
+  currentBalance: number | null;
+  availableBalance?: number | null;
+  isoCurrencyCode?: string | null;
+  source: 'plaid';
+  sourceMode: 'sandbox' | 'real_pilot';
+};
+
+export type PlaidAccountSummary = {
+  totalAssets: number;
+  totalLiabilities: number;
+  totalCash: number;
+  totalCredit: number;
+  totalInvestments: number;
+  netWorth: number;
+};
+
+export type PlaidAccountsResponse = {
+  ok: boolean;
+  environment?: string;
+  institutionName?: string | null;
+  accounts: PlaidAccountSnapshotItem[];
+  summary: PlaidAccountSummary | null;
+  message?: string;
+};
+
 export async function getPilotStatus(): Promise<PilotStatus> {
   const res = await fetchApi('/api/plaid/pilot-status');
   if (!res.ok) throw new Error('Failed to load pilot status');
@@ -308,6 +341,15 @@ export async function pilotDisconnectReal(): Promise<{ removedTokens: number; re
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error || 'Failed to disconnect real pilot account');
+  }
+  return res.json();
+}
+
+export async function getPlaidAccountsSnapshot(): Promise<PlaidAccountsResponse> {
+  const res = await fetchApi('/api/plaid/accounts');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Failed to load Plaid accounts');
   }
   return res.json();
 }
