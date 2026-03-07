@@ -56,16 +56,20 @@ export function usePlaidLink() {
 
       const config: PlaidCreateConfig = {
         token: link_token,
-        onSuccess: (public_token: string) => {
-          if (public_token) console.log('public_token received (length:', public_token.length, ')');
+        onSuccess: (public_token: string, metadata?: unknown) => {
+          console.log('Plaid onSuccess reached');
+          if (public_token) console.log('[Plaid] public_token received (length:', public_token.length, ')');
+          if (metadata != null) console.log('[Plaid] onSuccess metadata', metadata);
           successHandlerRef.current(public_token);
         },
         onExit: (err, metadata) => {
-          console.log('[Plaid] onExit', err != null ? 'with err' : 'no err', metadata != null ? 'metadata present' : '');
+          console.log('Plaid onExit reached');
+          console.log('[Plaid] onExit err:', err != null ? err : '(none)');
+          if (metadata != null) console.log('[Plaid] onExit metadata:', metadata);
           setLoading(false);
         },
-        onEvent: (eventName: string) => {
-          console.log('[Plaid] onEvent', eventName);
+        onEvent: (eventName: string, metadata?: unknown) => {
+          console.log('[Plaid] onEvent', eventName, metadata != null ? metadata : '');
         },
       };
 
