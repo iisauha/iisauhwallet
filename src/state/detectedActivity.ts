@@ -42,6 +42,15 @@ export type DetectedActivityItem = {
   detectedAt?: string;
   /** True when suggestedAction came from a saved rule. */
   suggestedFromRule?: boolean;
+  /** Best-effort: likely refund (inbound with refund/credit keywords or positive on credit card). */
+  likelyRefund?: boolean;
+  /** Best-effort: likely reversal (description contains reversal). */
+  likelyReversal?: boolean;
+  /** When resolved as refund linked to a purchase. */
+  linkedPurchaseId?: string;
+  linkedPurchaseTitle?: string;
+  linkedPurchaseDateISO?: string;
+  linkedPurchaseAmountCents?: number;
 };
 
 function uid(): string {

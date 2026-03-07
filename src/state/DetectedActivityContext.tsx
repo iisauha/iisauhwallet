@@ -22,7 +22,7 @@ type ContextValue = {
   setBackendItems: (items: DetectedActivityItem[] | ((prev: DetectedActivityItem[]) => DetectedActivityItem[])) => void;
   launchFlow: LaunchFlow | null;
   setLaunchFlow: (f: LaunchFlow | null) => void;
-  markResolved: (id: string, resolvedAs?: string) => void;
+  markResolved: (id: string, resolvedAs?: string, linkPayload?: import('../api/detectedActivityApi').ResolveLinkPayload) => void;
   markIgnored: (id: string) => void;
   markReopened: (id: string) => void;
   refresh: () => void;
@@ -54,6 +54,12 @@ function apiItemToDetected(a: {
   possibleTransferMatchId?: string;
   updatedFromPending?: boolean;
   suggestedFromRule?: boolean;
+  likelyRefund?: boolean;
+  likelyReversal?: boolean;
+  linkedPurchaseId?: string;
+  linkedPurchaseTitle?: string;
+  linkedPurchaseDateISO?: string;
+  linkedPurchaseAmountCents?: number;
 }): DetectedActivityItem {
   return {
     id: a.id,
@@ -68,6 +74,12 @@ function apiItemToDetected(a: {
     possibleTransferMatchId: a.possibleTransferMatchId,
     updatedFromPending: a.updatedFromPending,
     suggestedFromRule: a.suggestedFromRule,
+    likelyRefund: a.likelyRefund,
+    likelyReversal: a.likelyReversal,
+    linkedPurchaseId: a.linkedPurchaseId,
+    linkedPurchaseTitle: a.linkedPurchaseTitle,
+    linkedPurchaseDateISO: a.linkedPurchaseDateISO,
+    linkedPurchaseAmountCents: a.linkedPurchaseAmountCents,
   };
 }
 
@@ -106,16 +118,33 @@ export function DetectedActivityProvider({ children }: { children: React.ReactNo
     setBackendItemsState((prev) => (typeof updater === 'function' ? updater(prev) : updater));
   }, []);
 
-  const markResolved = useCallback((id: string, resolvedAs?: string) => {
+  const markResolved = useCallback((id: string, resolvedAs?: string, linkPayload?: import('../api/detectedActivityApi').ResolveLinkPayload) => {
+    const resolvedAsVal = linkPayload ? 'refund_linked' : resolvedAs;
+    const link = linkPayload
+      ? {
+          linkedPurchaseId: linkPayload.linkedPurchaseId,
+          linkedPurchaseTitle: linkPayload.linkedPurchaseTitle,
+          linkedPurchaseDateISO: linkPayload.linkedPurchaseDateISO,
+          linkedPurchaseAmountCents: linkPayload.linkedPurchaseAmountCents,
+        }
+      : undefined;
     if (id.startsWith('plaid_')) {
       setBackendItemsState((prev) =>
-        prev.map((i) => (i.id === id ? { ...i, status: 'resolved' as const } : i))
+        prev.map((i) =>
+          i.id === id
+            ? { ...i, status: 'resolved' as const, resolvedAs: resolvedAsVal, ...link }
+            : i
+        )
       );
       setLaunchFlow(null);
-      import('../api/detectedActivityApi').then((api) => api.resolveDetectedItem(id, resolvedAs).catch(() => {}));
+      import('../api/detectedActivityApi').then((api) =>
+        api.resolveDetectedItem(id, resolvedAsVal, linkPayload).catch(() => {})
+      );
     } else {
       setLocalItemsState((prev) => {
-        const next = prev.map((i) => (i.id === id ? { ...i, status: 'resolved' as const } : i));
+        const next = prev.map((i) =>
+          i.id === id ? { ...i, status: 'resolved' as const, resolvedAs: resolvedAsVal, ...link } : i
+        );
         saveDetectedActivity(next);
         return next;
       });

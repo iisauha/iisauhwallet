@@ -1,8 +1,10 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { formatCents } from '../../state/calc';
 import { useDetectedActivity } from '../../state/DetectedActivityContext';
 import { getActiveDetectedCount, type DetectedActivityItem, type DetectedSuggestedAction } from '../../state/detectedActivity';
 import type { LaunchFlowType } from '../../state/DetectedActivityContext';
+import { useLedgerStore } from '../../state/store';
+import type { Purchase } from '../../state/models';
 import {
   hasApiBase,
   createLinkToken,
@@ -43,6 +45,12 @@ function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
     sourceMode: a.sourceMode,
     detectedAt: a.detectedAt,
     suggestedFromRule: a.suggestedFromRule,
+    likelyRefund: a.likelyRefund,
+    likelyReversal: a.likelyReversal,
+    linkedPurchaseId: a.linkedPurchaseId,
+    linkedPurchaseTitle: a.linkedPurchaseTitle,
+    linkedPurchaseDateISO: a.linkedPurchaseDateISO,
+    linkedPurchaseAmountCents: a.linkedPurchaseAmountCents,
   };
 }
 
@@ -99,7 +107,7 @@ function sortByNewestFirst(a: DetectedActivityItem, b: DetectedActivityItem): nu
 }
 
 export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
-  const { items, setLaunchFlow, setBackendItems, markIgnored, markReopened } = useDetectedActivity();
+  const { items, setLaunchFlow, setBackendItems, markResolved, markIgnored, markReopened } = useDetectedActivity();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
@@ -110,7 +118,9 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   const [pendingRemember, setPendingRemember] = useState<PendingRemember>(null);
   const [rememberChecked, setRememberChecked] = useState(false);
   const [rememberSaving, setRememberSaving] = useState(false);
+  const [linkToPurchaseForItem, setLinkToPurchaseForItem] = useState<DetectedActivityItem | null>(null);
   const apiConfigured = hasApiBase();
+  const data = useLedgerStore((s) => s.data);
 
   React.useEffect(() => {
     if (!apiConfigured) return;
@@ -353,6 +363,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                 onAction={handleAction}
                 onIgnore={() => handleIgnoreClick(item)}
                 onReopen={() => markReopened(item.id)}
+                onLinkToPurchase={item.likelyRefund || item.likelyReversal ? () => setLinkToPurchaseForItem(item) : undefined}
                 showActions={item.status === 'new' || item.status === 'in_progress'}
               />
             ))}
@@ -404,6 +415,115 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
           </div>
         </div>
       ) : null}
+      {linkToPurchaseForItem ? (
+        <LinkToPurchaseModal
+          detectedItem={linkToPurchaseForItem}
+          onClose={() => setLinkToPurchaseForItem(null)}
+          onSelect={(p) => {
+            markResolved(linkToPurchaseForItem.id, 'refund_linked', {
+              linkedPurchaseId: p.id,
+              linkedPurchaseTitle: p.title,
+              linkedPurchaseDateISO: p.dateISO,
+              linkedPurchaseAmountCents: p.amountCents,
+            });
+            setLinkToPurchaseForItem(null);
+          }}
+          purchases={data.purchases || []}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function LinkToPurchaseModal({
+  detectedItem,
+  onClose,
+  onSelect,
+  purchases,
+}: {
+  detectedItem: DetectedActivityItem;
+  onClose: () => void;
+  onSelect: (p: Purchase) => void;
+  purchases: Purchase[];
+}) {
+  const [search, setSearch] = useState('');
+  const refundAmount = Math.abs(detectedItem.amountCents ?? 0);
+  const titleLower = (detectedItem.title || '').toLowerCase();
+  const words = titleLower.split(/\s+/).filter(Boolean);
+
+  const sorted = useMemo(() => {
+    let list = [...purchases];
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (p) =>
+          (p.title || '').toLowerCase().includes(q) ||
+          (p.dateISO || '').includes(q)
+      );
+    }
+    return list.sort((a, b) => {
+      const aAmt = Math.abs(a.amountCents ?? 0);
+      const bAmt = Math.abs(b.amountCents ?? 0);
+      const aDiff = Math.abs(aAmt - refundAmount);
+      const bDiff = Math.abs(bAmt - refundAmount);
+      if (aDiff !== bDiff) return aDiff - bDiff;
+      const aTitle = (a.title || '').toLowerCase();
+      const bTitle = (b.title || '').toLowerCase();
+      const aScore = words.filter((w) => w.length > 2 && aTitle.includes(w)).length;
+      const bScore = words.filter((w) => w.length > 2 && bTitle.includes(w)).length;
+      if (bScore !== aScore) return bScore - aScore;
+      const aDate = a.dateISO ? new Date(a.dateISO).getTime() : 0;
+      const bDate = b.dateISO ? new Date(b.dateISO).getTime() : 0;
+      return bDate - aDate;
+    });
+  }, [purchases, search, refundAmount, words]);
+
+  return (
+    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420, position: 'relative', zIndex: 10 }}>
+      <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Link to original purchase</h3>
+      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0 0 10px 0' }}>
+        Refund: {detectedItem.title} · {formatCents(refundAmount)}
+      </p>
+      <input
+        type="text"
+        placeholder="Search purchases…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '8px 10px',
+          marginBottom: 10,
+          borderRadius: 6,
+          border: '1px solid var(--border)',
+          background: 'var(--surface)',
+          color: 'var(--text)',
+        }}
+      />
+      <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {sorted.length === 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>No purchases to show. Add purchases in Spending first.</p>
+        ) : (
+          sorted.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="btn btn-secondary"
+              style={{ textAlign: 'left', justifyContent: 'flex-start', padding: 10 }}
+              onClick={() => onSelect(p)}
+            >
+              <span style={{ fontWeight: 600 }}>{p.title}</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.85rem', marginLeft: 8 }}>
+                {p.dateISO} · {formatCents(p.amountCents)}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <button type="button" className="btn btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
@@ -527,12 +647,14 @@ function DetectedCard({
   onAction,
   onIgnore,
   onReopen,
+  onLinkToPurchase,
   showActions,
 }: {
   item: DetectedActivityItem;
   onAction: (item: DetectedActivityItem, flow: LaunchFlowType) => void;
   onIgnore: () => void;
   onReopen: () => void;
+  onLinkToPurchase?: () => void;
   showActions: boolean;
 }) {
   const suggestedAction = item.suggestedAction ?? computeSuggestedActionForItem(item);
@@ -545,6 +667,10 @@ function DetectedCard({
   const pendingPostedBadge = item.pending
     ? <Badge label="Pending" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />
     : <Badge label="Posted" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />;
+  const refundReversalBadge =
+    item.likelyReversal ? <Badge label="Possible reversal" style={{ background: 'rgba(234, 179, 8, 0.2)', color: 'var(--yellow, #eab308)', border: '1px solid var(--border)' }} />
+    : item.likelyRefund ? <Badge label="Possible refund" style={{ background: 'rgba(34, 197, 94, 0.15)', color: 'var(--green)', border: '1px solid var(--border)' }} />
+    : null;
   return (
     <div
       className="card"
@@ -558,7 +684,13 @@ function DetectedCard({
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         {statusBadge}
         {pendingPostedBadge}
+        {refundReversalBadge}
       </div>
+      {item.status === 'resolved' && item.linkedPurchaseId && (item.linkedPurchaseTitle != null || item.linkedPurchaseDateISO != null || item.linkedPurchaseAmountCents != null) ? (
+        <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 6 }}>
+          Linked refund to purchase: {item.linkedPurchaseTitle ?? 'Purchase'} {item.linkedPurchaseDateISO ? ` · ${item.linkedPurchaseDateISO}` : ''} {item.linkedPurchaseAmountCents != null ? ` · ${formatCents(item.linkedPurchaseAmountCents)}` : ''}
+        </div>
+      ) : null}
       <div className="row" style={{ marginBottom: 6 }}>
         <span className="name" style={{ fontWeight: 600 }}>{item.title}</span>
         <span className="amount" style={{ color: item.amountCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
@@ -598,6 +730,16 @@ function DetectedCard({
       </div>
       {showActions ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {onLinkToPurchase ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+              onClick={onLinkToPurchase}
+            >
+              Link to original purchase
+            </button>
+          ) : null}
           <button
             type="button"
             className="btn btn-secondary"

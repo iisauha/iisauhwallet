@@ -411,6 +411,27 @@ function computeSuggestedAction(item) {
   return 'review_manually';
 }
 
+/** Best-effort: detect likely refund or reversal (positive inflow on credit, or description keywords). */
+function detectLikelyRefundOrReversal(item) {
+  const title = (item.title || '').toLowerCase();
+  const accountType = (item.accountType || '').toLowerCase();
+  const amountCents = item.amountCents ?? 0;
+  const isInbound = amountCents > 0;
+  const refundKeywords = ['refund', 'reversal', 'returned', 'adjustment'];
+  const hasRefundKeyword = refundKeywords.some((k) => title.includes(k));
+  const hasCreditWord = /\bcredit\b/.test(title) && !title.includes('credit card');
+  const isCredit = accountType.includes('credit');
+  const likelyReversal = hasRefundKeyword && (title.includes('reversal') || title.includes('revers'));
+  const likelyRefund = isInbound && (
+    (isCredit && (hasRefundKeyword || hasCreditWord)) ||
+    (!isCredit && (hasRefundKeyword || hasCreditWord))
+  );
+  return {
+    likelyRefund: !!likelyRefund || (!!likelyReversal && isInbound),
+    likelyReversal: !!likelyReversal,
+  };
+}
+
 function findTransferPairs(items) {
   const active = items.filter((i) => (i.status === 'new' || i.status === 'in_progress') && i.source === 'plaid');
   const pairs = new Map();
@@ -466,7 +487,15 @@ function enrichWithSuggestions(items) {
       suggested = computeSuggestedAction(item);
     }
     const possibleTransferMatchId = pairs.get(item.id) || undefined;
-    return { ...item, suggestedAction: suggested, suggestedFromRule: suggestedFromRule || undefined, possibleTransferMatchId };
+    const { likelyRefund, likelyReversal } = detectLikelyRefundOrReversal(item);
+    return {
+      ...item,
+      suggestedAction: suggested,
+      suggestedFromRule: suggestedFromRule || undefined,
+      possibleTransferMatchId,
+      likelyRefund: likelyRefund || undefined,
+      likelyReversal: likelyReversal || undefined,
+    };
   });
 }
 
@@ -491,11 +520,24 @@ app.post('/api/detected-activity/:id/ignore', (req, res) => {
 // POST /api/detected-activity/:id/resolve
 app.post('/api/detected-activity/:id/resolve', (req, res) => {
   const { id } = req.params;
-  const { resolvedAs } = req.body || {};
+  const body = req.body || {};
+  const { resolvedAs, linkedPurchaseId, linkedPurchaseTitle, linkedPurchaseDateISO, linkedPurchaseAmountCents } = body;
   const items = getDetectedItems();
   const idx = items.findIndex((i) => i.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  items[idx] = { ...items[idx], status: 'resolved', resolvedAs: resolvedAs || undefined };
+  const next = { ...items[idx], status: 'resolved', resolvedAs: resolvedAs || undefined };
+  if (linkedPurchaseId != null) {
+    next.linkedPurchaseId = linkedPurchaseId;
+    next.linkedPurchaseTitle = linkedPurchaseTitle != null ? String(linkedPurchaseTitle).slice(0, 200) : undefined;
+    next.linkedPurchaseDateISO = linkedPurchaseDateISO != null ? String(linkedPurchaseDateISO).slice(0, 10) : undefined;
+    next.linkedPurchaseAmountCents = typeof linkedPurchaseAmountCents === 'number' ? linkedPurchaseAmountCents : undefined;
+  } else {
+    next.linkedPurchaseId = undefined;
+    next.linkedPurchaseTitle = undefined;
+    next.linkedPurchaseDateISO = undefined;
+    next.linkedPurchaseAmountCents = undefined;
+  }
+  items[idx] = next;
   setDetectedItems(items);
   return res.json({ ok: true });
 });
@@ -506,7 +548,16 @@ app.post('/api/detected-activity/:id/reset', (req, res) => {
   const items = getDetectedItems();
   const idx = items.findIndex((i) => i.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  items[idx] = { ...items[idx], status: 'new', resolvedAs: undefined };
+  const item = items[idx];
+  items[idx] = {
+    ...item,
+    status: 'new',
+    resolvedAs: undefined,
+    linkedPurchaseId: undefined,
+    linkedPurchaseTitle: undefined,
+    linkedPurchaseDateISO: undefined,
+    linkedPurchaseAmountCents: undefined,
+  };
   setDetectedItems(items);
   return res.json({ ok: true });
 });

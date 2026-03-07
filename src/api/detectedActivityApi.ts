@@ -24,6 +24,12 @@ export type DetectedActivityItemFromApi = {
   sourceMode?: 'sandbox' | 'real_pilot';
   detectedAt?: string;
   suggestedFromRule?: boolean;
+  likelyRefund?: boolean;
+  likelyReversal?: boolean;
+  linkedPurchaseId?: string;
+  linkedPurchaseTitle?: string;
+  linkedPurchaseDateISO?: string;
+  linkedPurchaseAmountCents?: number;
 };
 
 export type DetectedActivityRule = {
@@ -105,10 +111,29 @@ export async function ignoreDetectedItem(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to ignore item');
 }
 
-export async function resolveDetectedItem(id: string, resolvedAs?: string): Promise<void> {
+export type ResolveLinkPayload = {
+  linkedPurchaseId: string;
+  linkedPurchaseTitle?: string;
+  linkedPurchaseDateISO?: string;
+  linkedPurchaseAmountCents?: number;
+};
+
+export async function resolveDetectedItem(
+  id: string,
+  resolvedAs?: string,
+  linkPayload?: ResolveLinkPayload
+): Promise<void> {
+  const body: Record<string, unknown> = resolvedAs != null ? { resolvedAs } : {};
+  if (linkPayload) {
+    body.linkedPurchaseId = linkPayload.linkedPurchaseId;
+    body.linkedPurchaseTitle = linkPayload.linkedPurchaseTitle;
+    body.linkedPurchaseDateISO = linkPayload.linkedPurchaseDateISO;
+    body.linkedPurchaseAmountCents = linkPayload.linkedPurchaseAmountCents;
+    if (resolvedAs == null) body.resolvedAs = 'refund_linked';
+  }
   const res = await fetchApi(`/api/detected-activity/${encodeURIComponent(id)}/resolve`, {
     method: 'POST',
-    body: JSON.stringify(resolvedAs != null ? { resolvedAs } : {}),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error('Failed to resolve item');
 }
