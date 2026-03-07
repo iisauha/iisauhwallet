@@ -8,6 +8,6 @@
   - Exchange public tokens for access tokens and store them securely
   - Proxy API calls to Plaid so the frontend never sees secrets
 
-- **No Plaid secrets should ever be stored in client code or in this repository.** Use `.env.example` only as a reminder; real values belong in a backend and in ignored env files (e.g. `.env.local`), never committed.
+- **Plaid secrets and access tokens must never be stored in client code or in this repository.** Use `.env.example` only as a reminder; real values belong in a backend and in ignored env files (e.g. `.env.local`), never committed.
 
-- **Public deployment (e.g. GitHub Pages) is only safe for mock or prototype integrations.** For production use with real banking or financial data, you need a proper backend, HTTPS, and secure storage. This repo is prepared for future secure API integration but does not yet include it.
+- **GitHub Pages / public frontend is only safe for mock or prototype detection UX, not real bank integration.** For production use with real banking or financial data, you need a proper backend, HTTPS, and secure storage. This repo is prepared for future secure API integration but does not yet include it.
