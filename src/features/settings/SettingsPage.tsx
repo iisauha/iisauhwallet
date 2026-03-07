@@ -12,7 +12,7 @@ import {
   type PlaidAccountsResponse,
 } from '../../api/detectedActivityApi';
 
-const PLAID_UI_ENABLED = import.meta.env.DEV || (import.meta as any).env?.VITE_ENABLE_PLAID_UI === 'true';
+const PLAID_UI_ENABLED = import.meta.env.DEV;
 
 function downloadJsonFile(filename: string, text: string) {
   const blob = new Blob([text], { type: 'application/json' });

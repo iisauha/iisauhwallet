@@ -8,7 +8,6 @@ import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
 import { InvestingPage } from './features/investing/InvestingPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { PrivacyPage } from './features/privacy/PrivacyPage';
-import { DetectedActivityInbox, DetectedActivityButtonLabel } from './features/detected-activity/DetectedActivityInbox';
 import { DropdownStateProvider } from './state/DropdownStateContext';
 import { DetectedActivityProvider } from './state/DetectedActivityContext';
 
@@ -16,9 +15,6 @@ type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' 
 
 function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
-  const [detectedInboxOpen, setDetectedInboxOpen] = useState(false);
-  const detectedActivityEnabled =
-    import.meta.env.DEV || (import.meta as any).env?.VITE_ENABLE_PLAID_UI === 'true';
 
   const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;
@@ -32,41 +28,7 @@ function MainApp() {
 
   return (
     <>
-      <div style={{ position: 'relative', minHeight: '100%' }}>
-        {detectedActivityEnabled ? (
-          <div
-            style={{
-              padding: '8px 12px',
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
-              alignItems: 'center',
-              gap: 8,
-              borderBottom: '1px solid var(--border)',
-              minHeight: 0,
-            }}
-          >
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.85rem', padding: '6px 12px', flexShrink: 0 }}
-              onClick={() => setDetectedInboxOpen(true)}
-            >
-              <DetectedActivityButtonLabel />
-            </button>
-          </div>
-        ) : null}
-        {content}
-        {detectedActivityEnabled && detectedInboxOpen ? (
-          <DetectedActivityInbox
-            onClose={() => setDetectedInboxOpen(false)}
-            onLaunchFlow={(_, targetTab) => {
-              setTab(targetTab);
-              setDetectedInboxOpen(false);
-            }}
-          />
-        ) : null}
-      </div>
+      <div style={{ position: 'relative', minHeight: '100%' }}>{content}</div>
       <nav className="tabs" aria-label="Sections">
         <button type="button" className={tab === 'snapshot' ? 'tab active' : 'tab'} onClick={() => setTab('snapshot')}>
           Snapshot
