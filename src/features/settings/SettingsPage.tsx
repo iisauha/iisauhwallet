@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLedgerStore } from '../../state/store';
 import { exportJSON, importJSON, loadCategoryConfig, saveCategoryConfig } from '../../state/storage';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
@@ -22,7 +23,14 @@ export function SettingsPage() {
 
   return (
     <div className="tab-panel active" id="settingsContent">
-      <p className="section-title">Backup</p>
+      <p className="section-title">Privacy</p>
+      <div className="settings-section">
+        <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+          Privacy Policy
+        </Link>
+      </div>
+
+      <p className="section-title" style={{ marginTop: 24 }}>Backup</p>
       <div className="settings-section">
         <button
           type="button"
