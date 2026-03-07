@@ -7,6 +7,14 @@ import { DETECTED_ACTIVITY_KEY } from './keys';
 
 export type DetectedActivityStatus = 'new' | 'in_progress' | 'resolved' | 'ignored';
 
+/** Suggested action for UX only; user still chooses manually. */
+export type DetectedSuggestedAction =
+  | 'add_purchase'
+  | 'pending_in'
+  | 'pending_out'
+  | 'transfer'
+  | 'review_manually';
+
 export type DetectedActivityItem = {
   id: string;
   title: string;
@@ -16,6 +24,10 @@ export type DetectedActivityItem = {
   accountType: string;
   pending: boolean;
   status: DetectedActivityStatus;
+  /** Best-effort suggestion; no auto-resolve. */
+  suggestedAction?: DetectedSuggestedAction;
+  /** If set, this item is part of a likely transfer pair with the given id. */
+  possibleTransferMatchId?: string;
 };
 
 function uid(): string {

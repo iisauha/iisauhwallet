@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { formatCents } from '../../state/calc';
 import { useDetectedActivity } from '../../state/DetectedActivityContext';
-import { getActiveDetectedCount } from '../../state/detectedActivity';
-import type { DetectedActivityItem } from '../../state/detectedActivity';
+import { getActiveDetectedCount, type DetectedActivityItem, type DetectedSuggestedAction } from '../../state/detectedActivity';
 import type { LaunchFlowType } from '../../state/DetectedActivityContext';
 import {
   hasApiBase,
@@ -30,7 +29,35 @@ function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
     accountType: a.accountType,
     pending: a.pending,
     status: (a.status as DetectedActivityItem['status']) || 'new',
+    suggestedAction: a.suggestedAction as DetectedSuggestedAction | undefined,
+    possibleTransferMatchId: a.possibleTransferMatchId,
   };
+}
+
+/** Best-effort suggestion for local/mock items when API did not provide one. */
+function computeSuggestedActionForItem(item: DetectedActivityItem): DetectedSuggestedAction {
+  const title = (item.title || '').toLowerCase();
+  const accountType = (item.accountType || '').toLowerCase();
+  const isInbound = (item.amountCents || 0) > 0;
+  const incoming = ['venmo', 'zelle', 'paypal', 'ach', 'transfer', 'deposit'].some((k) => title.includes(k));
+  const outgoing = ['ach', 'transfer', 'payment', 'withdrawal'].some((k) => title.includes(k));
+  const isCredit = accountType.includes('credit');
+  const isBank = accountType.includes('depository') || accountType.includes('checking') || accountType.includes('savings') || accountType === 'bank';
+  if (isCredit) return 'add_purchase';
+  if (isInbound && incoming) return 'pending_in';
+  if (!isInbound && isBank && outgoing) return 'pending_out';
+  return 'review_manually';
+}
+
+function getSuggestedActionLabel(action: DetectedSuggestedAction): string {
+  switch (action) {
+    case 'add_purchase': return 'Add purchase';
+    case 'pending_in': return 'Pending inbound';
+    case 'pending_out': return 'Pending outbound';
+    case 'transfer': return 'Transfer between cash and investing';
+    case 'review_manually': return 'Review manually';
+    default: return 'Review manually';
+  }
 }
 
 export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
@@ -175,6 +202,9 @@ function DetectedCard({
   onAction: (item: DetectedActivityItem, flow: LaunchFlowType) => void;
   onIgnore: () => void;
 }) {
+  const suggestedAction = item.suggestedAction ?? computeSuggestedActionForItem(item);
+  const suggestedLabel = getSuggestedActionLabel(suggestedAction);
+  const showTransferMatch = !!item.possibleTransferMatchId;
   return (
     <div
       className="card"
@@ -194,6 +224,12 @@ function DetectedCard({
       <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>
         {item.accountName} · {item.accountType.replace('_', ' ')} · {item.dateISO}
         {item.pending ? ' · Pending' : ' · Posted'}
+      </div>
+      <div style={{ fontSize: '0.8rem', marginBottom: 8 }}>
+        <span style={{ color: 'var(--accent)', fontWeight: 500 }}>Suggested: {suggestedLabel}</span>
+        {showTransferMatch && (
+          <span style={{ marginLeft: 8, color: 'var(--muted)', fontStyle: 'italic' }}>· Possible transfer match</span>
+        )}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         <button

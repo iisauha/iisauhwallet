@@ -290,10 +290,80 @@ app.post('/api/plaid/webhook', (req, res) => {
   });
 });
 
+// --- Suggested action and transfer-pair (UX only; no auto-posting) ---
+function computeSuggestedAction(item) {
+  const title = (item.title || '').toLowerCase();
+  const accountType = (item.accountType || '').toLowerCase();
+  const amountCents = item.amountCents ?? 0;
+  const isInbound = amountCents > 0;
+
+  const incomingKeywords = ['venmo', 'zelle', 'paypal', 'ach credit', 'transfer in', 'deposit', 'direct dep'];
+  const outgoingKeywords = ['ach', 'transfer out', 'payment', 'withdrawal', 'wire'];
+  const hasIncoming = incomingKeywords.some((k) => title.includes(k));
+  const hasOutgoing = outgoingKeywords.some((k) => title.includes(k));
+
+  const isCredit = accountType.includes('credit');
+  const isBank = accountType.includes('depository') || accountType.includes('checking') || accountType.includes('savings') || accountType === 'bank';
+
+  if (isCredit) return 'add_purchase';
+  if (isInbound && (hasIncoming || title.includes('transfer'))) return 'pending_in';
+  if (!isInbound && isBank && (hasOutgoing || title.includes('transfer'))) return 'pending_out';
+  return 'review_manually';
+}
+
+function findTransferPairs(items) {
+  const active = items.filter((i) => (i.status === 'new' || i.status === 'in_progress') && i.source === 'plaid');
+  const pairs = new Map();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const amountTolerance = 5;
+
+  for (let i = 0; i < active.length; i++) {
+    if (pairs.has(active[i].id)) continue;
+    const a = active[i];
+    const aAmount = Math.abs(a.amountCents || 0);
+    const aDate = a.dateISO ? new Date(a.dateISO).getTime() : 0;
+    const aType = (a.accountType || '').toLowerCase();
+    const aTitle = (a.title || '').toLowerCase();
+    const aIsBank = aType.includes('depository') || aType.includes('checking') || aType.includes('savings') || aType === 'bank';
+    const aIsInvest = aType.includes('investment') || aType.includes('brokerage');
+
+    for (let j = i + 1; j < active.length; j++) {
+      if (pairs.has(active[j].id)) continue;
+      const b = active[j];
+      if (a.id === b.id) continue;
+      const oppositeSign = (a.amountCents || 0) * (b.amountCents || 0) < 0;
+      if (!oppositeSign) continue;
+      if (Math.abs(aAmount - Math.abs(b.amountCents || 0)) > amountTolerance) continue;
+      const bDate = b.dateISO ? new Date(b.dateISO).getTime() : 0;
+      if (aDate && bDate && Math.abs(aDate - bDate) > 5 * dayMs) continue;
+      const bType = (b.accountType || '').toLowerCase();
+      const bIsBank = bType.includes('depository') || bType.includes('checking') || bType.includes('savings') || bType === 'bank';
+      const bIsInvest = bType.includes('investment') || bType.includes('brokerage');
+      const transferLike = aTitle.includes('transfer') || (b.title || '').toLowerCase().includes('transfer') || aTitle.includes('ach') || (b.title || '').toLowerCase().includes('ach');
+      if ((aIsBank && bIsInvest) || (aIsInvest && bIsBank) || (aIsBank && bIsBank && transferLike)) {
+        pairs.set(a.id, b.id);
+        pairs.set(b.id, a.id);
+        break;
+      }
+    }
+  }
+  return pairs;
+}
+
+function enrichWithSuggestions(items) {
+  const pairs = findTransferPairs(items);
+  return items.map((item) => {
+    const suggested = pairs.has(item.id) ? 'transfer' : computeSuggestedAction(item);
+    const possibleTransferMatchId = pairs.get(item.id) || undefined;
+    return { ...item, suggestedAction: suggested, possibleTransferMatchId };
+  });
+}
+
 // GET /api/detected-activity
 app.get('/api/detected-activity', (req, res) => {
   const items = getDetectedItems();
-  return res.json({ items });
+  const enriched = enrichWithSuggestions(items);
+  return res.json({ items: enriched });
 });
 
 // POST /api/detected-activity/:id/ignore
