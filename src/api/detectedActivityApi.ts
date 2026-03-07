@@ -23,6 +23,20 @@ export type DetectedActivityItemFromApi = {
   sourceEnvironment?: 'sandbox' | 'production';
   sourceMode?: 'sandbox' | 'real_pilot';
   detectedAt?: string;
+  suggestedFromRule?: boolean;
+};
+
+export type DetectedActivityRule = {
+  id: string;
+  enabled: boolean;
+  matchType: string;
+  matchValue: string;
+  accountName?: string;
+  direction?: 'inflow' | 'outflow' | 'any';
+  actionSuggestion: string;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export function hasApiBase(): boolean {
@@ -111,4 +125,49 @@ export async function syncAndGetDetectedActivity(): Promise<DetectedActivityItem
   await syncTransactions();
   const { items } = await getDetectedActivity();
   return items;
+}
+
+// --- Detected activity rules ---
+export async function getDetectedActivityRules(): Promise<{ rules: DetectedActivityRule[] }> {
+  const res = await fetchApi('/api/detected-activity/rules');
+  if (!res.ok) throw new Error('Failed to load rules');
+  return res.json();
+}
+
+export async function createDetectedActivityRule(rule: {
+  matchType: string;
+  matchValue: string;
+  accountName?: string;
+  direction?: 'inflow' | 'outflow' | 'any';
+  actionSuggestion: string;
+  priority?: number;
+}): Promise<{ rule: DetectedActivityRule }> {
+  const res = await fetchApi('/api/detected-activity/rules', {
+    method: 'POST',
+    body: JSON.stringify(rule),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Failed to create rule');
+  }
+  return res.json();
+}
+
+export async function updateDetectedActivityRule(
+  id: string,
+  patch: { enabled?: boolean; matchType?: string; matchValue?: string; accountName?: string; direction?: string; actionSuggestion?: string; priority?: number }
+): Promise<{ rule: DetectedActivityRule }> {
+  const res = await fetchApi(`/api/detected-activity/rules/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error('Failed to update rule');
+  return res.json();
+}
+
+export async function deleteDetectedActivityRule(id: string): Promise<void> {
+  const res = await fetchApi(`/api/detected-activity/rules/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete rule');
 }

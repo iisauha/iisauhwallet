@@ -13,7 +13,8 @@ export type DetectedSuggestedAction =
   | 'pending_in'
   | 'pending_out'
   | 'transfer'
-  | 'review_manually';
+  | 'review_manually'
+  | 'suggest_ignore';
 
 /** Sandbox vs real pilot; used to keep items separate in UI. */
 export type DetectedSourceMode = 'sandbox' | 'real_pilot';
@@ -39,6 +40,8 @@ export type DetectedActivityItem = {
   sourceMode?: DetectedSourceMode;
   /** When this item was first detected (real pilot debug). */
   detectedAt?: string;
+  /** True when suggestedAction came from a saved rule. */
+  suggestedFromRule?: boolean;
 };
 
 function uid(): string {

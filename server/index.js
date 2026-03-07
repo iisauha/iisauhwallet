@@ -22,6 +22,7 @@ const PLAID_ENV = (process.env.PLAID_ENV || 'sandbox').toLowerCase();
 const STORE_DIR = path.join(__dirname, '.store');
 const ACCESS_TOKENS_FILE = path.join(STORE_DIR, 'access_tokens.json');
 const DETECTED_FILE = path.join(STORE_DIR, 'detected_activity.json');
+const RULES_FILE = path.join(STORE_DIR, 'detected_activity_rules.json');
 
 function ensureStore() {
   if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
@@ -75,6 +76,54 @@ function getDetectedItems() {
 
 function setDetectedItems(items) {
   writeJson(DETECTED_FILE, items);
+}
+
+// --- Detected activity rules (suggestions only; no auto-posting) ---
+const RULE_MATCH_TYPES = ['merchant_exact', 'merchant_contains', 'description_contains', 'account_description_contains', 'account_merchant'];
+const RULE_ACTIONS = ['add_purchase', 'pending_in', 'pending_out', 'transfer', 'review_manually', 'suggest_ignore'];
+
+function getRules() {
+  const raw = readJson(RULES_FILE, []);
+  if (!Array.isArray(raw)) return [];
+  return raw;
+}
+
+function setRules(rules) {
+  writeJson(RULES_FILE, rules);
+}
+
+function ruleMatchesItem(rule, item) {
+  if (!rule.enabled) return false;
+  const title = (item.title || '').toLowerCase();
+  const accountName = (item.accountName || '').toLowerCase();
+  const value = (rule.matchValue || '').toLowerCase().trim();
+  if (!value) return false;
+  const direction = (item.amountCents ?? 0) >= 0 ? 'inflow' : 'outflow';
+  if (rule.direction && rule.direction !== 'any' && rule.direction !== direction) return false;
+  if (rule.accountName) {
+    const ruleAccount = (rule.accountName || '').toLowerCase();
+    if (ruleAccount && !accountName.includes(ruleAccount)) return false;
+  }
+  switch (rule.matchType) {
+    case 'merchant_exact':
+      return title === value;
+    case 'merchant_contains':
+      return title.includes(value);
+    case 'description_contains':
+      return title.includes(value);
+    case 'account_description_contains':
+      return (rule.accountName ? accountName.includes((rule.accountName || '').toLowerCase()) : true) && title.includes(value);
+    case 'account_merchant':
+      return accountName.includes((rule.accountName || '').toLowerCase()) && title.includes(value);
+    default:
+      return title.includes(value);
+  }
+}
+
+function findMatchingRule(rules, item) {
+  const enabled = rules.filter((r) => r.enabled);
+  const sorted = [...enabled].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  return sorted.find((r) => ruleMatchesItem(r, item)) || null;
 }
 
 function normalizePlaidTransaction(tx, accountName, accountType, existingItem = null, environment = 'sandbox') {
@@ -402,11 +451,22 @@ function findTransferPairs(items) {
 }
 
 function enrichWithSuggestions(items) {
+  const rules = getRules();
   const pairs = findTransferPairs(items);
   return items.map((item) => {
-    const suggested = pairs.has(item.id) ? 'transfer' : computeSuggestedAction(item);
+    const matchedRule = findMatchingRule(rules, item);
+    let suggested;
+    let suggestedFromRule = false;
+    if (matchedRule && matchedRule.actionSuggestion) {
+      suggested = matchedRule.actionSuggestion;
+      suggestedFromRule = true;
+    } else if (pairs.has(item.id)) {
+      suggested = 'transfer';
+    } else {
+      suggested = computeSuggestedAction(item);
+    }
     const possibleTransferMatchId = pairs.get(item.id) || undefined;
-    return { ...item, suggestedAction: suggested, possibleTransferMatchId };
+    return { ...item, suggestedAction: suggested, suggestedFromRule: suggestedFromRule || undefined, possibleTransferMatchId };
   });
 }
 
@@ -448,6 +508,77 @@ app.post('/api/detected-activity/:id/reset', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
   items[idx] = { ...items[idx], status: 'new', resolvedAs: undefined };
   setDetectedItems(items);
+  return res.json({ ok: true });
+});
+
+// --- Detected activity rules (suggestions only) ---
+// GET /api/detected-activity/rules
+app.get('/api/detected-activity/rules', (req, res) => {
+  const rules = getRules();
+  return res.json({ rules });
+});
+
+// POST /api/detected-activity/rules
+app.post('/api/detected-activity/rules', (req, res) => {
+  const body = req.body || {};
+  const { matchType, matchValue, accountName, direction, actionSuggestion } = body;
+  if (!matchType || !matchValue || !actionSuggestion) {
+    return res.status(400).json({ error: 'matchType, matchValue, and actionSuggestion required' });
+  }
+  if (!RULE_MATCH_TYPES.includes(matchType)) {
+    return res.status(400).json({ error: 'Invalid matchType' });
+  }
+  if (!RULE_ACTIONS.includes(actionSuggestion)) {
+    return res.status(400).json({ error: 'Invalid actionSuggestion' });
+  }
+  const rules = getRules();
+  const id = `rule_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const now = new Date().toISOString();
+  const rule = {
+    id,
+    enabled: true,
+    matchType,
+    matchValue: String(matchValue).trim().slice(0, 200),
+    accountName: accountName != null ? String(accountName).trim().slice(0, 100) : undefined,
+    direction: direction && ['inflow', 'outflow', 'any'].includes(direction) ? direction : 'any',
+    actionSuggestion,
+    priority: Number.isFinite(body.priority) ? body.priority : 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  rules.push(rule);
+  setRules(rules);
+  return res.status(201).json({ rule });
+});
+
+// PATCH /api/detected-activity/rules/:id
+app.patch('/api/detected-activity/rules/:id', (req, res) => {
+  const { id } = req.params;
+  const body = req.body || {};
+  const rules = getRules();
+  const idx = rules.findIndex((r) => r.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  const r = rules[idx];
+  if (body.enabled !== undefined) r.enabled = !!body.enabled;
+  if (body.matchType && RULE_MATCH_TYPES.includes(body.matchType)) r.matchType = body.matchType;
+  if (body.matchValue !== undefined) r.matchValue = String(body.matchValue).trim().slice(0, 200);
+  if (body.accountName !== undefined) r.accountName = body.accountName ? String(body.accountName).trim().slice(0, 100) : undefined;
+  if (body.direction !== undefined) r.direction = ['inflow', 'outflow', 'any'].includes(body.direction) ? body.direction : 'any';
+  if (body.actionSuggestion && RULE_ACTIONS.includes(body.actionSuggestion)) r.actionSuggestion = body.actionSuggestion;
+  if (body.priority !== undefined && Number.isFinite(body.priority)) r.priority = body.priority;
+  r.updatedAt = new Date().toISOString();
+  setRules(rules);
+  return res.json({ rule: r });
+});
+
+// DELETE /api/detected-activity/rules/:id
+app.delete('/api/detected-activity/rules/:id', (req, res) => {
+  const { id } = req.params;
+  const rules = getRules();
+  const idx = rules.findIndex((r) => r.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  rules.splice(idx, 1);
+  setRules(rules);
   return res.json({ ok: true });
 });
 

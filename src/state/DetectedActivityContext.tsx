@@ -53,6 +53,7 @@ function apiItemToDetected(a: {
   suggestedAction?: string;
   possibleTransferMatchId?: string;
   updatedFromPending?: boolean;
+  suggestedFromRule?: boolean;
 }): DetectedActivityItem {
   return {
     id: a.id,
@@ -66,6 +67,7 @@ function apiItemToDetected(a: {
     suggestedAction: a.suggestedAction as DetectedActivityItem['suggestedAction'],
     possibleTransferMatchId: a.possibleTransferMatchId,
     updatedFromPending: a.updatedFromPending,
+    suggestedFromRule: a.suggestedFromRule,
   };
 }
 
