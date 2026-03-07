@@ -24,6 +24,7 @@ const ACCESS_TOKENS_FILE = path.join(STORE_DIR, 'access_tokens.json');
 const DETECTED_FILE = path.join(STORE_DIR, 'detected_activity.json');
 const RULES_FILE = path.join(STORE_DIR, 'detected_activity_rules.json');
 const SYNC_STATE_FILE = path.join(STORE_DIR, 'plaid_sync_state.json');
+const PILOT_STATUS_FILE = path.join(STORE_DIR, 'plaid_pilot_status.json');
 
 const MIN_SYNC_INTERVAL_MS = 20 * 1000; // 20 seconds between syncs per item
 const SYNC_LOCK_EXPIRY_MS = 5 * 60 * 1000; // 5 min max lock
@@ -462,6 +463,16 @@ async function refreshDetectedActivityFromPlaid(itemIds = [], options = {}) {
     }
     const result = await refreshDetectedActivityFromPlaidCore(toRefresh.length ? toRefresh : []);
     console.log('[plaid sync] sync completed', 'added:', result.added, 'modified:', result.modified, 'removed:', result.removed, 'duplicates_prevented:', result.duplicatesPrevented);
+    const nowIso = new Date().toISOString();
+    try {
+      const pilot = readJson(PILOT_STATUS_FILE, {});
+      if (fromWebhook) {
+        pilot.lastWebhookSyncAt = nowIso;
+      } else {
+        pilot.lastManualSyncAt = nowIso;
+      }
+      writeJson(PILOT_STATUS_FILE, pilot);
+    } catch (_) {}
     return { skipped: false };
   } catch (err) {
     console.error('[plaid sync] sync failed', err.message);
@@ -890,6 +901,84 @@ app.delete('/api/detected-activity/rules/:id', (req, res) => {
   rules.splice(idx, 1);
   setRules(rules);
   return res.json({ ok: true });
+});
+
+// --- Plaid pilot diagnostics and recovery (queue only; no ledger changes) ---
+function getPilotStatusData() {
+  const pilot = readJson(PILOT_STATUS_FILE, {});
+  const items = getDetectedItems();
+  const plaidItems = items.filter((i) => i.source === 'plaid');
+  const sandbox = plaidItems.filter((i) => (i.sourceMode || i.sourceEnvironment || 'sandbox') === 'sandbox');
+  const realPilot = plaidItems.filter((i) => (i.sourceMode || i.sourceEnvironment) === 'real_pilot');
+  const count = (arr, status) => arr.filter((i) => i.status === status).length;
+  const newCount = (arr) => count(arr, 'new') + count(arr, 'in_progress');
+  return {
+    plaidMode: (PLAID_ENV || 'sandbox').toLowerCase() === 'production' ? 'production' : 'sandbox',
+    lastManualSyncAt: pilot.lastManualSyncAt || null,
+    lastWebhookSyncAt: pilot.lastWebhookSyncAt || null,
+    counts: {
+      new: newCount(plaidItems),
+      ignored: count(plaidItems, 'ignored'),
+      resolved: count(plaidItems, 'resolved'),
+    },
+    bySource: {
+      sandbox: { new: newCount(sandbox), ignored: count(sandbox, 'ignored'), resolved: count(sandbox, 'resolved') },
+      real_pilot: { new: newCount(realPilot), ignored: count(realPilot, 'ignored'), resolved: count(realPilot, 'resolved') },
+    },
+  };
+}
+
+app.get('/api/plaid/pilot-status', (req, res) => {
+  try {
+    return res.json(getPilotStatusData());
+  } catch (e) {
+    return res.status(500).json({ error: e.message || 'Failed to get pilot status' });
+  }
+});
+
+app.post('/api/plaid/pilot/clear-sandbox-detected', (req, res) => {
+  try {
+    const items = getDetectedItems();
+    const next = items.filter((i) => i.source !== 'plaid' || ((i.sourceMode || i.sourceEnvironment || 'sandbox') !== 'sandbox'));
+    setDetectedItems(next);
+    return res.json({ ok: true, removed: items.length - next.length });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || 'Failed to clear sandbox detected items' });
+  }
+});
+
+app.post('/api/plaid/pilot/clear-resolved-sandbox', (req, res) => {
+  try {
+    const items = getDetectedItems();
+    const next = items.filter(
+      (i) =>
+        !(i.source === 'plaid' && (i.sourceMode || i.sourceEnvironment || 'sandbox') === 'sandbox' && i.status === 'resolved')
+    );
+    setDetectedItems(next);
+    return res.json({ ok: true, removed: items.length - next.length });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || 'Failed to clear resolved sandbox items' });
+  }
+});
+
+app.post('/api/plaid/pilot/resync', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const itemId = body.itemId && typeof body.itemId === 'string' ? body.itemId.trim() : null;
+    await refreshDetectedActivityFromPlaid(itemId ? [itemId] : [], { fromWebhook: false });
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || 'Resync failed' });
+  }
+});
+
+app.post('/api/plaid/pilot/rebuild-queue', async (req, res) => {
+  try {
+    await refreshDetectedActivityFromPlaid([], { fromWebhook: false });
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || 'Rebuild failed' });
+  }
 });
 
 // Health (no Plaid creds required)

@@ -12,12 +12,19 @@ import {
   getDetectedActivity,
   syncAndGetDetectedActivity,
   getPlaidMode,
+  getPilotStatus,
+  pilotClearSandboxDetected,
+  pilotClearResolvedSandbox,
+  pilotResync,
+  pilotRebuildQueue,
+  resetDetectedItem,
   createDetectedActivityRule,
   getDetectedActivityRules,
   updateDetectedActivityRule,
   deleteDetectedActivityRule,
   type DetectedActivityItemFromApi,
   type PlaidMode,
+  type PilotStatus,
   type DetectedActivityRule,
 } from '../../api/detectedActivityApi';
 
@@ -31,6 +38,7 @@ type Props = {
 function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
   return {
     id: a.id,
+    plaidTransactionId: a.plaidTransactionId,
     title: a.title,
     amountCents: a.amountCents,
     dateISO: a.dateISO,
@@ -129,13 +137,30 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   const [rememberSaving, setRememberSaving] = useState(false);
   const [linkToPurchaseForItem, setLinkToPurchaseForItem] = useState<DetectedActivityItem | null>(null);
   const [detailsItem, setDetailsItem] = useState<DetectedActivityItem | null>(null);
+  const [pilotStatus, setPilotStatus] = useState<PilotStatus | null>(null);
+  const [pilotMaintenanceBusy, setPilotMaintenanceBusy] = useState(false);
+  const [pilotMaintenanceError, setPilotMaintenanceError] = useState<string | null>(null);
   const apiConfigured = hasApiBase();
   const data = useLedgerStore((s) => s.data);
+
+  const loadPilotStatus = useCallback(async () => {
+    if (!apiConfigured) return;
+    try {
+      const status = await getPilotStatus();
+      setPilotStatus(status);
+    } catch (_) {
+      setPilotStatus(null);
+    }
+  }, [apiConfigured]);
 
   React.useEffect(() => {
     if (!apiConfigured) return;
     getPlaidMode().then(setPlaidMode).catch(() => setPlaidMode('sandbox'));
   }, [apiConfigured]);
+
+  React.useEffect(() => {
+    loadPilotStatus();
+  }, [loadPilotStatus, syncStatus, refreshStatus]);
 
   const bySourceView = (list: DetectedActivityItem[]) => {
     if (sourceView === 'all') return list;
@@ -243,6 +268,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
       setBackendItems(list.map(toDetectedItem));
       setSyncStatus('ok');
       setSyncMessage(`Loaded ${list.length} item(s) from Plaid sandbox.`);
+      await loadPilotStatus();
     } catch (e) {
       setSyncStatus('error');
       setSyncMessage(e instanceof Error ? e.message : 'Sync failed');
@@ -255,6 +281,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
       const { items: list } = await getDetectedActivity();
       setBackendItems(list.map(toDetectedItem));
       setRefreshStatus('ok');
+      await loadPilotStatus();
     } catch (_) {
       setRefreshStatus('idle');
     }
@@ -275,11 +302,39 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
         </div>
         {apiConfigured ? (
           <div style={{ marginBottom: 16 }}>
-            {plaidMode != null && (
+            {pilotStatus ? (
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: 10,
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  fontSize: '0.8rem',
+                  color: 'var(--muted)',
+                }}
+              >
+                <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Pilot status</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px' }}>
+                  <span>Mode: {pilotStatus.plaidMode === 'production' ? 'Real Pilot' : 'Sandbox'}</span>
+                  <span>Last manual sync: {pilotStatus.lastManualSyncAt ? new Date(pilotStatus.lastManualSyncAt).toLocaleString() : '—'}</span>
+                  <span>Last webhook sync: {pilotStatus.lastWebhookSyncAt ? new Date(pilotStatus.lastWebhookSyncAt).toLocaleString() : '—'}</span>
+                </div>
+                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: '12px 16px' }}>
+                  <span>New: {pilotStatus.counts.new}</span>
+                  <span>Ignored: {pilotStatus.counts.ignored}</span>
+                  <span>Resolved: {pilotStatus.counts.resolved}</span>
+                </div>
+                <div style={{ marginTop: 6, display: 'flex', gap: 12 }}>
+                  <span>Sandbox — new: {pilotStatus.bySource.sandbox.new}, ignored: {pilotStatus.bySource.sandbox.ignored}, resolved: {pilotStatus.bySource.sandbox.resolved}</span>
+                  <span>Real pilot — new: {pilotStatus.bySource.real_pilot.new}, ignored: {pilotStatus.bySource.real_pilot.ignored}, resolved: {pilotStatus.bySource.real_pilot.resolved}</span>
+                </div>
+              </div>
+            ) : plaidMode != null ? (
               <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0', fontWeight: 500 }}>
                 Plaid Mode: {plaidMode === 'production' ? 'Real Pilot' : 'Sandbox'}
               </p>
-            )}
+            ) : null}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={handleConnectPlaid}>
                 {plaidMode === 'production' ? 'Connect Plaid (1 real account)' : 'Connect Plaid Sandbox'}
@@ -310,6 +365,16 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                 {syncMessage}
               </p>
             ) : null}
+
+            <PilotMaintenance
+              pilotMaintenanceBusy={pilotMaintenanceBusy}
+              pilotMaintenanceError={pilotMaintenanceError}
+              setPilotMaintenanceBusy={setPilotMaintenanceBusy}
+              setPilotMaintenanceError={setPilotMaintenanceError}
+              loadPilotStatus={loadPilotStatus}
+              setBackendItems={setBackendItems}
+              toDetectedItem={toDetectedItem}
+            />
           </div>
         ) : null}
         {apiConfigured && (sandboxCount > 0 || realPilotCount > 0) ? (
@@ -427,7 +492,12 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
         </div>
       ) : null}
       {detailsItem ? (
-        <DetailsModal item={detailsItem} onClose={() => setDetailsItem(null)} />
+        <DetailsModal
+          item={detailsItem}
+          onClose={() => setDetailsItem(null)}
+          onReopen={detailsItem.id.startsWith('plaid_') ? () => { markReopened(detailsItem.id); setDetailsItem(null); loadPilotStatus(); } : undefined}
+          onRerunSuggestion={detailsItem.id.startsWith('plaid_') ? async () => { await resetDetectedItem(detailsItem.id); const { items: list } = await getDetectedActivity(); setBackendItems(list.map(toDetectedItem)); loadPilotStatus(); } : undefined}
+        />
       ) : null}
       {linkToPurchaseForItem ? (
         <LinkToPurchaseModal
@@ -552,11 +622,97 @@ function suggestionSourceLabel(source?: string): string {
   }
 }
 
-function DetailsModal({ item, onClose }: { item: DetectedActivityItem; onClose: () => void }) {
+function PilotMaintenance({
+  pilotMaintenanceBusy,
+  pilotMaintenanceError,
+  setPilotMaintenanceBusy,
+  setPilotMaintenanceError,
+  loadPilotStatus,
+  setBackendItems,
+  toDetectedItem,
+}: {
+  pilotMaintenanceBusy: boolean;
+  pilotMaintenanceError: string | null;
+  setPilotMaintenanceBusy: (v: boolean) => void;
+  setPilotMaintenanceError: (v: string | null) => void;
+  loadPilotStatus: () => Promise<void>;
+  setBackendItems: (updater: DetectedActivityItem[] | ((prev: DetectedActivityItem[]) => DetectedActivityItem[])) => void;
+  toDetectedItem: (a: DetectedActivityItemFromApi) => DetectedActivityItem;
+}) {
+  const refreshList = useCallback(async () => {
+    const { items: list } = await getDetectedActivity();
+    setBackendItems(list.map(toDetectedItem));
+    await loadPilotStatus();
+  }, [setBackendItems, toDetectedItem, loadPilotStatus]);
+
+  async function run(op: () => Promise<unknown>) {
+    setPilotMaintenanceError(null);
+    setPilotMaintenanceBusy(true);
+    try {
+      await op();
+      await refreshList();
+    } catch (e) {
+      setPilotMaintenanceError(e instanceof Error ? e.message : 'Action failed');
+    } finally {
+      setPilotMaintenanceBusy(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        padding: 10,
+        borderRadius: 8,
+        border: '1px solid var(--border)',
+        background: 'var(--bg)',
+        fontSize: '0.8rem',
+      }}
+    >
+      <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>Pilot maintenance (queue only)</div>
+      {pilotMaintenanceError ? <p style={{ color: 'var(--red)', margin: '0 0 8px 0' }}>{pilotMaintenanceError}</p> : null}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div>
+          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Sandbox</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} disabled={pilotMaintenanceBusy} onClick={() => run(() => pilotClearSandboxDetected())}>
+              Clear sandbox detected items
+            </button>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} disabled={pilotMaintenanceBusy} onClick={() => run(() => pilotClearResolvedSandbox())}>
+              Clear resolved sandbox items
+            </button>
+          </div>
+        </div>
+        <div>
+          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Real pilot</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} disabled={pilotMaintenanceBusy} onClick={() => run(() => pilotResync())}>
+              Re-sync (manual sync)
+            </button>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} disabled={pilotMaintenanceBusy} onClick={() => run(() => pilotRebuildQueue())}>
+              Rebuild queue from backend
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type DetailsModalProps = {
+  item: DetectedActivityItem;
+  onClose: () => void;
+  onReopen?: () => void;
+  onRerunSuggestion?: () => void | Promise<void>;
+};
+
+function DetailsModal({ item, onClose, onReopen, onRerunSuggestion }: DetailsModalProps) {
+  const [rerunBusy, setRerunBusy] = useState(false);
   const suggestedAction = item.suggestedAction ?? computeSuggestedActionForItem(item);
   const suggestedLabel = getSuggestedActionLabel(suggestedAction);
   const firstSeen = item.firstSeenAt || item.detectedAt;
   const lastUpdated = item.lastUpdatedAt;
+  const isPlaidItem = item.id.startsWith('plaid_');
 
   return (
     <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, position: 'relative', zIndex: 10 }}>
@@ -623,6 +779,53 @@ function DetailsModal({ item, onClose }: { item: DetectedActivityItem; onClose: 
           <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Resolved as</div>
           <div style={{ fontSize: '0.85rem' }}>{getSuggestedActionLabel(item.resolvedAs as DetectedSuggestedAction) || item.resolvedAs}</div>
           {item.resolvedAt ? <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>{new Date(item.resolvedAt).toLocaleString()}</div> : null}
+        </section>
+      ) : null}
+
+      <section style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>Debug (pilot)</div>
+        <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div>Plaid transaction id: {item.plaidTransactionId || (item.id.startsWith('plaid_') ? item.id : '—')}</div>
+          <div>Account: {item.accountName}</div>
+          <div>Pending / Posted: {item.pending ? 'Pending' : 'Posted'}</div>
+          <div>First seen: {firstSeen ? new Date(firstSeen).toLocaleString() : '—'}</div>
+          <div>Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : '—'}</div>
+          <div>Suggestion source: {suggestionSourceLabel(item.suggestionSource)}</div>
+          <div>Status: {item.status}</div>
+          {item.resolvedAs ? <div>Resolved as: {item.resolvedAs}</div> : null}
+          {item.linkedPurchaseId ? <div>Linked item id: {item.linkedPurchaseId}</div> : null}
+        </div>
+      </section>
+
+      {isPlaidItem && (onReopen || onRerunSuggestion) ? (
+        <section style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>Recovery (queue only)</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {onReopen ? (
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => { onReopen(); onClose(); }}>
+                Reopen (move back to New)
+              </button>
+            ) : null}
+            {onRerunSuggestion ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem' }}
+                disabled={rerunBusy}
+                onClick={async () => {
+                  setRerunBusy(true);
+                  try {
+                    await onRerunSuggestion();
+                    onClose();
+                  } finally {
+                    setRerunBusy(false);
+                  }
+                }}
+              >
+                {rerunBusy ? 'Re-running…' : 'Re-run suggestion'}
+              </button>
+            ) : null}
+          </div>
         </section>
       ) : null}
     </div>

@@ -203,3 +203,58 @@ export async function deleteDetectedActivityRule(id: string): Promise<void> {
   });
   if (!res.ok) throw new Error('Failed to delete rule');
 }
+
+// --- Plaid pilot diagnostics and recovery (queue only; no ledger) ---
+export type PilotStatus = {
+  plaidMode: 'sandbox' | 'production';
+  lastManualSyncAt: string | null;
+  lastWebhookSyncAt: string | null;
+  counts: { new: number; ignored: number; resolved: number };
+  bySource: {
+    sandbox: { new: number; ignored: number; resolved: number };
+    real_pilot: { new: number; ignored: number; resolved: number };
+  };
+};
+
+export async function getPilotStatus(): Promise<PilotStatus> {
+  const res = await fetchApi('/api/plaid/pilot-status');
+  if (!res.ok) throw new Error('Failed to load pilot status');
+  return res.json();
+}
+
+export async function pilotClearSandboxDetected(): Promise<{ removed: number }> {
+  const res = await fetchApi('/api/plaid/pilot/clear-sandbox-detected', { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Failed to clear sandbox detected items');
+  }
+  return res.json();
+}
+
+export async function pilotClearResolvedSandbox(): Promise<{ removed: number }> {
+  const res = await fetchApi('/api/plaid/pilot/clear-resolved-sandbox', { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Failed to clear resolved sandbox items');
+  }
+  return res.json();
+}
+
+export async function pilotResync(itemId?: string): Promise<void> {
+  const res = await fetchApi('/api/plaid/pilot/resync', {
+    method: 'POST',
+    body: JSON.stringify(itemId != null ? { itemId } : {}),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Resync failed');
+  }
+}
+
+export async function pilotRebuildQueue(): Promise<void> {
+  const res = await fetchApi('/api/plaid/pilot/rebuild-queue', { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Rebuild failed');
+  }
+}

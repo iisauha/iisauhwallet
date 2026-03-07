@@ -21,6 +21,8 @@ export type DetectedSourceMode = 'sandbox' | 'real_pilot';
 
 export type DetectedActivityItem = {
   id: string;
+  /** Plaid transaction id (backend items only). */
+  plaidTransactionId?: string;
   title: string;
   amountCents: number;
   dateISO: string;
