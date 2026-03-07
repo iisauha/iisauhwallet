@@ -5,6 +5,8 @@ This repository contains a maintainable **Vite + React + TypeScript** version of
 - **Legacy single-file app** is preserved in `legacy/` for reference.
 - **Local data compatibility** is preserved: the React app uses the **same `localStorage` keys** as the legacy app (no key renames; no automatic wipes).
 
+**Developer note:** Plaid / banking integrations are not yet implemented in production-safe form. Future integration must use a backend; see `SECURITY_NOTES.md`.
+
 ## Run locally
 
 ```bash
