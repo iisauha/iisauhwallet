@@ -8,6 +8,8 @@
     <meta name="theme-color" content="#0b0b0f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- CSP: allow Plaid Link and reCAPTCHA (required for bank connection flow) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plaid.com https://www.google.com https://www.gstatic.com; connect-src 'self' https://cdn.plaid.com https://production.plaid.com https://sandbox.plaid.com https://development.plaid.com https://www.google.com https://www.gstatic.com https://recaptcha.google.com https://www.recaptcha.net http://localhost:* https://localhost:* wss://localhost:* blob:; frame-src 'self' https://cdn.plaid.com https://www.google.com https://www.recaptcha.net https://recaptcha.google.com blob:; img-src 'self' data: blob: https://www.gstatic.com https://www.google.com https://cdn.plaid.com; style-src 'self' 'unsafe-inline' https://www.gstatic.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://www.gstatic.com;" />
     <title>LedgerLite</title>
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js" defer></script>
   </head>
