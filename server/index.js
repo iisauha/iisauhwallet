@@ -41,6 +41,13 @@ function setSyncStateItem(itemId, data) {
   writeJson(SYNC_STATE_FILE, state);
 }
 
+function getCursorForItem(itemId) {
+  const state = getSyncState();
+  const item = state[itemId];
+  const c = item?.transactionsSyncCursor;
+  return c && typeof c === 'string' && c.length > 0 ? c : null;
+}
+
 function acquireSyncLock() {
   const now = Date.now();
   if (syncLock) {
@@ -259,8 +266,54 @@ function findExistingByAccountAmountDate(existing, accountName, amountCents, dat
 }
 
 /**
- * Core refresh: fetch from Plaid and merge into detected activity.
- * Preserves resolved/ignored; merges pending->posted; prevents duplicates.
+ * Process a single Plaid transaction (from sync added/modified) into detected activity.
+ * Returns the normalized item; caller merges into existing list and byPlaidId.
+ */
+function processOneTransaction(tx, accountById, existing, byPlaidId, environment, sourceMode) {
+  const acc = accountById.get(tx.account_id);
+  const accountName = acc?.name || 'Unknown';
+  const accountType = (acc?.type || 'other').replace(/-/g, '_');
+  const amountCents = Math.round(Math.abs((tx.amount || 0) * 100));
+  const isDebit = (tx.amount || 0) < 0;
+  const amount = isDebit ? -amountCents : amountCents;
+  const dateISO = (tx.date || '').slice(0, 10);
+  const name = tx.merchant_name || tx.name || tx.payment_channel || '';
+
+  let existingItem = byPlaidId.get(tx.transaction_id);
+  if (!existingItem && tx.pending_transaction_id) {
+    existingItem = byPlaidId.get(tx.pending_transaction_id) || null;
+    if (existingItem) byPlaidId.delete(tx.pending_transaction_id);
+  }
+  if (!existingItem && !tx.pending) {
+    const fallback = findMatchingDetectedItem(existing, amount, dateISO, name, accountName, sourceMode);
+    if (fallback) existingItem = fallback;
+  }
+  let duplicatePrevented = false;
+  if (!existingItem) {
+    const dup = findExistingByAccountAmountDate(existing, accountName, amount, dateISO, sourceMode);
+    if (dup) {
+      existingItem = dup;
+      duplicatePrevented = true;
+    }
+  }
+  const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined, environment);
+  if (existingItem) {
+    if (existingItem.plaidTransactionId && existingItem.plaidTransactionId !== tx.transaction_id) {
+      byPlaidId.delete(existingItem.plaidTransactionId);
+    }
+    const idx = existing.findIndex((i) => i.id === existingItem.id);
+    if (idx !== -1) existing[idx] = item;
+    byPlaidId.set(tx.transaction_id, item);
+  } else {
+    byPlaidId.set(tx.transaction_id, item);
+    existing.push(item);
+  }
+  return { duplicatePrevented };
+}
+
+/**
+ * Core refresh: cursor-based transactions/sync. Processes added, modified, removed.
+ * Preserves resolved/ignored; merges pending->posted; one source of truth.
  * Caller must hold sync lock and handle rate limit.
  */
 async function refreshDetectedActivityFromPlaidCore(itemIds = []) {
@@ -269,95 +322,105 @@ async function refreshDetectedActivityFromPlaidCore(itemIds = []) {
   const idsToRefresh = itemIds.length > 0
     ? list.filter((e) => itemIds.includes(e.itemId) && e.environment === env).map((e) => e.itemId)
     : list.filter((e) => e.environment === env).map((e) => e.itemId);
-  if (idsToRefresh.length === 0) return { processed: 0, duplicatesPrevented: 0 };
+  if (idsToRefresh.length === 0) return { added: 0, modified: 0, removed: 0, duplicatesPrevented: 0 };
 
   const client = getPlaidClient();
-  const now = new Date();
-  const endDate = now.toISOString().slice(0, 10);
-  const startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  let existing = getDetectedItems();
-  const byPlaidId = new Map(existing.filter((i) => i.plaidTransactionId).map((i) => [i.plaidTransactionId, i]));
-  let totalProcessed = 0;
-  let duplicatesPrevented = 0;
-
   const listById = new Map(list.map((e) => [e.itemId, e]));
+  let totalAdded = 0;
+  let totalModified = 0;
+  let totalRemoved = 0;
+  let totalDuplicatesPrevented = 0;
+
   for (const itemId of idsToRefresh) {
     const entry = listById.get(itemId);
     if (!entry || entry.environment !== env) continue;
     const { accessToken, environment } = entry;
-    let accounts = [];
+    const sourceMode = environment === 'sandbox' ? 'sandbox' : 'real_pilot';
+
+    let cursor = getCursorForItem(itemId);
+    let existing = getDetectedItems();
+    const byPlaidId = new Map(existing.filter((i) => i.plaidTransactionId).map((i) => [i.plaidTransactionId, i]));
+    let itemAdded = 0;
+    let itemModified = 0;
+    let itemRemoved = 0;
+    let itemDuplicates = 0;
+
+    console.log('[plaid sync] item', itemId.slice(0, 8) + '...', 'sync started', cursor ? '(incremental)' : '(initial)');
+
+    const accountById = new Map();
     try {
-      const acctRes = await client.accountsGet({ access_token: accessToken });
-      accounts = acctRes.data.accounts || [];
-    } catch (e) {
-      console.error('[plaid sync] accountsGet error', itemId.slice(0, 8) + '...', e.response?.data?.error_message || e.message);
-      continue;
-    }
-    const accountById = new Map(accounts.map((a) => [a.account_id, a]));
-    let transactions = [];
-    try {
-      const txRes = await client.transactionsGet({
-        access_token: accessToken,
-        start_date: startDate,
-        end_date: endDate,
-        options: { count: 500, offset: 0 },
+      for (;;) {
+        const request = { access_token: accessToken };
+        if (cursor) request.cursor = cursor;
+
+        const res = await client.transactionsSync(request);
+        for (const a of res.data.accounts || []) {
+          accountById.set(a.account_id, a);
+        }
+
+        for (const tx of res.data.added || []) {
+          const { duplicatePrevented } = processOneTransaction(tx, accountById, existing, byPlaidId, environment, sourceMode);
+          if (duplicatePrevented) itemDuplicates += 1;
+          itemAdded += 1;
+        }
+        for (const tx of res.data.modified || []) {
+          const existingItem = byPlaidId.get(tx.transaction_id) || (tx.pending_transaction_id ? byPlaidId.get(tx.pending_transaction_id) : null);
+          const acc = accountById.get(tx.account_id);
+          const accountName = acc?.name || 'Unknown';
+          const accountType = (acc?.type || 'other').replace(/-/g, '_');
+          const normalized = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined, environment);
+          if (existingItem) {
+            if (existingItem.plaidTransactionId && existingItem.plaidTransactionId !== tx.transaction_id) byPlaidId.delete(existingItem.plaidTransactionId);
+            const idx = existing.findIndex((i) => i.id === existingItem.id);
+            if (idx !== -1) existing[idx] = normalized;
+            byPlaidId.set(tx.transaction_id, normalized);
+          } else {
+            byPlaidId.set(tx.transaction_id, normalized);
+            existing.push(normalized);
+          }
+          itemModified += 1;
+        }
+        for (const r of res.data.removed || []) {
+          const tid = r.transaction_id;
+          const idx = existing.findIndex((i) => i.plaidTransactionId === tid);
+          if (idx !== -1) {
+            const item = existing[idx];
+            existing[idx] = {
+              ...item,
+              plaidRemoved: true,
+              ...(item.status === 'new' || item.status === 'in_progress' ? { status: 'removed' } : {}),
+            };
+            byPlaidId.delete(tid);
+            itemRemoved += 1;
+          }
+        }
+
+        cursor = res.data.next_cursor;
+        if (!res.data.has_more) break;
+      }
+
+      setDetectedItems(existing);
+      const nowIso = new Date().toISOString();
+      setSyncStateItem(itemId, {
+        transactionsSyncCursor: cursor,
+        lastSyncTime: nowIso,
+        lastTransactionFetchCount: itemAdded + itemModified + itemRemoved,
       });
-      transactions = txRes.data.transactions || [];
+
+      totalAdded += itemAdded;
+      totalModified += itemModified;
+      totalRemoved += itemRemoved;
+      totalDuplicatesPrevented += itemDuplicates;
+
+      console.log('[plaid sync] item', itemId.slice(0, 8) + '...', 'completed', 'added:', itemAdded, 'modified:', itemModified, 'removed:', itemRemoved, 'duplicates_prevented:', itemDuplicates, 'cursor advanced:', !!cursor);
     } catch (e) {
       if (e.response?.data?.error_code === 'PRODUCT_NOT_READY') continue;
-      console.error('[plaid sync] transactionsGet error', itemId.slice(0, 8) + '...', e.response?.data?.error_message || e.message);
-      continue;
+      console.error('[plaid sync] item', itemId.slice(0, 8) + '...', 'sync failed', e.response?.data?.error_message || e.message);
     }
-
-    const sourceMode = environment === 'sandbox' ? 'sandbox' : 'real_pilot';
-    for (const tx of transactions) {
-      const acc = accountById.get(tx.account_id);
-      const accountName = acc?.name || 'Unknown';
-      const accountType = (acc?.type || 'other').replace(/-/g, '_');
-      const amountCents = Math.round(Math.abs((tx.amount || 0) * 100));
-      const isDebit = (tx.amount || 0) < 0;
-      const amount = isDebit ? -amountCents : amountCents;
-      const dateISO = (tx.date || '').slice(0, 10);
-      const name = tx.merchant_name || tx.name || tx.payment_channel || '';
-
-      let existingItem = byPlaidId.get(tx.transaction_id);
-      if (!existingItem && tx.pending_transaction_id) {
-        existingItem = byPlaidId.get(tx.pending_transaction_id) || null;
-        if (existingItem) byPlaidId.delete(tx.pending_transaction_id);
-      }
-      if (!existingItem && !tx.pending) {
-        const fallback = findMatchingDetectedItem(existing, amount, dateISO, name, accountName, sourceMode);
-        if (fallback) existingItem = fallback;
-      }
-      if (!existingItem) {
-        const dup = findExistingByAccountAmountDate(existing, accountName, amount, dateISO, sourceMode);
-        if (dup) {
-          existingItem = dup;
-          duplicatesPrevented += 1;
-        }
-      }
-      const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined, environment);
-      if (existingItem) {
-        if (existingItem.plaidTransactionId && existingItem.plaidTransactionId !== tx.transaction_id) {
-          byPlaidId.delete(existingItem.plaidTransactionId);
-        }
-        const idx = existing.findIndex((i) => i.id === existingItem.id);
-        if (idx !== -1) existing[idx] = item;
-        byPlaidId.set(tx.transaction_id, item);
-      } else {
-        byPlaidId.set(tx.transaction_id, item);
-        existing.push(item);
-      }
-      totalProcessed += 1;
-    }
-
-    setSyncStateItem(itemId, {
-      lastSyncTime: new Date().toISOString(),
-      lastTransactionFetchCount: transactions.length,
-    });
   }
-  setDetectedItems(existing);
-  return { processed: totalProcessed, duplicatesPrevented };
+
+  const processed = totalAdded + totalModified + totalRemoved;
+  return { processed, added: totalAdded, modified: totalModified, removed: totalRemoved, duplicatesPrevented: totalDuplicatesPrevented };
 }
 
 /**
@@ -398,7 +461,7 @@ async function refreshDetectedActivityFromPlaid(itemIds = [], options = {}) {
       console.log('[plaid sync] sync started', toRefresh.length, 'item(s)');
     }
     const result = await refreshDetectedActivityFromPlaidCore(toRefresh.length ? toRefresh : []);
-    console.log('[plaid sync] sync completed', 'transactions_processed:', result.processed, 'duplicates_prevented:', result.duplicatesPrevented);
+    console.log('[plaid sync] sync completed', 'added:', result.added, 'modified:', result.modified, 'removed:', result.removed, 'duplicates_prevented:', result.duplicatesPrevented);
     return { skipped: false };
   } catch (err) {
     console.error('[plaid sync] sync failed', err.message);
