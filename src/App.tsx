@@ -11,14 +11,12 @@ import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { DetectedActivityInbox, DetectedActivityButtonLabel } from './features/detected-activity/DetectedActivityInbox';
 import { DropdownStateProvider } from './state/DropdownStateContext';
 import { DetectedActivityProvider } from './state/DetectedActivityContext';
-import { usePlaidLink } from './hooks/usePlaidLink';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
 
 function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
   const [detectedInboxOpen, setDetectedInboxOpen] = useState(false);
-  const { openLink, error: plaidError, setError: setPlaidError, loading: plaidLoading } = usePlaidLink();
 
   const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;
@@ -36,15 +34,6 @@ function MainApp() {
         <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)', minHeight: 0 }}>
           <button
             type="button"
-            className="btn btn-primary"
-            style={{ fontSize: '0.85rem', padding: '6px 12px', flexShrink: 0 }}
-            onClick={openLink}
-            disabled={plaidLoading}
-          >
-            {plaidLoading ? 'Connecting…' : 'Connect Bank'}
-          </button>
-          <button
-            type="button"
             className="btn btn-secondary"
             style={{ fontSize: '0.85rem', padding: '6px 12px', flexShrink: 0 }}
             onClick={() => setDetectedInboxOpen(true)}
@@ -52,12 +41,6 @@ function MainApp() {
             <DetectedActivityButtonLabel />
           </button>
         </div>
-        {plaidError ? (
-          <div style={{ padding: '6px 12px', fontSize: '0.85rem', color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            {plaidError}
-            <button type="button" className="btn btn-secondary" style={{ padding: '2px 8px', fontSize: '0.8rem' }} onClick={() => setPlaidError(null)}>Dismiss</button>
-          </div>
-        ) : null}
         {content}
         {detectedInboxOpen ? (
           <DetectedActivityInbox

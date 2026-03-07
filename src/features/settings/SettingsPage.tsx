@@ -3,6 +3,11 @@ import { Link } from 'react-router-dom';
 import { useLedgerStore } from '../../state/store';
 import { exportJSON, importJSON, loadCategoryConfig, saveCategoryConfig } from '../../state/storage';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
+import { formatCents } from '../../state/calc';
+import { usePlaidLink } from '../../hooks/usePlaidLink';
+import { hasApiBase, getPlaidAccountsSnapshot, type PlaidAccountsResponse } from '../../api/detectedActivityApi';
+
+const PLAID_UI_ENABLED = import.meta.env.DEV || (import.meta as any).env?.VITE_ENABLE_PLAID_UI === 'true';
 
 function downloadJsonFile(filename: string, text: string) {
   const blob = new Blob([text], { type: 'application/json' });
@@ -20,9 +25,200 @@ export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const [manageOpen, setManageOpen] = useState(false);
+  const { openLink, error: plaidError, setError: setPlaidError, loading: plaidLoading } = usePlaidLink();
+  const [plaidSnapshot, setPlaidSnapshot] = useState<PlaidAccountsResponse | null>(null);
+  const [plaidSnapshotLoading, setPlaidSnapshotLoading] = useState(false);
+  const [plaidSnapshotError, setPlaidSnapshotError] = useState<string | null>(null);
+
+  const showPlaidUi = PLAID_UI_ENABLED && hasApiBase();
+
+  async function handleRefreshPlaidSnapshot() {
+    if (!showPlaidUi) return;
+    setPlaidSnapshotError(null);
+    setPlaidSnapshotLoading(true);
+    try {
+      const snapshot = await getPlaidAccountsSnapshot();
+      setPlaidSnapshot(snapshot);
+    } catch (e) {
+      setPlaidSnapshotError(e instanceof Error ? e.message : 'Failed to load Plaid balances');
+    } finally {
+      setPlaidSnapshotLoading(false);
+    }
+  }
 
   return (
     <div className="tab-panel active" id="settingsContent">
+      {showPlaidUi ? (
+        <>
+          <p className="section-title">Linked Accounts (Plaid Snapshot)</p>
+          <div className="settings-section" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ fontSize: '0.85rem' }}
+                onClick={openLink}
+                disabled={plaidLoading}
+              >
+                {plaidLoading ? 'Connecting…' : 'Connect Bank'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.85rem' }}
+                onClick={handleRefreshPlaidSnapshot}
+                disabled={plaidSnapshotLoading}
+              >
+                {plaidSnapshotLoading ? 'Refreshing…' : 'Refresh Balances'}
+              </button>
+            </div>
+            {plaidError ? (
+              <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>
+                {plaidError}{' '}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '2px 8px', fontSize: '0.75rem', marginLeft: 6 }}
+                  onClick={() => setPlaidError(null)}
+                >
+                  Dismiss
+                </button>
+              </p>
+            ) : null}
+            {plaidSnapshotError ? (
+              <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>{plaidSnapshotError}</p>
+            ) : null}
+            {!plaidSnapshotLoading && plaidSnapshot && plaidSnapshot.accounts.length === 0 ? (
+              <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>No Plaid account linked yet.</p>
+            ) : null}
+            {!plaidSnapshotLoading && plaidSnapshot && plaidSnapshot.accounts.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p style={{ color: 'var(--muted)', margin: 0, fontSize: '0.85rem' }}>
+                  Institution:{' '}
+                  <span style={{ color: 'var(--text)' }}>
+                    {plaidSnapshot.institutionName || 'Unknown institution'}
+                  </span>
+                </p>
+                {plaidSnapshot.summary ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                      fontSize: '0.8rem',
+                      color: 'var(--muted)',
+                    }}
+                  >
+                    <span>
+                      Net worth:{' '}
+                      <span style={{ color: 'var(--text)' }}>
+                        {formatCents(plaidSnapshot.summary.netWorth)}
+                      </span>
+                    </span>
+                    <span>
+                      Assets:{' '}
+                      <span style={{ color: 'var(--text)' }}>
+                        {formatCents(plaidSnapshot.summary.totalAssets)}
+                      </span>
+                    </span>
+                    <span>
+                      Liabilities:{' '}
+                      <span style={{ color: 'var(--text)' }}>
+                        {formatCents(plaidSnapshot.summary.totalLiabilities)}
+                      </span>
+                    </span>
+                    <span>
+                      Cash:{' '}
+                      <span style={{ color: 'var(--text)' }}>
+                        {formatCents(plaidSnapshot.summary.totalCash)}
+                      </span>
+                    </span>
+                    <span>
+                      Credit:{' '}
+                      <span style={{ color: 'var(--text)' }}>
+                        {formatCents(plaidSnapshot.summary.totalCredit)}
+                      </span>
+                    </span>
+                    <span>
+                      Investments:{' '}
+                      <span style={{ color: 'var(--text)' }}>
+                        {formatCents(plaidSnapshot.summary.totalInvestments)}
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {plaidSnapshot.accounts.map((acc) => (
+                    <div
+                      key={acc.accountId}
+                      className="card"
+                      style={{
+                        padding: 8,
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        background: 'var(--surface)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: 4,
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                          {acc.name || acc.officialName || 'Account'}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                          {acc.type}
+                          {acc.subtype ? ` · ${acc.subtype}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 4 }}>
+                        {acc.mask ? `•••• ${acc.mask}` : null}
+                        {acc.isoCurrencyCode ? ` · ${acc.isoCurrencyCode}` : null}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                          fontSize: '0.8rem',
+                          color: 'var(--muted)',
+                        }}
+                      >
+                        <span>
+                          Current:{' '}
+                          <span style={{ color: 'var(--text)' }}>
+                            {typeof acc.currentBalance === 'number'
+                              ? formatCents(acc.currentBalance)
+                              : '—'}
+                          </span>
+                        </span>
+                        <span>
+                          Available:{' '}
+                          <span style={{ color: 'var(--text)' }}>
+                            {typeof acc.availableBalance === 'number'
+                              ? formatCents(acc.availableBalance)
+                              : '—'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {!plaidSnapshotLoading && !plaidSnapshot && !plaidSnapshotError ? (
+              <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
+                No Plaid balances loaded yet. Use Connect Bank and Refresh Balances to view linked accounts.
+              </p>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+
       <p className="section-title">Privacy</p>
       <div className="settings-section">
         <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>

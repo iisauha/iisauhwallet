@@ -28,8 +28,6 @@ import {
   type PlaidMode,
   type PilotStatus,
   type DetectedActivityRule,
-  type PlaidAccountsResponse,
-  getPlaidAccountsSnapshot,
 } from '../../api/detectedActivityApi';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
@@ -147,9 +145,6 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   const [pilotMaintenanceError, setPilotMaintenanceError] = useState<string | null>(null);
   const [addTestOpen, setAddTestOpen] = useState(false);
   const [addTestSaving, setAddTestSaving] = useState(false);
-  const [plaidSnapshot, setPlaidSnapshot] = useState<PlaidAccountsResponse | null>(null);
-  const [plaidSnapshotLoading, setPlaidSnapshotLoading] = useState(false);
-  const [plaidSnapshotError, setPlaidSnapshotError] = useState<string | null>(null);
   const apiConfigured = hasApiBase();
   const data = useLedgerStore((s) => s.data);
 
@@ -310,20 +305,6 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
     }
   }
 
-  async function handleRefreshPlaidSnapshot() {
-    if (!apiConfigured) return;
-    setPlaidSnapshotError(null);
-    setPlaidSnapshotLoading(true);
-    try {
-      const snapshot = await getPlaidAccountsSnapshot();
-      setPlaidSnapshot(snapshot);
-    } catch (e) {
-      setPlaidSnapshotError(e instanceof Error ? e.message : 'Failed to load Plaid balances');
-    } finally {
-      setPlaidSnapshotLoading(false);
-    }
-  }
-
   const resolveLabel = pendingRemember?.type === 'resolve'
     ? getSuggestedActionLabel(pendingRemember.flow)
     : '';
@@ -433,160 +414,6 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
               setBackendItems={setBackendItems}
               toDetectedItem={toDetectedItem}
             />
-
-            <div
-              style={{
-                marginTop: 12,
-                padding: 10,
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: 'var(--surface)',
-                fontSize: '0.8rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontWeight: 600, color: 'var(--text)' }}>Plaid Snapshot</span>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.8rem', marginLeft: 'auto' }}
-                  onClick={handleRefreshPlaidSnapshot}
-                  disabled={plaidSnapshotLoading}
-                >
-                  {plaidSnapshotLoading ? 'Refreshing…' : 'Refresh Plaid Balances'}
-                </button>
-              </div>
-              {plaidSnapshotError ? (
-                <p style={{ color: 'var(--red)', margin: '0 0 8px 0' }}>{plaidSnapshotError}</p>
-              ) : null}
-              {!plaidSnapshotLoading && plaidSnapshot && plaidSnapshot.accounts.length === 0 ? (
-                <p style={{ color: 'var(--muted)', margin: 0 }}>No Plaid account linked yet.</p>
-              ) : null}
-              {!plaidSnapshotLoading && plaidSnapshot && plaidSnapshot.accounts.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ color: 'var(--muted)', margin: 0 }}>
-                    Institution:{' '}
-                    <span style={{ color: 'var(--text)' }}>
-                      {plaidSnapshot.institutionName || 'Unknown institution'}
-                    </span>
-                  </p>
-                  {plaidSnapshot.summary ? (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 10,
-                        fontSize: '0.8rem',
-                        color: 'var(--muted)',
-                      }}
-                    >
-                      <span>
-                        Net worth:{' '}
-                        <span style={{ color: 'var(--text)' }}>
-                          {formatCents(plaidSnapshot.summary.netWorth)}
-                        </span>
-                      </span>
-                      <span>
-                        Assets:{' '}
-                        <span style={{ color: 'var(--text)' }}>
-                          {formatCents(plaidSnapshot.summary.totalAssets)}
-                        </span>
-                      </span>
-                      <span>
-                        Liabilities:{' '}
-                        <span style={{ color: 'var(--text)' }}>
-                          {formatCents(plaidSnapshot.summary.totalLiabilities)}
-                        </span>
-                      </span>
-                      <span>
-                        Cash:{' '}
-                        <span style={{ color: 'var(--text)' }}>
-                          {formatCents(plaidSnapshot.summary.totalCash)}
-                        </span>
-                      </span>
-                      <span>
-                        Credit:{' '}
-                        <span style={{ color: 'var(--text)' }}>
-                          {formatCents(plaidSnapshot.summary.totalCredit)}
-                        </span>
-                      </span>
-                      <span>
-                        Investments:{' '}
-                        <span style={{ color: 'var(--text)' }}>
-                          {formatCents(plaidSnapshot.summary.totalInvestments)}
-                        </span>
-                      </span>
-                    </div>
-                  ) : null}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {plaidSnapshot.accounts.map((acc) => (
-                      <div
-                        key={acc.accountId}
-                        className="card"
-                        style={{
-                          padding: 8,
-                          borderRadius: 8,
-                          border: '1px solid var(--border)',
-                          background: 'var(--bg)',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: 4,
-                          }}
-                        >
-                          <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                            {acc.name || acc.officialName || 'Account'}
-                          </div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
-                            {acc.type}
-                            {acc.subtype ? ` · ${acc.subtype}` : ''}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 4 }}>
-                          {acc.mask ? `•••• ${acc.mask}` : null}
-                          {acc.isoCurrencyCode ? ` · ${acc.isoCurrencyCode}` : null}
-                        </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 8,
-                            fontSize: '0.8rem',
-                            color: 'var(--muted)',
-                          }}
-                        >
-                          <span>
-                            Current:{' '}
-                            <span style={{ color: 'var(--text)' }}>
-                              {typeof acc.currentBalance === 'number'
-                                ? formatCents(acc.currentBalance)
-                                : '—'}
-                            </span>
-                          </span>
-                          <span>
-                            Available:{' '}
-                            <span style={{ color: 'var(--text)' }}>
-                              {typeof acc.availableBalance === 'number'
-                                ? formatCents(acc.availableBalance)
-                                : '—'}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {!plaidSnapshotLoading && !plaidSnapshot && !plaidSnapshotError ? (
-                <p style={{ color: 'var(--muted)', margin: 0 }}>
-                  No Plaid balances loaded yet. Click "Refresh Plaid Balances" to view accounts.
-                </p>
-              ) : null}
-            </div>
           </div>
         ) : null}
         {apiConfigured && (sandboxCount > 0 || realPilotCount > 0) ? (
