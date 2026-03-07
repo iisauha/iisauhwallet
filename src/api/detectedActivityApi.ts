@@ -111,6 +111,29 @@ export async function getDetectedActivity(): Promise<{ items: DetectedActivityIt
   return res.json();
 }
 
+/** Run a single test item through backend suggestion/rules logic. Returns enriched item (no persistence). */
+export async function enrichTestItem(item: {
+  id?: string;
+  title: string;
+  amountCents: number;
+  dateISO: string;
+  accountName: string;
+  accountType: string;
+  pending: boolean;
+  source?: string;
+}): Promise<DetectedActivityItemFromApi> {
+  const res = await fetchApi('/api/detected-activity/enrich-item', {
+    method: 'POST',
+    body: JSON.stringify({ ...item, source: 'test' }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Enrich failed');
+  }
+  const data = await res.json();
+  return data.item;
+}
+
 export async function ignoreDetectedItem(id: string): Promise<void> {
   const res = await fetchApi(`/api/detected-activity/${encodeURIComponent(id)}/ignore`, {
     method: 'POST',

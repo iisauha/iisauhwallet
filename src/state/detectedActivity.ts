@@ -19,8 +19,13 @@ export type DetectedSuggestedAction =
 /** Sandbox vs real pilot; used to keep items separate in UI. */
 export type DetectedSourceMode = 'sandbox' | 'real_pilot';
 
+/** Item origin: plaid (backend) or test (manually added for testing). */
+export type DetectedSource = 'plaid' | 'test';
+
 export type DetectedActivityItem = {
   id: string;
+  /** Item origin: plaid or test. Test items are manually added for classification testing. */
+  source?: DetectedSource;
   /** Plaid transaction id (backend items only). */
   plaidTransactionId?: string;
   title: string;
@@ -70,69 +75,19 @@ export type DetectedActivityItem = {
   matchedRuleSummary?: string;
 };
 
-function uid(): string {
+export function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-
-function seedMockItems(): DetectedActivityItem[] {
-  const today = new Date().toISOString().slice(0, 10);
-  return [
-    {
-      id: uid(),
-      title: 'Starbucks',
-      amountCents: -862,
-      dateISO: today,
-      accountName: 'Amex Gold',
-      accountType: 'credit_card',
-      pending: true,
-      status: 'new',
-    },
-    {
-      id: uid(),
-      title: 'Venmo transfer',
-      amountCents: 6000,
-      dateISO: today,
-      accountName: 'Chase Checking',
-      accountType: 'checking',
-      pending: true,
-      status: 'new',
-    },
-    {
-      id: uid(),
-      title: 'Utilities',
-      amountCents: -12431,
-      dateISO: today,
-      accountName: 'Chase Checking',
-      accountType: 'checking',
-      pending: false,
-      status: 'new',
-    },
-    {
-      id: uid(),
-      title: 'Transfer $500 from Chase Checking to HYSA',
-      amountCents: -50000,
-      dateISO: today,
-      accountName: 'Chase Checking',
-      accountType: 'checking',
-      pending: true,
-      status: 'new',
-    },
-  ];
 }
 
 export function loadDetectedActivity(): DetectedActivityItem[] {
   try {
     const raw = localStorage.getItem(DETECTED_ACTIVITY_KEY);
-    if (!raw) {
-      const seeded = seedMockItems();
-      saveDetectedActivity(seeded);
-      return seeded;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return seedMockItems();
+    if (!Array.isArray(parsed)) return [];
     return parsed as DetectedActivityItem[];
   } catch {
-    return seedMockItems();
+    return [];
   }
 }
 

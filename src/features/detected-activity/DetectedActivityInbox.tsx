@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { formatCents } from '../../state/calc';
+import { formatCents, parseCents } from '../../state/calc';
 import { useDetectedActivity } from '../../state/DetectedActivityContext';
-import { getActiveDetectedCount, type DetectedActivityItem, type DetectedSuggestedAction } from '../../state/detectedActivity';
+import { getActiveDetectedCount, uid, type DetectedActivityItem, type DetectedSuggestedAction } from '../../state/detectedActivity';
 import type { LaunchFlowType } from '../../state/DetectedActivityContext';
 import { useLedgerStore } from '../../state/store';
 import type { Purchase } from '../../state/models';
@@ -11,6 +11,7 @@ import {
   exchangePublicToken,
   getDetectedActivity,
   syncAndGetDetectedActivity,
+  enrichTestItem,
   getPlaidMode,
   getPilotStatus,
   pilotClearSandboxDetected,
@@ -38,6 +39,7 @@ type Props = {
 function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
   return {
     id: a.id,
+    source: (a as { source?: 'plaid' | 'test' }).source ?? 'plaid',
     plaidTransactionId: a.plaidTransactionId,
     title: a.title,
     amountCents: a.amountCents,
@@ -124,7 +126,7 @@ function sortByNewestFirst(a: DetectedActivityItem, b: DetectedActivityItem): nu
 }
 
 export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
-  const { items, setLaunchFlow, setBackendItems, markResolved, markIgnored, markReopened } = useDetectedActivity();
+  const { items, setItems, setLaunchFlow, setBackendItems, markResolved, markIgnored, markReopened } = useDetectedActivity();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
@@ -140,6 +142,8 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   const [pilotStatus, setPilotStatus] = useState<PilotStatus | null>(null);
   const [pilotMaintenanceBusy, setPilotMaintenanceBusy] = useState(false);
   const [pilotMaintenanceError, setPilotMaintenanceError] = useState<string | null>(null);
+  const [addTestOpen, setAddTestOpen] = useState(false);
+  const [addTestSaving, setAddTestSaving] = useState(false);
   const apiConfigured = hasApiBase();
   const data = useLedgerStore((s) => s.data);
 
@@ -420,19 +424,48 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
           })}
         </div>
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0, marginBottom: 12 }}>
-          {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Detected activity (sample data) — what do you want to do with each?'}
+          {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Add test items to try the classification flow and rules.'}
         </p>
         {apiConfigured ? (
           <div style={{ marginBottom: 12 }}>
             <ManageRulesButton />
           </div>
         ) : null}
+        <div style={{ marginBottom: 12 }}>
+          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={() => setAddTestOpen(true)}>
+            Add Test Detected Activity
+          </button>
+        </div>
+        {items.some((i) => i.source === 'test') ? (
+          <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }}>
+            <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Test items cleanup</div>
+            <p style={{ color: 'var(--muted)', margin: '0 0 8px 0', fontSize: '0.85rem' }}>Only removes test items. Real Plaid items are not affected.</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => setItems((prev) => prev.filter((i) => i.source !== 'test'))}>
+                Clear all test items
+              </button>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => setItems((prev) => prev.filter((i) => !(i.source === 'test' && i.status === 'resolved')))}>
+                Clear resolved test items
+              </button>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => setItems((prev) => prev.filter((i) => !(i.source === 'test' && i.status === 'ignored')))}>
+                Clear ignored test items
+              </button>
+            </div>
+          </div>
+        ) : null}
         {filteredItems.length === 0 ? (
           <div style={{ color: 'var(--muted)', fontSize: '0.9rem', padding: '24px 0', textAlign: 'center' }}>
-            {filter === 'new' && 'No new detected activity.'}
+            {filter === 'new' && (items.length === 0 ? 'No detected activity yet. Add a test item or wait for Plaid detection.' : 'No new detected activity.')}
             {filter === 'ignored' && 'No ignored items.'}
             {filter === 'resolved' && 'No resolved items.'}
-            {filter === 'all' && 'No detected activity yet.'}
+            {filter === 'all' && (items.length === 0 ? 'No detected activity yet. Add a test item or wait for Plaid detection.' : 'No detected activity.')}
+            {items.length === 0 && (
+              <div style={{ marginTop: 12 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setAddTestOpen(true)}>
+                  Add Test Detected Activity
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -502,6 +535,18 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
           onClose={() => setDetailsItem(null)}
           onReopen={detailsItem.id.startsWith('plaid_') ? () => { markReopened(detailsItem.id); setDetailsItem(null); loadPilotStatus(); } : undefined}
           onRerunSuggestion={detailsItem.id.startsWith('plaid_') ? async () => { await resetDetectedItem(detailsItem.id); const { items: list } = await getDetectedActivity(); setBackendItems(list.map(toDetectedItem)); loadPilotStatus(); } : undefined}
+        />
+      ) : null}
+      {addTestOpen ? (
+        <AddTestModal
+          onClose={() => setAddTestOpen(false)}
+          onSaved={() => setAddTestOpen(false)}
+          setSaving={setAddTestSaving}
+          setItems={setItems}
+          hasApiBase={apiConfigured}
+          enrichTestItem={enrichTestItem}
+          toDetectedItem={toDetectedItem}
+          computeSuggestedActionForItem={computeSuggestedActionForItem}
         />
       ) : null}
       {linkToPurchaseForItem ? (
@@ -699,6 +744,194 @@ function PilotMaintenance({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+type AddTestModalProps = {
+  onClose: () => void;
+  onSaved: () => void;
+  setSaving: (v: boolean) => void;
+  setItems: (updater: DetectedActivityItem[] | ((prev: DetectedActivityItem[]) => DetectedActivityItem[])) => void;
+  hasApiBase: boolean;
+  enrichTestItem: (item: { id?: string; title: string; amountCents: number; dateISO: string; accountName: string; accountType: string; pending: boolean; source?: string }) => Promise<DetectedActivityItemFromApi>;
+  toDetectedItem: (a: DetectedActivityItemFromApi) => DetectedActivityItem;
+  computeSuggestedActionForItem: (item: DetectedActivityItem) => DetectedSuggestedAction;
+};
+
+function AddTestModal({
+  onClose,
+  onSaved,
+  setSaving,
+  setItems,
+  hasApiBase,
+  enrichTestItem,
+  toDetectedItem,
+  computeSuggestedActionForItem,
+}: AddTestModalProps) {
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [dateISO, setDateISO] = useState(todayISO());
+  const [accountName, setAccountName] = useState('');
+  const [accountType, setAccountType] = useState<'credit_card' | 'checking' | 'investing'>('checking');
+  const [direction, setDirection] = useState<'inflow' | 'outflow'>('outflow');
+  const [pending, setPending] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSavingLocal] = useState(false);
+
+  async function handleSave() {
+    const trimmed = (description || '').trim();
+    if (!trimmed) {
+      setError('Description is required');
+      return;
+    }
+    const amountCentsRaw = parseCents(amount);
+    if (amountCentsRaw <= 0) {
+      setError('Amount must be greater than 0');
+      return;
+    }
+    const amountCents = direction === 'outflow' ? -amountCentsRaw : amountCentsRaw;
+    const dateStr = (dateISO || todayISO()).slice(0, 10);
+    const account = (accountName || '').trim() || 'Test account';
+    const nowIso = new Date().toISOString();
+    setError(null);
+    setSaving(true);
+    setSavingLocal(true);
+    try {
+      const rawItem = {
+        id: uid(),
+        title: trimmed,
+        amountCents,
+        dateISO: dateStr,
+        accountName: account,
+        accountType: accountType === 'credit_card' ? 'credit_card' : accountType === 'investing' ? 'investment' : 'checking',
+        pending,
+        status: 'new' as const,
+        source: 'test' as const,
+      };
+      let newItem: DetectedActivityItem;
+      if (hasApiBase) {
+        const enriched = await enrichTestItem({
+          id: rawItem.id,
+          title: rawItem.title,
+          amountCents: rawItem.amountCents,
+          dateISO: rawItem.dateISO,
+          accountName: rawItem.accountName,
+          accountType: rawItem.accountType,
+          pending: rawItem.pending,
+          source: 'test',
+        });
+        newItem = toDetectedItem(enriched);
+        newItem.source = 'test';
+        newItem.firstSeenAt = nowIso;
+        newItem.lastUpdatedAt = nowIso;
+        newItem.detectedAt = nowIso;
+      } else {
+        newItem = {
+          ...rawItem,
+          suggestedAction: computeSuggestedActionForItem(rawItem),
+          firstSeenAt: nowIso,
+          lastUpdatedAt: nowIso,
+          detectedAt: nowIso,
+        };
+      }
+      setItems((prev) => [...prev, newItem]);
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to add test item');
+    } finally {
+      setSaving(false);
+      setSavingLocal(false);
+    }
+  }
+
+  return (
+    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, position: 'relative', zIndex: 10 }}>
+      <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Add Test Detected Activity</h3>
+      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0 0 12px 0' }}>Test items use the same suggestion and rules flow as real items.</p>
+      {error ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{error}</p> : null}
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label>Description / merchant</label>
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="e.g. Coffee shop"
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+        />
+      </div>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label>Amount ($)</label>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00"
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+        />
+      </div>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label>Direction</label>
+        <select
+          value={direction}
+          onChange={(e) => setDirection(e.target.value as 'inflow' | 'outflow')}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+        >
+          <option value="inflow">Inflow</option>
+          <option value="outflow">Outflow</option>
+        </select>
+      </div>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label>Date</label>
+        <input
+          type="date"
+          value={dateISO}
+          onChange={(e) => setDateISO(e.target.value.slice(0, 10))}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+        />
+      </div>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label>Account name</label>
+        <input
+          value={accountName}
+          onChange={(e) => setAccountName(e.target.value)}
+          placeholder="e.g. Chase Checking"
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+        />
+      </div>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label>Account type</label>
+        <select
+          value={accountType}
+          onChange={(e) => setAccountType(e.target.value as 'credit_card' | 'checking' | 'investing')}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+        >
+          <option value="credit_card">Credit card</option>
+          <option value="checking">Checking / bank</option>
+          <option value="investing">Investing</option>
+        </select>
+      </div>
+      <div className="field" style={{ marginBottom: 12 }}>
+        <label>Status</label>
+        <select
+          value={pending ? 'pending' : 'posted'}
+          onChange={(e) => setPending(e.target.value === 'pending')}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+        >
+          <option value="pending">Pending</option>
+          <option value="posted">Posted</option>
+        </select>
+      </div>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSave}>
+          {saving ? 'Adding…' : 'Add'}
+        </button>
       </div>
     </div>
   );
@@ -982,6 +1215,9 @@ function DetectedCard({
     item.likelyReversal ? <Badge label="Possible reversal" style={{ background: 'rgba(234, 179, 8, 0.2)', color: 'var(--yellow, #eab308)', border: '1px solid var(--border)' }} />
     : item.likelyRefund ? <Badge label="Possible refund" style={{ background: 'rgba(34, 197, 94, 0.15)', color: 'var(--green)', border: '1px solid var(--border)' }} />
     : null;
+  const testBadge = item.source === 'test' ? (
+    <Badge label="Test" style={{ background: 'rgba(148, 163, 184, 0.2)', color: 'var(--muted)', border: '1px solid var(--border)' }} />
+  ) : null;
   return (
     <div
       className="card"
@@ -995,6 +1231,7 @@ function DetectedCard({
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         {statusBadge}
         {pendingPostedBadge}
+        {testBadge}
         {refundReversalBadge}
         {onShowDetails ? (
           <button type="button" className="btn btn-secondary" style={{ fontSize: '0.7rem', padding: '2px 8px', marginLeft: 'auto' }} onClick={onShowDetails}>
@@ -1013,8 +1250,11 @@ function DetectedCard({
           {formatCents(item.amountCents)}
         </span>
       </div>
+      {item.source === 'test' ? (
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Test detected activity</div>
+      ) : null}
       <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>
-        {item.accountName} · {item.accountType.replace('_', ' ')} · {item.dateISO}
+        {item.accountName} · {item.accountType.replace(/_/g, ' ')} · {item.dateISO}
         {item.updatedFromPending && !item.pending && (
           <span style={{ marginLeft: 4, fontStyle: 'italic' }}>· Updated from pending to posted</span>
         )}

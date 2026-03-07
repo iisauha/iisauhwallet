@@ -775,6 +775,37 @@ app.get('/api/detected-activity', (req, res) => {
   return res.json({ items: enriched });
 });
 
+// POST /api/detected-activity/enrich-item — run a single item (e.g. test) through same suggestion/rules logic. No persistence.
+app.post('/api/detected-activity/enrich-item', (req, res) => {
+  const body = req.body || {};
+  const {
+    id,
+    title,
+    amountCents,
+    dateISO,
+    accountName,
+    accountType,
+    pending,
+    source,
+  } = body;
+  if (!title || amountCents == null || !dateISO || !accountName || !accountType) {
+    return res.status(400).json({ error: 'title, amountCents, dateISO, accountName, accountType required' });
+  }
+  const item = {
+    id: id || `test_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    source: source || 'test',
+    title: String(title).trim().slice(0, 200),
+    amountCents: Number(amountCents),
+    dateISO: String(dateISO).slice(0, 10),
+    accountName: String(accountName).trim().slice(0, 100),
+    accountType: String(accountType).trim().slice(0, 50),
+    pending: !!pending,
+    status: 'new',
+  };
+  const enriched = enrichWithSuggestions([item]);
+  return res.json({ item: enriched[0] });
+});
+
 // POST /api/detected-activity/:id/ignore
 app.post('/api/detected-activity/:id/ignore', (req, res) => {
   const { id } = req.params;

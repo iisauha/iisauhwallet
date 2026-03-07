@@ -71,6 +71,7 @@ function apiItemToDetected(a: {
 }): DetectedActivityItem {
   return {
     id: a.id,
+    source: (a as { source?: 'plaid' | 'test' }).source ?? 'plaid',
     title: a.title,
     amountCents: a.amountCents,
     dateISO: a.dateISO,
