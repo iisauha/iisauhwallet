@@ -5,7 +5,12 @@ import { exportJSON, importJSON, loadCategoryConfig, saveCategoryConfig } from '
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { formatCents } from '../../state/calc';
 import { usePlaidLink } from '../../hooks/usePlaidLink';
-import { hasApiBase, getPlaidAccountsSnapshot, type PlaidAccountsResponse } from '../../api/detectedActivityApi';
+import {
+  hasApiBase,
+  getPlaidAccountsSnapshot,
+  pilotDisconnectReal,
+  type PlaidAccountsResponse,
+} from '../../api/detectedActivityApi';
 
 const PLAID_UI_ENABLED = import.meta.env.DEV || (import.meta as any).env?.VITE_ENABLE_PLAID_UI === 'true';
 
@@ -29,20 +34,47 @@ export function SettingsPage() {
   const [plaidSnapshot, setPlaidSnapshot] = useState<PlaidAccountsResponse | null>(null);
   const [plaidSnapshotLoading, setPlaidSnapshotLoading] = useState(false);
   const [plaidSnapshotError, setPlaidSnapshotError] = useState<string | null>(null);
+   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+  const [disconnectBusy, setDisconnectBusy] = useState(false);
+  const [disconnectMessage, setDisconnectMessage] = useState<string | null>(null);
 
   const showPlaidUi = PLAID_UI_ENABLED && hasApiBase();
 
   async function handleRefreshPlaidSnapshot() {
     if (!showPlaidUi) return;
+    setDisconnectMessage(null);
     setPlaidSnapshotError(null);
     setPlaidSnapshotLoading(true);
     try {
       const snapshot = await getPlaidAccountsSnapshot();
       setPlaidSnapshot(snapshot);
+      setLastRefreshedAt(new Date());
     } catch (e) {
       setPlaidSnapshotError(e instanceof Error ? e.message : 'Failed to load Plaid balances');
     } finally {
       setPlaidSnapshotLoading(false);
+    }
+  }
+
+  async function handleDisconnectBank() {
+    if (!showPlaidUi) return;
+    setDisconnectMessage(null);
+    setPlaidSnapshotError(null);
+    setDisconnectBusy(true);
+    try {
+      const result = await pilotDisconnectReal();
+      setPlaidSnapshot(null);
+      setLastRefreshedAt(new Date());
+      const removedTokens = result?.removedTokens ?? 0;
+      setDisconnectMessage(
+        removedTokens > 0
+          ? 'Disconnected. You can link a different bank.'
+          : 'No linked real account to disconnect.'
+      );
+    } catch (e) {
+      setPlaidSnapshotError(e instanceof Error ? e.message : 'Failed to disconnect bank');
+    } finally {
+      setDisconnectBusy(false);
     }
   }
 
@@ -52,67 +84,80 @@ export function SettingsPage() {
         <>
           <p className="section-title">Linked Accounts (Plaid Snapshot)</p>
           <div className="settings-section" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ fontSize: '0.85rem' }}
-                onClick={openLink}
-                disabled={plaidLoading}
-              >
-                {plaidLoading ? 'Connecting…' : 'Connect Bank'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem' }}
-                onClick={handleRefreshPlaidSnapshot}
-                disabled={plaidSnapshotLoading}
-              >
-                {plaidSnapshotLoading ? 'Refreshing…' : 'Refresh Balances'}
-              </button>
-            </div>
-            {plaidError ? (
-              <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>
-                {plaidError}{' '}
+            <div
+              className="card"
+              style={{
+                padding: 12,
+                borderRadius: 10,
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline' }}>
+                <div style={{ flex: '1 1 auto' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Institution</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>
+                    {plaidSnapshot?.institutionName || 'Not linked'}
+                  </div>
+                </div>
+                <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Accounts</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                    {plaidSnapshot ? plaidSnapshot.accounts.length : 0}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.85rem' }}
+                  onClick={openLink}
+                  disabled={plaidLoading || disconnectBusy}
+                >
+                  {plaidLoading ? 'Connecting…' : 'Connect Bank'}
+                </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ padding: '2px 8px', fontSize: '0.75rem', marginLeft: 6 }}
-                  onClick={() => setPlaidError(null)}
+                  style={{ fontSize: '0.85rem' }}
+                  onClick={handleRefreshPlaidSnapshot}
+                  disabled={plaidSnapshotLoading || disconnectBusy}
                 >
-                  Dismiss
+                  {plaidSnapshotLoading ? 'Refreshing…' : 'Refresh Balances'}
                 </button>
-              </p>
-            ) : null}
-            {plaidSnapshotError ? (
-              <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>{plaidSnapshotError}</p>
-            ) : null}
-            {!plaidSnapshotLoading && plaidSnapshot && plaidSnapshot.accounts.length === 0 ? (
-              <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>No Plaid account linked yet.</p>
-            ) : null}
-            {!plaidSnapshotLoading && plaidSnapshot && plaidSnapshot.accounts.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <p style={{ color: 'var(--muted)', margin: 0, fontSize: '0.85rem' }}>
-                  Institution:{' '}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.85rem', marginLeft: 'auto' }}
+                  onClick={handleDisconnectBank}
+                  disabled={disconnectBusy}
+                >
+                  {disconnectBusy ? 'Disconnecting…' : 'Disconnect Bank'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: '0.75rem', color: 'var(--muted)' }}>
+                <span>
+                  Last refreshed:{' '}
                   <span style={{ color: 'var(--text)' }}>
-                    {plaidSnapshot.institutionName || 'Unknown institution'}
+                    {lastRefreshedAt ? lastRefreshedAt.toLocaleString() : 'Not refreshed yet'}
                   </span>
-                </p>
-                {plaidSnapshot.summary ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                      fontSize: '0.8rem',
-                      color: 'var(--muted)',
-                    }}
-                  >
+                </span>
+                {plaidSnapshot?.summary ? (
+                  <>
                     <span>
-                      Net worth:{' '}
+                      Cash:{' '}
                       <span style={{ color: 'var(--text)' }}>
-                        {formatCents(plaidSnapshot.summary.netWorth)}
+                        {formatCents(plaidSnapshot.summary.totalCash)}
+                      </span>
+                    </span>
+                    <span>
+                      Credit:{' '}
+                      <span style={{ color: 'var(--text)' }}>
+                        {formatCents(plaidSnapshot.summary.totalCredit)}
                       </span>
                     </span>
                     <span>
@@ -128,32 +173,49 @@ export function SettingsPage() {
                       </span>
                     </span>
                     <span>
-                      Cash:{' '}
+                      Net worth:{' '}
                       <span style={{ color: 'var(--text)' }}>
-                        {formatCents(plaidSnapshot.summary.totalCash)}
+                        {formatCents(plaidSnapshot.summary.netWorth)}
                       </span>
                     </span>
-                    <span>
-                      Credit:{' '}
-                      <span style={{ color: 'var(--text)' }}>
-                        {formatCents(plaidSnapshot.summary.totalCredit)}
-                      </span>
-                    </span>
-                    <span>
-                      Investments:{' '}
-                      <span style={{ color: 'var(--text)' }}>
-                        {formatCents(plaidSnapshot.summary.totalInvestments)}
-                      </span>
-                    </span>
-                  </div>
+                  </>
                 ) : null}
+              </div>
+              {plaidError ? (
+                <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>
+                  {plaidError}{' '}
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '2px 8px', fontSize: '0.75rem', marginLeft: 6 }}
+                    onClick={() => setPlaidError(null)}
+                  >
+                    Dismiss
+                  </button>
+                </p>
+              ) : null}
+              {plaidSnapshotError ? (
+                <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>{plaidSnapshotError}</p>
+              ) : null}
+              {disconnectMessage ? (
+                <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0 }}>{disconnectMessage}</p>
+              ) : null}
+              {!plaidSnapshotLoading && (!plaidSnapshot || plaidSnapshot.accounts.length === 0) ? (
+                <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
+                  No Plaid account linked yet. Link a bank locally to view accounts and balances.
+                </p>
+              ) : null}
+            </div>
+
+            {!plaidSnapshotLoading && plaidSnapshot && plaidSnapshot.accounts.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {plaidSnapshot.accounts.map((acc) => (
                     <div
                       key={acc.accountId}
                       className="card"
                       style={{
-                        padding: 8,
+                        padding: 10,
                         borderRadius: 8,
                         border: '1px solid var(--border)',
                         background: 'var(--surface)',
@@ -167,7 +229,7 @@ export function SettingsPage() {
                           marginBottom: 4,
                         }}
                       >
-                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
                           {acc.name || acc.officialName || 'Account'}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
@@ -175,7 +237,12 @@ export function SettingsPage() {
                           {acc.subtype ? ` · ${acc.subtype}` : ''}
                         </div>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 4 }}>
+                      {acc.officialName ? (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 2 }}>
+                          {acc.officialName}
+                        </div>
+                      ) : null}
+                      <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 6 }}>
                         {acc.mask ? `•••• ${acc.mask}` : null}
                         {acc.isoCurrencyCode ? ` · ${acc.isoCurrencyCode}` : null}
                       </div>
@@ -183,22 +250,22 @@ export function SettingsPage() {
                         style={{
                           display: 'flex',
                           flexWrap: 'wrap',
-                          gap: 8,
-                          fontSize: '0.8rem',
-                          color: 'var(--muted)',
+                          gap: 12,
+                          fontSize: '0.85rem',
+                          alignItems: 'baseline',
                         }}
                       >
                         <span>
-                          Current:{' '}
-                          <span style={{ color: 'var(--text)' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Current</span>{' '}
+                          <span style={{ color: 'var(--text)', fontWeight: 600 }}>
                             {typeof acc.currentBalance === 'number'
                               ? formatCents(acc.currentBalance)
                               : '—'}
                           </span>
                         </span>
                         <span>
-                          Available:{' '}
-                          <span style={{ color: 'var(--text)' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Available</span>{' '}
+                          <span style={{ color: 'var(--text)', fontWeight: 500 }}>
                             {typeof acc.availableBalance === 'number'
                               ? formatCents(acc.availableBalance)
                               : '—'}
@@ -209,11 +276,6 @@ export function SettingsPage() {
                   ))}
                 </div>
               </div>
-            ) : null}
-            {!plaidSnapshotLoading && !plaidSnapshot && !plaidSnapshotError ? (
-              <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
-                No Plaid balances loaded yet. Use Connect Bank and Refresh Balances to view linked accounts.
-              </p>
             ) : null}
           </div>
         </>

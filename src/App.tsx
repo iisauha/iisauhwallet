@@ -17,6 +17,8 @@ type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' 
 function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
   const [detectedInboxOpen, setDetectedInboxOpen] = useState(false);
+  const detectedActivityEnabled =
+    import.meta.env.DEV || (import.meta as any).env?.VITE_ENABLE_PLAID_UI === 'true';
 
   const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;
@@ -31,18 +33,31 @@ function MainApp() {
   return (
     <>
       <div style={{ position: 'relative', minHeight: '100%' }}>
-        <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)', minHeight: 0 }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ fontSize: '0.85rem', padding: '6px 12px', flexShrink: 0 }}
-            onClick={() => setDetectedInboxOpen(true)}
+        {detectedActivityEnabled ? (
+          <div
+            style={{
+              padding: '8px 12px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 8,
+              borderBottom: '1px solid var(--border)',
+              minHeight: 0,
+            }}
           >
-            <DetectedActivityButtonLabel />
-          </button>
-        </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.85rem', padding: '6px 12px', flexShrink: 0 }}
+              onClick={() => setDetectedInboxOpen(true)}
+            >
+              <DetectedActivityButtonLabel />
+            </button>
+          </div>
+        ) : null}
         {content}
-        {detectedInboxOpen ? (
+        {detectedActivityEnabled && detectedInboxOpen ? (
           <DetectedActivityInbox
             onClose={() => setDetectedInboxOpen(false)}
             onLaunchFlow={(_, targetTab) => {
