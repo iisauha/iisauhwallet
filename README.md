@@ -18,10 +18,9 @@ Vite will print the local URL (it includes the repo base path). The Detected Act
 
 **With Plaid sandbox backend (optional):**
 1. In `server/`: copy `server/.env.example` to `server/.env` and set `PLAID_CLIENT_ID`, `PLAID_SECRET` (sandbox keys from [Plaid Dashboard](https://dashboard.plaid.com/developers/keys)), and `PORT=3001`.
-2. Start the backend: `cd server && npm install && npm start`.
-3. In the project root, create `.env.local` with `VITE_API_BASE_URL=http://localhost:3001`.
-4. Run the frontend: `npm run dev`.
-5. Open the app, click **Detected Activity** → **Connect Plaid Sandbox** to link a sandbox account, then **Sync Detected Activity** to load transactions (or use **Refresh** after webhook-driven updates). The backend supports Plaid webhooks for automatic queue updates; see `server/README.md` for local webhook setup (e.g. ngrok). No production credentials; sandbox only.
+2. Start the backend on **port 3001**: `cd server && npm install && npm start`. The backend must be running at `http://localhost:3001` for Connect Bank to work.
+3. Run the frontend: `npm run dev`. The Vite dev server **proxies `/api` to `http://localhost:3001`**, so you do not need to set `VITE_API_BASE_URL` for local development. (Optional: set `VITE_API_BASE_URL=http://localhost:3001` in `.env.local` to call the backend directly.)
+4. Open the app, click **Connect Bank** (or **Detected Activity** → **Connect Bank**) to link a sandbox account, then **Sync Detected Activity** to load transactions (or use **Refresh** after webhook-driven updates). The backend supports Plaid webhooks for automatic queue updates; see `server/README.md` for local webhook setup (e.g. ngrok). No production credentials; sandbox only.
 
 ## Build locally
 

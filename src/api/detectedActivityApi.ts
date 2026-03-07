@@ -67,7 +67,8 @@ export async function getPlaidMode(): Promise<PlaidMode> {
 }
 
 async function fetchApi(path: string, options: RequestInit = {}): Promise<Response> {
-  const url = `${BASE.replace(/\/$/, '')}${path}`;
+  const base = BASE.replace(/\/$/, '');
+  const url = base ? `${base}${path}` : path;
   return fetch(url, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...options.headers },
@@ -75,10 +76,29 @@ async function fetchApi(path: string, options: RequestInit = {}): Promise<Respon
 }
 
 export async function createLinkToken(): Promise<{ link_token: string }> {
-  const res = await fetchApi('/api/plaid/create_link_token', { method: 'POST' });
+  const path = '/api/plaid/create_link_token';
+  const base = BASE.replace(/\/$/, '');
+  const url = base ? `${base}${path}` : path;
+  console.log('[Plaid] create_link_token request URL:', url);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (e) {
+    console.error('[Plaid] create_link_token failed (network):', e);
+    throw new Error('Plaid backend not reachable');
+  }
+  console.log('[Plaid] create_link_token response status:', res.status, res.statusText);
   if (!res.ok) {
+    if (res.status === 404) {
+      console.error('[Plaid] create_link_token 404 — backend route not found or proxy not forwarding');
+      throw new Error('Plaid backend not reachable');
+    }
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).error || res.statusText || 'Failed to create link token');
+    const msg = (err as { error?: string }).error || res.statusText;
+    throw new Error(msg || 'Plaid backend not reachable');
   }
   return res.json();
 }
