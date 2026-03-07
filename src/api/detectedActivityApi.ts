@@ -301,3 +301,12 @@ export async function pilotRebuildQueue(): Promise<void> {
     throw new Error((err as { error?: string }).error || 'Rebuild failed');
   }
 }
+
+export async function pilotDisconnectReal(): Promise<{ removedTokens: number; removedItems: number }> {
+  const res = await fetchApi('/api/plaid/pilot/disconnect-real', { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || 'Failed to disconnect real pilot account');
+  }
+  return res.json();
+}

@@ -117,6 +117,52 @@ function setAccessToken(itemId, accessToken, environment = PLAID_ENV) {
   writeJson(ACCESS_TOKENS_FILE, tokens);
 }
 
+// Remove all non-sandbox (real pilot) access tokens and their sync state,
+// and optionally clear real-pilot detected items for pilot debugging.
+function clearRealPilotAccessTokensAndItems() {
+  const tokens = getStoredAccessTokens();
+  const nextTokens = {};
+  let removedTokens = 0;
+
+  for (const [itemId, val] of Object.entries(tokens)) {
+    const env =
+      typeof val === 'string'
+        ? 'sandbox'
+        : (val && typeof val.environment === 'string' ? val.environment.toLowerCase() : 'sandbox');
+    if (env === 'sandbox') {
+      nextTokens[itemId] = val;
+    } else {
+      removedTokens += 1;
+    }
+  }
+
+  if (removedTokens > 0) {
+    writeJson(ACCESS_TOKENS_FILE, nextTokens);
+  }
+
+  // Clear sync state for any removed items.
+  const syncState = getSyncState();
+  const nextSyncState = {};
+  for (const [itemId, value] of Object.entries(syncState)) {
+    if (Object.prototype.hasOwnProperty.call(nextTokens, itemId)) {
+      nextSyncState[itemId] = value;
+    }
+  }
+  writeJson(SYNC_STATE_FILE, nextSyncState);
+
+  // Optionally clear detected items that came from real pilot.
+  const items = getDetectedItems();
+  const nextItems = items.filter(
+    (i) => !(i.source === 'plaid' && ((i.sourceMode || i.sourceEnvironment) === 'real_pilot'))
+  );
+  const removedItems = items.length - nextItems.length;
+  if (removedItems > 0) {
+    setDetectedItems(nextItems);
+  }
+
+  return { removedTokens, removedItems };
+}
+
 // Detected activity queue (server-side)
 function getDetectedItems() {
   return readJson(DETECTED_FILE, []);
@@ -1029,6 +1075,16 @@ app.post('/api/plaid/pilot/rebuild-queue', async (req, res) => {
     return res.json({ ok: true });
   } catch (e) {
     return res.status(500).json({ error: e.message || 'Rebuild failed' });
+  }
+});
+
+// POST /api/plaid/pilot/disconnect-real — local pilot-only: remove real-account access tokens and items
+app.post('/api/plaid/pilot/disconnect-real', (req, res) => {
+  try {
+    const { removedTokens, removedItems } = clearRealPilotAccessTokensAndItems();
+    return res.json({ ok: true, removedTokens, removedItems });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || 'Failed to disconnect real pilot account' });
   }
 });
 

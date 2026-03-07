@@ -18,6 +18,7 @@ import {
   pilotClearResolvedSandbox,
   pilotResync,
   pilotRebuildQueue,
+  pilotDisconnectReal,
   resetDetectedItem,
   createDetectedActivityRule,
   getDetectedActivityRules,
@@ -760,7 +761,19 @@ function PilotMaintenance({
             <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} disabled={pilotMaintenanceBusy} onClick={() => run(() => pilotRebuildQueue())}>
               Rebuild queue from backend
             </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.8rem' }}
+              disabled={pilotMaintenanceBusy}
+              onClick={() => run(() => pilotDisconnectReal())}
+            >
+              Disconnect linked Plaid account
+            </button>
           </div>
+          <p style={{ color: 'var(--muted)', marginTop: 4, fontSize: '0.75rem' }}>
+            Pilot-only: clears the stored real Plaid access token and its detected items. Manual ledger data is not affected.
+          </p>
         </div>
       </div>
     </div>
