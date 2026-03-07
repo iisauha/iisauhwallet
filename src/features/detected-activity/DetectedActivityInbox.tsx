@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { formatCents } from '../../state/calc';
 import { useDetectedActivity } from '../../state/DetectedActivityContext';
 import { getActiveDetectedCount, type DetectedActivityItem, type DetectedSuggestedAction } from '../../state/detectedActivity';
@@ -61,14 +61,35 @@ function getSuggestedActionLabel(action: DetectedSuggestedAction): string {
   }
 }
 
+type InboxFilter = 'new' | 'ignored' | 'resolved' | 'all';
+
+function sortByNewestFirst(a: DetectedActivityItem, b: DetectedActivityItem): number {
+  const dateA = a.dateISO ? new Date(a.dateISO).getTime() : 0;
+  const dateB = b.dateISO ? new Date(b.dateISO).getTime() : 0;
+  if (dateB !== dateA) return dateB - dateA;
+  return (b.id || '').localeCompare(a.id || '');
+}
+
 export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
-  const { items, setLaunchFlow, setBackendItems, markIgnored, loadBackendItems } = useDetectedActivity();
+  const { items, setLaunchFlow, setBackendItems, markIgnored, markReopened } = useDetectedActivity();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [refreshStatus, setRefreshStatus] = useState<'idle' | 'loading' | 'ok'>('idle');
-  const activeItems = items.filter((i) => i.status === 'new' || i.status === 'in_progress');
+  const [filter, setFilter] = useState<InboxFilter>('new');
   const apiConfigured = hasApiBase();
+
+  const newItems = items.filter((i) => i.status === 'new' || i.status === 'in_progress');
+  const ignoredItems = items.filter((i) => i.status === 'ignored');
+  const resolvedItems = items.filter((i) => i.status === 'resolved');
+  const filteredItems = (() => {
+    const list =
+      filter === 'new' ? newItems
+      : filter === 'ignored' ? ignoredItems
+      : filter === 'resolved' ? resolvedItems
+      : items;
+    return [...list].sort(sortByNewestFirst);
+  })();
 
   function handleAction(item: DetectedActivityItem, flow: LaunchFlowType) {
     const tab: TabKey =
@@ -172,19 +193,44 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
             ) : null}
           </div>
         ) : null}
-        <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0, marginBottom: 16 }}>
-          {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Mock inbox — what do you want to do with each item?'}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+          {(['new', 'ignored', 'resolved', 'all'] as const).map((f) => {
+            const count = f === 'new' ? newItems.length : f === 'ignored' ? ignoredItems.length : f === 'resolved' ? resolvedItems.length : items.length;
+            const label = f === 'new' ? 'New' : f === 'ignored' ? 'Ignored' : f === 'resolved' ? 'Resolved' : 'All';
+            const active = filter === f;
+            return (
+              <button
+                key={f}
+                type="button"
+                className={active ? 'tab active' : 'tab'}
+                style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                onClick={() => setFilter(f)}
+              >
+                {label} ({count})
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0, marginBottom: 12 }}>
+          {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Mock inbox — what do you want to do with each?'}
         </p>
-        {activeItems.length === 0 ? (
-          <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No items to review.</p>
+        {filteredItems.length === 0 ? (
+          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', padding: '24px 0', textAlign: 'center' }}>
+            {filter === 'new' && 'No new detected activity.'}
+            {filter === 'ignored' && 'No ignored items.'}
+            {filter === 'resolved' && 'No resolved items.'}
+            {filter === 'all' && 'No detected activity yet.'}
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {activeItems.map((item) => (
+            {filteredItems.map((item) => (
               <DetectedCard
                 key={item.id}
                 item={item}
                 onAction={handleAction}
                 onIgnore={() => markIgnored(item.id)}
+                onReopen={() => markReopened(item.id)}
+                showActions={item.status === 'new' || item.status === 'in_progress'}
               />
             ))}
           </div>
@@ -194,18 +240,37 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   );
 }
 
+function Badge({ label, style }: { label: string; style?: React.CSSProperties }) {
+  return (
+    <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 4, fontWeight: 500, ...style }}>
+      {label}
+    </span>
+  );
+}
+
 function DetectedCard({
   item,
   onAction,
-  onIgnore
+  onIgnore,
+  onReopen,
+  showActions,
 }: {
   item: DetectedActivityItem;
   onAction: (item: DetectedActivityItem, flow: LaunchFlowType) => void;
   onIgnore: () => void;
+  onReopen: () => void;
+  showActions: boolean;
 }) {
   const suggestedAction = item.suggestedAction ?? computeSuggestedActionForItem(item);
   const suggestedLabel = getSuggestedActionLabel(suggestedAction);
   const showTransferMatch = !!item.possibleTransferMatchId;
+  const statusBadge =
+    item.status === 'ignored' ? <Badge label="Ignored" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />
+    : item.status === 'resolved' ? <Badge label="Resolved" style={{ background: 'var(--surface)', color: 'var(--green)', border: '1px solid var(--border)' }} />
+    : <Badge label="New" style={{ background: 'rgba(14, 165, 233, 0.15)', color: 'var(--accent)', border: '1px solid var(--border)' }} />;
+  const pendingPostedBadge = item.pending
+    ? <Badge label="Pending" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />
+    : <Badge label="Posted" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />;
   return (
     <div
       className="card"
@@ -213,9 +278,13 @@ function DetectedCard({
         padding: 12,
         border: '1px solid var(--border)',
         borderRadius: 10,
-        background: 'var(--surface)'
+        background: 'var(--surface)',
       }}
     >
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        {statusBadge}
+        {pendingPostedBadge}
+      </div>
       <div className="row" style={{ marginBottom: 6 }}>
         <span className="name" style={{ fontWeight: 600 }}>{item.title}</span>
         <span className="amount" style={{ color: item.amountCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
@@ -224,7 +293,6 @@ function DetectedCard({
       </div>
       <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>
         {item.accountName} · {item.accountType.replace('_', ' ')} · {item.dateISO}
-        {item.pending ? ' · Pending' : ' · Posted'}
         {item.updatedFromPending && !item.pending && (
           <span style={{ marginLeft: 4, fontStyle: 'italic' }}>· Updated from pending to posted</span>
         )}
@@ -246,48 +314,61 @@ function DetectedCard({
           <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Possible transfer pair detected</span>
         )}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ fontSize: '0.8rem', padding: '6px 10px' }}
-          onClick={() => onAction(item, 'add_purchase')}
-        >
-          Add purchase
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ fontSize: '0.8rem', padding: '6px 10px' }}
-          onClick={() => onAction(item, 'pending_in')}
-        >
-          Pending inbound
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ fontSize: '0.8rem', padding: '6px 10px' }}
-          onClick={() => onAction(item, 'pending_out')}
-        >
-          Pending outbound
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ fontSize: '0.8rem', padding: '6px 10px' }}
-          onClick={() => onAction(item, 'transfer')}
-        >
-          Transfer
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ fontSize: '0.8rem', padding: '6px 10px' }}
-          onClick={onIgnore}
-        >
-          Ignore
-        </button>
-      </div>
+      {showActions ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+            onClick={() => onAction(item, 'add_purchase')}
+          >
+            Add purchase
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+            onClick={() => onAction(item, 'pending_in')}
+          >
+            Pending inbound
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+            onClick={() => onAction(item, 'pending_out')}
+          >
+            Pending outbound
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+            onClick={() => onAction(item, 'transfer')}
+          >
+            Transfer
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+            onClick={onIgnore}
+          >
+            Ignore
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+            onClick={onReopen}
+          >
+            Move back to New
+          </button>
+        </div>
+      )}
     </div>
   );
 }

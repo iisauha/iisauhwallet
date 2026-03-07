@@ -24,6 +24,7 @@ type ContextValue = {
   setLaunchFlow: (f: LaunchFlow | null) => void;
   markResolved: (id: string, resolvedAs?: string) => void;
   markIgnored: (id: string) => void;
+  markReopened: (id: string) => void;
   refresh: () => void;
   loadBackendItems: () => Promise<void>;
 };
@@ -137,6 +138,21 @@ export function DetectedActivityProvider({ children }: { children: React.ReactNo
     }
   }, []);
 
+  const markReopened = useCallback((id: string) => {
+    if (id.startsWith('plaid_')) {
+      setBackendItemsState((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, status: 'new' as const } : i))
+      );
+      import('../api/detectedActivityApi').then((api) => api.resetDetectedItem(id).catch(() => {}));
+    } else {
+      setLocalItemsState((prev) => {
+        const next = prev.map((i) => (i.id === id ? { ...i, status: 'new' as const } : i));
+        saveDetectedActivity(next);
+        return next;
+      });
+    }
+  }, []);
+
   const refresh = useCallback(() => {
     setLocalItemsState(loadDetectedActivity());
   }, []);
@@ -151,10 +167,11 @@ export function DetectedActivityProvider({ children }: { children: React.ReactNo
       setLaunchFlow,
       markResolved,
       markIgnored,
+      markReopened,
       refresh,
       loadBackendItems,
     }),
-    [items, setItems, backendItems, setBackendItems, launchFlow, markResolved, markIgnored, refresh, loadBackendItems]
+    [items, setItems, backendItems, setBackendItems, launchFlow, markResolved, markIgnored, markReopened, refresh, loadBackendItems]
   );
 
   return (
