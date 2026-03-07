@@ -82,7 +82,7 @@ export function SettingsPage() {
     <div className="tab-panel active" id="settingsContent">
       {showPlaidUi ? (
         <>
-          <p className="section-title">Linked Accounts (Plaid Snapshot)</p>
+          <p className="section-title">Linked Bank Accounts</p>
           <div className="settings-section" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
             <div
               className="card"
@@ -202,7 +202,7 @@ export function SettingsPage() {
               ) : null}
               {!plaidSnapshotLoading && (!plaidSnapshot || plaidSnapshot.accounts.length === 0) ? (
                 <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
-                  No Plaid account linked yet. Link a bank locally to view accounts and balances.
+                  No bank linked yet. Link a bank locally to view accounts and balances.
                 </p>
               ) : null}
             </div>

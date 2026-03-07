@@ -147,6 +147,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   const [addTestSaving, setAddTestSaving] = useState(false);
   const apiConfigured = hasApiBase();
   const data = useLedgerStore((s) => s.data);
+  const showPlaidControlsInDetectedActivity = false;
 
   const loadPilotStatus = useCallback(async () => {
     if (!apiConfigured) return;
@@ -314,27 +315,14 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 12, minHeight: 0 }}>
           <h3 style={{ margin: 0, flexShrink: 0 }}>Detected Activity</h3>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ padding: '6px 12px', fontSize: '0.85rem', flexShrink: 0 }}
-            onClick={() => {
-              if (!apiConfigured) {
-                setLinkError('Backend not configured. Set VITE_API_BASE_URL to connect.');
-                return;
-              }
-              handleConnectPlaid();
-            }}
-            disabled={false}
-          >
-            Connect Bank
-          </button>
           <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '6px 12px', marginLeft: 'auto' }}>
             Close
           </button>
         </div>
-        {linkError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{linkError}</p> : null}
-        {apiConfigured ? (
+        {linkError && showPlaidControlsInDetectedActivity ? (
+          <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{linkError}</p>
+        ) : null}
+        {apiConfigured && showPlaidControlsInDetectedActivity ? (
           <div style={{ marginBottom: 16 }}>
             {pilotStatus ? (
               <div
@@ -485,10 +473,10 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
         ) : null}
         {filteredItems.length === 0 ? (
           <div style={{ color: 'var(--muted)', fontSize: '0.9rem', padding: '24px 0', textAlign: 'center' }}>
-            {filter === 'new' && (items.length === 0 ? 'No detected activity yet. Add a test item or wait for Plaid detection.' : 'No new detected activity.')}
+            {filter === 'new' && (items.length === 0 ? 'No detected activity yet. Add a test item to try the flow.' : 'No new detected activity.')}
             {filter === 'ignored' && 'No ignored items.'}
             {filter === 'resolved' && 'No resolved items.'}
-            {filter === 'all' && (items.length === 0 ? 'No detected activity yet. Add a test item or wait for Plaid detection.' : 'No detected activity.')}
+            {filter === 'all' && (items.length === 0 ? 'No detected activity yet. Add a test item to try the flow.' : 'No detected activity.')}
             {items.length === 0 && (
               <div style={{ marginTop: 12 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setAddTestOpen(true)}>
@@ -1063,9 +1051,9 @@ function DetailsModal({ item, onClose, onReopen, onRerunSuggestion }: DetailsMod
       ) : null}
 
       <section style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>Debug (pilot)</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>Debug</div>
         <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div>Plaid transaction id: {item.plaidTransactionId || (item.id.startsWith('plaid_') ? item.id : '—')}</div>
+          <div>Transaction id: {item.plaidTransactionId || (item.id.startsWith('plaid_') ? item.id : '—')}</div>
           <div>Account: {item.accountName}</div>
           <div>Pending / Posted: {item.pending ? 'Pending' : 'Posted'}</div>
           <div>First seen: {firstSeen ? new Date(firstSeen).toLocaleString() : '—'}</div>
