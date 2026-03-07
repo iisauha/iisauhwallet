@@ -257,7 +257,18 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
             const list = await syncAndGetDetectedActivity();
             setBackendItems(list.map(toDetectedItem));
           } catch (e) {
-            setLinkError(e instanceof Error ? e.message : 'Exchange failed');
+            if (e instanceof Error) {
+              // Surface backend 400 (one-real-account pilot) message clearly and hint at disconnect control.
+              if (/one real account/i.test(e.message) || /Disconnect the existing real account/i.test(e.message)) {
+                console.warn('[Plaid] exchange_public_token pilot limit hit:', e.message);
+                setLinkError(`${e.message} Use \"Disconnect linked Plaid account\" in Pilot maintenance, then try again.`);
+              } else {
+                console.error('[Plaid] exchange_public_token error (pilot):', e);
+                setLinkError(e.message);
+              }
+            } else {
+              setLinkError('Exchange failed');
+            }
           }
         },
         onExit: () => {},

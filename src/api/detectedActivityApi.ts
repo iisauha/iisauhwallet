@@ -111,6 +111,7 @@ export async function exchangePublicToken(publicToken: string): Promise<{ ok: bo
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = (err as { error?: string }).error || res.statusText || 'Exchange failed';
+    console.error('[Plaid] exchange_public_token failed', res.status, res.statusText, err);
     throw new Error(msg);
   }
   return res.json();
