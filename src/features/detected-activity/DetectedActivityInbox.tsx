@@ -1,8 +1,16 @@
+import { useState } from 'react';
 import { formatCents } from '../../state/calc';
 import { useDetectedActivity } from '../../state/DetectedActivityContext';
 import { getActiveDetectedCount } from '../../state/detectedActivity';
 import type { DetectedActivityItem } from '../../state/detectedActivity';
 import type { LaunchFlowType } from '../../state/DetectedActivityContext';
+import {
+  hasApiBase,
+  createLinkToken,
+  exchangePublicToken,
+  syncAndGetDetectedActivity,
+  type DetectedActivityItemFromApi
+} from '../../api/detectedActivityApi';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
 
@@ -11,9 +19,26 @@ type Props = {
   onLaunchFlow: (flow: LaunchFlowType, tab: TabKey) => void;
 };
 
+function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
+  return {
+    id: a.id,
+    title: a.title,
+    amountCents: a.amountCents,
+    dateISO: a.dateISO,
+    accountName: a.accountName,
+    accountType: a.accountType,
+    pending: a.pending,
+    status: (a.status as DetectedActivityItem['status']) || 'new',
+  };
+}
+
 export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
-  const { items, setLaunchFlow, markIgnored } = useDetectedActivity();
+  const { items, setLaunchFlow, setBackendItems, markIgnored } = useDetectedActivity();
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const activeItems = items.filter((i) => i.status === 'new' || i.status === 'in_progress');
+  const apiConfigured = hasApiBase();
 
   function handleAction(item: DetectedActivityItem, flow: LaunchFlowType) {
     const tab: TabKey =
@@ -21,6 +46,46 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
     setLaunchFlow({ flow, detectedId: item.id, item });
     onLaunchFlow(flow, tab);
     onClose();
+  }
+
+  async function handleConnectPlaid() {
+    setLinkError(null);
+    try {
+      const { link_token } = await createLinkToken();
+      const Plaid = (window as any).Plaid;
+      if (!Plaid) {
+        setLinkError('Plaid Link not loaded. Refresh and try again.');
+        return;
+      }
+      Plaid.create({
+        token: link_token,
+        onSuccess: async (public_token: string) => {
+          try {
+            await exchangePublicToken(public_token);
+            setLinkError(null);
+          } catch (e) {
+            setLinkError(e instanceof Error ? e.message : 'Exchange failed');
+          }
+        },
+        onExit: () => {},
+      }).open();
+    } catch (e) {
+      setLinkError(e instanceof Error ? e.message : 'Failed to create link token');
+    }
+  }
+
+  async function handleSync() {
+    setSyncStatus('loading');
+    setSyncMessage(null);
+    try {
+      const list = await syncAndGetDetectedActivity();
+      setBackendItems(list.map(toDetectedItem));
+      setSyncStatus('ok');
+      setSyncMessage(`Loaded ${list.length} item(s) from Plaid sandbox.`);
+    } catch (e) {
+      setSyncStatus('error');
+      setSyncMessage(e instanceof Error ? e.message : 'Sync failed');
+    }
   }
 
   return (
@@ -32,8 +97,32 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
             Close
           </button>
         </div>
+        {apiConfigured ? (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={handleConnectPlaid}>
+                Connect Plaid Sandbox
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.85rem' }}
+                onClick={handleSync}
+                disabled={syncStatus === 'loading'}
+              >
+                {syncStatus === 'loading' ? 'Syncing…' : 'Sync Detected Activity'}
+              </button>
+            </div>
+            {linkError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{linkError}</p> : null}
+            {syncMessage ? (
+              <p style={{ color: syncStatus === 'error' ? 'var(--red)' : 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
+                {syncMessage}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0, marginBottom: 16 }}>
-          Mock inbox — what do you want to do with each item?
+          {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Mock inbox — what do you want to do with each item?'}
         </p>
         {activeItems.length === 0 ? (
           <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No items to review.</p>

@@ -5,16 +5,23 @@ This repository contains a maintainable **Vite + React + TypeScript** version of
 - **Legacy single-file app** is preserved in `legacy/` for reference.
 - **Local data compatibility** is preserved: the React app uses the **same `localStorage` keys** as the legacy app (no key renames; no automatic wipes).
 
-**Developer note:** Real banking integrations are not yet implemented in a production-safe form. Future Plaid integration will require a backend. See `SECURITY_NOTES.md` and `PLAID_BACKEND_PLAN.md`.
+**Developer note:** Real banking integrations are not yet implemented in a production-safe form. A **sandbox-only** Plaid backend is included for testing the Detected Activity flow. See `SECURITY_NOTES.md` and `PLAID_BACKEND_PLAN.md`.
 
 ## Run locally
 
+**Frontend only (mock mode):**
 ```bash
 npm install
 npm run dev
 ```
+Vite will print the local URL (it includes the repo base path). The Detected Activity inbox uses mock data from localStorage.
 
-Vite will print the local URL (it includes the repo base path).
+**With Plaid sandbox backend (optional):**
+1. In `server/`: copy `server/.env.example` to `server/.env` and set `PLAID_CLIENT_ID`, `PLAID_SECRET` (sandbox keys from [Plaid Dashboard](https://dashboard.plaid.com/developers/keys)), and `PORT=3001`.
+2. Start the backend: `cd server && npm install && npm start`.
+3. In the project root, create `.env.local` with `VITE_API_BASE_URL=http://localhost:3001`.
+4. Run the frontend: `npm run dev`.
+5. Open the app, click **Detected Activity** → **Connect Plaid Sandbox** to link a sandbox account, then **Sync Detected Activity** to load transactions into the queue. No production credentials; sandbox only.
 
 ## Build locally
 
