@@ -516,6 +516,11 @@ export function SubTrackerPage() {
               <div>
                 <strong>Current pace:</strong>{' '}
                 {currentPace == null ? '—' : `${formatCents(Math.round(currentPace))} / month`}
+                {currentPace != null && elapsedDays != null ? (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 2 }}>
+                    (Avg {formatCents(Math.round((spendCents / elapsedDays) * 100))} / day over {elapsedDays} {elapsedDays === 1 ? 'day' : 'days'})
+                  </div>
+                ) : null}
               </div>
               <div>
                 <strong>Remaining to target:</strong>{' '}
