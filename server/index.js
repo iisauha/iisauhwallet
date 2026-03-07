@@ -84,6 +84,100 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
   return { ...base, status: 'new' };
 }
 
+/** Best-effort match for pending->posted: same amount, account, date proximity, name similarity */
+function findMatchingDetectedItem(existing, tx, accountId, amountCents, dateISO, name) {
+  const nameNorm = (n) => (n || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 40);
+  const txName = nameNorm(name);
+  const dateTs = dateISO ? new Date(dateISO).getTime() : 0;
+  const dayMs = 24 * 60 * 60 * 1000;
+  for (const item of existing) {
+    if (item.source !== 'plaid' || !item.plaidTransactionId) continue;
+    if (item.status !== 'new' && item.status !== 'in_progress') continue;
+    if (Math.abs((item.amountCents || 0) - amountCents) > 1) continue;
+    if (item.dateISO && dateTs && Math.abs(new Date(item.dateISO).getTime() - dateTs) > 3 * dayMs) continue;
+    if (txName && nameNorm(item.title).slice(0, 20) !== txName.slice(0, 20)) continue;
+    return item;
+  }
+  return null;
+}
+
+/**
+ * Refresh detected activity from Plaid for given item(s). If itemIds is empty, refresh all.
+ * Reuses normalization; preserves resolved/ignored; merges pending->posted.
+ */
+async function refreshDetectedActivityFromPlaid(itemIds = []) {
+  const tokens = getStoredAccessTokens();
+  const idsToRefresh = itemIds.length > 0 ? itemIds.filter((id) => tokens[id]) : Object.keys(tokens);
+  if (idsToRefresh.length === 0) return;
+  const client = getPlaidClient();
+  const now = new Date();
+  const endDate = now.toISOString().slice(0, 10);
+  const startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  let existing = getDetectedItems();
+  const byPlaidId = new Map(existing.filter((i) => i.plaidTransactionId).map((i) => [i.plaidTransactionId, i]));
+
+  for (const itemId of idsToRefresh) {
+    const accessToken = tokens[itemId];
+    if (!accessToken) continue;
+    let accounts = [];
+    try {
+      const acctRes = await client.accountsGet({ access_token: accessToken });
+      accounts = acctRes.data.accounts || [];
+    } catch (e) {
+      console.error('webhook/sync accountsGet error', itemId, e.response?.data?.error_message || e.message);
+      continue;
+    }
+    const accountById = new Map(accounts.map((a) => [a.account_id, a]));
+    let transactions = [];
+    try {
+      const txRes = await client.transactionsGet({
+        access_token: accessToken,
+        start_date: startDate,
+        end_date: endDate,
+        options: { count: 500, offset: 0 },
+      });
+      transactions = txRes.data.transactions || [];
+    } catch (e) {
+      if (e.response?.data?.error_code === 'PRODUCT_NOT_READY') continue;
+      console.error('webhook/sync transactionsGet error', itemId, e.response?.data?.error_message || e.message);
+      continue;
+    }
+    for (const tx of transactions) {
+      const acc = accountById.get(tx.account_id);
+      const accountName = acc?.name || 'Unknown';
+      const accountType = (acc?.type || 'other').replace(/-/g, '_');
+      const amountCents = Math.round(Math.abs((tx.amount || 0) * 100));
+      const isDebit = (tx.amount || 0) < 0;
+      const amount = isDebit ? -amountCents : amountCents;
+      const dateISO = (tx.date || '').slice(0, 10);
+      const name = tx.merchant_name || tx.name || tx.payment_channel || '';
+
+      let existingItem = byPlaidId.get(tx.transaction_id);
+      if (!existingItem && tx.pending_transaction_id) {
+        existingItem = byPlaidId.get(tx.pending_transaction_id) || null;
+        if (existingItem) byPlaidId.delete(tx.pending_transaction_id);
+      }
+      if (!existingItem && !tx.pending) {
+        const fallback = findMatchingDetectedItem(existing, tx, tx.account_id, amount, dateISO, name);
+        if (fallback) existingItem = fallback;
+      }
+      const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined);
+      if (existingItem) {
+        if (existingItem.plaidTransactionId && existingItem.plaidTransactionId !== tx.transaction_id) {
+          byPlaidId.delete(existingItem.plaidTransactionId);
+        }
+        const idx = existing.findIndex((i) => i.id === existingItem.id);
+        if (idx !== -1) existing[idx] = item;
+        byPlaidId.set(tx.transaction_id, item);
+      } else {
+        byPlaidId.set(tx.transaction_id, item);
+        existing.push(item);
+      }
+    }
+  }
+  setDetectedItems(existing);
+}
+
 let plaidClient = null;
 function getPlaidClient() {
   if (plaidClient) return plaidClient;
@@ -145,72 +239,55 @@ app.post('/api/plaid/exchange_public_token', async (req, res) => {
   }
 });
 
-// POST /api/plaid/sync_transactions
+// POST /api/plaid/sync_transactions (manual fallback; webhooks also trigger refresh)
 app.post('/api/plaid/sync_transactions', async (req, res) => {
   try {
     const tokens = getStoredAccessTokens();
-    const itemIds = Object.keys(tokens);
-    if (itemIds.length === 0) {
+    if (Object.keys(tokens).length === 0) {
       return res.json({ synced: 0, message: 'No linked items' });
     }
-    const client = getPlaidClient();
-    const now = new Date();
-    const endDate = now.toISOString().slice(0, 10);
-    const startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    await refreshDetectedActivityFromPlaid([]);
     const existing = getDetectedItems();
-    const byPlaidId = new Map(existing.filter((i) => i.plaidTransactionId).map((i) => [i.plaidTransactionId, i]));
-
-    for (const itemId of itemIds) {
-      const accessToken = tokens[itemId];
-      if (!accessToken) continue;
-      let accounts = [];
-      try {
-        const acctRes = await client.accountsGet({ access_token: accessToken });
-        accounts = acctRes.data.accounts || [];
-      } catch (e) {
-        console.error('accountsGet error', itemId, e.response?.data || e.message);
-        continue;
-      }
-      const accountById = new Map(accounts.map((a) => [a.account_id, a]));
-      let transactions = [];
-      try {
-        const txRes = await client.transactionsGet({
-          access_token: accessToken,
-          start_date: startDate,
-          end_date: endDate,
-          options: { count: 500, offset: 0 },
-        });
-        transactions = txRes.data.transactions || [];
-      } catch (e) {
-        if (e.response?.data?.error_code === 'PRODUCT_NOT_READY') {
-          // Sandbox can return this; skip
-          continue;
-        }
-        console.error('transactionsGet error', itemId, e.response?.data || e.message);
-        continue;
-      }
-      for (const tx of transactions) {
-        const acc = accountById.get(tx.account_id);
-        const accountName = acc?.name || 'Unknown';
-        const accountType = (acc?.type || 'other').replace(/-/g, '_');
-        const existingItem = byPlaidId.get(tx.transaction_id);
-        const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined);
-        if (existingItem) {
-          const idx = existing.findIndex((i) => i.plaidTransactionId === tx.transaction_id);
-          if (idx !== -1) existing[idx] = item;
-        } else {
-          byPlaidId.set(tx.transaction_id, item);
-          existing.push(item);
-        }
-      }
-    }
-    setDetectedItems(existing);
     return res.json({ synced: existing.filter((i) => i.source === 'plaid').length, total: existing.length });
   } catch (err) {
     const data = err.response?.data || { error_message: err.message };
     console.error('sync_transactions error', data);
     return res.status(500).json({ error: data.error_message || 'Sync failed' });
   }
+});
+
+// POST /api/plaid/webhook — Plaid sends transaction/item updates. Respond 200 immediately; process async.
+app.post('/api/plaid/webhook', (req, res) => {
+  const body = req.body || {};
+  const webhookType = body.webhook_type;
+  const webhookCode = body.webhook_code;
+  const itemId = body.item_id;
+  const requestId = body.request_id;
+  const removedIds = body.removed_transactions;
+  // Log for debugging; do not log secrets or full payload
+  console.log('[plaid webhook]', {
+    webhook_type: webhookType,
+    webhook_code: webhookCode,
+    item_id: itemId ? `${itemId.slice(0, 8)}...` : undefined,
+    request_id: requestId ? `${String(requestId).slice(0, 8)}...` : undefined,
+    removed_count: Array.isArray(removedIds) ? removedIds.length : 0,
+  });
+  res.status(200).json({ received: true });
+  const tokens = getStoredAccessTokens();
+  const shouldRefresh = itemId && tokens[itemId];
+  const removedSet = Array.isArray(removedIds) && removedIds.length ? new Set(removedIds) : null;
+  setImmediate(() => {
+    (async () => {
+      if (shouldRefresh) await refreshDetectedActivityFromPlaid([itemId]).catch((err) => {
+        console.error('[plaid webhook] refresh failed', err.message);
+      });
+      if (removedSet && removedSet.size > 0) {
+        const existing = getDetectedItems();
+        const next = existing.filter((i) => !i.plaidTransactionId || !removedSet.has(i.plaidTransactionId));
+        if (next.length !== existing.length) setDetectedItems(next);
+      }
+    })();
+  });
 });
 
 // GET /api/detected-activity

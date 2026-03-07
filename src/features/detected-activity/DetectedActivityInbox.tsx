@@ -8,6 +8,7 @@ import {
   hasApiBase,
   createLinkToken,
   exchangePublicToken,
+  getDetectedActivity,
   syncAndGetDetectedActivity,
   type DetectedActivityItemFromApi
 } from '../../api/detectedActivityApi';
@@ -33,10 +34,11 @@ function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
 }
 
 export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
-  const { items, setLaunchFlow, setBackendItems, markIgnored } = useDetectedActivity();
+  const { items, setLaunchFlow, setBackendItems, markIgnored, loadBackendItems } = useDetectedActivity();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [refreshStatus, setRefreshStatus] = useState<'idle' | 'loading' | 'ok'>('idle');
   const activeItems = items.filter((i) => i.status === 'new' || i.status === 'in_progress');
   const apiConfigured = hasApiBase();
 
@@ -88,6 +90,17 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
     }
   }
 
+  async function handleRefresh() {
+    setRefreshStatus('loading');
+    try {
+      const { items: list } = await getDetectedActivity();
+      setBackendItems(list.map(toDetectedItem));
+      setRefreshStatus('ok');
+    } catch (_) {
+      setRefreshStatus('idle');
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={() => onClose()}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
@@ -111,6 +124,16 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                 disabled={syncStatus === 'loading'}
               >
                 {syncStatus === 'loading' ? 'Syncing…' : 'Sync Detected Activity'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.85rem' }}
+                onClick={handleRefresh}
+                disabled={refreshStatus === 'loading'}
+                title="Reload queue from server (e.g. after webhook updates)"
+              >
+                {refreshStatus === 'loading' ? 'Refreshing…' : refreshStatus === 'ok' ? 'Refreshed' : 'Refresh'}
               </button>
             </div>
             {linkError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{linkError}</p> : null}
