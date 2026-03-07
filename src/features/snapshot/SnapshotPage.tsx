@@ -75,6 +75,9 @@ export function SnapshotPage() {
   const finalNetCashClass =
     totals.finalNetCashCents >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
 
+  const pendingCcPaymentCents = totals.pendingCcPaymentCents || 0;
+  const pendingOutNonCcCents = totals.pendingOutNonCcCents ?? totals.pendingOutCents;
+
   const visibleBanks = useMemo(() => {
     const list = data.banks || [];
     return showZeroCashItems ? list : list.filter((b) => (b.balanceCents || 0) !== 0);
@@ -331,9 +334,15 @@ export function SnapshotPage() {
             <span className="k">Credit Card Credit</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.ccCreditCents)}</span>
           </div>
+          {pendingCcPaymentCents > 0 ? (
+            <div className="summary-kv">
+              <span className="k">Pending Credit Card Payments</span>
+              <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingCcPaymentCents)}</span>
+            </div>
+          ) : null}
           <div className="summary-kv">
             <span className="k">Total Pending Outbound</span>
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.pendingOutCents)}</span>
+            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingOutNonCcCents)}</span>
           </div>
           <div className="summary-kv">
             <span className="k">Total Pending Inbound</span>

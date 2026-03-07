@@ -47,24 +47,42 @@ export function formatLongLocalDate(dateISO: string): string {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// IMPORTANT: matches legacy snapshotNeedsPaint expectedFinal formula exactly.
 export function calcFinalNetCashCents(data: LedgerData): {
   bankTotalCents: number;
   ccDebtCents: number;
   ccCreditCents: number;
   pendingOutCents: number;
+  /** Pending outbound that are NOT credit card payments (used for net cash). */
+  pendingOutNonCcCents: number;
+  /** Pending outbound that ARE credit card payments (bank → card transfers). */
+  pendingCcPaymentCents: number;
   pendingInCents: number;
   finalNetCashCents: number;
 } {
   const bankTotalCents = sumBankTotalCents(data);
   const ccDebtCents = sumCcDebtCents(data.cards || []);
   const ccCreditCents = sumCcCreditCents(data.cards || []);
-  const pendingOutCents = sumPendingOutCents(data.pendingOut || []);
+  const allPendingOut = data.pendingOut || [];
+  const pendingOutCents = sumPendingOutCents(allPendingOut);
+  const pendingCcPaymentCents = sumPendingOutCents(allPendingOut.filter((p) => p.outboundType === 'cc_payment'));
+  const pendingOutNonCcCents = pendingOutCents - pendingCcPaymentCents;
   const pendingInCents = sumPendingInCents(data.pendingIn || []);
 
-  const finalNetCashCents = bankTotalCents + pendingInCents - pendingOutCents - ccDebtCents + ccCreditCents;
+  // For net cash, only subtract true outbound costs. Credit card payments are transfers
+  // that pay down an already-counted card balance, so we exclude them here to avoid
+  // double-counting the liability.
+  const finalNetCashCents = bankTotalCents + pendingInCents - pendingOutNonCcCents - ccDebtCents + ccCreditCents;
 
-  return { bankTotalCents, ccDebtCents, ccCreditCents, pendingOutCents, pendingInCents, finalNetCashCents };
+  return {
+    bankTotalCents,
+    ccDebtCents,
+    ccCreditCents,
+    pendingOutCents,
+    pendingOutNonCcCents,
+    pendingCcPaymentCents,
+    pendingInCents,
+    finalNetCashCents
+  };
 }
 
 export function toLocalDateKey(date: Date) {
