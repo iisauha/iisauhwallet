@@ -19,6 +19,7 @@ export type DetectedActivityItemFromApi = {
   resolvedAs?: string;
   suggestedAction?: string;
   possibleTransferMatchId?: string;
+  updatedFromPending?: boolean;
 };
 
 export function hasApiBase(): boolean {

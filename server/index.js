@@ -67,6 +67,7 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
   const amount = isDebit ? -amountCents : amountCents;
   const title = tx.merchant_name || tx.name || tx.payment_channel || 'Transaction';
   const dateISO = (tx.date || '').slice(0, 10);
+  const wasPendingNowPosted = existingItem?.pending && !tx.pending;
   const base = {
     id: existingItem?.id ?? `plaid_${tx.transaction_id}`,
     plaidTransactionId: tx.transaction_id,
@@ -77,6 +78,7 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
     accountType: accountType || 'unknown',
     pending: !!tx.pending,
     source: 'plaid',
+    ...(wasPendingNowPosted ? { updatedFromPending: true } : {}),
   };
   if (existingItem) {
     return { ...base, status: existingItem.status, resolvedAs: existingItem.resolvedAs };
@@ -84,17 +86,26 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
   return { ...base, status: 'new' };
 }
 
-/** Best-effort match for pending->posted: same amount, account, date proximity, name similarity */
-function findMatchingDetectedItem(existing, tx, accountId, amountCents, dateISO, name) {
+/**
+ * Best-effort match for pending->posted reconciliation.
+ * Uses: same account, same/near amount, close date, merchant/name similarity.
+ * Matches only items that are currently pending (so we merge posted tx into a pending item).
+ * Preserves status (new/ignored/resolved) when merging.
+ */
+function findMatchingDetectedItem(existing, amountCents, dateISO, name, accountName) {
   const nameNorm = (n) => (n || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 40);
   const txName = nameNorm(name);
   const dateTs = dateISO ? new Date(dateISO).getTime() : 0;
   const dayMs = 24 * 60 * 60 * 1000;
+  const amountTolerance = 5;
+  const accountNorm = (a) => (a || '').toLowerCase().trim();
+  const txAccount = accountNorm(accountName);
   for (const item of existing) {
     if (item.source !== 'plaid' || !item.plaidTransactionId) continue;
-    if (item.status !== 'new' && item.status !== 'in_progress') continue;
-    if (Math.abs((item.amountCents || 0) - amountCents) > 1) continue;
-    if (item.dateISO && dateTs && Math.abs(new Date(item.dateISO).getTime() - dateTs) > 3 * dayMs) continue;
+    if (!item.pending) continue;
+    if (txAccount && accountNorm(item.accountName) !== txAccount) continue;
+    if (Math.abs((item.amountCents || 0) - amountCents) > amountTolerance) continue;
+    if (item.dateISO && dateTs && Math.abs(new Date(item.dateISO).getTime() - dateTs) > 5 * dayMs) continue;
     if (txName && nameNorm(item.title).slice(0, 20) !== txName.slice(0, 20)) continue;
     return item;
   }
@@ -158,7 +169,7 @@ async function refreshDetectedActivityFromPlaid(itemIds = []) {
         if (existingItem) byPlaidId.delete(tx.pending_transaction_id);
       }
       if (!existingItem && !tx.pending) {
-        const fallback = findMatchingDetectedItem(existing, tx, tx.account_id, amount, dateISO, name);
+        const fallback = findMatchingDetectedItem(existing, amount, dateISO, name, accountName);
         if (fallback) existingItem = fallback;
       }
       const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined);

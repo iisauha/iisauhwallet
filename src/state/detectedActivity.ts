@@ -28,6 +28,8 @@ export type DetectedActivityItem = {
   suggestedAction?: DetectedSuggestedAction;
   /** If set, this item is part of a likely transfer pair with the given id. */
   possibleTransferMatchId?: string;
+  /** True when this item was reconciled from pending to posted (single queue item). */
+  updatedFromPending?: boolean;
 };
 
 function uid(): string {

@@ -40,7 +40,19 @@ export function useDetectedActivityOptional(): ContextValue | null {
   return useContext(DetectedActivityContext);
 }
 
-function apiItemToDetected(a: { id: string; title: string; amountCents: number; dateISO: string; accountName: string; accountType: string; pending: boolean; status: string }): DetectedActivityItem {
+function apiItemToDetected(a: {
+  id: string;
+  title: string;
+  amountCents: number;
+  dateISO: string;
+  accountName: string;
+  accountType: string;
+  pending: boolean;
+  status: string;
+  suggestedAction?: string;
+  possibleTransferMatchId?: string;
+  updatedFromPending?: boolean;
+}): DetectedActivityItem {
   return {
     id: a.id,
     title: a.title,
@@ -50,6 +62,9 @@ function apiItemToDetected(a: { id: string; title: string; amountCents: number; 
     accountType: a.accountType,
     pending: a.pending,
     status: (a.status as DetectedActivityItem['status']) || 'new',
+    suggestedAction: a.suggestedAction as DetectedActivityItem['suggestedAction'],
+    possibleTransferMatchId: a.possibleTransferMatchId,
+    updatedFromPending: a.updatedFromPending,
   };
 }
 

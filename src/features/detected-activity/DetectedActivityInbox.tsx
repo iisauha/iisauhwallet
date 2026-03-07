@@ -31,6 +31,7 @@ function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
     status: (a.status as DetectedActivityItem['status']) || 'new',
     suggestedAction: a.suggestedAction as DetectedSuggestedAction | undefined,
     possibleTransferMatchId: a.possibleTransferMatchId,
+    updatedFromPending: a.updatedFromPending,
   };
 }
 
@@ -224,6 +225,9 @@ function DetectedCard({
       <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>
         {item.accountName} · {item.accountType.replace('_', ' ')} · {item.dateISO}
         {item.pending ? ' · Pending' : ' · Posted'}
+        {item.updatedFromPending && !item.pending && (
+          <span style={{ marginLeft: 4, fontStyle: 'italic' }}>· Updated from pending to posted</span>
+        )}
       </div>
       <div style={{ fontSize: '0.75rem', marginBottom: 8, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
         <span
