@@ -225,10 +225,21 @@ function DetectedCard({
         {item.accountName} · {item.accountType.replace('_', ' ')} · {item.dateISO}
         {item.pending ? ' · Pending' : ' · Posted'}
       </div>
-      <div style={{ fontSize: '0.8rem', marginBottom: 8 }}>
-        <span style={{ color: 'var(--accent)', fontWeight: 500 }}>Suggested: {suggestedLabel}</span>
+      <div style={{ fontSize: '0.75rem', marginBottom: 8, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+        <span
+          style={{
+            color: 'var(--accent)',
+            fontWeight: 500,
+            padding: '2px 8px',
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+          }}
+        >
+          Suggested: {suggestedLabel}
+        </span>
         {showTransferMatch && (
-          <span style={{ marginLeft: 8, color: 'var(--muted)', fontStyle: 'italic' }}>· Possible transfer match</span>
+          <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Possible transfer pair detected</span>
         )}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
