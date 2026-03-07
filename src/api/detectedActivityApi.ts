@@ -30,6 +30,13 @@ export type DetectedActivityItemFromApi = {
   linkedPurchaseTitle?: string;
   linkedPurchaseDateISO?: string;
   linkedPurchaseAmountCents?: number;
+  suggestionSource?: string;
+  suggestionReason?: string;
+  firstSeenAt?: string;
+  lastUpdatedAt?: string;
+  resolvedAt?: string;
+  matchedRuleId?: string;
+  matchedRuleSummary?: string;
 };
 
 export type DetectedActivityRule = {

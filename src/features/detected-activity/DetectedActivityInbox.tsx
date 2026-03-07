@@ -51,6 +51,14 @@ function toDetectedItem(a: DetectedActivityItemFromApi): DetectedActivityItem {
     linkedPurchaseTitle: a.linkedPurchaseTitle,
     linkedPurchaseDateISO: a.linkedPurchaseDateISO,
     linkedPurchaseAmountCents: a.linkedPurchaseAmountCents,
+    suggestionSource: a.suggestionSource as DetectedActivityItem['suggestionSource'],
+    suggestionReason: a.suggestionReason,
+    firstSeenAt: a.firstSeenAt,
+    lastUpdatedAt: a.lastUpdatedAt,
+    resolvedAs: a.resolvedAs,
+    resolvedAt: a.resolvedAt,
+    matchedRuleId: a.matchedRuleId,
+    matchedRuleSummary: a.matchedRuleSummary,
   };
 }
 
@@ -69,7 +77,7 @@ function computeSuggestedActionForItem(item: DetectedActivityItem): DetectedSugg
   return 'review_manually';
 }
 
-function getSuggestedActionLabel(action: DetectedSuggestedAction): string {
+function getSuggestedActionLabel(action: DetectedSuggestedAction | string): string {
   switch (action) {
     case 'add_purchase': return 'Add purchase';
     case 'pending_in': return 'Pending inbound';
@@ -77,7 +85,8 @@ function getSuggestedActionLabel(action: DetectedSuggestedAction): string {
     case 'transfer': return 'Transfer between cash and investing';
     case 'review_manually': return 'Review manually';
     case 'suggest_ignore': return 'Ignore / likely irrelevant';
-    default: return 'Review manually';
+    case 'refund_linked': return 'Linked refund to purchase';
+    default: return typeof action === 'string' && action ? action.replace(/_/g, ' ') : 'Review manually';
   }
 }
 
@@ -119,6 +128,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
   const [rememberChecked, setRememberChecked] = useState(false);
   const [rememberSaving, setRememberSaving] = useState(false);
   const [linkToPurchaseForItem, setLinkToPurchaseForItem] = useState<DetectedActivityItem | null>(null);
+  const [detailsItem, setDetailsItem] = useState<DetectedActivityItem | null>(null);
   const apiConfigured = hasApiBase();
   const data = useLedgerStore((s) => s.data);
 
@@ -364,6 +374,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                 onIgnore={() => handleIgnoreClick(item)}
                 onReopen={() => markReopened(item.id)}
                 onLinkToPurchase={item.likelyRefund || item.likelyReversal ? () => setLinkToPurchaseForItem(item) : undefined}
+                onShowDetails={() => setDetailsItem(item)}
                 showActions={item.status === 'new' || item.status === 'in_progress'}
               />
             ))}
@@ -414,6 +425,9 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
             )}
           </div>
         </div>
+      ) : null}
+      {detailsItem ? (
+        <DetailsModal item={detailsItem} onClose={() => setDetailsItem(null)} />
       ) : null}
       {linkToPurchaseForItem ? (
         <LinkToPurchaseModal
@@ -524,6 +538,93 @@ function LinkToPurchaseModal({
           Cancel
         </button>
       </div>
+    </div>
+  );
+}
+
+function suggestionSourceLabel(source?: string): string {
+  switch (source) {
+    case 'rule': return 'Saved rule';
+    case 'transfer_match': return 'Transfer matching';
+    case 'heuristic': return 'Default heuristic';
+    case 'manual_only': return 'Manual only';
+    default: return source || '—';
+  }
+}
+
+function DetailsModal({ item, onClose }: { item: DetectedActivityItem; onClose: () => void }) {
+  const suggestedAction = item.suggestedAction ?? computeSuggestedActionForItem(item);
+  const suggestedLabel = getSuggestedActionLabel(suggestedAction);
+  const firstSeen = item.firstSeenAt || item.detectedAt;
+  const lastUpdated = item.lastUpdatedAt;
+
+  return (
+    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, position: 'relative', zIndex: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <h3 style={{ margin: 0, fontSize: '1rem' }}>Details · Why?</h3>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px' }} onClick={onClose}>Close</button>
+      </div>
+      <div style={{ fontSize: '0.9rem', marginBottom: 8, fontWeight: 600 }}>{item.title}</div>
+      <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 12 }}>{item.accountName} · {formatCents(item.amountCents)} · {item.dateISO}</div>
+
+      <section style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Suggested action</div>
+        <div style={{ fontSize: '0.9rem' }}>{suggestedLabel}</div>
+      </section>
+
+      <section style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Source</div>
+        <div style={{ fontSize: '0.85rem' }}>{suggestionSourceLabel(item.suggestionSource)}</div>
+      </section>
+
+      {item.suggestionReason ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Why</div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text)' }}>{item.suggestionReason}</div>
+        </section>
+      ) : null}
+
+      {item.matchedRuleSummary ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Matched rule</div>
+          <div style={{ fontSize: '0.85rem' }}>{item.matchedRuleSummary}</div>
+        </section>
+      ) : null}
+
+      <section style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>State</div>
+        <div style={{ fontSize: '0.85rem' }}>{item.pending ? 'Pending' : 'Posted'}</div>
+      </section>
+
+      {item.updatedFromPending ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Pending → Posted</div>
+          <div style={{ fontSize: '0.85rem' }}>Originally detected as pending.</div>
+          {lastUpdated ? <div style={{ fontSize: '0.85rem' }}>Updated to posted on {new Date(lastUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}.</div> : null}
+        </section>
+      ) : null}
+
+      {firstSeen ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>First seen</div>
+          <div style={{ fontSize: '0.85rem' }}>{new Date(firstSeen).toLocaleString()}</div>
+        </section>
+      ) : null}
+
+      {lastUpdated ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Last updated</div>
+          <div style={{ fontSize: '0.85rem' }}>{new Date(lastUpdated).toLocaleString()}</div>
+        </section>
+      ) : null}
+
+      {item.status === 'resolved' && item.resolvedAs ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Resolved as</div>
+          <div style={{ fontSize: '0.85rem' }}>{getSuggestedActionLabel(item.resolvedAs as DetectedSuggestedAction) || item.resolvedAs}</div>
+          {item.resolvedAt ? <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>{new Date(item.resolvedAt).toLocaleString()}</div> : null}
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -648,6 +749,7 @@ function DetectedCard({
   onIgnore,
   onReopen,
   onLinkToPurchase,
+  onShowDetails,
   showActions,
 }: {
   item: DetectedActivityItem;
@@ -655,6 +757,7 @@ function DetectedCard({
   onIgnore: () => void;
   onReopen: () => void;
   onLinkToPurchase?: () => void;
+  onShowDetails?: () => void;
   showActions: boolean;
 }) {
   const suggestedAction = item.suggestedAction ?? computeSuggestedActionForItem(item);
@@ -685,6 +788,11 @@ function DetectedCard({
         {statusBadge}
         {pendingPostedBadge}
         {refundReversalBadge}
+        {onShowDetails ? (
+          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.7rem', padding: '2px 8px', marginLeft: 'auto' }} onClick={onShowDetails}>
+            Why?
+          </button>
+        ) : null}
       </div>
       {item.status === 'resolved' && item.linkedPurchaseId && (item.linkedPurchaseTitle != null || item.linkedPurchaseDateISO != null || item.linkedPurchaseAmountCents != null) ? (
         <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 6 }}>

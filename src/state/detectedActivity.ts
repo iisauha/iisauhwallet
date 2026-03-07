@@ -51,6 +51,21 @@ export type DetectedActivityItem = {
   linkedPurchaseTitle?: string;
   linkedPurchaseDateISO?: string;
   linkedPurchaseAmountCents?: number;
+  /** Audit: why this suggestion (rule | transfer_match | heuristic). */
+  suggestionSource?: 'rule' | 'transfer_match' | 'heuristic' | 'manual_only';
+  /** Audit: human-readable reason for suggestion. */
+  suggestionReason?: string;
+  /** Audit: when first detected. */
+  firstSeenAt?: string;
+  /** Audit: when last updated (sync or resolve/ignore). */
+  lastUpdatedAt?: string;
+  /** What the user resolved this item as (e.g. add_purchase, refund_linked). */
+  resolvedAs?: string;
+  /** Audit: when resolved (if resolved). */
+  resolvedAt?: string;
+  /** Audit: rule that matched (if suggestion from rule). */
+  matchedRuleId?: string;
+  matchedRuleSummary?: string;
 };
 
 function uid(): string {

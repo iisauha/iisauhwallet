@@ -60,6 +60,14 @@ function apiItemToDetected(a: {
   linkedPurchaseTitle?: string;
   linkedPurchaseDateISO?: string;
   linkedPurchaseAmountCents?: number;
+  suggestionSource?: string;
+  suggestionReason?: string;
+  firstSeenAt?: string;
+  lastUpdatedAt?: string;
+  resolvedAs?: string;
+  resolvedAt?: string;
+  matchedRuleId?: string;
+  matchedRuleSummary?: string;
 }): DetectedActivityItem {
   return {
     id: a.id,
@@ -80,6 +88,14 @@ function apiItemToDetected(a: {
     linkedPurchaseTitle: a.linkedPurchaseTitle,
     linkedPurchaseDateISO: a.linkedPurchaseDateISO,
     linkedPurchaseAmountCents: a.linkedPurchaseAmountCents,
+    suggestionSource: a.suggestionSource as DetectedActivityItem['suggestionSource'],
+    suggestionReason: a.suggestionReason,
+    firstSeenAt: a.firstSeenAt,
+    lastUpdatedAt: a.lastUpdatedAt,
+    resolvedAs: a.resolvedAs,
+    resolvedAt: a.resolvedAt,
+    matchedRuleId: a.matchedRuleId,
+    matchedRuleSummary: a.matchedRuleSummary,
   };
 }
 

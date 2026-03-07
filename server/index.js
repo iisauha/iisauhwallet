@@ -135,6 +135,7 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
   const wasPendingNowPosted = existingItem?.pending && !tx.pending;
   const env = (environment || 'sandbox').toLowerCase();
   const sourceMode = env === 'sandbox' ? 'sandbox' : 'real_pilot';
+  const nowIso = new Date().toISOString();
   const base = {
     id: existingItem?.id ?? `plaid_${tx.transaction_id}`,
     plaidTransactionId: tx.transaction_id,
@@ -149,10 +150,22 @@ function normalizePlaidTransaction(tx, accountName, accountType, existingItem = 
     sourceMode,
     ...(wasPendingNowPosted ? { updatedFromPending: true } : {}),
     ...(existingItem?.detectedAt ? { detectedAt: existingItem.detectedAt } : {}),
-    ...(!existingItem ? { detectedAt: new Date().toISOString() } : {}),
+    ...(!existingItem ? { detectedAt: nowIso } : {}),
+    ...(existingItem?.firstSeenAt ? { firstSeenAt: existingItem.firstSeenAt } : {}),
+    ...(!existingItem ? { firstSeenAt: nowIso } : {}),
+    ...(existingItem ? { lastUpdatedAt: nowIso } : {}),
   };
   if (existingItem) {
-    return { ...base, status: existingItem.status, resolvedAs: existingItem.resolvedAs };
+    return {
+      ...base,
+      status: existingItem.status,
+      resolvedAs: existingItem.resolvedAs,
+      resolvedAt: existingItem.resolvedAt,
+      linkedPurchaseId: existingItem.linkedPurchaseId,
+      linkedPurchaseTitle: existingItem.linkedPurchaseTitle,
+      linkedPurchaseDateISO: existingItem.linkedPurchaseDateISO,
+      linkedPurchaseAmountCents: existingItem.linkedPurchaseAmountCents,
+    };
   }
   return { ...base, status: 'new' };
 }
@@ -391,6 +404,15 @@ app.post('/api/plaid/webhook', (req, res) => {
 });
 
 // --- Suggested action and transfer-pair (UX only; no auto-posting) ---
+const ACTION_LABELS = {
+  add_purchase: 'Add purchase',
+  pending_in: 'Pending inbound',
+  pending_out: 'Pending outbound',
+  transfer: 'Transfer between cash and investing',
+  review_manually: 'Review manually',
+  suggest_ignore: 'Ignore / likely irrelevant',
+};
+
 function computeSuggestedAction(item) {
   const title = (item.title || '').toLowerCase();
   const accountType = (item.accountType || '').toLowerCase();
@@ -409,6 +431,30 @@ function computeSuggestedAction(item) {
   if (isInbound && (hasIncoming || title.includes('transfer'))) return 'pending_in';
   if (!isInbound && isBank && (hasOutgoing || title.includes('transfer'))) return 'pending_out';
   return 'review_manually';
+}
+
+function buildHeuristicReason(item, suggested) {
+  const title = (item.title || '').toLowerCase();
+  const accountType = (item.accountType || '').toLowerCase();
+  const amountCents = item.amountCents ?? 0;
+  const isInbound = amountCents > 0;
+  const isCredit = accountType.includes('credit');
+  const isBank = accountType.includes('depository') || accountType.includes('checking') || accountType.includes('savings') || accountType === 'bank';
+  const refundNote = (item.likelyRefund || item.likelyReversal) ? ' Possible refund/reversal detected (inbound or keywords).' : '';
+  if (suggested === 'add_purchase') return `Likely credit card purchase (account type is credit).${refundNote}`;
+  if (suggested === 'pending_in') return `Inbound transaction with transfer/incoming keywords.${refundNote}`;
+  if (suggested === 'pending_out') return `Outbound from bank with transfer/payment keywords.${refundNote}`;
+  if (suggested === 'transfer') return 'Possible transfer pair with matching opposite transaction (amount/date).';
+  return `No strong pattern; review manually.${refundNote}`;
+}
+
+function ruleToSummary(rule) {
+  if (!rule) return '';
+  const typeLabels = { merchant_exact: 'merchant is', merchant_contains: 'merchant contains', description_contains: 'description contains', account_description_contains: 'account + description contains', account_merchant: 'account + merchant' };
+  const t = typeLabels[rule.matchType] || rule.matchType;
+  const v = (rule.matchValue || '').slice(0, 40);
+  const action = ACTION_LABELS[rule.actionSuggestion] || rule.actionSuggestion;
+  return `${t} "${v}" → ${action}`;
 }
 
 /** Best-effort: detect likely refund or reversal (positive inflow on credit, or description keywords). */
@@ -475,19 +521,30 @@ function enrichWithSuggestions(items) {
   const rules = getRules();
   const pairs = findTransferPairs(items);
   return items.map((item) => {
+    const { likelyRefund, likelyReversal } = detectLikelyRefundOrReversal(item);
     const matchedRule = findMatchingRule(rules, item);
     let suggested;
     let suggestedFromRule = false;
+    let suggestionSource = 'heuristic';
+    let suggestionReason = '';
+    let matchedRuleId;
+    let matchedRuleSummary;
     if (matchedRule && matchedRule.actionSuggestion) {
       suggested = matchedRule.actionSuggestion;
       suggestedFromRule = true;
+      suggestionSource = 'rule';
+      matchedRuleId = matchedRule.id;
+      matchedRuleSummary = ruleToSummary(matchedRule);
+      suggestionReason = `Matched saved rule: ${matchedRuleSummary}`;
     } else if (pairs.has(item.id)) {
       suggested = 'transfer';
+      suggestionSource = 'transfer_match';
+      suggestionReason = 'Possible transfer pair detected with matching opposite transaction (amount and date).';
     } else {
       suggested = computeSuggestedAction(item);
+      suggestionReason = buildHeuristicReason({ ...item, likelyRefund, likelyReversal }, suggested);
     }
     const possibleTransferMatchId = pairs.get(item.id) || undefined;
-    const { likelyRefund, likelyReversal } = detectLikelyRefundOrReversal(item);
     return {
       ...item,
       suggestedAction: suggested,
@@ -495,6 +552,10 @@ function enrichWithSuggestions(items) {
       possibleTransferMatchId,
       likelyRefund: likelyRefund || undefined,
       likelyReversal: likelyReversal || undefined,
+      suggestionSource: suggestionSource || undefined,
+      suggestionReason: suggestionReason || undefined,
+      matchedRuleId: matchedRuleId || undefined,
+      matchedRuleSummary: matchedRuleSummary || undefined,
     };
   });
 }
@@ -512,7 +573,7 @@ app.post('/api/detected-activity/:id/ignore', (req, res) => {
   const items = getDetectedItems();
   const idx = items.findIndex((i) => i.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  items[idx] = { ...items[idx], status: 'ignored' };
+  items[idx] = { ...items[idx], status: 'ignored', lastUpdatedAt: new Date().toISOString() };
   setDetectedItems(items);
   return res.json({ ok: true });
 });
@@ -525,7 +586,8 @@ app.post('/api/detected-activity/:id/resolve', (req, res) => {
   const items = getDetectedItems();
   const idx = items.findIndex((i) => i.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  const next = { ...items[idx], status: 'resolved', resolvedAs: resolvedAs || undefined };
+  const nowIso = new Date().toISOString();
+  const next = { ...items[idx], status: 'resolved', resolvedAs: resolvedAs || undefined, resolvedAt: nowIso, lastUpdatedAt: nowIso };
   if (linkedPurchaseId != null) {
     next.linkedPurchaseId = linkedPurchaseId;
     next.linkedPurchaseTitle = linkedPurchaseTitle != null ? String(linkedPurchaseTitle).slice(0, 200) : undefined;
@@ -553,10 +615,12 @@ app.post('/api/detected-activity/:id/reset', (req, res) => {
     ...item,
     status: 'new',
     resolvedAs: undefined,
+    resolvedAt: undefined,
     linkedPurchaseId: undefined,
     linkedPurchaseTitle: undefined,
     linkedPurchaseDateISO: undefined,
     linkedPurchaseAmountCents: undefined,
+    lastUpdatedAt: new Date().toISOString(),
   };
   setDetectedItems(items);
   return res.json({ ok: true });
