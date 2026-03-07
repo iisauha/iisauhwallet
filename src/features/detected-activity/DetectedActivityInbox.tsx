@@ -314,7 +314,6 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
     <div className="modal-overlay" onClick={() => onClose()}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 12, minHeight: 0 }}>
-          <h3 style={{ margin: 0, flexShrink: 0 }}>Detected Activity</h3>
           <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '6px 12px', marginLeft: 'auto' }}>
             Close
           </button>
@@ -362,30 +361,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                 Pilot: one real account only. To link another, disconnect the current one first.
               </p>
             ) : null}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={handleConnectPlaid}>
-                Connect Bank{plaidMode === 'production' ? ' (1 real account)' : ''}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem' }}
-                onClick={handleSync}
-                disabled={syncStatus === 'loading'}
-              >
-                {syncStatus === 'loading' ? 'Syncing…' : 'Sync Detected Activity'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem' }}
-                onClick={handleRefresh}
-                disabled={refreshStatus === 'loading'}
-                title="Reload queue from server (e.g. after webhook updates)"
-              >
-                {refreshStatus === 'loading' ? 'Refreshing…' : refreshStatus === 'ok' ? 'Refreshed' : 'Refresh'}
-              </button>
-            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }} />
             {linkError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{linkError}</p> : null}
             {syncMessage ? (
               <p style={{ color: syncStatus === 'error' ? 'var(--red)' : 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
@@ -451,13 +427,13 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
         ) : null}
         <div style={{ marginBottom: 12 }}>
           <button type="button" className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={() => setAddTestOpen(true)}>
-            Add Test Detected Activity
+            Add Test Item
           </button>
         </div>
         {items.some((i) => i.source === 'test') ? (
           <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }}>
             <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Test items cleanup</div>
-            <p style={{ color: 'var(--muted)', margin: '0 0 8px 0', fontSize: '0.85rem' }}>Only removes test items. Real Plaid items are not affected.</p>
+            <p style={{ color: 'var(--muted)', margin: '0 0 8px 0', fontSize: '0.85rem' }}>Only removes test items. Manual data is not affected.</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => setItems((prev) => prev.filter((i) => i.source !== 'test'))}>
                 Clear all test items
@@ -882,7 +858,7 @@ function AddTestModal({
 
   return (
     <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, position: 'relative', zIndex: 10 }}>
-      <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Add Test Detected Activity</h3>
+      <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Add Test Item</h3>
       <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0 0 12px 0' }}>Test items use the same suggestion and rules flow as real items.</p>
       {error ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{error}</p> : null}
       <div className="field" style={{ marginBottom: 10 }}>
@@ -1383,13 +1359,12 @@ function DetectedCard({
   );
 }
 
-/** Button label: "Detected Activity" or "Detected Activity (N)" when there are unresolved items. */
 export function DetectedActivityButtonLabel() {
   const { items } = useDetectedActivity();
   const count = getActiveDetectedCount(items);
   return (
     <>
-      Detected Activity{count > 0 ? ` (${count})` : ''}
+      Inbox{count > 0 ? ` (${count})` : ''}
     </>
   );
 }

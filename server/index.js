@@ -672,8 +672,10 @@ app.get('/api/plaid/accounts', async (req, res) => {
 
     const sourceMode = env === 'sandbox' ? 'sandbox' : 'real_pilot';
     const normalized = rawAccounts.map((a) => {
-      const current = toNumberOrNull(a.balances?.current ?? a.balances?.available);
-      const available = toNumberOrNull(a.balances?.available);
+      const currentRaw = toNumberOrNull(a.balances?.current ?? a.balances?.available);
+      const availableRaw = toNumberOrNull(a.balances?.available);
+      const currentCents = currentRaw != null ? Math.round(currentRaw * 100) : null;
+      const availableCents = availableRaw != null ? Math.round(availableRaw * 100) : null;
       const isoCurrencyCode =
         a.balances?.iso_currency_code || a.balances?.unofficial_currency_code || null;
       return {
@@ -684,13 +686,47 @@ app.get('/api/plaid/accounts', async (req, res) => {
         mask: a.mask || null,
         type: a.type || '',
         subtype: a.subtype || null,
-        currentBalance: current,
-        availableBalance: available,
+        currentBalance: currentCents,
+        availableBalance: availableCents,
         isoCurrencyCode,
         source: 'plaid',
         sourceMode,
       };
     });
+
+    // #region agent log
+    try {
+      if (typeof fetch === 'function') {
+        fetch('http://127.0.0.1:7458/ingest/27b509c0-59e8-4a4f-9012-8a8e58914640', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Debug-Session-Id': 'e20ffd',
+          },
+          body: JSON.stringify({
+            sessionId: 'e20ffd',
+            runId: 'balances',
+            hypothesisId: 'H3',
+            location: 'server/index.js:664-693',
+            message: 'Plaid accounts raw vs normalized',
+            data: rawAccounts.map((a, idx) => ({
+              accountId: a.account_id,
+              name: a.name,
+              rawCurrent: a.balances?.current,
+              rawAvailable: a.balances?.available,
+              normalizedCurrentCents: normalized[idx]?.currentBalance,
+              normalizedAvailableCents: normalized[idx]?.availableBalance,
+              isoCurrencyCode:
+                a.balances?.iso_currency_code || a.balances?.unofficial_currency_code || null,
+            })),
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+      }
+    } catch {
+      // ignore debug logging failures
+    }
+    // #endregion
 
     function isLiability(acc) {
       const t = (acc.type || '').toLowerCase();
