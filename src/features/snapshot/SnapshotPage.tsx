@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
+import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
@@ -11,6 +12,45 @@ import { PendingInboundList, PendingOutboundList } from './PendingList';
 export function SnapshotPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const detected = useDetectedActivityOptional();
+
+  useEffect(() => {
+    if (!detected?.launchFlow) return;
+    const { flow, item } = detected.launchFlow;
+    if (flow !== 'pending_in' && flow !== 'pending_out') return;
+    setModal((prev) => {
+      if (prev.type === 'add-pending') return prev;
+      const firstBankId = data.banks?.[0]?.id || '';
+      if (flow === 'pending_in') {
+        return {
+          type: 'add-pending',
+          kind: 'in',
+          label: item.title,
+          amount: (item.amountCents / 100).toFixed(2),
+          isRefund: false,
+          depositTo: 'bank',
+          targetCardId: '',
+          outboundType: 'standard',
+          sourceBankId: firstBankId,
+          targetCardIdOut: '',
+          targetBankId: firstBankId
+        } as any;
+      }
+      return {
+        type: 'add-pending',
+        kind: 'out',
+        label: item.title,
+        amount: (item.amountCents / 100).toFixed(2),
+        isRefund: false,
+        depositTo: 'bank',
+        targetCardId: '',
+        outboundType: 'standard',
+        sourceBankId: firstBankId,
+        targetCardIdOut: '',
+        targetBankId: firstBankId
+      } as any;
+    });
+  }, [detected?.launchFlow?.flow, detected?.launchFlow?.detectedId, detected?.launchFlow?.item, data.banks]);
 
   const legacyShowZero = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
   const [showZeroCashItems, setShowZeroCashItems] = useState<boolean>(loadBoolPref(SHOW_ZERO_CASH_KEY, legacyShowZero));
@@ -398,6 +438,16 @@ export function SnapshotPage() {
 
             {modal.type === 'add-pending' ? (
               <>
+                {detected?.launchFlow && (detected.launchFlow.flow === 'pending_in' || detected.launchFlow.flow === 'pending_out') && detected.launchFlow.item ? (
+                  <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
+                    <div>Merchant: {detected.launchFlow.item.title}</div>
+                    <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
+                    <div>Account: {detected.launchFlow.item.accountName}</div>
+                    <div>Date: {detected.launchFlow.item.dateISO}</div>
+                    <div>Status: {detected.launchFlow.item.pending ? 'Pending' : 'Posted'}</div>
+                  </div>
+                ) : null}
                 <h3>{modal.kind === 'in' ? 'Add pending inbound item' : 'Add pending outbound item'}</h3>
                 <div className="field">
                   <label>Label</label>
@@ -490,7 +540,14 @@ export function SnapshotPage() {
                 )}
 
                 <div className="btn-row">
-                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setModal({ type: 'none' });
+                      if (detected?.launchFlow?.flow === 'pending_in' || detected?.launchFlow?.flow === 'pending_out') detected?.setLaunchFlow(null);
+                    }}
+                  >
                     Cancel
                   </button>
                   <button
@@ -523,6 +580,10 @@ export function SnapshotPage() {
                         } else {
                           actions.addPendingOutbound({ label: modal.label.trim() || 'Pending', amountCents, outboundType: 'standard' });
                         }
+                      }
+                      if (detected?.launchFlow && (detected.launchFlow.flow === 'pending_in' || detected.launchFlow.flow === 'pending_out')) {
+                        detected.markResolved(detected.launchFlow.detectedId);
+                        detected.setLaunchFlow(null);
                       }
                       setModal({ type: 'none' });
                     }}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
@@ -13,7 +13,15 @@ function todayKey() {
   return `${y}-${m}-${dd}`;
 }
 
-export function AddPurchaseModal(props: { open: boolean; onClose: () => void; purchaseKey?: string | null }) {
+export type AddPurchasePrefill = { title?: string; amountCents?: number; dateISO?: string };
+
+export function AddPurchaseModal(props: {
+  open: boolean;
+  onClose: () => void;
+  purchaseKey?: string | null;
+  prefill?: AddPurchasePrefill | null;
+  onSave?: () => void;
+}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -51,6 +59,15 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void; pu
   }, [props.purchaseKey, data.purchases]);
 
   const isEditing = !!currentPurchase;
+
+  useEffect(() => {
+    if (props.open && props.prefill && !currentPurchase) {
+      const p = props.prefill;
+      if (p.title) setTitle(p.title);
+      if (typeof p.amountCents === 'number' && p.amountCents > 0) setAmount((p.amountCents / 100).toFixed(2));
+      if (p.dateISO) setDateISO(p.dateISO);
+    }
+  }, [props.open, props.prefill, currentPurchase]);
 
   if (!props.open) return null;
 
@@ -266,6 +283,7 @@ export function AddPurchaseModal(props: { open: boolean; onClose: () => void; pu
               } else {
                 actions.addPurchase(purchase);
               }
+              props.onSave?.();
               props.onClose();
               setTitle('');
               setAmount('');

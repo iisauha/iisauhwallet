@@ -6,12 +6,15 @@ import { UpcomingPage } from './features/upcoming/UpcomingPage';
 import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
 import { InvestingPage } from './features/investing/InvestingPage';
 import { SettingsPage } from './features/settings/SettingsPage';
+import { DetectedActivityInbox, DetectedActivityBadge } from './features/detected-activity/DetectedActivityInbox';
 import { DropdownStateProvider } from './state/DropdownStateContext';
+import { DetectedActivityProvider } from './state/DetectedActivityContext';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
 
 export function App() {
   const [tab, setTab] = useState<TabKey>('snapshot');
+  const [detectedInboxOpen, setDetectedInboxOpen] = useState(false);
 
   const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;
@@ -25,7 +28,31 @@ export function App() {
 
   return (
     <DropdownStateProvider>
-      {content}
+      <DetectedActivityProvider>
+        <div style={{ position: 'relative', minHeight: '100%' }}>
+          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+              onClick={() => setDetectedInboxOpen(true)}
+            >
+              Detected Activity
+              <DetectedActivityBadge />
+            </button>
+          </div>
+        {content}
+        {detectedInboxOpen ? (
+          <DetectedActivityInbox
+            onClose={() => setDetectedInboxOpen(false)}
+            onLaunchFlow={(_, targetTab) => {
+              setTab(targetTab);
+              setDetectedInboxOpen(false);
+            }}
+          />
+        ) : null}
+        </div>
+      </DetectedActivityProvider>
       <nav className="tabs" aria-label="Sections">
         <button type="button" className={tab === 'snapshot' ? 'tab active' : 'tab'} onClick={() => setTab('snapshot')}>
           Snapshot

@@ -30,3 +30,6 @@ export const UI_DROPDOWN_STATE_KEY = 'ledgerlite_ui_dropdown_state_v1';
 
 // New feature (does not replace any legacy keys).
 export const SUB_TRACKER_KEY = 'ledgerlite_subTracker_v1';
+
+// Mock/prototype only: detected activity inbox (UI-only, no Plaid).
+export const DETECTED_ACTIVITY_KEY = 'iisauhwallet_detected_activity_v1';

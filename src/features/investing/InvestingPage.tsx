@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
+import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import {
   loadInvesting,
   saveInvesting,
@@ -630,12 +631,20 @@ export function InvestingPage() {
   const setCollapsed = (key: 'hysa' | 'roth' | 'k401' | 'general', collapsed: boolean) =>
     dropdownState.setDropdownCollapsed(`investing_${key}`, collapsed);
 
+  const detected = useDetectedActivityOptional();
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
   const [transferError, setTransferError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (detected?.launchFlow?.flow === 'transfer') {
+      setTransferOpen(true);
+      if (detected.launchFlow.item?.amountCents) setTransferAmount((detected.launchFlow.item.amountCents / 100).toFixed(2));
+    }
+  }, [detected?.launchFlow?.flow, detected?.launchFlow?.item?.amountCents]);
 
   const [coastFireOpen, setCoastFireOpen] = useState(false);
   const [coastFireEditForm, setCoastFireEditForm] = useState(false);
@@ -1092,6 +1101,10 @@ export function InvestingPage() {
           investingAccountId: inv.acc.id
         }
       } as any);
+      if (detected?.launchFlow?.flow === 'transfer') {
+        detected.markResolved(detected.launchFlow.detectedId);
+        detected.setLaunchFlow(null);
+      }
       setTransferOpen(false);
       return;
     }
@@ -1116,6 +1129,10 @@ export function InvestingPage() {
           investingAccountId: inv.acc.id
         }
       } as any);
+      if (detected?.launchFlow?.flow === 'transfer') {
+        detected.markResolved(detected.launchFlow.detectedId);
+        detected.setLaunchFlow(null);
+      }
       setTransferOpen(false);
       return;
     }
@@ -1599,6 +1616,16 @@ export function InvestingPage() {
       {transferOpen ? (
         <div className="modal-overlay">
           <div className="modal">
+            {detected?.launchFlow?.flow === 'transfer' && detected.launchFlow.item ? (
+              <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
+                <div>Merchant: {detected.launchFlow.item.title}</div>
+                <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
+                <div>Account: {detected.launchFlow.item.accountName}</div>
+                <div>Date: {detected.launchFlow.item.dateISO}</div>
+                <div>Status: {detected.launchFlow.item.pending ? 'Pending' : 'Posted'}</div>
+              </div>
+            ) : null}
             <h3>Transfer between accounts</h3>
             <div className="field">
               <label>From</label>
@@ -1664,7 +1691,14 @@ export function InvestingPage() {
               <div style={{ color: 'var(--red)', fontSize: '0.85rem', marginTop: 4 }}>{transferError}</div>
             ) : null}
             <div className="btn-row" style={{ marginTop: 10 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setTransferOpen(false)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setTransferOpen(false);
+                  if (detected?.launchFlow?.flow === 'transfer') detected?.setLaunchFlow(null);
+                }}
+              >
                 Cancel
               </button>
               <button type="button" className="btn btn-secondary" onClick={createTransfer}>
