@@ -22,9 +22,10 @@ type ContextValue = {
   setBackendItems: (items: DetectedActivityItem[] | ((prev: DetectedActivityItem[]) => DetectedActivityItem[])) => void;
   launchFlow: LaunchFlow | null;
   setLaunchFlow: (f: LaunchFlow | null) => void;
-  markResolved: (id: string) => void;
+  markResolved: (id: string, resolvedAs?: string) => void;
   markIgnored: (id: string) => void;
   refresh: () => void;
+  loadBackendItems: () => Promise<void>;
 };
 
 const DetectedActivityContext = createContext<ContextValue | null>(null);
@@ -39,10 +40,36 @@ export function useDetectedActivityOptional(): ContextValue | null {
   return useContext(DetectedActivityContext);
 }
 
+function apiItemToDetected(a: { id: string; title: string; amountCents: number; dateISO: string; accountName: string; accountType: string; pending: boolean; status: string }): DetectedActivityItem {
+  return {
+    id: a.id,
+    title: a.title,
+    amountCents: a.amountCents,
+    dateISO: a.dateISO,
+    accountName: a.accountName,
+    accountType: a.accountType,
+    pending: a.pending,
+    status: (a.status as DetectedActivityItem['status']) || 'new',
+  };
+}
+
 export function DetectedActivityProvider({ children }: { children: React.ReactNode }) {
   const [localItems, setLocalItemsState] = useState<DetectedActivityItem[]>(loadDetectedActivity);
   const [backendItems, setBackendItemsState] = useState<DetectedActivityItem[]>([]);
   const [launchFlow, setLaunchFlow] = useState<LaunchFlow | null>(null);
+
+  const loadBackendItems = useCallback(async () => {
+    const api = await import('../api/detectedActivityApi');
+    if (!api.hasApiBase()) return;
+    try {
+      const { items: list } = await api.getDetectedActivity();
+      setBackendItemsState(list.map(apiItemToDetected));
+    } catch (_) {}
+  }, []);
+
+  React.useEffect(() => {
+    loadBackendItems();
+  }, [loadBackendItems]);
 
   const items = useMemo(
     () => [...localItems, ...backendItems],
@@ -61,14 +88,13 @@ export function DetectedActivityProvider({ children }: { children: React.ReactNo
     setBackendItemsState((prev) => (typeof updater === 'function' ? updater(prev) : updater));
   }, []);
 
-  const markResolved = useCallback((id: string) => {
+  const markResolved = useCallback((id: string, resolvedAs?: string) => {
     if (id.startsWith('plaid_')) {
       setBackendItemsState((prev) =>
         prev.map((i) => (i.id === id ? { ...i, status: 'resolved' as const } : i))
       );
       setLaunchFlow(null);
-      // Optionally call API to persist; avoid blocking UI
-      import('../api/detectedActivityApi').then((api) => api.resolveDetectedItem(id).catch(() => {}));
+      import('../api/detectedActivityApi').then((api) => api.resolveDetectedItem(id, resolvedAs).catch(() => {}));
     } else {
       setLocalItemsState((prev) => {
         const next = prev.map((i) => (i.id === id ? { ...i, status: 'resolved' as const } : i));
@@ -110,9 +136,10 @@ export function DetectedActivityProvider({ children }: { children: React.ReactNo
       setLaunchFlow,
       markResolved,
       markIgnored,
-      refresh
+      refresh,
+      loadBackendItems,
     }),
-    [items, setItems, backendItems, setBackendItems, launchFlow, markResolved, markIgnored, refresh]
+    [items, setItems, backendItems, setBackendItems, launchFlow, markResolved, markIgnored, refresh, loadBackendItems]
   );
 
   return (

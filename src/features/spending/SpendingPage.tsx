@@ -367,7 +367,7 @@ export function SpendingPage() {
         }}
         purchaseKey={editingPurchase ? getPurchaseUiId(editingPurchase) : null}
         prefill={detected?.launchFlow?.flow === 'add_purchase' && detected.launchFlow.item ? { title: detected.launchFlow.item.title, amountCents: detected.launchFlow.item.amountCents, dateISO: detected.launchFlow.item.dateISO } : null}
-        onSave={detected?.launchFlow?.flow === 'add_purchase' ? () => { detected.markResolved(detected.launchFlow!.detectedId); detected.setLaunchFlow(null); setOpenAdd(false); } : undefined}
+        onSave={detected?.launchFlow?.flow === 'add_purchase' ? () => { detected.markResolved(detected.launchFlow!.detectedId, 'add_purchase'); detected.setLaunchFlow(null); setOpenAdd(false); } : undefined}
       />
 
       {confirmDelete ? (

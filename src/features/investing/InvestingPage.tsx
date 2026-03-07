@@ -1102,7 +1102,7 @@ export function InvestingPage() {
         }
       } as any);
       if (detected?.launchFlow?.flow === 'transfer') {
-        detected.markResolved(detected.launchFlow.detectedId);
+        detected.markResolved(detected.launchFlow.detectedId, 'transfer');
         detected.setLaunchFlow(null);
       }
       setTransferOpen(false);
@@ -1130,7 +1130,7 @@ export function InvestingPage() {
         }
       } as any);
       if (detected?.launchFlow?.flow === 'transfer') {
-        detected.markResolved(detected.launchFlow.detectedId);
+        detected.markResolved(detected.launchFlow.detectedId, 'transfer');
         detected.setLaunchFlow(null);
       }
       setTransferOpen(false);

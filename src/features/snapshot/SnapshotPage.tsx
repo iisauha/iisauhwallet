@@ -582,7 +582,7 @@ export function SnapshotPage() {
                         }
                       }
                       if (detected?.launchFlow && (detected.launchFlow.flow === 'pending_in' || detected.launchFlow.flow === 'pending_out')) {
-                        detected.markResolved(detected.launchFlow.detectedId);
+                        detected.markResolved(detected.launchFlow.detectedId, detected.launchFlow.flow);
                         detected.setLaunchFlow(null);
                       }
                       setModal({ type: 'none' });

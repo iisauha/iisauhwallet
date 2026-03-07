@@ -16,6 +16,7 @@ export type DetectedActivityItemFromApi = {
   pending: boolean;
   status: string;
   source?: string;
+  resolvedAs?: string;
 };
 
 export function hasApiBase(): boolean {
@@ -73,11 +74,19 @@ export async function ignoreDetectedItem(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to ignore item');
 }
 
-export async function resolveDetectedItem(id: string): Promise<void> {
+export async function resolveDetectedItem(id: string, resolvedAs?: string): Promise<void> {
   const res = await fetchApi(`/api/detected-activity/${encodeURIComponent(id)}/resolve`, {
     method: 'POST',
+    body: JSON.stringify(resolvedAs != null ? { resolvedAs } : {}),
   });
   if (!res.ok) throw new Error('Failed to resolve item');
+}
+
+export async function resetDetectedItem(id: string): Promise<void> {
+  const res = await fetchApi(`/api/detected-activity/${encodeURIComponent(id)}/reset`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to reset item');
 }
 
 /** Sync transactions from Plaid then return normalized detected-activity items. */

@@ -61,14 +61,14 @@ function setDetectedItems(items) {
   writeJson(DETECTED_FILE, items);
 }
 
-function normalizePlaidTransaction(tx, accountName, accountType) {
+function normalizePlaidTransaction(tx, accountName, accountType, existingItem = null) {
   const amountCents = Math.round(Math.abs((tx.amount || 0) * 100));
   const isDebit = (tx.amount || 0) < 0;
   const amount = isDebit ? -amountCents : amountCents;
   const title = tx.merchant_name || tx.name || tx.payment_channel || 'Transaction';
   const dateISO = (tx.date || '').slice(0, 10);
-  return {
-    id: `plaid_${tx.transaction_id}`,
+  const base = {
+    id: existingItem?.id ?? `plaid_${tx.transaction_id}`,
     plaidTransactionId: tx.transaction_id,
     title,
     amountCents: amount,
@@ -76,9 +76,12 @@ function normalizePlaidTransaction(tx, accountName, accountType) {
     accountName: accountName || 'Unknown',
     accountType: accountType || 'unknown',
     pending: !!tx.pending,
-    status: 'new',
     source: 'plaid',
   };
+  if (existingItem) {
+    return { ...base, status: existingItem.status, resolvedAs: existingItem.resolvedAs };
+  }
+  return { ...base, status: 'new' };
 }
 
 let plaidClient = null;
@@ -187,14 +190,18 @@ app.post('/api/plaid/sync_transactions', async (req, res) => {
         continue;
       }
       for (const tx of transactions) {
-        const existingItem = byPlaidId.get(tx.transaction_id);
-        if (existingItem) continue;
         const acc = accountById.get(tx.account_id);
         const accountName = acc?.name || 'Unknown';
         const accountType = (acc?.type || 'other').replace(/-/g, '_');
-        const item = normalizePlaidTransaction(tx, accountName, accountType);
-        byPlaidId.set(tx.transaction_id, item);
-        existing.push(item);
+        const existingItem = byPlaidId.get(tx.transaction_id);
+        const item = normalizePlaidTransaction(tx, accountName, accountType, existingItem || undefined);
+        if (existingItem) {
+          const idx = existing.findIndex((i) => i.plaidTransactionId === tx.transaction_id);
+          if (idx !== -1) existing[idx] = item;
+        } else {
+          byPlaidId.set(tx.transaction_id, item);
+          existing.push(item);
+        }
       }
     }
     setDetectedItems(existing);
@@ -226,10 +233,22 @@ app.post('/api/detected-activity/:id/ignore', (req, res) => {
 // POST /api/detected-activity/:id/resolve
 app.post('/api/detected-activity/:id/resolve', (req, res) => {
   const { id } = req.params;
+  const { resolvedAs } = req.body || {};
   const items = getDetectedItems();
   const idx = items.findIndex((i) => i.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  items[idx] = { ...items[idx], status: 'resolved' };
+  items[idx] = { ...items[idx], status: 'resolved', resolvedAs: resolvedAs || undefined };
+  setDetectedItems(items);
+  return res.json({ ok: true });
+});
+
+// POST /api/detected-activity/:id/reset (testing: set status back to new)
+app.post('/api/detected-activity/:id/reset', (req, res) => {
+  const { id } = req.params;
+  const items = getDetectedItems();
+  const idx = items.findIndex((i) => i.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  items[idx] = { ...items[idx], status: 'new', resolvedAs: undefined };
   setDetectedItems(items);
   return res.json({ ok: true });
 });
