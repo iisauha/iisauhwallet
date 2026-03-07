@@ -1,50 +1,75 @@
 /**
  * Minimal Plaid Link hook: create link token → open Plaid Link → exchange public token → sync transactions.
  * Does not change financial logic or auto-import into ledger; only links account and populates Detected Activity queue.
+ * onSuccess is synchronous so the Plaid SDK reliably invokes it; async exchange/sync run after return.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   createLinkToken,
   exchangePublicToken,
   syncTransactions,
 } from '../api/detectedActivityApi';
 
+type PlaidCreateConfig = {
+  token: string;
+  onSuccess: (public_token: string, metadata?: unknown) => void;
+  onExit: (err: unknown, metadata?: unknown) => void;
+  onEvent?: (eventName: string, metadata?: unknown) => void;
+};
+
 export function usePlaidLink() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const successHandlerRef = useRef<(public_token: string) => void>(() => {});
 
   const openLink = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
       const { link_token } = await createLinkToken();
-      const Plaid = (window as unknown as { Plaid?: { create: (config: {
-        token: string;
-        onSuccess: (public_token: string) => void;
-        onExit: () => void;
-      }) => { open: () => void } } }).Plaid;
+      const Plaid = (window as unknown as { Plaid?: { create: (config: PlaidCreateConfig) => { open: () => void } } }).Plaid;
       if (!Plaid) {
         setError('Plaid Link not loaded. Refresh and try again.');
+        setLoading(false);
         return;
       }
-      Plaid.create({
-        token: link_token,
-        onSuccess: async (public_token: string) => {
-          try {
-            await exchangePublicToken(public_token);
-            await syncTransactions();
+
+      successHandlerRef.current = (public_token: string) => {
+        console.log('Plaid Link success');
+        console.log('Exchanging public token');
+        exchangePublicToken(public_token)
+          .then(() => {
+            console.log('Syncing Plaid transactions');
+            return syncTransactions();
+          })
+          .then(() => {
             setError(null);
-          } catch (e) {
+          })
+          .catch((e) => {
             setError(e instanceof Error ? e.message : 'Exchange or sync failed');
-          } finally {
+          })
+          .finally(() => {
             setLoading(false);
-          }
+          });
+      };
+
+      const config: PlaidCreateConfig = {
+        token: link_token,
+        onSuccess: (public_token: string) => {
+          if (public_token) console.log('public_token received (length:', public_token.length, ')');
+          successHandlerRef.current(public_token);
         },
-        onExit: () => {
+        onExit: (err, metadata) => {
+          console.log('[Plaid] onExit', err != null ? 'with err' : 'no err', metadata != null ? 'metadata present' : '');
           setLoading(false);
         },
-      }).open();
+        onEvent: (eventName: string) => {
+          console.log('[Plaid] onEvent', eventName);
+        },
+      };
+
+      Plaid.create(config).open();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create link token');
       setLoading(false);
