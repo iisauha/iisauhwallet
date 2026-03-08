@@ -8,6 +8,8 @@ import {
   type Loan,
   type FutureRepaymentPlan,
   type PaymentScheduleRange,
+  type PrivatePaymentRange,
+  type PrivatePaymentRangeMode,
   type LoanBorrowerType,
   type LoanStateOfResidency,
   uid,
@@ -116,6 +118,87 @@ function computeMonthsToPayoff(
   return Math.ceil(n);
 }
 
+const FAR_FUTURE_ISO = '2099-12-31';
+
+function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+/** Effective ranges for a private loan: from stored ranges or one implicit from legacy fields. */
+function getEffectivePrivateRanges(loan: Loan): PrivatePaymentRange[] {
+  const ranges = loan.privatePaymentRanges;
+  if (ranges && ranges.length > 0) {
+    return [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }
+  const today = toDateKey(new Date());
+  const mode = loan.privatePaymentMode ?? 'custom_monthly';
+  return [
+    {
+      id: uid(),
+      startDate: today,
+      endDate: FAR_FUTURE_ISO,
+      mode: mode as PrivatePaymentRangeMode,
+      customPaymentCents: mode === 'custom_monthly' ? (loan.nextPaymentCents ?? undefined) : undefined
+    }
+  ];
+}
+
+function getActivePrivateRange(ranges: PrivatePaymentRange[], asOfISO: string): PrivatePaymentRange | null {
+  for (const r of ranges) {
+    if (asOfISO >= r.startDate && asOfISO <= r.endDate) return r;
+  }
+  return null;
+}
+
+/** First range with mode full_repayment and startDate > afterISO. */
+function getFirstFutureFullRepaymentRange(ranges: PrivatePaymentRange[], afterISO: string): PrivatePaymentRange | null {
+  for (const r of ranges) {
+    if (r.mode === 'full_repayment' && r.startDate > afterISO) return r;
+  }
+  return null;
+}
+
+/** Earliest range with mode full_repayment (by start date). For payoff start. */
+function getFirstFullRepaymentRange(ranges: PrivatePaymentRange[]): PrivatePaymentRange | null {
+  let found: PrivatePaymentRange | null = null;
+  for (const r of ranges) {
+    if (r.mode !== 'full_repayment') continue;
+    if (!found || r.startDate < found.startDate) found = r;
+  }
+  return found;
+}
+
+function paymentCentsFromPrivateRange(
+  range: PrivatePaymentRange,
+  balanceCents: number,
+  ratePercent: number,
+  termMonths: number | undefined | null
+): number {
+  switch (range.mode) {
+    case 'deferred':
+      return 0;
+    case 'interest_only':
+      return Math.round((balanceCents * (ratePercent / 100)) / 12);
+    case 'full_repayment':
+      return computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
+    case 'custom_monthly':
+      return range.customPaymentCents ?? 0;
+    default:
+      return 0;
+  }
+}
+
+/** Calendar months between two YYYY-MM-DD dates (whole months). */
+function monthsBetween(startISO: string, endISO: string): number {
+  const a = new Date(startISO + 'T00:00:00');
+  const b = new Date(endISO + 'T00:00:00');
+  const months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  return Math.max(0, months);
+}
+
 export type FederalPlanRow = {
   planId: 'ibr' | 'paye' | 'icr';
   planName: string;
@@ -140,6 +223,10 @@ type LoanWithDerived = Loan & {
   federalPlans?: FederalPlanRow[];
   totalFederalPaymentCents?: number | null;
   approximateShareCents?: number | null;
+  /** Private only: future full-repayment amount when not yet in full repayment (for hidden breakdown). */
+  futureFullRepaymentCents?: number | null;
+  /** Private only: mode of the active range (for display). */
+  activePrivateRangeMode?: PrivatePaymentRangeMode | null;
   /** For private deferred: estimated balance today from schedule timeline (display only). */
   estimatedCurrentBalanceCents?: number | null;
   /** For private deferred: balance at start of first repayment range (display only). */
@@ -240,24 +327,59 @@ function deriveForLoan(
       payoffMonths = null;
     }
   } else {
-    // Private loan: payment mode determines current payment; after-grace always amortized
-    const mode = loan.privatePaymentMode ?? 'custom_monthly';
-    const paymentNow =
-      mode === 'interest_only'
-        ? interestOnlyMonthly
-        : mode === 'full_repayment'
-          ? (fullPaymentCents ?? 0)
-          : (loan.nextPaymentCents ?? 0);
+    // Private loan: range-based payment logic
+    const todayISO = toDateKey(new Date());
+    const effectiveRanges = getEffectivePrivateRanges(loan);
+    const activeRange = getActivePrivateRange(effectiveRanges, todayISO);
+    const paymentNow = activeRange
+      ? paymentCentsFromPrivateRange(activeRange, balanceCents, interestRatePercent, termMonths)
+      : 0;
     monthlyNowCents = paymentNow;
-    monthlyLaterCents = fullPaymentCents;
-    const monthlyInterestOnly = Math.round((balanceCents * (interestRatePercent / 100)) / 12);
-    if (paymentNow > 0 && paymentNow <= monthlyInterestOnly) {
-      payoffMonths = null;
+
+    const firstFutureFull = getFirstFutureFullRepaymentRange(effectiveRanges, todayISO);
+    const inFullRepaymentNow = activeRange?.mode === 'full_repayment';
+    const futureAmortized = fullPaymentCents ?? 0;
+    let futureFullRepaymentCents: number | null = null;
+    if (!inFullRepaymentNow && firstFutureFull != null && futureAmortized > 0) {
+      monthlyLaterCents = futureAmortized;
+      futureFullRepaymentCents = futureAmortized;
     } else {
-      payoffMonths = paymentNow > 0
-        ? computeMonthsToPayoff(balanceCents, interestRatePercent, paymentNow)
-        : (fullPaymentCents ? computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents) : null);
+      monthlyLaterCents = inFullRepaymentNow ? futureAmortized : (futureAmortized || null);
     }
+
+    const firstFullRange = getFirstFullRepaymentRange(effectiveRanges);
+    if (firstFullRange && futureAmortized > 0) {
+      if (todayISO < firstFullRange.startDate) {
+        const monthsUntilStart = monthsBetween(todayISO, firstFullRange.startDate);
+        const payoffFromStart = computeMonthsToPayoff(balanceCents, interestRatePercent, futureAmortized);
+        payoffMonths = payoffFromStart != null ? monthsUntilStart + payoffFromStart : null;
+      } else {
+        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, futureAmortized);
+      }
+    } else {
+      const monthlyInterestOnly = Math.round((balanceCents * (interestRatePercent / 100)) / 12);
+      if (paymentNow > 0 && paymentNow <= monthlyInterestOnly) {
+        payoffMonths = null;
+      } else {
+        payoffMonths = paymentNow > 0
+          ? computeMonthsToPayoff(balanceCents, interestRatePercent, paymentNow)
+          : (fullPaymentCents ? computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents) : null);
+      }
+    }
+
+    return {
+      ...loan,
+      monthlyNowCents,
+      monthlyLaterCents,
+      dailyInterestCents,
+      monthlyInterestCents,
+      payoffMonths,
+      federalPlans,
+      totalFederalPaymentCents,
+      approximateShareCents,
+      futureFullRepaymentCents,
+      activePrivateRangeMode: activeRange?.mode ?? null
+    };
   }
 
   return {
@@ -302,6 +424,8 @@ type LoanEditorState = {
   scheduleAccruedInterestStrings: Record<string, string>;
   excludeFromCurrentPayment: boolean;
   privatePaymentMode: 'interest_only' | 'full_repayment' | 'custom_monthly';
+  /** Private: date ranges (start, end, mode, custom $ string). */
+  privatePaymentRanges: { id: string; startDate: string; endDate: string; mode: PrivatePaymentRangeMode; customPayment: string }[];
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -333,9 +457,29 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       schedulePaymentStrings: {},
       scheduleAccruedInterestStrings: {},
       excludeFromCurrentPayment: false,
-      privatePaymentMode: 'full_repayment'
+      privatePaymentMode: 'full_repayment',
+      privatePaymentRanges: []
     };
   }
+  const privRanges = (l as Loan).privatePaymentRanges;
+  const defaultRanges =
+    privRanges && privRanges.length > 0
+      ? privRanges.map((r) => ({
+          id: r.id,
+          startDate: r.startDate,
+          endDate: r.endDate,
+          mode: r.mode,
+          customPayment: r.customPaymentCents != null ? (r.customPaymentCents / 100).toFixed(2) : ''
+        }))
+      : [
+          {
+            id: uid(),
+            startDate: toDateKey(new Date()),
+            endDate: FAR_FUTURE_ISO,
+            mode: ((l as Loan).privatePaymentMode ?? 'full_repayment') as PrivatePaymentRangeMode,
+            customPayment: (l as Loan).nextPaymentCents != null ? ((l as Loan).nextPaymentCents! / 100).toFixed(2) : ''
+          }
+        ];
   return {
     id: l.id,
     name: l.name,
@@ -371,7 +515,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       return out;
     })(),
     excludeFromCurrentPayment: l.excludeFromCurrentPayment ?? false,
-    privatePaymentMode: (l as Loan).privatePaymentMode ?? 'custom_monthly'
+    privatePaymentMode: (l as Loan).privatePaymentMode ?? 'custom_monthly',
+    privatePaymentRanges: defaultRanges
   };
 }
 
@@ -392,12 +537,14 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
   const nextPaymentStr = isPublic ? undefined : (e.nextPayment !== undefined ? String(e.nextPayment).replace(/,/g, '').trim() : '');
   const nextPaymentCents = isPublic
     ? prev?.nextPaymentCents
-    : (nextPaymentStr === ''
-        ? undefined
-        : (() => {
-            const n = Math.round(parseFloat(nextPaymentStr!) * 100);
-            return Number.isFinite(n) && n >= 0 ? n : undefined;
-          })());
+    : (e.privatePaymentRanges?.length
+        ? prev?.nextPaymentCents
+        : nextPaymentStr === ''
+          ? undefined
+          : (() => {
+              const n = Math.round(parseFloat(nextPaymentStr!) * 100);
+              return Number.isFinite(n) && n >= 0 ? n : undefined;
+            })());
   const repaymentStatus = isPublic ? (prev?.repaymentStatus ?? 'full_repayment') : 'full_repayment';
   const gracePeriodEndDate = isPublic ? prev?.gracePeriodEndDate : undefined;
   const futureRepaymentPlan = isPublic ? (prev?.futureRepaymentPlan ?? 'na') : undefined;
@@ -437,7 +584,23 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     accruedInterestCents: isPublic ? undefined : undefined,
     accrualLastUpdatedAt: isPublic ? undefined : undefined,
     excludeFromCurrentPayment: isPublic ? undefined : e.excludeFromCurrentPayment,
-    privatePaymentMode: isPublic ? undefined : e.privatePaymentMode
+    privatePaymentMode: isPublic ? undefined : e.privatePaymentMode,
+    privatePaymentRanges:
+      isPublic
+        ? undefined
+        : e.privatePaymentRanges.map((r) => {
+            const customVal =
+              r.mode === 'custom_monthly' && r.customPayment.trim() !== ''
+                ? Math.round(parseFloat(r.customPayment.replace(/,/g, '')) * 100)
+                : undefined;
+            return {
+              id: r.id,
+              startDate: r.startDate,
+              endDate: r.endDate,
+              mode: r.mode,
+              customPaymentCents: customVal != null && Number.isFinite(customVal) && customVal >= 0 ? customVal : undefined
+            };
+          })
   };
 }
 
@@ -514,7 +677,7 @@ function LoanCard(props: {
       {l.category === 'private' ? (
         <>
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-            Payment mode: {l.privatePaymentMode === 'interest_only' ? 'Interest Only' : l.privatePaymentMode === 'full_repayment' ? 'Full Repayment' : 'Custom'}
+            Current range: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '—'}
           </div>
           {onToggleExcludeFromPayment ? (
             <div className="toggle-row" style={{ marginBottom: 6 }}>
@@ -744,16 +907,16 @@ export function LoansPage() {
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
 
-  /** After-grace estimated payments for the Payment(now) info popup. Per-loan private = full amortized. */
+  /** After-grace: per private loan use first future full-repayment value (only loans not yet in full repayment). */
   const afterGraceBreakdown = useMemo(() => {
     const privateLoansBreakdown: { name: string; afterGraceCents: number }[] = [];
     let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
       if (l.category !== 'private') return;
-      const am = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, l.termMonths);
-      if (am != null && am > 0) {
-        privateAfterGraceCents += am;
-        privateLoansBreakdown.push({ name: l.name, afterGraceCents: am });
+      const cents = l.futureFullRepaymentCents ?? 0;
+      if (cents > 0) {
+        privateAfterGraceCents += cents;
+        privateLoansBreakdown.push({ name: l.name, afterGraceCents: cents });
       }
     });
     const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
@@ -1226,56 +1389,124 @@ function LoanEditorForm(props: {
             </p>
           </div>
           <div className="field">
-            <label>Monthly payment mode</label>
-            <Select
-              value={state.privatePaymentMode}
-              onChange={(e) => onChange({ ...state, privatePaymentMode: e.target.value as LoanEditorState['privatePaymentMode'] })}
+            <label style={{ display: 'block', marginBottom: 6 }}>Payment date ranges</label>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
+              Define when each payment mode applies. First matching range for today sets Payment(now).
+            </p>
+            {state.privatePaymentRanges.map((r, idx) => (
+              <div
+                key={r.id}
+                style={{
+                  marginBottom: 10,
+                  padding: '8px 10px',
+                  border: '1px solid var(--border)',
+                  borderRadius: 6,
+                  background: 'var(--bg-secondary)'
+                }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                  <input
+                    type="date"
+                    value={r.startDate}
+                    onChange={(e) =>
+                      onChange({
+                        ...state,
+                        privatePaymentRanges: state.privatePaymentRanges.map((x, i) =>
+                          i === idx ? { ...x, startDate: e.target.value } : x
+                        )
+                      })
+                    }
+                    style={{ maxWidth: 140 }}
+                  />
+                  <span style={{ color: 'var(--muted)' }}>to</span>
+                  <input
+                    type="date"
+                    value={r.endDate}
+                    onChange={(e) =>
+                      onChange({
+                        ...state,
+                        privatePaymentRanges: state.privatePaymentRanges.map((x, i) =>
+                          i === idx ? { ...x, endDate: e.target.value } : x
+                        )
+                      })
+                    }
+                    style={{ maxWidth: 140 }}
+                  />
+                  <Select
+                    value={r.mode}
+                    onChange={(e) =>
+                      onChange({
+                        ...state,
+                        privatePaymentRanges: state.privatePaymentRanges.map((x, i) =>
+                          i === idx ? { ...x, mode: e.target.value as PrivatePaymentRangeMode } : x
+                        )
+                      })
+                    }
+                    style={{ minWidth: 160 }}
+                  >
+                    <option value="deferred">Deferred / Forbearance</option>
+                    <option value="interest_only">Interest Only</option>
+                    <option value="full_repayment">Full Repayment</option>
+                    <option value="custom_monthly">Custom Monthly Payment</option>
+                  </Select>
+                  {r.mode === 'custom_monthly' ? (
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="$/mo"
+                      value={r.customPayment}
+                      onChange={(e) =>
+                        onChange({
+                          ...state,
+                          privatePaymentRanges: state.privatePaymentRanges.map((x, i) =>
+                            i === idx ? { ...x, customPayment: e.target.value } : x
+                          )
+                        })
+                      }
+                      style={{ width: 72 }}
+                    />
+                  ) : null}
+                </div>
+                {state.privatePaymentRanges.length > 1 ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.8rem', padding: '2px 8px' }}
+                    onClick={() =>
+                      onChange({
+                        ...state,
+                        privatePaymentRanges: state.privatePaymentRanges.filter((_, i) => i !== idx)
+                      })
+                    }
+                  >
+                    Remove range
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ marginTop: 4, fontSize: '0.85rem' }}
+              onClick={() =>
+                onChange({
+                  ...state,
+                  privatePaymentRanges: [
+                    ...state.privatePaymentRanges,
+                    {
+                      id: uid(),
+                      startDate: toDateKey(new Date()),
+                      endDate: FAR_FUTURE_ISO,
+                      mode: 'full_repayment',
+                      customPayment: ''
+                    }
+                  ]
+                })
+              }
             >
-              <option value="interest_only">Interest Only</option>
-              <option value="full_repayment">Full Repayment</option>
-              <option value="custom_monthly">Custom Monthly Payment</option>
-            </Select>
+              Add range
+            </button>
           </div>
-          {state.privatePaymentMode === 'custom_monthly' ? (
-            <div className="field">
-              <label>Monthly payment ($)</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={state.nextPayment}
-                onChange={(e) => onChange({ ...state, nextPayment: e.target.value })}
-                placeholder="0.00"
-              />
-              <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-                Manual monthly payment (used in Payment(now) total)
-              </p>
-            </div>
-          ) : state.privatePaymentMode === 'interest_only' ? (
-            <div className="field">
-              <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0 }}>
-                Estimated monthly payment = balance × (rate / 100) / 12 ={' '}
-                {formatCents(
-                  Math.round(
-                    (parseFloat(state.balance || '0') * 100 * (parseFloat(state.ratePercent || '0') / 100)) / 12
-                  )
-                )}
-                {' '}(interest only)
-              </p>
-            </div>
-          ) : (
-            <div className="field">
-              <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0 }}>
-                Full repayment (interest + minimum monthly):{' '}
-                {formatCents(
-                  computeAmortizedPaymentCents(
-                    Math.round(parseFloat(state.balance || '0') * 100),
-                    parseFloat(state.ratePercent || '0'),
-                    parseFloat(state.termMonths || '0') || undefined
-                  ) ?? 0
-                )}
-              </p>
-            </div>
-          )}
           <div className="toggle-row" style={{ marginTop: 4 }}>
             <input
               type="checkbox"

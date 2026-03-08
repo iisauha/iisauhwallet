@@ -641,6 +641,18 @@ export type PaymentScheduleRange = {
   accruedInterestCents?: number | null;
 };
 
+/** Private loan only: one date range with a payment mode. Dates YYYY-MM-DD. */
+export type PrivatePaymentRangeMode = 'deferred' | 'interest_only' | 'full_repayment' | 'custom_monthly';
+
+export type PrivatePaymentRange = {
+  id: string;
+  startDate: string;
+  endDate: string;
+  mode: PrivatePaymentRangeMode;
+  /** Used when mode is custom_monthly. Cents per month. */
+  customPaymentCents?: number | null;
+};
+
 export type Loan = {
   id: string;
   name: string;
@@ -683,8 +695,10 @@ export type Loan = {
   stateOfResidency?: LoanStateOfResidency;
   /** Private only: if true, this loan's payment is not included in Payment(now) total (still included in grace/after-grace calculations). */
   excludeFromCurrentPayment?: boolean;
-  /** Private only: how current monthly payment is determined. */
+  /** Private only: how current monthly payment is determined (used when privatePaymentRanges is empty or missing). */
   privatePaymentMode?: 'interest_only' | 'full_repayment' | 'custom_monthly';
+  /** Private only: date ranges that define payment mode over time. If present and non-empty, overrides privatePaymentMode. */
+  privatePaymentRanges?: PrivatePaymentRange[];
 };
 
 export type LoansState = {

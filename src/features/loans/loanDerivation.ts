@@ -4,7 +4,9 @@
  */
 import type { Loan } from '../../state/storage';
 import type { PaymentScheduleRange } from '../../state/storage';
+import type { PrivatePaymentRange } from '../../state/storage';
 import { loadFederalRepaymentConfig } from '../../state/storage';
+import { uid } from '../../state/storage';
 
 function toDateKey(d: Date): string {
   const y = d.getFullYear();
@@ -165,15 +167,62 @@ function deriveMonthlyNowCents(
     return fullPaymentCents;
   }
 
-  // Private loans: payment mode determines estimated monthly payment
+  // Private loans: range-based or legacy single mode
+  const ranges = getEffectivePrivateRanges(loan);
+  const today = new Date();
+  const key = toDateKey(today);
+  const active = getActivePrivateRange(ranges, key);
+  if (active) {
+    return paymentCentsFromPrivateRange(active, loan.balanceCents, loan.interestRatePercent, loan.termMonths);
+  }
+  return 0;
+}
+
+const FAR_FUTURE_ISO = '2099-12-31';
+
+function getEffectivePrivateRanges(loan: Loan): PrivatePaymentRange[] {
+  const ranges = loan.privatePaymentRanges;
+  if (ranges && ranges.length > 0) {
+    return [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }
+  const today = toDateKey(new Date());
   const mode = loan.privatePaymentMode ?? 'custom_monthly';
-  if (mode === 'interest_only') {
-    return computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent);
+  return [
+    {
+      id: uid(),
+      startDate: today,
+      endDate: FAR_FUTURE_ISO,
+      mode,
+      customPaymentCents: mode === 'custom_monthly' ? (loan.nextPaymentCents ?? undefined) : undefined
+    }
+  ];
+}
+
+function getActivePrivateRange(ranges: PrivatePaymentRange[], asOfISO: string): PrivatePaymentRange | null {
+  for (const r of ranges) {
+    if (asOfISO >= r.startDate && asOfISO <= r.endDate) return r;
   }
-  if (mode === 'full_repayment') {
-    return computeAmortizedPaymentCents(loan.balanceCents, loan.interestRatePercent, loan.termMonths) ?? 0;
+  return null;
+}
+
+function paymentCentsFromPrivateRange(
+  range: PrivatePaymentRange,
+  balanceCents: number,
+  ratePercent: number,
+  termMonths: number | undefined | null
+): number {
+  switch (range.mode) {
+    case 'deferred':
+      return 0;
+    case 'interest_only':
+      return computeInterestOnlyMonthlyCents(balanceCents, ratePercent);
+    case 'full_repayment':
+      return computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
+    case 'custom_monthly':
+      return range.customPaymentCents ?? 0;
+    default:
+      return 0;
   }
-  return loan.nextPaymentCents ?? 0;
 }
 
 /** Returns map of loan id -> estimated monthly payment (now) in cents, or null if not available. */
