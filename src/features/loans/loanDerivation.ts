@@ -165,7 +165,14 @@ function deriveMonthlyNowCents(
     return fullPaymentCents;
   }
 
-  // Private loans: simple manual model — Payment(now) = current monthly payment
+  // Private loans: payment mode determines estimated monthly payment
+  const mode = loan.privatePaymentMode ?? 'custom_monthly';
+  if (mode === 'interest_only') {
+    return computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent);
+  }
+  if (mode === 'full_repayment') {
+    return computeAmortizedPaymentCents(loan.balanceCents, loan.interestRatePercent, loan.termMonths) ?? 0;
+  }
   return loan.nextPaymentCents ?? 0;
 }
 

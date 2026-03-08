@@ -683,6 +683,8 @@ export type Loan = {
   stateOfResidency?: LoanStateOfResidency;
   /** Private only: if true, this loan's payment is not included in Payment(now) total (still included in grace/after-grace calculations). */
   excludeFromCurrentPayment?: boolean;
+  /** Private only: how current monthly payment is determined. */
+  privatePaymentMode?: 'interest_only' | 'full_repayment' | 'custom_monthly';
 };
 
 export type LoansState = {

@@ -240,8 +240,14 @@ function deriveForLoan(
       payoffMonths = null;
     }
   } else {
-    // Private loan: simple manual model — current payment, amortized after-grace, payoff from payment
-    const paymentNow = loan.nextPaymentCents ?? 0;
+    // Private loan: payment mode determines current payment; after-grace always amortized
+    const mode = loan.privatePaymentMode ?? 'custom_monthly';
+    const paymentNow =
+      mode === 'interest_only'
+        ? interestOnlyMonthly
+        : mode === 'full_repayment'
+          ? (fullPaymentCents ?? 0)
+          : (loan.nextPaymentCents ?? 0);
     monthlyNowCents = paymentNow;
     monthlyLaterCents = fullPaymentCents;
     const monthlyInterestOnly = Math.round((balanceCents * (interestRatePercent / 100)) / 12);
@@ -295,6 +301,7 @@ type LoanEditorState = {
   schedulePaymentStrings: Record<string, string>;
   scheduleAccruedInterestStrings: Record<string, string>;
   excludeFromCurrentPayment: boolean;
+  privatePaymentMode: 'interest_only' | 'full_repayment' | 'custom_monthly';
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -325,7 +332,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       paymentScheduleRanges: [],
       schedulePaymentStrings: {},
       scheduleAccruedInterestStrings: {},
-      excludeFromCurrentPayment: false
+      excludeFromCurrentPayment: false,
+      privatePaymentMode: 'full_repayment'
     };
   }
   return {
@@ -362,7 +370,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       });
       return out;
     })(),
-    excludeFromCurrentPayment: l.excludeFromCurrentPayment ?? false
+    excludeFromCurrentPayment: l.excludeFromCurrentPayment ?? false,
+    privatePaymentMode: (l as Loan).privatePaymentMode ?? 'custom_monthly'
   };
 }
 
@@ -427,7 +436,8 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     idrManualAnnualIncomeCents: e.category === 'public' ? undefined : idrManualAnnualIncomeCents,
     accruedInterestCents: isPublic ? undefined : undefined,
     accrualLastUpdatedAt: isPublic ? undefined : undefined,
-    excludeFromCurrentPayment: isPublic ? undefined : e.excludeFromCurrentPayment
+    excludeFromCurrentPayment: isPublic ? undefined : e.excludeFromCurrentPayment,
+    privatePaymentMode: isPublic ? undefined : e.privatePaymentMode
   };
 }
 
@@ -503,6 +513,9 @@ function LoanCard(props: {
       </div>
       {l.category === 'private' ? (
         <>
+          <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+            Payment mode: {l.privatePaymentMode === 'interest_only' ? 'Interest Only' : l.privatePaymentMode === 'full_repayment' ? 'Full Repayment' : 'Custom'}
+          </div>
           {onToggleExcludeFromPayment ? (
             <div className="toggle-row" style={{ marginBottom: 6 }}>
               <input
@@ -522,7 +535,7 @@ function LoanCard(props: {
             </p>
           ) : null}
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-            Monthly Interest Portion: {formatCents(l.monthlyInterestCents)}
+            Monthly interest: {formatCents(l.monthlyInterestCents)}
           </div>
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             {l.payoffMonths != null && l.payoffMonths > 0 ? (
@@ -731,16 +744,22 @@ export function LoansPage() {
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
 
-  /** After-grace estimated payments for the Payment(now) info popup. */
+  /** After-grace estimated payments for the Payment(now) info popup. Per-loan private = full amortized. */
   const afterGraceBreakdown = useMemo(() => {
+    const privateLoansBreakdown: { name: string; afterGraceCents: number }[] = [];
     let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
+      if (l.category !== 'private') return;
       const am = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, l.termMonths);
-      if (am != null && am > 0) privateAfterGraceCents += am;
+      if (am != null && am > 0) {
+        privateAfterGraceCents += am;
+        privateLoansBreakdown.push({ name: l.name, afterGraceCents: am });
+      }
     });
     const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
     return {
       privateAfterGraceCents,
+      privateLoansBreakdown,
       publicAfterGraceCents,
       combinedAfterGraceCents: privateAfterGraceCents + publicAfterGraceCents
     };
@@ -999,15 +1018,31 @@ export function LoansPage() {
         onClose={() => setShowAfterGraceBreakdown(false)}
       >
         <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
-          Estimated full-repayment amounts. Private = amortized from balance, rate, and term. Public = estimated monthly payment.
+          If all private loans moved to full repayment, total monthly would be below. Public = estimated monthly payment.
         </p>
         <div className="summary-compact" style={{ gap: 8 }}>
-          <div className="summary-kv">
-            <span className="k">Private Loans After Grace</span>
-            <span className="v" style={{ color: 'var(--red)' }}>
-              {afterGraceBreakdown.privateAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.privateAfterGraceCents) : '—'}
-            </span>
-          </div>
+          {afterGraceBreakdown.privateLoansBreakdown.length > 0 ? (
+            <>
+              <div style={{ marginBottom: 4, fontSize: '0.85rem', fontWeight: 600 }}>Private Loan After Grace Breakdown</div>
+              {afterGraceBreakdown.privateLoansBreakdown.map((row) => (
+                <div key={row.name} className="summary-kv">
+                  <span className="k">{row.name}</span>
+                  <span className="v" style={{ color: 'var(--red)' }}>{formatCents(row.afterGraceCents)}</span>
+                </div>
+              ))}
+              <div className="summary-kv" style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                <span className="k">Total Private After Grace</span>
+                <span className="v" style={{ color: 'var(--red)' }}>
+                  {formatCents(afterGraceBreakdown.privateAfterGraceCents)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="summary-kv">
+              <span className="k">Private Loans After Grace</span>
+              <span className="v" style={{ color: 'var(--red)' }}>—</span>
+            </div>
+          )}
           <div className="summary-kv">
             <span className="k">Public Loans After Grace</span>
             <span className="v" style={{ color: 'var(--red)' }}>
@@ -1179,19 +1214,6 @@ function LoanEditorForm(props: {
       {state.category !== 'public' ? (
         <>
           <div className="field">
-            <label>Monthly payment ($)</label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={state.nextPayment}
-              onChange={(e) => onChange({ ...state, nextPayment: e.target.value })}
-              placeholder="0.00"
-            />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              Current monthly payment (used in Payment(now) total)
-            </p>
-          </div>
-          <div className="field">
             <label>Repayment term (months)</label>
             <input
               value={state.termMonths}
@@ -1203,6 +1225,57 @@ function LoanEditorForm(props: {
               Used for payoff estimate and after-grace amortized payment
             </p>
           </div>
+          <div className="field">
+            <label>Monthly payment mode</label>
+            <Select
+              value={state.privatePaymentMode}
+              onChange={(e) => onChange({ ...state, privatePaymentMode: e.target.value as LoanEditorState['privatePaymentMode'] })}
+            >
+              <option value="interest_only">Interest Only</option>
+              <option value="full_repayment">Full Repayment</option>
+              <option value="custom_monthly">Custom Monthly Payment</option>
+            </Select>
+          </div>
+          {state.privatePaymentMode === 'custom_monthly' ? (
+            <div className="field">
+              <label>Monthly payment ($)</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={state.nextPayment}
+                onChange={(e) => onChange({ ...state, nextPayment: e.target.value })}
+                placeholder="0.00"
+              />
+              <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                Manual monthly payment (used in Payment(now) total)
+              </p>
+            </div>
+          ) : state.privatePaymentMode === 'interest_only' ? (
+            <div className="field">
+              <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0 }}>
+                Estimated monthly payment = balance × (rate / 100) / 12 ={' '}
+                {formatCents(
+                  Math.round(
+                    (parseFloat(state.balance || '0') * 100 * (parseFloat(state.ratePercent || '0') / 100)) / 12
+                  )
+                )}
+                {' '}(interest only)
+              </p>
+            </div>
+          ) : (
+            <div className="field">
+              <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0 }}>
+                Full repayment (interest + minimum monthly):{' '}
+                {formatCents(
+                  computeAmortizedPaymentCents(
+                    Math.round(parseFloat(state.balance || '0') * 100),
+                    parseFloat(state.ratePercent || '0'),
+                    parseFloat(state.termMonths || '0') || undefined
+                  ) ?? 0
+                )}
+              </p>
+            </div>
+          )}
           <div className="toggle-row" style={{ marginTop: 4 }}>
             <input
               type="checkbox"
