@@ -19,6 +19,12 @@ import { getDetectedAgiFromRecurring } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
+import {
+  loadFederalLoanParameters,
+  computeEstimatedMonthlyPaymentCents
+} from '../federalLoans/FederalLoanParametersStore';
+import { FederalLoanParametersModal } from '../federalLoans/FederalLoanParametersModal';
+import { FederalLoanSummaryCard } from '../federalLoans/FederalLoanSummaryCard';
 
 function todayISO(): string {
   const d = new Date();
@@ -698,6 +704,10 @@ export function LoansPage() {
   const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
   const [editingPoverty, setEditingPoverty] = useState(false);
   const [povertyInput, setPovertyInput] = useState('');
+  const [federalParams, setFederalParams] = useState<ReturnType<typeof loadFederalLoanParameters>>(
+    () => loadFederalLoanParameters()
+  );
+  const [federalParamsModalOpen, setFederalParamsModalOpen] = useState(false);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -710,9 +720,30 @@ export function LoansPage() {
   const federalTotals = useMemo(() => {
     const publicLoans = (state.loans || []).filter((l) => l.category === 'public');
     if (!publicLoans.length) return null;
-    const agi = getAgiCents(publicLoans[0], detectedAnnualIncomeCents);
-    return computeFederalPlanTotals(publicLoans, agi, federalConfig.povertyLevelDollars);
-  }, [state.loans, detectedAnnualIncomeCents, federalConfig.povertyLevelDollars]);
+    const agi =
+      federalParams?.useRecurringIncome !== false
+        ? detectedAnnualIncomeCents
+        : (federalParams?.agiCents ?? 0);
+    const povertyLevelDollars = federalParams?.povertyLevel ?? federalConfig.povertyLevelDollars;
+    const totals = computeFederalPlanTotals(
+      publicLoans,
+      federalParams ? agi : getAgiCents(publicLoans[0], detectedAnnualIncomeCents),
+      povertyLevelDollars
+    );
+    if (federalParams) {
+      const selectedPayment = computeEstimatedMonthlyPaymentCents(
+        federalParams,
+        federalParams.useRecurringIncome ? detectedAnnualIncomeCents : null
+      );
+      return { ...totals, lowestTotalCents: selectedPayment };
+    }
+    return totals;
+  }, [
+    state.loans,
+    detectedAnnualIncomeCents,
+    federalConfig.povertyLevelDollars,
+    federalParams
+  ]);
 
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
     return (state.loans || []).map((l) =>
@@ -896,7 +927,36 @@ export function LoansPage() {
         </div>
       ) : null}
 
-      {loanView === 'public' && loansWithDerived.some((l) => l.category === 'public') ? (
+      {loanView === 'public' ? (
+        <div style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ width: '100%', marginBottom: federalParams && loansWithDerived.some((l) => l.category === 'public') ? 8 : 0 }}
+            onClick={() => setFederalParamsModalOpen(true)}
+          >
+            Define Public Loan Parameters
+          </button>
+          {federalParams && loansWithDerived.some((l) => l.category === 'public') ? (
+            <FederalLoanSummaryCard
+              totalBalanceCents={(state.loans || [])
+                .filter((l) => l.category === 'public')
+                .reduce((s, l) => s + (l.balanceCents ?? 0), 0)}
+              repaymentPlan={federalParams.repaymentPlan}
+              estimatedPaymentCents={
+                federalTotals?.lowestTotalCents ??
+                computeEstimatedMonthlyPaymentCents(
+                  federalParams,
+                  federalParams.useRecurringIncome ? detectedAnnualIncomeCents : null
+                )
+              }
+              numPublicLoans={(state.loans || []).filter((l) => l.category === 'public').length}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {loanView === 'public' && !federalParams && loansWithDerived.some((l) => l.category === 'public') ? (
         <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
           <div className="summary-kv" style={{ marginTop: 0, marginBottom: 6 }}>
             <span className="k">Poverty level used</span>
@@ -1018,6 +1078,13 @@ export function LoansPage() {
           + Add {loanView === 'public' ? 'Public' : 'Private'} Loan
         </button>
       ) : null}
+
+      <FederalLoanParametersModal
+        open={federalParamsModalOpen}
+        onClose={() => setFederalParamsModalOpen(false)}
+        onSave={() => setFederalParams(loadFederalLoanParameters())}
+        detectedAgiCents={detectedAnnualIncomeCents}
+      />
 
       {/* Loan editor modal */}
       <Modal
