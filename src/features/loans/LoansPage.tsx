@@ -6,6 +6,8 @@ import {
   saveLoans,
   loadPublicPaymentNowAdded,
   savePublicPaymentNowAdded,
+  loadPrivatePaymentNowBase,
+  savePrivatePaymentNowBase,
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
@@ -16,9 +18,9 @@ import {
   type LoanStateOfResidency,
   uid,
   loadBirthdateISO,
-  addAccruedInterestToPrivateBalances
+  addMonthlyInterestToPrivateBalances
 } from '../../state/storage';
-import { getDetectedAgiFromRecurring } from './loanDerivation';
+import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -361,7 +363,7 @@ function deriveForLoan(
   const dailyInterestCents = isPublicSubsidizedInSchoolOrGrace
     ? 0
     : Math.round((balanceCents * (interestRatePercent / 100)) / 365);
-  const monthlyInterestCents = dailyInterestCents * 30;
+  let monthlyInterestCents = dailyInterestCents * 30;
 
   const interestOnlyMonthly = computeInterestOnlyMonthlyCents(balanceCents, interestRatePercent);
   const fullPaymentCents = computeAmortizedPaymentCents(balanceCents, interestRatePercent, termMonths) ?? interestOnlyMonthly;
@@ -434,6 +436,9 @@ function deriveForLoan(
       ? paymentCentsFromPrivateRange(activeRange, balanceCents, interestRatePercent, derivedTermMonths)
       : 0;
     monthlyNowCents = paymentNow;
+    if (activeRange?.mode === 'interest_only') {
+      monthlyInterestCents = paymentNow;
+    }
 
     // Future/grace value: first future range (custom → full_repayment → interest_only). Custom overrides calculated.
     const fullRepaymentBreakdown =
@@ -994,7 +999,7 @@ export function LoansPage() {
 
   const summary = useMemo(() => {
     let totalBalance = 0;
-    let privatePaymentNowBase = 0;
+    let derivedPrivatePaymentNowBase = 0;
     let totalMonthlyLater = 0;
     let weightedRateNumerator = 0;
 
@@ -1004,7 +1009,7 @@ export function LoansPage() {
     loansWithDerived.forEach((l) => {
       const bal = l.balanceCents || 0;
       totalBalance += bal;
-      if (l.monthlyNowCents != null && !l.excludeFromCurrentPayment) privatePaymentNowBase += l.monthlyNowCents;
+      if (l.monthlyNowCents != null && !l.excludeFromCurrentPayment) derivedPrivatePaymentNowBase += l.monthlyNowCents;
       if (l.monthlyLaterCents != null) {
         totalMonthlyLater += l.monthlyLaterCents;
         privateAfterGraceCents += l.monthlyLaterCents;
@@ -1027,6 +1032,11 @@ export function LoansPage() {
         : (estimated > 0 ? estimated : 0);
     })();
 
+    const persistedPrivateBase = loadPrivatePaymentNowBase();
+    const privatePaymentNowBase =
+      persistedPrivateBase !== null && persistedPrivateBase !== undefined
+        ? persistedPrivateBase
+        : derivedPrivatePaymentNowBase;
     const totalMonthlyNow = privatePaymentNowBase + publicPaymentNowAdded;
 
     const privateTotalBalance = totalBalance;
@@ -1282,7 +1292,13 @@ export function LoansPage() {
                   className="btn btn-secondary"
                   style={{ fontSize: '0.9rem', padding: '6px 12px' }}
                   onClick={() => {
-                  addAccruedInterestToPrivateBalances();
+                  addMonthlyInterestToPrivateBalances();
+                  const loansState = loadLoans();
+                  const newPrivateTotal = getPrivatePaymentNowTotal(
+                    loansState.loans || [],
+                    detectedAnnualIncomeCents
+                  );
+                  savePrivatePaymentNowBase(newPrivateTotal);
                   setState(loadLoans());
                 }}
                 >

@@ -278,6 +278,21 @@ export function getLoanEstimatedPaymentNowMap(
   return map;
 }
 
+/** Sum of private (non-excluded) loan Payment(now) contributions. Used after recompute to persist display total. */
+export function getPrivatePaymentNowTotal(
+  loans: Loan[],
+  detectedAnnualIncomeCents: number
+): number {
+  const map = getLoanEstimatedPaymentNowMap(loans, detectedAnnualIncomeCents);
+  let total = 0;
+  for (const l of loans) {
+    if (l.category !== 'private' || (l as any).excludeFromCurrentPayment) continue;
+    const c = map[l.id];
+    if (c != null && c > 0) total += c;
+  }
+  return total;
+}
+
 function annualizeCents(
   amountCents: number,
   freq: string,
