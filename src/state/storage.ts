@@ -681,6 +681,8 @@ export type Loan = {
   dependents?: number;
   /** State of residency for FPG (default contiguous). */
   stateOfResidency?: LoanStateOfResidency;
+  /** Private only: if true, this loan's payment is not included in Payment(now) total (still included in grace/after-grace calculations). */
+  excludeFromCurrentPayment?: boolean;
 };
 
 export type LoansState = {

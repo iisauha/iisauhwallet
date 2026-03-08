@@ -294,6 +294,7 @@ type LoanEditorState = {
   paymentScheduleRanges: PaymentScheduleRange[];
   schedulePaymentStrings: Record<string, string>;
   scheduleAccruedInterestStrings: Record<string, string>;
+  excludeFromCurrentPayment: boolean;
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -323,7 +324,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       stateOfResidency: 'contiguous',
       paymentScheduleRanges: [],
       schedulePaymentStrings: {},
-      scheduleAccruedInterestStrings: {}
+      scheduleAccruedInterestStrings: {},
+      excludeFromCurrentPayment: false
     };
   }
   return {
@@ -359,7 +361,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
         if (r.accruedInterestCents != null) out[r.id] = (r.accruedInterestCents / 100).toFixed(2);
       });
       return out;
-    })()
+    })(),
+    excludeFromCurrentPayment: l.excludeFromCurrentPayment ?? false
   };
 }
 
@@ -423,7 +426,8 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     idrUseManualIncome: e.category === 'public' ? undefined : e.idrUseManualIncome,
     idrManualAnnualIncomeCents: e.category === 'public' ? undefined : idrManualAnnualIncomeCents,
     accruedInterestCents: isPublic ? undefined : undefined,
-    accrualLastUpdatedAt: isPublic ? undefined : undefined
+    accrualLastUpdatedAt: isPublic ? undefined : undefined,
+    excludeFromCurrentPayment: isPublic ? undefined : e.excludeFromCurrentPayment
   };
 }
 
@@ -452,8 +456,9 @@ function LoanCard(props: {
   onDelete: () => void;
   onPayoffAge: () => void;
   onRefinance?: () => void;
+  onToggleExcludeFromPayment?: (exclude: boolean) => void;
 }) {
-  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance } = props;
+  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance, onToggleExcludeFromPayment } = props;
   const [plansOpen, setPlansOpen] = useState(false);
 
   return (
@@ -498,6 +503,24 @@ function LoanCard(props: {
       </div>
       {l.category === 'private' ? (
         <>
+          {onToggleExcludeFromPayment ? (
+            <div className="toggle-row" style={{ marginBottom: 6 }}>
+              <input
+                type="checkbox"
+                id={`exclude-payment-${l.id}`}
+                checked={!!l.excludeFromCurrentPayment}
+                onChange={(e) => onToggleExcludeFromPayment(e.target.checked)}
+              />
+              <label htmlFor={`exclude-payment-${l.id}`} style={{ fontSize: '0.85rem' }}>
+                Exclude from Payment(now)
+              </label>
+            </div>
+          ) : null}
+          {l.excludeFromCurrentPayment ? (
+            <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 0, marginBottom: 4 }}>
+              Excluded from current payment total but included in grace period estimates.
+            </p>
+          ) : null}
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             Monthly Interest Portion: {formatCents(l.monthlyInterestCents)}
           </div>
@@ -644,7 +667,7 @@ export function LoansPage() {
     loansWithDerived.forEach((l) => {
       const bal = l.balanceCents || 0;
       totalBalance += bal;
-      if (l.monthlyNowCents != null) totalMonthlyNow += l.monthlyNowCents;
+      if (l.monthlyNowCents != null && !l.excludeFromCurrentPayment) totalMonthlyNow += l.monthlyNowCents;
       if (l.monthlyLaterCents != null) {
         totalMonthlyLater += l.monthlyLaterCents;
         privateAfterGraceCents += l.monthlyLaterCents;
@@ -890,6 +913,9 @@ export function LoansPage() {
                   }}
                   onPayoffAge={() => setPayoffLoan(l)}
                   onRefinance={() => setRefiLoan(l)}
+                  onToggleExcludeFromPayment={(exclude) =>
+                    persist({ loans: (state.loans || []).map((x) => (x.id === l.id ? { ...x, excludeFromCurrentPayment: exclude } : x)) })
+                  }
                 />
               ))}
               <button
@@ -1177,6 +1203,18 @@ function LoanEditorForm(props: {
               Used for payoff estimate and after-grace amortized payment
             </p>
           </div>
+          <div className="toggle-row" style={{ marginTop: 4 }}>
+            <input
+              type="checkbox"
+              id="excludeFromPayment"
+              checked={state.excludeFromCurrentPayment}
+              onChange={(e) => onChange({ ...state, excludeFromCurrentPayment: e.target.checked })}
+            />
+            <label htmlFor="excludeFromPayment">Exclude from Payment(now)</label>
+          </div>
+          <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+            If checked, this loan&apos;s payment is not added to the Payment(now) total; it is still included in grace period / after-grace estimates.
+          </p>
         </>
       ) : null}
       {state.category === 'public' ? (
