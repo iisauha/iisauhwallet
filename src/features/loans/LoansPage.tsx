@@ -8,6 +8,8 @@ import {
   type Loan,
   type FutureRepaymentPlan,
   type PaymentScheduleRange,
+  type LoanBorrowerType,
+  type LoanStateOfResidency,
   uid,
   loadBirthdateISO
 } from '../../state/storage';
@@ -111,34 +113,214 @@ function computeMonthsToPayoff(
   return Math.ceil(n);
 }
 
+// ----- Federal repayment plan formulas and eligibility -----
+// Poverty guidelines: 2025 HHS (48 contiguous; AK/HI higher). Amounts in dollars.
+const FPG_2025_CONTIGUOUS = [0, 15650, 21150, 26650, 32150, 37650, 43150, 48650, 54150] as const;
+const FPG_2025_AK = [0, 19550, 26450, 33350, 40250, 47150, 54050, 60950, 67850] as const;
+const FPG_2025_HI = [0, 17980, 24320, 30660, 37000, 43340, 49680, 56020, 62360] as const;
+const FPG_ADD_PER_PERSON_CONTIGUOUS = 5500;
+const FPG_ADD_PER_PERSON_AK = 6900;
+const FPG_ADD_PER_PERSON_HI = 6340;
+
+function getFederalPovertyGuidelineDollars(
+  householdSize: number,
+  stateOfResidency: 'contiguous' | 'AK' | 'HI'
+): number {
+  const size = Math.max(1, Math.min(householdSize, 20));
+  const table =
+    stateOfResidency === 'AK' ? FPG_2025_AK : stateOfResidency === 'HI' ? FPG_2025_HI : FPG_2025_CONTIGUOUS;
+  const addPer =
+    stateOfResidency === 'AK' ? FPG_ADD_PER_PERSON_AK : stateOfResidency === 'HI' ? FPG_ADD_PER_PERSON_HI : FPG_ADD_PER_PERSON_CONTIGUOUS;
+  if (size <= 8) return table[size] as number;
+  return (table[8] as number) + (size - 8) * addPer;
+}
+
+/** Discretionary income = AGI - (150% × FPG). Returns dollars (for plan formulas). */
+function discretionaryIncomeDollars(
+  agiCents: number,
+  householdSize: number,
+  stateOfResidency: 'contiguous' | 'AK' | 'HI'
+): number {
+  const fpg = getFederalPovertyGuidelineDollars(householdSize, stateOfResidency);
+  const threshold = 1.5 * fpg;
+  const agiDollars = agiCents / 100;
+  return Math.max(0, agiDollars - threshold);
+}
+
+export type FederalPlanRow = {
+  planId: 'ibr' | 'paye' | 'icr' | 'rap' | 'standard';
+  planName: string;
+  monthlyPaymentCents: number;
+  forgivenessYears: number;
+  eligible: boolean;
+};
+
+const PHASE_OUT_DATE = '2028-07-01';
+const RAP_START_DATE = '2026-07-01';
+const ALL_PLANS_CUTOFF = '2026-07-01'; // IBR/PAYE/ICR only if all disbursed before this
+const PAYE_NO_LOAN_BEFORE = '2007-10-01';
+const PAYE_AT_LEAST_ONE_AFTER = '2011-10-01';
+
+function parseDateCompare(iso: string): number {
+  return new Date(iso + 'T00:00:00').getTime();
+}
+
+function allPublicLoansDisbursedBefore(loans: Loan[], before: string): boolean {
+  const cutoff = parseDateCompare(before);
+  for (const l of loans) {
+    if (l.category !== 'public') continue;
+    const d = l.disbursementDate;
+    if (!d || parseDateCompare(d) >= cutoff) return false;
+  }
+  return true;
+}
+
+function hasNoPublicLoanBefore(loans: Loan[], before: string): boolean {
+  const t = parseDateCompare(before);
+  for (const l of loans) {
+    if (l.category !== 'public') continue;
+    const d = l.disbursementDate;
+    if (d && parseDateCompare(d) < t) return false;
+  }
+  return true;
+}
+
+function hasAtLeastOnePublicLoanAfter(loans: Loan[], after: string): boolean {
+  const t = parseDateCompare(after);
+  for (const l of loans) {
+    if (l.category !== 'public') continue;
+    const d = l.disbursementDate;
+    if (d && parseDateCompare(d) >= t) return true;
+  }
+  return false;
+}
+
+function computeFederalPlans(
+  loan: Loan,
+  allPublicLoans: Loan[],
+  agiCents: number
+): { plans: FederalPlanRow[]; lowestEligibleCents: number | null } {
+  const plans: FederalPlanRow[] = [];
+  const isParent = loan.borrowerType === 'parent';
+  const householdSize = Math.max(1, loan.householdSize ?? 1);
+  const stateOfResidency = loan.stateOfResidency ?? 'contiguous';
+  const discDollars = discretionaryIncomeDollars(agiCents, householdSize, stateOfResidency);
+  const now = new Date();
+  const phaseOutTime = parseDateCompare(PHASE_OUT_DATE);
+  const rapStartTime = parseDateCompare(RAP_START_DATE);
+
+  const standard120 = computeAmortizedPaymentCents(
+    loan.balanceCents,
+    loan.interestRatePercent,
+    120
+  );
+  const standardCents = standard120 ?? computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent);
+  const icr12Year = computeAmortizedPaymentCents(loan.balanceCents, loan.interestRatePercent, 144);
+
+  const allBeforeCutoff = allPublicLoansDisbursedBefore(allPublicLoans, ALL_PLANS_CUTOFF);
+  const noLoanBefore2007 = hasNoPublicLoanBefore(allPublicLoans, PAYE_NO_LOAN_BEFORE);
+  const atLeastOneAfter2011 = hasAtLeastOnePublicLoanAfter(allPublicLoans, PAYE_AT_LEAST_ONE_AFTER);
+  const beforePhaseOut = now.getTime() < phaseOutTime;
+  const rapAvailable = now.getTime() >= rapStartTime;
+
+  // IBR: 10% discretionary / 12; 20 yr forgiveness. Eligible if all disbursed before 7/1/2026, not parent.
+  const ibrEligible = loan.category === 'public' && !isParent && allBeforeCutoff && beforePhaseOut;
+  const ibrMonthlyDollars = (discDollars * 0.1) / 12;
+  const ibrCents = Math.round(ibrMonthlyDollars * 100);
+  plans.push({
+    planId: 'ibr',
+    planName: 'IBR',
+    monthlyPaymentCents: ibrCents,
+    forgivenessYears: 20,
+    eligible: ibrEligible
+  });
+
+  // PAYE: 10% discretionary / 12, cap at Standard 10-yr; 20 yr. No loan before 10/1/2007, at least one after 10/1/2011; before phase out.
+  const payeEligible =
+    loan.category === 'public' &&
+    !isParent &&
+    allBeforeCutoff &&
+    noLoanBefore2007 &&
+    atLeastOneAfter2011 &&
+    beforePhaseOut;
+  const payeUncapped = (discDollars * 0.1) / 12;
+  const payeCapped =
+    standardCents != null ? Math.min(payeUncapped * 100, standardCents) : payeUncapped * 100;
+  const payeCents = Math.round(payeCapped);
+  plans.push({
+    planId: 'paye',
+    planName: 'PAYE',
+    monthlyPaymentCents: payeCents,
+    forgivenessYears: 20,
+    eligible: payeEligible
+  });
+
+  // ICR: lesser of 20% discretionary/12 or 12-year amortized; 25 yr. Estimates only. Phase out.
+  const icrEligible = loan.category === 'public' && !isParent && allBeforeCutoff && beforePhaseOut;
+  const icr20Pct = (discDollars * 0.2) / 12;
+  const icr12YearCents = icr12Year ?? Infinity;
+  const icrCents = Math.round(Math.min(icr20Pct * 100, icr12YearCents));
+  plans.push({
+    planId: 'icr',
+    planName: 'ICR',
+    monthlyPaymentCents: icrCents,
+    forgivenessYears: 25,
+    eligible: icrEligible
+  });
+
+  // RAP: 6% discretionary / 12, min $10/mo; 30 yr. Available from 7/1/2026.
+  const rapEligible = loan.category === 'public' && !isParent && rapAvailable;
+  const rapUncapped = (discDollars * 0.06) / 12;
+  const rapCents = Math.max(1000, Math.round(rapUncapped * 100)); // $10 min = 1000 cents
+  plans.push({
+    planId: 'rap',
+    planName: 'RAP',
+    monthlyPaymentCents: rapCents,
+    forgivenessYears: 30,
+    eligible: rapEligible
+  });
+
+  // Standard 10-year: always eligible
+  plans.push({
+    planId: 'standard',
+    planName: 'Standard',
+    monthlyPaymentCents: standardCents,
+    forgivenessYears: 10,
+    eligible: true
+  });
+
+  const eligiblePlans = plans.filter((p) => p.eligible);
+  const lowestEligibleCents =
+    eligiblePlans.length > 0
+      ? Math.min(...eligiblePlans.map((p) => p.monthlyPaymentCents))
+      : null;
+
+  return { plans, lowestEligibleCents };
+}
+
 type LoanWithDerived = Loan & {
   monthlyNowCents: number | null;
   monthlyLaterCents: number | null;
   dailyInterestCents: number;
   monthlyInterestCents: number;
   payoffMonths: number | null;
+  federalPlans?: FederalPlanRow[];
 };
 
-function computeIdrMonthlyCents(
-  loan: Loan,
-  detectedAnnualIncomeCents: number,
-  idrManualIncomeCents: number | undefined
-): number {
+function getAgiCents(loan: Loan, detectedAnnualIncomeCents: number): number {
   const useManual = loan.idrUseManualIncome;
-  const annualIncomeCents = useManual
-    ? Math.max(0, idrManualIncomeCents || 0)
+  return useManual
+    ? Math.max(0, loan.idrManualAnnualIncomeCents ?? 0)
     : Math.max(0, detectedAnnualIncomeCents);
-  const annualIncomeDollars = annualIncomeCents / 100;
-  const idrMonthlyDollars = (annualIncomeDollars * 0.1) / 12; // ~10% of gross income
-  return Math.max(0, Math.round(idrMonthlyDollars * 100));
 }
 
 function deriveForLoan(
   loan: Loan,
-  detectedAnnualIncomeCents: number,
-  idrManualIncomeCents: number | undefined
+  allLoans: Loan[],
+  detectedAnnualIncomeCents: number
 ): LoanWithDerived {
   const { balanceCents, interestRatePercent, repaymentStatus, termMonths, category } = loan;
+  const allPublicLoans = allLoans.filter((l) => l.category === 'public');
   const isPublicSubsidizedInSchoolOrGrace =
     category === 'public' &&
     loan.subsidyType === 'subsidized' &&
@@ -154,61 +336,77 @@ function deriveForLoan(
   let monthlyNowCents: number | null = null;
   let monthlyLaterCents: number | null = null;
   let payoffMonths: number | null = null;
+  let federalPlans: FederalPlanRow[] | undefined;
 
   const isPublicInSchoolOrGrace =
     category === 'public' &&
     (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only');
-  const futurePlan = loan.futureRepaymentPlan || 'na';
 
-  if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
-    monthlyNowCents = isPublicSubsidizedInSchoolOrGrace ? 0 : interestOnlyMonthly;
-    if (isPublicInSchoolOrGrace) {
-      if (futurePlan === 'idr') {
-        const idrCents = computeIdrMonthlyCents(loan, detectedAnnualIncomeCents, idrManualIncomeCents);
-        monthlyLaterCents = idrCents || null;
-        payoffMonths = monthlyLaterCents
+  if (category === 'public') {
+    const agiCents = getAgiCents(loan, detectedAnnualIncomeCents);
+    const { plans, lowestEligibleCents } = computeFederalPlans(loan, allPublicLoans, agiCents);
+    federalPlans = plans;
+
+    if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
+      // In school: $0 current payment (per Part 6). After grace = lowest eligible plan.
+      monthlyNowCents = 0;
+      monthlyLaterCents = lowestEligibleCents;
+      payoffMonths =
+        monthlyLaterCents != null && monthlyLaterCents > 0
           ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyLaterCents)
           : computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-      } else if (futurePlan === 'custom' && loan.nextPaymentCents && loan.nextPaymentCents > 0) {
-        monthlyLaterCents = loan.nextPaymentCents;
-        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, loan.nextPaymentCents);
-      } else if (futurePlan === 'standard' || futurePlan === 'graduated' || futurePlan === 'extended') {
-        monthlyLaterCents = fullPaymentCents;
-        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-      } else {
-        // N/A or unknown: no after-grace estimate shown; payoff uses standard for projection
-        monthlyLaterCents = null;
-        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-      }
+    } else if (repaymentStatus === 'full_repayment') {
+      monthlyNowCents = fullPaymentCents;
+      monthlyLaterCents = null;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    } else if (repaymentStatus === 'idr') {
+      monthlyNowCents = lowestEligibleCents;
+      monthlyLaterCents = null;
+      payoffMonths =
+        monthlyNowCents != null && monthlyNowCents > 0
+          ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyNowCents)
+          : null;
+    } else if (repaymentStatus === 'deferred_forbearance') {
+      monthlyNowCents = 0;
+      monthlyLaterCents = lowestEligibleCents ?? fullPaymentCents;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    } else if (repaymentStatus === 'custom_payment') {
+      const custom = loan.nextPaymentCents && loan.nextPaymentCents > 0 ? loan.nextPaymentCents : null;
+      monthlyNowCents = custom;
+      monthlyLaterCents = null;
+      payoffMonths =
+        custom != null ? computeMonthsToPayoff(balanceCents, interestRatePercent, custom) : null;
     } else {
+      monthlyNowCents = null;
+      monthlyLaterCents = null;
+      payoffMonths = null;
+    }
+  } else {
+    // Private loan: unchanged behavior
+    const futurePlan = loan.futureRepaymentPlan || 'na';
+    if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
+      monthlyNowCents = interestOnlyMonthly;
       monthlyLaterCents = fullPaymentCents;
       payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    } else if (repaymentStatus === 'full_repayment') {
+      monthlyNowCents = fullPaymentCents;
+      monthlyLaterCents = null;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    } else if (repaymentStatus === 'deferred_forbearance') {
+      monthlyNowCents = 0;
+      monthlyLaterCents = fullPaymentCents;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    } else if (repaymentStatus === 'custom_payment') {
+      const custom = loan.nextPaymentCents && loan.nextPaymentCents > 0 ? loan.nextPaymentCents : null;
+      monthlyNowCents = custom;
+      monthlyLaterCents = null;
+      payoffMonths =
+        custom != null ? computeMonthsToPayoff(balanceCents, interestRatePercent, custom) : null;
+    } else {
+      monthlyNowCents = null;
+      monthlyLaterCents = null;
+      payoffMonths = null;
     }
-  } else if (repaymentStatus === 'full_repayment') {
-    monthlyNowCents = fullPaymentCents;
-    monthlyLaterCents = null;
-    payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-  } else if (repaymentStatus === 'idr' && category === 'public') {
-    const idrCents = computeIdrMonthlyCents(loan, detectedAnnualIncomeCents, idrManualIncomeCents);
-    monthlyNowCents = idrCents || null;
-    monthlyLaterCents = null;
-    payoffMonths = monthlyNowCents
-      ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyNowCents)
-      : null;
-  } else if (repaymentStatus === 'deferred_forbearance') {
-    monthlyNowCents = 0;
-    monthlyLaterCents = fullPaymentCents;
-    payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-  } else if (repaymentStatus === 'custom_payment') {
-    const custom = loan.nextPaymentCents && loan.nextPaymentCents > 0 ? loan.nextPaymentCents : null;
-    monthlyNowCents = custom;
-    monthlyLaterCents = null;
-    payoffMonths =
-      custom != null ? computeMonthsToPayoff(balanceCents, interestRatePercent, custom) : null;
-  } else {
-    monthlyNowCents = null;
-    monthlyLaterCents = null;
-    payoffMonths = null;
   }
 
   return {
@@ -217,7 +415,8 @@ function deriveForLoan(
     monthlyLaterCents,
     dailyInterestCents,
     monthlyInterestCents,
-    payoffMonths
+    payoffMonths,
+    federalPlans
   };
 }
 
@@ -241,6 +440,10 @@ type LoanEditorState = {
   active: boolean;
   idrUseManualIncome: boolean;
   idrManualAnnualIncome: string;
+  borrowerType: LoanBorrowerType;
+  householdSize: string;
+  dependents: string;
+  stateOfResidency: LoanStateOfResidency;
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -263,7 +466,11 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       notes: '',
       active: true,
       idrUseManualIncome: !hasRecurringIncome,
-      idrManualAnnualIncome: ''
+      idrManualAnnualIncome: '',
+      borrowerType: 'student',
+      householdSize: '1',
+      dependents: '0',
+      stateOfResidency: 'contiguous'
     };
   }
   return {
@@ -286,7 +493,11 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     active: l.active !== false,
     idrUseManualIncome: !!l.idrUseManualIncome,
     idrManualAnnualIncome:
-      l.idrManualAnnualIncomeCents != null ? (l.idrManualAnnualIncomeCents / 100).toFixed(2) : ''
+      l.idrManualAnnualIncomeCents != null ? (l.idrManualAnnualIncomeCents / 100).toFixed(2) : '',
+    borrowerType: l.borrowerType ?? 'student',
+    householdSize: String(l.householdSize ?? 1),
+    dependents: String(l.dependents ?? 0),
+    stateOfResidency: l.stateOfResidency ?? 'contiguous'
   };
 }
 
@@ -315,9 +526,14 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     e.category === 'public' ? (e.futureRepaymentPlan || 'na') : undefined;
 
   const subsidyType = e.category === 'public' ? e.subsidyType : undefined;
-  const disbursementDate =
-    e.category === 'public' && e.subsidyType === 'unsubsidized' && e.disbursementDate
-      ? e.disbursementDate
+  const disbursementDate = e.category === 'public' && e.disbursementDate ? e.disbursementDate : undefined;
+  const householdSize =
+    e.category === 'public' && e.householdSize
+      ? Math.max(1, Math.min(20, parseInt(e.householdSize, 10) || 1))
+      : undefined;
+  const dependents =
+    e.category === 'public' && e.dependents !== ''
+      ? Math.max(0, Math.min(20, parseInt(e.dependents, 10) || 0))
       : undefined;
 
   return {
@@ -333,6 +549,10 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     futureRepaymentPlan,
     subsidyType,
     disbursementDate,
+    borrowerType: e.category === 'public' ? e.borrowerType : undefined,
+    householdSize,
+    dependents,
+    stateOfResidency: e.category === 'public' ? e.stateOfResidency : undefined,
     paymentScheduleRanges: prev?.paymentScheduleRanges,
     gracePeriodEndDate,
     nextPaymentCents,
@@ -342,6 +562,138 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     idrUseManualIncome: e.idrUseManualIncome,
     idrManualAnnualIncomeCents
   };
+}
+
+function statusLabel(status: Loan['repaymentStatus']): string {
+  switch (status) {
+    case 'in_school_interest_only':
+      return 'In school';
+    case 'grace_interest_only':
+      return 'Grace';
+    case 'full_repayment':
+      return 'Full repayment';
+    case 'idr':
+      return 'IDR';
+    case 'deferred_forbearance':
+      return 'Deferred';
+    case 'custom_payment':
+      return 'Custom';
+    default:
+      return '—';
+  }
+}
+
+function LoanCard(props: {
+  loan: LoanWithDerived;
+  onEdit: () => void;
+  onDelete: () => void;
+  onPayoffAge: () => void;
+  onBreakdown: () => void;
+  onRefinance?: () => void;
+}) {
+  const { loan: l, onEdit, onDelete, onPayoffAge, onBreakdown, onRefinance } = props;
+  const [plansOpen, setPlansOpen] = useState(false);
+
+  return (
+    <div className="card" key={l.id} style={{ marginBottom: 10, padding: '12px 14px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <span className="name" style={{ fontSize: '1rem', fontWeight: 600 }}>
+          {l.name}
+        </span>
+        <span
+          style={{
+            fontSize: '0.7rem',
+            padding: '2px 6px',
+            borderRadius: 999,
+            background: l.category === 'public' ? 'rgba(59,130,246,0.15)' : 'rgba(234,179,8,0.15)',
+            color: l.category === 'public' ? 'var(--blue)' : 'var(--yellow)'
+          }}
+        >
+          {l.category === 'public' ? 'Public' : 'Private'}
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px', marginBottom: 4 }}>
+        <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(l.balanceCents)}</span>
+        <span style={{ fontSize: '0.9rem' }}>
+          {l.interestRatePercent.toFixed(2)}% {l.rateType === 'fixed' ? 'fixed' : 'variable'}
+        </span>
+      </div>
+      <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
+        <span style={{ color: 'var(--muted)' }}>{statusLabel(l.repaymentStatus)}</span>
+        {l.category === 'public' && l.subsidyType ? (
+          <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}> · {l.subsidyType}</span>
+        ) : null}
+      </div>
+      {l.nextPaymentDate ? (
+        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
+          Next payment date: {l.nextPaymentDate}
+        </div>
+      ) : null}
+      <div style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: 6 }}>
+        Estimated payment after grace:{' '}
+        {l.monthlyLaterCents != null ? formatCents(l.monthlyLaterCents) : '—'}
+      </div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>
+        {l.lender ? `Servicer: ${l.lender}` : null}
+        {l.lender ? ' · ' : null}
+        Daily ≈ {formatCents(l.dailyInterestCents)}
+      </div>
+      {l.category === 'public' && l.federalPlans && l.federalPlans.length > 0 ? (
+        <div style={{ marginBottom: 8 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+            onClick={() => setPlansOpen((o) => !o)}
+          >
+            {plansOpen ? 'Hide' : 'Compare'} repayment plans
+          </button>
+          {plansOpen ? (
+            <div style={{ marginTop: 8, overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', padding: '4px 8px' }}>Plan</th>
+                    <th style={{ textAlign: 'right', padding: '4px 8px' }}>Monthly payment</th>
+                    <th style={{ textAlign: 'right', padding: '4px 8px' }}>Forgiveness</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {l.federalPlans.map((p) => (
+                    <tr
+                      key={p.planId}
+                      style={{
+                        borderBottom: '1px solid var(--border)',
+                        opacity: p.eligible ? 1 : 0.6
+                      }}
+                    >
+                      <td style={{ padding: '4px 8px' }}>
+                        {p.planName}
+                        {!p.eligible ? ' (not eligible)' : ''}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '4px 8px' }}>
+                        {formatCents(p.monthlyPaymentCents)}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '4px 8px' }}>
+                        {p.forgivenessYears} years
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onEdit}>Edit</button>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onPayoffAge}>Payoff age</button>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onBreakdown}>Breakdown</button>
+        {onRefinance ? <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onRefinance}>Refinance</button> : null}
+      </div>
+    </div>
+  );
 }
 
 export function LoansPage() {
@@ -364,7 +716,7 @@ export function LoansPage() {
 
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
     return (state.loans || []).map((l) =>
-      deriveForLoan(l, detectedAnnualIncomeCents, l.idrManualAnnualIncomeCents)
+      deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents)
     );
   }, [state.loans, detectedAnnualIncomeCents]);
 
@@ -489,66 +841,18 @@ export function LoansPage() {
       ) : null}
 
       {loansWithDerived.map((l) => (
-        <div className="card" key={l.id} style={{ marginBottom: 10, padding: '12px 14px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-            <span className="name" style={{ fontSize: '1rem', fontWeight: 600 }}>
-              {l.name}
-            </span>
-            <span
-              style={{
-                fontSize: '0.7rem',
-                padding: '2px 6px',
-                borderRadius: 999,
-                background: l.category === 'public' ? 'rgba(59,130,246,0.15)' : 'rgba(234,179,8,0.15)',
-                color: l.category === 'public' ? 'var(--blue)' : 'var(--yellow)'
-              }}
-            >
-              {l.category === 'public' ? 'Public' : 'Private'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px', marginBottom: 6 }}>
-            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(l.balanceCents)}</span>
-            <span style={{ fontSize: '0.9rem' }}>
-              {l.interestRatePercent.toFixed(2)}% {l.rateType === 'fixed' ? 'fixed' : 'variable'}
-            </span>
-          </div>
-          <div style={{ fontSize: '0.85rem', marginBottom: 6 }}>
-            <span style={{ color: 'var(--muted)' }}>
-              {l.repaymentStatus === 'in_school_interest_only'
-                ? 'In school'
-                : l.repaymentStatus === 'grace_interest_only'
-                  ? 'Grace'
-                  : l.repaymentStatus === 'full_repayment'
-                    ? 'Full repayment'
-                    : l.repaymentStatus === 'idr'
-                      ? 'IDR'
-                      : l.repaymentStatus === 'deferred_forbearance'
-                        ? 'Deferred'
-                        : 'Custom'}
-            </span>
-            {' · '}
-            <span style={{ color: 'var(--red)' }}>
-              Now: {l.monthlyNowCents != null ? formatCents(l.monthlyNowCents) : '—'}
-            </span>
-            {l.monthlyLaterCents != null ? (
-              <>
-                {' · '}
-                <span>After grace: {formatCents(l.monthlyLaterCents)}</span>
-              </>
-            ) : null}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>
-            {l.lender ? `Servicer: ${l.lender} · ` : null}
-            Daily ≈ {formatCents(l.dailyInterestCents)} · Monthly ≈ {formatCents(l.monthlyInterestCents)}
-          </div>
-          <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
-            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}>Edit</button>
-            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => { if (!confirm('Delete this loan?')) return; persist({ loans: state.loans.filter((x) => x.id !== l.id) }); }}>Delete</button>
-            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setPayoffLoan(l)}>Payoff age</button>
-            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setScheduleLoan(l)}>Breakdown</button>
-            {l.category === 'private' ? <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setRefiLoan(l)}>Refinance</button> : null}
-          </div>
-        </div>
+        <LoanCard
+          key={l.id}
+          loan={l}
+          onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
+          onDelete={() => {
+            if (!confirm('Delete this loan?')) return;
+            persist({ loans: state.loans.filter((x) => x.id !== l.id) });
+          }}
+          onPayoffAge={() => setPayoffLoan(l)}
+          onBreakdown={() => setScheduleLoan(l)}
+          onRefinance={l.category === 'private' ? () => setRefiLoan(l) : undefined}
+        />
       ))}
 
       {loansWithDerived.length > 0 ? (
@@ -711,28 +1015,121 @@ function LoanEditorForm(props: {
               Subsidized: no interest during school/grace. Unsubsidized: interest from disbursement.
             </p>
           </div>
-          {state.subsidyType === 'unsubsidized' ? (
-            <div className="field">
-              <label>Disbursement date</label>
+          <div className="field">
+            <label>Disbursement date</label>
+            <input
+              type="date"
+              value={state.disbursementDate}
+              onChange={(e) => onChange({ ...state, disbursementDate: e.target.value })}
+              style={{
+                padding: '6px 8px',
+                borderRadius: 4,
+                border: '1px solid var(--border)',
+                background: 'var(--bg)',
+                color: 'var(--text)',
+                fontSize: '0.9rem',
+                width: '100%'
+              }}
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              {state.subsidyType === 'unsubsidized'
+                ? 'Date interest started accruing. Also used for plan eligibility.'
+                : 'Used for federal plan eligibility.'}
+            </p>
+          </div>
+          <div className="field">
+            <label>Borrower type</label>
+            <Select
+              value={state.borrowerType}
+              onChange={(e) =>
+                onChange({
+                  ...state,
+                  borrowerType: (e.target.value === 'parent' ? 'parent' : 'student') as LoanBorrowerType
+                })
+              }
+            >
+              <option value="student">Student</option>
+              <option value="parent">Parent (Parent PLUS)</option>
+            </Select>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Parent PLUS is eligible only for Standard repayment unless consolidated.
+            </p>
+          </div>
+          <div className="field">
+            <label>Adjusted Gross Income (AGI)</label>
+            <div className="toggle-row">
               <input
-                type="date"
-                value={state.disbursementDate}
-                onChange={(e) => onChange({ ...state, disbursementDate: e.target.value })}
-                style={{
-                  padding: '6px 8px',
-                  borderRadius: 4,
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg)',
-                  color: 'var(--text)',
-                  fontSize: '0.9rem',
-                  width: '100%'
-                }}
+                type="checkbox"
+                id="idrUseManual"
+                checked={state.idrUseManualIncome || !hasRecurringIncome}
+                onChange={(e) =>
+                  onChange({
+                    ...state,
+                    idrUseManualIncome: e.target.checked || !hasRecurringIncome
+                  })
+                }
               />
-              <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-                Date interest started accruing
-              </p>
+              <label htmlFor="idrUseManual">
+                {hasRecurringIncome
+                  ? 'Use manual AGI instead of detected full-time job income'
+                  : 'Use manual AGI'}
+              </label>
             </div>
-          ) : null}
+            <input
+              value={state.idrManualAnnualIncome}
+              onChange={(e) => onChange({ ...state, idrManualAnnualIncome: e.target.value })}
+              inputMode="decimal"
+              placeholder="Annual AGI ($) if manual"
+              style={{ marginTop: 4 }}
+            />
+          </div>
+          <div className="field">
+            <label>Household size</label>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={state.householdSize}
+              onChange={(e) => onChange({ ...state, householdSize: e.target.value })}
+              inputMode="numeric"
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              For poverty guideline (default 1).
+            </p>
+          </div>
+          <div className="field">
+            <label>Number of dependents</label>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              value={state.dependents}
+              onChange={(e) => onChange({ ...state, dependents: e.target.value })}
+              inputMode="numeric"
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Default 0.
+            </p>
+          </div>
+          <div className="field">
+            <label>State of residency</label>
+            <Select
+              value={state.stateOfResidency}
+              onChange={(e) =>
+                onChange({
+                  ...state,
+                  stateOfResidency: (e.target.value as LoanStateOfResidency) || 'contiguous'
+                })
+              }
+            >
+              <option value="contiguous">48 contiguous states / D.C.</option>
+              <option value="AK">Alaska</option>
+              <option value="HI">Hawaii</option>
+            </Select>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              For federal poverty guideline.
+            </p>
+          </div>
         </>
       ) : null}
       <div className="field">
@@ -862,55 +1259,10 @@ function LoanEditorForm(props: {
           onChange={(e) => onChange({ ...state, nextPaymentDate: e.target.value })}
         />
       </div>
-      {(state.repaymentStatus === 'idr' && idrAllowed) ||
-      (state.category === 'public' && state.futureRepaymentPlan === 'idr') ? (
-        <div
-          className="field"
-          style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 8 }}
-        >
-          <label style={{ display: 'block', marginBottom: 4 }}>
-            IDR income source
-            {state.repaymentStatus !== 'idr' && state.futureRepaymentPlan === 'idr'
-              ? ' (for after-grace estimate)'
-              : ''}
-          </label>
-          <div className="toggle-row">
-            <input
-              type="checkbox"
-              id="idrUseManual"
-              checked={state.idrUseManualIncome || !hasRecurringIncome}
-              onChange={(e) =>
-                onChange({
-                  ...state,
-                  idrUseManualIncome: e.target.checked || !hasRecurringIncome
-                })
-              }
-            />
-            <label htmlFor="idrUseManual">
-              {hasRecurringIncome
-                ? 'Use manual income instead of detected full-time recurring income'
-                : 'Use manual income'}
-            </label>
-          </div>
-          <div className="field" style={{ marginTop: 6 }}>
-            <label>Manual annual income ($)</label>
-            <input
-              value={state.idrManualAnnualIncome}
-              onChange={(e) =>
-                onChange({
-                  ...state,
-                  idrManualAnnualIncome: e.target.value
-                })
-              }
-              inputMode="decimal"
-              placeholder="Optional"
-            />
-          </div>
-          <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
-            Estimated IDR payment uses ~10% of annual income divided by 12. This is an
-            approximation and for planning only.
-          </p>
-        </div>
+      {state.category === 'public' ? (
+        <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          Federal plan estimates use discretionary income (AGI − 150% of poverty guideline). IBR/PAYE/ICR/RAP eligibility depends on disbursement dates.
+        </p>
       ) : null}
       <div className="field">
         <label>Notes (optional)</label>

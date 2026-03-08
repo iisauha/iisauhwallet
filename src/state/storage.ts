@@ -621,6 +621,12 @@ export type FutureRepaymentPlan = 'na' | 'idr' | 'standard' | 'graduated' | 'ext
 /** Public loan subsidy: subsidized = no interest during school/grace; unsubsidized = interest from disbursement. */
 export type LoanSubsidyType = 'subsidized' | 'unsubsidized';
 
+/** For federal eligibility: student borrower vs parent (Parent PLUS). Parent PLUS = Standard only unless consolidated. */
+export type LoanBorrowerType = 'student' | 'parent';
+
+/** State of residency for federal poverty guideline (48 contiguous, Alaska, Hawaii). */
+export type LoanStateOfResidency = 'contiguous' | 'AK' | 'HI';
+
 /** One range in a loan's payment schedule. Dates are YYYY-MM-DD. */
 export type PaymentScheduleRange = {
   id: string;
@@ -646,7 +652,7 @@ export type Loan = {
   futureRepaymentPlan?: FutureRepaymentPlan;
   /** Public loans only: subsidized (no interest in school/grace) vs unsubsidized. */
   subsidyType?: LoanSubsidyType;
-  /** For unsubsidized public loans: date interest started accruing. YYYY-MM-DD */
+  /** Public loans: first disbursement date (for eligibility and unsubsidized interest). YYYY-MM-DD */
   disbursementDate?: string;
   /** Optional payment schedule ranges (start/end date + payment + optional rate). */
   paymentScheduleRanges?: PaymentScheduleRange[];
@@ -656,9 +662,18 @@ export type Loan = {
   active?: boolean;
   /** When repayment status is in_school_interest_only: optional grace period end (full repayment starts after this). YYYY-MM-DD */
   gracePeriodEndDate?: string;
-  // IDR-related (public loans).
+  // Federal repayment / IDR (public loans).
   idrUseManualIncome?: boolean;
+  /** Manual AGI when not using detected full-time income. Cents per year. */
   idrManualAnnualIncomeCents?: number;
+  /** Student vs parent (Parent PLUS). Affects plan eligibility. */
+  borrowerType?: LoanBorrowerType;
+  /** Household size for poverty guideline (default 1). */
+  householdSize?: number;
+  /** Number of dependents (default 0). */
+  dependents?: number;
+  /** State of residency for FPG (default contiguous). */
+  stateOfResidency?: LoanStateOfResidency;
 };
 
 export type LoansState = {
