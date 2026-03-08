@@ -626,14 +626,19 @@ export function LoansPage() {
       weightedRateNumerator += bal * l.interestRatePercent;
     });
 
+    const privateTotalBalance = totalBalance;
+    const publicBalanceCents = publicSummary.totalBalanceCents ?? 0;
+    if (publicBalanceCents > 0) totalBalance += publicBalanceCents;
+
     const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
     if (publicAfterGraceCents > 0) {
       totalMonthlyLater += publicAfterGraceCents;
       anyLater = true;
     }
 
-    const weightedRate =
-      totalBalance > 0 ? weightedRateNumerator / totalBalance : 0;
+    const avgPrivateRate =
+      privateTotalBalance > 0 ? weightedRateNumerator / privateTotalBalance : null;
+    const avgPublicRate = publicSummary.avgInterestRatePercent ?? null;
 
     const now = new Date();
     let latestPayoffDate: Date | null = null;
@@ -653,7 +658,8 @@ export function LoansPage() {
       totalBalance,
       totalMonthlyNow,
       totalMonthlyLater: anyLater ? totalMonthlyLater : null,
-      weightedRate,
+      avgPrivateRate,
+      avgPublicRate,
       payoffAge
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
@@ -694,12 +700,18 @@ export function LoansPage() {
             {summary.totalMonthlyLater != null ? formatCents(summary.totalMonthlyLater) : '—'}
           </span>
         </div>
-        <div className="summary-kv" style={{ marginTop: 2 }}>
-          <span className="k">Avg rate</span>
-          <span className="v">
-            {summary.totalBalance > 0 ? `${summary.weightedRate.toFixed(2)}%` : '—'}
-          </span>
-        </div>
+        {summary.avgPrivateRate != null ? (
+          <div className="summary-kv" style={{ marginTop: 2 }}>
+            <span className="k">Avg private rate</span>
+            <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+          </div>
+        ) : null}
+        {summary.avgPublicRate != null ? (
+          <div className="summary-kv" style={{ marginTop: 2 }}>
+            <span className="k">Avg public rate</span>
+            <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+          </div>
+        ) : null}
         <div className="summary-kv" style={{ marginTop: 2 }}>
           <span className="k">Payoff age</span>
           <span className="v">

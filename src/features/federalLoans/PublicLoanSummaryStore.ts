@@ -5,13 +5,24 @@ export interface PublicLoanSummary {
   notesText: string;
   /** Optional: data URLs (e.g. base64 image) for screenshots. Kept small to avoid localStorage limits. */
   attachments?: string[];
+  /** Optional summary: total public loan balance (cents). */
+  totalBalanceCents?: number | null;
+  /** Optional summary: average public interest rate (e.g. 5.5 for 5.5%). */
+  avgInterestRatePercent?: number | null;
 }
 
 const DEFAULT: PublicLoanSummary = {
   estimatedMonthlyPaymentCents: null,
   notesText: '',
-  attachments: []
+  attachments: [],
+  totalBalanceCents: null,
+  avgInterestRatePercent: null
 };
+
+function parseNum(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v) && v >= 0) return v;
+  return null;
+}
 
 function parse(raw: unknown): PublicLoanSummary {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT };
@@ -25,7 +36,15 @@ function parse(raw: unknown): PublicLoanSummary {
   if (Array.isArray(o.attachments)) {
     attachments = o.attachments.filter((x): x is string => typeof x === 'string').slice(0, 6);
   }
-  return { estimatedMonthlyPaymentCents, notesText, attachments };
+  const totalBalanceCents = parseNum(o.totalBalanceCents) ?? null;
+  const avgInterestRatePercent = parseNum(o.avgInterestRatePercent) ?? null;
+  return {
+    estimatedMonthlyPaymentCents,
+    notesText,
+    attachments,
+    totalBalanceCents,
+    avgInterestRatePercent
+  };
 }
 
 export function loadPublicLoanSummary(): PublicLoanSummary {
