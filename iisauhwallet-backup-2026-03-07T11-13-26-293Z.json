@@ -1,0 +1,797 @@
+{
+  "version": "iisauhwallet-backup-v1",
+  "exportedAt": "2026-03-07T11:13:26.292Z",
+  "data": {
+    "ledgerlite_backup_before_color_update": {
+      "ledgerlite_pendingOutboundCollapsed": "1",
+      "ledgerlite_showZeroCreditCards": "0",
+      "ledgerlite": "{\"banks\":[{\"id\":\"mmb9r1lalna2srtl3q\",\"name\":\"Bank\",\"balanceCents\":186599,\"updatedAt\":\"2026-03-03T23:59:08.617Z\"}],\"cards\":[{\"id\":\"mmb9r1la0ib2qgrhliau\",\"name\":\"Amex Delta Gold\",\"balanceCents\":53639,\"updatedAt\":\"2026-03-04T02:08:20.103Z\"},{\"id\":\"mmb9r1laxbfk3agekpb\",\"name\":\"Amex Blue Cash Preferred\",\"balanceCents\":0,\"updatedAt\":\"2026-03-03T23:58:47.758Z\"},{\"id\":\"mmb9r1la12n9exwj58f\",\"name\":\"US Bank Altitude Reserve\",\"balanceCents\":1819,\"updatedAt\":\"2026-03-04T02:07:44.662Z\"},{\"id\":\"mmb9r1lav5hqayfs3zr\",\"name\":\"Robinhood Gold Card\",\"balanceCents\":0,\"updatedAt\":\"2026-03-03T23:58:47.758Z\"},{\"id\":\"mmb9r1lapdskmkxd8rr\",\"name\":\"Capital One Quicksilver\",\"balanceCents\":1000,\"updatedAt\":\"2026-03-04T00:06:09.893Z\"},{\"id\":\"mmb9r1latyq7o53rkzn\",\"name\":\"Discover\",\"balanceCents\":0,\"updatedAt\":\"2026-03-03T23:58:47.758Z\"},{\"id\":\"mmb9r1laq8obzb64rgo\",\"name\":\"Citi Custom Cash\",\"balanceCents\":0,\"updatedAt\":\"2026-03-03T23:58:47.758Z\"},{\"id\":\"mmb9r1la7bog5sk5cz\",\"name\":\"Chase Freedom Unlimited\",\"balanceCents\":0,\"updatedAt\":\"2026-03-03T23:58:47.758Z\"},{\"id\":\"mmb9r1la32kpi87ntzl\",\"name\":\"Venmo Visa\",\"balanceCents\":0,\"updatedAt\":\"2026-03-03T23:58:47.758Z\"},{\"id\":\"mmb9r1la9wtbrszxwjj\",\"name\":\"Amazon Store Card\",\"balanceCents\":0,\"updatedAt\":\"2026-03-03T23:58:47.758Z\"}],\"pendingIn\":[],\"pendingOut\":[{\"id\":\"mmb9tdchbb51b1r9uot\",\"label\":\"Amex BCP\",\"amountCents\":35509,\"createdAt\":\"2026-03-04T00:00:36.305Z\"},{\"id\":\"mmb9yv8g4okzp4yhd76\",\"label\":\"U.S. Bank\",\"amountCents\":3398,\"createdAt\":\"2026-03-04T00:04:52.768Z\"},{\"id\":\"mmba097fnpim04lqao\",\"label\":\"Robinhood\",\"amountCents\":3706,\"createdAt\":\"2026-03-04T00:05:57.531Z\"}],\"purchases\":[{\"id\":\"mmbe2s5697k0pesuqb4\",\"title\":\"ConEd\",\"amountCents\":5239,\"dateISO\":\"2026-03-01\",\"category\":\"utilities\",\"subcategory\":\"Electricity + Gas\",\"notes\":\"Split w Zaria\"},{\"id\":\"mmbecvfackxck613tz\",\"title\":\"El Portón\",\"amountCents\":1819,\"dateISO\":\"2026-03-02\",\"category\":\"food\",\"subcategory\":\"Restaurants\",\"applyToSnapshot\":true,\"paymentSource\":\"card\",\"paymentTargetId\":\"mmb9r1la12n9exwj58f\"},{\"id\":\"mmbedmrqf45hohexshv\",\"title\":\"Minimart\",\"amountCents\":280,\"dateISO\":\"2026-03-03\",\"category\":\"food\",\"subcategory\":\"Snacks\",\"notes\":\"Hot Cheetos\",\"applyToSnapshot\":true,\"paymentSource\":\"card\",\"paymentTargetId\":\"mmb9r1la0ib2qgrhliau\"}],\"cashInHandCents\":2000}",
+      "ledgerlite_categories_v1": "{\"food\":{\"name\":\"Food\",\"sub\":[\"Groceries\",\"Snacks\",\"Restaurants\"]},\"travel\":{\"name\":\"Travel\",\"sub\":[\"MTA\",\"Flights\"]},\"loan_payment\":{\"name\":\"Loan Payment\",\"sub\":[]},\"rent\":{\"name\":\"Rent\",\"sub\":[]},\"fun_money\":{\"name\":\"Fun Money\",\"sub\":[]},\"necessities\":{\"name\":\"Necessities\",\"sub\":[\"Home Necessities\"]},\"utilities\":{\"name\":\"Utilities\",\"sub\":[\"WiFi\",\"Electricity + Gas\"]},\"subscriptions\":{\"name\":\"Subscriptions\",\"sub\":[]},\"uncategorized\":{\"name\":\"Uncategorized\",\"sub\":[]}}",
+      "ledgerlite_pendingInboundCollapsed": "1"
+    },
+    "ledgerlite_pendingOutboundCollapsed": 1,
+    "upcomingCashflow_window_v1": {
+      "days": 30
+    },
+    "categoryColorMap_v1": {
+      "uncategorized": "#0EA5E9"
+    },
+    "ledgerlite_lastAdjustments": {
+      "mmdcwa3rgbr1vwqv6bd:2026-03-07": 1999,
+      "mmf9jhlssh0ynlqt23:2026-03-08": 5000,
+      "mmdd2k7ubf60n5on01i": 90679
+    },
+    "ledgerlite_ui_dropdown_state_v1": {
+      "snapshot_pending_out": false,
+      "snapshot_pending_in": false,
+      "recurring_income": false,
+      "upcoming_expected_income": false,
+      "upcoming_expected_costs": false,
+      "snapshot_cards": false,
+      "snapshot_cash": false,
+      "investing_k401": false,
+      "recurring_expenses_loan_payment": false,
+      "investing_general": false,
+      "spending_purchases": false,
+      "recurring_expenses_subscriptions": false,
+      "investing_roth": false,
+      "investing_hysa": true,
+      "recurring_expenses_rent": false,
+      "recurring_expenses_utilities": false
+    },
+    "ledgerlite_categories_v1": {
+      "food": {
+        "name": "Food",
+        "sub": [
+          "Groceries",
+          "Snacks",
+          "Restaurants"
+        ]
+      },
+      "travel": {
+        "name": "Travel",
+        "sub": [
+          "MTA",
+          "Flights"
+        ]
+      },
+      "loan_payment": {
+        "name": "Loan Payment",
+        "sub": []
+      },
+      "rent": {
+        "name": "Rent",
+        "sub": []
+      },
+      "fun_money": {
+        "name": "Fun Money",
+        "sub": []
+      },
+      "necessities": {
+        "name": "Necessities",
+        "sub": [
+          "Home Necessities"
+        ]
+      },
+      "utilities": {
+        "name": "Utilities",
+        "sub": [
+          "WiFi",
+          "Electricity + Gas"
+        ]
+      },
+      "subscriptions": {
+        "name": "Subscriptions",
+        "sub": []
+      },
+      "uncategorized": {
+        "name": "Uncategorized",
+        "sub": []
+      },
+      "investing": {
+        "name": "Investing",
+        "sub": []
+      }
+    },
+    "ledgerlite_subTracker_v1": {
+      "version": 1,
+      "entries": [
+        {
+          "id": "mme6csj3kgo0bgn33y",
+          "cardRef": {
+            "type": "card",
+            "cardId": "mmdamyyvn866hwtlz1o"
+          },
+          "startDate": "2026-02-28",
+          "tiers": [
+            {
+              "id": "mme6csj30nrroje6fsrp",
+              "spendTargetCents": 500000,
+              "rewardText": "20k bonus miles"
+            }
+          ],
+          "spendCents": 69221,
+          "createdAt": "2026-03-06T00:47:02.511Z",
+          "updatedAt": "2026-03-06T20:45:59.411Z",
+          "monthsWindow": 6,
+          "appliedPurchaseIds": [
+            "mmf87d8qac546upf8p6",
+            "mmfd6nebxk76r7rw2mj"
+          ]
+        },
+        {
+          "id": "mmdg3zao9b6b2c2z0er",
+          "cardRef": {
+            "type": "card",
+            "cardId": "mmdamyyvn866hwtlz1o"
+          },
+          "startDate": "2026-02-28",
+          "tiers": [
+            {
+              "id": "mmdg3zao48htb8mvr3k",
+              "spendTargetCents": 300000,
+              "rewardText": "70k miles"
+            }
+          ],
+          "spendCents": 69221,
+          "createdAt": "2026-03-05T12:32:21.360Z",
+          "updatedAt": "2026-03-06T20:45:59.411Z",
+          "appliedPurchaseIds": [
+            "mmdb1lqs6wgoade6ujs",
+            "mmdc8zt5rvap4w4e1cb",
+            "mme3sxuiwi75rz9gck",
+            "mme3vjwaaa5y7kqx9pj",
+            "mme66ia04z932t8t2as",
+            "mme6a9ny2r7iai38las",
+            "mmf87d8qac546upf8p6",
+            "mmfd6nebxk76r7rw2mj"
+          ],
+          "monthsWindow": 6
+        }
+      ],
+      "completedBonuses": [
+        {
+          "id": "mmeiz616ae3a5uf3i3i",
+          "cardId": "mmb9r1laxbfk3agekpb",
+          "cardName": "Amex Blue Cash Preferred",
+          "unitType": "cash",
+          "rewardQuantity": 200,
+          "rewardLabel": "Statement Credit",
+          "completedAt": "2024-05-13"
+        },
+        {
+          "id": "mmej5gwzob9o9w9ited",
+          "cardId": "mmdedjaltts9mr12tz",
+          "cardName": "US Bank Altitude Go",
+          "unitType": "cash",
+          "rewardQuantity": 200,
+          "rewardLabel": "Statement Credit",
+          "completedAt": "2023-11-20"
+        },
+        {
+          "id": "mmej89cdhjrtqbmfo79",
+          "cardId": "mmdapxuugp4k22ax6cd",
+          "cardName": "Capital One Quicksilver",
+          "unitType": "cash",
+          "rewardQuantity": 100,
+          "rewardLabel": "Statement Credit",
+          "completedAt": "2025-07-06"
+        },
+        {
+          "id": "mmej9uy6npr39tyqld",
+          "cardId": "mmb9r1la7bog5sk5cz",
+          "cardName": "Chase Freedom Unlimited",
+          "unitType": "cash",
+          "rewardQuantity": 200,
+          "rewardLabel": "Statement Credit",
+          "completedAt": "2025-08-21"
+        },
+        {
+          "id": "mmejejypf1r1eu0z03",
+          "cardId": "mmb9r1latyq7o53rkzn",
+          "cardName": "Discover",
+          "unitType": "cash",
+          "rewardQuantity": 91.36,
+          "rewardLabel": "Cashback",
+          "completedAt": "2024-02-02",
+          "notes": "Double cash back first year"
+        },
+        {
+          "id": "mmejgxuixe2fbdezfj",
+          "cardId": "mmb9r1latyq7o53rkzn",
+          "cardName": "Discover",
+          "unitType": "cash",
+          "rewardQuantity": 100,
+          "rewardLabel": "Cashback",
+          "completedAt": "2023-06-24",
+          "notes": "Referred Zaria"
+        },
+        {
+          "id": "mmejjeeznqun9p45dra",
+          "cardId": "mmdapxuugp4k22ax6cd",
+          "cardName": "Capital One Quicksilver",
+          "unitType": "cash",
+          "rewardQuantity": 100,
+          "rewardLabel": "Statement Credit",
+          "completedAt": "2025-06-25",
+          "notes": "Referred Zaria"
+        },
+        {
+          "id": "mmejl3sxtxyc2rpgi99",
+          "cardId": "mmb9r1la9wtbrszxwjj",
+          "cardName": "Amazon Store Card",
+          "unitType": "cash",
+          "rewardQuantity": 75,
+          "rewardLabel": "Giftcard",
+          "completedAt": "2025-09-23"
+        },
+        {
+          "id": "mmejqis9q0gixzvgw4c",
+          "cardId": "mmb9r1laq8obzb64rgo",
+          "cardName": "Citi Custom Cash",
+          "unitType": "cash",
+          "rewardQuantity": 200,
+          "rewardLabel": "Statement Credit",
+          "completedAt": "2023-12-21"
+        },
+        {
+          "id": "mmelrtcub5nn4l12i05",
+          "cardName": "Chase",
+          "unitType": "cash",
+          "rewardQuantity": 100,
+          "rewardLabel": "Cash",
+          "bankAccountRef": {
+            "type": "bank",
+            "bankId": "mmdamjok0eiwjp0hmzqq"
+          },
+          "completedAt": "2023-03-15",
+          "notes": "Dont know exact date but was 2023; 15 transactions awards bonus"
+        },
+        {
+          "id": "mmelt8aulxenfkumrmg",
+          "cardName": "Chime",
+          "unitType": "cash",
+          "rewardQuantity": 350,
+          "rewardLabel": "Cash",
+          "bankAccountRef": {
+            "type": "manual",
+            "name": "Chime"
+          },
+          "completedAt": "2025-08-13",
+          "notes": "250 for Checking Direct Deposit Bonus + 100 for Referral to Zaria"
+        },
+        {
+          "id": "mmelu4y695ef1citb8",
+          "cardName": "Capital One",
+          "unitType": "cash",
+          "rewardQuantity": 250,
+          "rewardLabel": "Cash",
+          "bankAccountRef": {
+            "type": "bank",
+            "bankId": "mmdamagmrtir1963o"
+          },
+          "completedAt": "2025-07-30",
+          "notes": "Direct Deposit ACH Venmo Trick"
+        },
+        {
+          "id": "mmelws7bh4vpablv71d",
+          "cardName": "TD Bank",
+          "unitType": "cash",
+          "rewardQuantity": 250,
+          "rewardLabel": "Cash",
+          "bankAccountRef": {
+            "type": "manual",
+            "name": "TD Bank"
+          },
+          "completedAt": "2025-07-30",
+          "notes": "Direct Deposit Checking Bonus"
+        }
+      ]
+    },
+    "snapshot_lastPostedOutboundBankId": "mmdamjok0eiwjp0hmzqq",
+    "ledgerlite_showZeroCreditCards": 0,
+    "ledgerlite_investing_v1": {
+      "version": 1,
+      "accounts": [
+        {
+          "id": "mmduuc2dr932daavlf",
+          "type": "roth",
+          "name": "Robinhood",
+          "balanceCents": 504
+        },
+        {
+          "id": "mmdvyybsp32qciukat",
+          "type": "hysa",
+          "name": "Capital One",
+          "balanceCents": 50,
+          "interestRate": 3.3,
+          "lastAccruedAt": 1772827002066,
+          "monthKey": "2026-03",
+          "interestThisMonth": 0
+        },
+        {
+          "id": "mmdw12cudm8ts8t3m9w",
+          "type": "hysa",
+          "name": "Amex",
+          "balanceCents": 0,
+          "interestRate": 3.3,
+          "lastAccruedAt": 1772837493445,
+          "monthKey": "2026-03",
+          "interestThisMonth": 0
+        },
+        {
+          "id": "mmfjpc1szp1p3qqjxh8",
+          "type": "hysa",
+          "name": "Robinhood",
+          "balanceCents": 300546,
+          "interestRate": 4.25,
+          "lastAccruedAt": 1772873935975,
+          "monthKey": "2026-03",
+          "interestThisMonth": 275,
+          "monthlyBalanceEvents": [
+            {
+              "timestamp": 1772341200000,
+              "balanceAfterCents": 300546
+            },
+            {
+              "timestamp": 1772843227617,
+              "balanceAfterCents": 300546
+            }
+          ],
+          "manualInterestBaselineThisMonth": 135,
+          "manualInterestBaselineSetAt": 1772843227617,
+          "manualInterestBaselineMonthKey": "2026-03"
+        }
+      ]
+    },
+    "ledgerlite_showZeroCashItems": 0,
+    "ledgerlite_pendingInboundCollapsed": 0,
+    "ledgerlite_coastfire_v1": {
+      "currentAge": 22,
+      "retirementAge": 65,
+      "annualSpendingDollars": 70000,
+      "swrPercent": 4,
+      "investmentReturnPercent": 7,
+      "inflationPercent": 3,
+      "includeRoth": true,
+      "include401k": true,
+      "includeGeneral": false,
+      "includeHysa": false,
+      "useDetectedContributions": true,
+      "manualMonthlyContributionDollars": 0
+    },
+    "expectedIncome_v1": [
+      {
+        "id": "mmdd2k7ubf60n5on01i",
+        "title": "Yemi Lab",
+        "expectedDate": "2026-03-13",
+        "amountCents": 90679,
+        "status": "moved_to_pending"
+      },
+      {
+        "id": "mmfa3lyfv7jttg8i5oe",
+        "title": "Yemi Lab",
+        "expectedDate": "2026-03-13",
+        "amountCents": 45339,
+        "status": "expected"
+      },
+      {
+        "id": "mmfa4v7x2c2xhau3brh",
+        "title": "Yemi Lab",
+        "expectedDate": "2026-03-27",
+        "amountCents": 45339,
+        "status": "expected"
+      }
+    ],
+    "ledgerlite": {
+      "banks": [
+        {
+          "id": "mmdamagmrtir1963o",
+          "name": "Capital One",
+          "type": "bank",
+          "balanceCents": 51,
+          "updatedAt": "2026-03-05T19:07:11.556Z"
+        },
+        {
+          "id": "mmdamggy8mim839y6i3",
+          "name": "Tri Counties",
+          "type": "bank",
+          "balanceCents": 144191,
+          "updatedAt": "2026-03-07T10:06:01.484Z"
+        },
+        {
+          "id": "mmdamjok0eiwjp0hmzqq",
+          "name": "Chase",
+          "type": "bank",
+          "balanceCents": 0,
+          "updatedAt": "2026-03-06T19:05:27.173Z"
+        },
+        {
+          "id": "mmdamnc32r9h4en1mk9",
+          "name": "Physical Cash",
+          "type": "bank",
+          "balanceCents": 2000,
+          "updatedAt": "2026-03-05T10:00:21.295Z"
+        }
+      ],
+      "cards": [
+        {
+          "id": "mmb9r1laxbfk3agekpb",
+          "name": "Amex Blue Cash Preferred",
+          "balanceCents": -1985,
+          "updatedAt": "2026-03-06T18:27:59.193Z"
+        },
+        {
+          "id": "mmb9r1lav5hqayfs3zr",
+          "name": "Robinhood Gold Card",
+          "balanceCents": 1334,
+          "updatedAt": "2026-03-06T00:08:52.126Z"
+        },
+        {
+          "id": "mmb9r1latyq7o53rkzn",
+          "name": "Discover",
+          "balanceCents": 0,
+          "updatedAt": "2026-03-03T23:58:47.758Z"
+        },
+        {
+          "id": "mmb9r1laq8obzb64rgo",
+          "name": "Citi Custom Cash",
+          "balanceCents": 0,
+          "updatedAt": "2026-03-03T23:58:47.758Z"
+        },
+        {
+          "id": "mmb9r1la7bog5sk5cz",
+          "name": "Chase Freedom Unlimited",
+          "balanceCents": 0,
+          "updatedAt": "2026-03-05T14:47:26.288Z"
+        },
+        {
+          "id": "mmb9r1la32kpi87ntzl",
+          "name": "Venmo Visa",
+          "balanceCents": 0,
+          "updatedAt": "2026-03-03T23:58:47.758Z"
+        },
+        {
+          "id": "mmb9r1la9wtbrszxwjj",
+          "name": "Amazon Store Card",
+          "balanceCents": 0,
+          "updatedAt": "2026-03-03T23:58:47.758Z"
+        },
+        {
+          "id": "mmdamyyvn866hwtlz1o",
+          "name": "Amex Delta Gold",
+          "balanceCents": 69221,
+          "updatedAt": "2026-03-06T20:45:59.411Z"
+        },
+        {
+          "id": "mmdapxuugp4k22ax6cd",
+          "name": "Capital One Quicksilver",
+          "balanceCents": 0,
+          "updatedAt": "2026-03-05T13:12:36.307Z"
+        },
+        {
+          "id": "mmdedjaltts9mr12tz",
+          "name": "US Bank Altitude Go",
+          "balanceCents": 1819,
+          "updatedAt": "2026-03-05T14:17:04.843Z"
+        }
+      ],
+      "pendingIn": [
+        {
+          "label": "Venmo from Mom for Amazon Mex",
+          "amountCents": 560,
+          "depositTo": "bank",
+          "targetBankId": "mmdamggy8mim839y6i3",
+          "id": "mmf9t13h0cf4gj5osts6",
+          "createdAt": "2026-03-06T19:11:25.133Z"
+        },
+        {
+          "id": "mmfd6nebap9o43dpcyi",
+          "label": "Venmo - \"Yankees Game Senior Event\"",
+          "amountCents": 5464,
+          "createdAt": "2026-03-06T20:45:59.411Z",
+          "linkedPurchaseId": "mmfd6nebxk76r7rw2mj",
+          "fromSplit": true
+        }
+      ],
+      "pendingOut": [],
+      "purchases": [
+        {
+          "title": "Apple",
+          "amountCents": 299,
+          "dateISO": "2026-03-04",
+          "category": "subscriptions",
+          "subcategory": "Restaurants",
+          "applyToSnapshot": true,
+          "paymentSource": "bank",
+          "paymentTargetId": "mmdamggy8mim839y6i3",
+          "id": "mmdaxnoseljkfwi73je"
+        },
+        {
+          "title": "ConEd",
+          "amountCents": 5239,
+          "dateISO": "2026-03-01",
+          "category": "utilities",
+          "subcategory": "Electricity + Gas",
+          "isSplit": true,
+          "splitTotalCents": 10478,
+          "splitMyPortionCents": 5239,
+          "splitInboundCents": 5239,
+          "originalTotal": 10478,
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "splitSnapshot": {
+            "amountCents": 10478,
+            "paymentSource": "card",
+            "paymentTargetId": "mmdamyyvn866hwtlz1o"
+          },
+          "id": "mmdb1lqs6wgoade6ujs",
+          "splitPendingId": "mmdkx3nn9fpeuazk369"
+        },
+        {
+          "title": "Minimart",
+          "amountCents": 280,
+          "dateISO": "2026-03-03",
+          "category": "food",
+          "subcategory": "Snacks",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "id": "mmdc8zt5rvap4w4e1cb"
+        },
+        {
+          "title": "El Portón",
+          "amountCents": 1819,
+          "dateISO": "2026-03-02",
+          "category": "food",
+          "subcategory": "Restaurants",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdedjaltts9mr12tz",
+          "id": "mmdeeh4i4hzlcef22ae"
+        },
+        {
+          "title": "Subway",
+          "amountCents": 300,
+          "dateISO": "2026-03-05",
+          "category": "travel",
+          "subcategory": "MTA",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "id": "mme3sxuiwi75rz9gck"
+        },
+        {
+          "title": "Subway",
+          "amountCents": 300,
+          "dateISO": "2026-03-05",
+          "category": "travel",
+          "subcategory": "MTA",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "id": "mme3vjwaaa5y7kqx9pj"
+        },
+        {
+          "title": "Xiangs Famous Foods",
+          "amountCents": 1334,
+          "dateISO": "2026-03-05",
+          "category": "food",
+          "subcategory": "Restaurants",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmb9r1lav5hqayfs3zr",
+          "id": "mme4zhifiboz7jqed8"
+        },
+        {
+          "title": "Bus",
+          "amountCents": 300,
+          "dateISO": "2026-03-05",
+          "category": "travel",
+          "subcategory": "MTA",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "id": "mme66ia04z932t8t2as"
+        },
+        {
+          "title": "Teso Mini",
+          "amountCents": 249,
+          "dateISO": "2026-03-05",
+          "category": "food",
+          "subcategory": "Snacks",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "id": "mme6a9ny2r7iai38las"
+        },
+        {
+          "title": "OpenAI",
+          "amountCents": 1999,
+          "dateISO": "2026-03-06",
+          "category": "subscriptions",
+          "id": "mmf2u4cjo27ihb5vd3",
+          "applyToSnapshot": true,
+          "paymentSource": "bank",
+          "paymentTargetId": "mmdamggy8mim839y6i3"
+        },
+        {
+          "title": "Chipotle",
+          "amountCents": 1323,
+          "dateISO": "2026-03-06",
+          "category": "food",
+          "subcategory": "Restaurants",
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "id": "mmf87d8qac546upf8p6"
+        },
+        {
+          "title": "Yankees Game Senior Event",
+          "amountCents": 5464,
+          "dateISO": "2026-03-06",
+          "category": "fun_money",
+          "isSplit": true,
+          "splitTotalCents": 10928,
+          "splitMyPortionCents": 5464,
+          "splitInboundCents": 5464,
+          "originalTotal": 10928,
+          "applyToSnapshot": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "splitSnapshot": {
+            "amountCents": 10928,
+            "paymentSource": "card",
+            "paymentTargetId": "mmdamyyvn866hwtlz1o"
+          },
+          "id": "mmfd6nebxk76r7rw2mj",
+          "splitPendingId": "mmfd6nebap9o43dpcyi"
+        }
+      ],
+      "recurring": [
+        {
+          "id": "mmdcnuknl1khaw3cehg",
+          "name": "Mom Help w Rent",
+          "amountCents": 70000,
+          "type": "income",
+          "frequency": "monthly",
+          "startDate": "2026-03-31",
+          "active": true,
+          "paymentTargetId": "mmdamggy8mim839y6i3",
+          "useLastDayOfMonth": true,
+          "isActive": true
+        },
+        {
+          "id": "mmdcph4h0lixg48orlgp",
+          "name": "AES",
+          "amountCents": 42500,
+          "expectedMinCents": 40000,
+          "expectedMaxCents": 45000,
+          "type": "expense",
+          "frequency": "monthly",
+          "startDate": "2026-03-31",
+          "active": true,
+          "paymentSource": "bank",
+          "paymentTargetId": "mmdamggy8mim839y6i3",
+          "useLastDayOfMonth": true,
+          "category": "loan_payment"
+        },
+        {
+          "id": "mmdcqykqrqcere0cky",
+          "name": "Clickpay",
+          "amountCents": 140295,
+          "type": "expense",
+          "frequency": "monthly",
+          "startDate": "2026-03-31",
+          "active": true,
+          "paymentSource": "bank",
+          "paymentTargetId": "mmdamggy8mim839y6i3",
+          "useLastDayOfMonth": true,
+          "category": "rent"
+        },
+        {
+          "id": "mmdcva74cpcmuh8gtta",
+          "name": "Apple",
+          "amountCents": 299,
+          "type": "expense",
+          "frequency": "monthly",
+          "startDate": "2026-04-04",
+          "active": true,
+          "paymentSource": "bank",
+          "paymentTargetId": "mmdamggy8mim839y6i3",
+          "category": "subscriptions"
+        },
+        {
+          "id": "mmdcwa3rgbr1vwqv6bd",
+          "name": "OpenAI",
+          "amountCents": 1999,
+          "type": "expense",
+          "frequency": "monthly",
+          "startDate": "2026-03-06",
+          "active": true,
+          "paymentSource": "bank",
+          "paymentTargetId": "mmdamggy8mim839y6i3",
+          "category": "subscriptions"
+        },
+        {
+          "id": "mmdcx9lapulydlgz1z",
+          "name": "AMEX BCP Annual Fee",
+          "amountCents": 9500,
+          "type": "expense",
+          "frequency": "yearly",
+          "startDate": "2026-04-11",
+          "active": true,
+          "autoPay": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmb9r1laxbfk3agekpb",
+          "category": "subscriptions"
+        },
+        {
+          "id": "mmdcy09vhtxeg7a1v5",
+          "name": "Robinhood Gold",
+          "amountCents": 5000,
+          "type": "expense",
+          "frequency": "yearly",
+          "startDate": "2027-02-08",
+          "active": true,
+          "autoPay": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmb9r1lav5hqayfs3zr",
+          "category": "subscriptions"
+        },
+        {
+          "id": "mmdczd0ydxo8sekjr67",
+          "name": "Amex Disney Plus Bundle",
+          "amountCents": 1299,
+          "type": "expense",
+          "frequency": "monthly",
+          "startDate": "2026-03-30",
+          "active": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmb9r1laxbfk3agekpb",
+          "category": "subscriptions",
+          "isSplit": true,
+          "myPortionCents": 299
+        },
+        {
+          "id": "mmdd0lno9prwqnhja9m",
+          "name": "ConEdison",
+          "amountCents": 10000,
+          "expectedMinCents": 9000,
+          "expectedMaxCents": 11000,
+          "type": "expense",
+          "frequency": "monthly",
+          "startDate": "2026-03-31",
+          "active": true,
+          "paymentSource": "card",
+          "paymentTargetId": "mmdamyyvn866hwtlz1o",
+          "useLastDayOfMonth": true,
+          "category": "utilities",
+          "subcategory": "Electricity + Gas",
+          "isSplit": true,
+          "myPortionCents": 5000
+        },
+        {
+          "id": "mmddephff5hykwz4gb8",
+          "name": "Verizon",
+          "amountCents": 6000,
+          "type": "expense",
+          "frequency": "monthly",
+          "startDate": "2026-03-17",
+          "active": true,
+          "paymentSource": "bank",
+          "paymentTargetId": "mmdamggy8mim839y6i3",
+          "category": "utilities",
+          "subcategory": "WiFi",
+          "isSplit": true,
+          "myPortionCents": 3000
+        }
+      ],
+      "recurringPosted": {
+        "mmdcwa3rgbr1vwqv6bd:2026-03-06": true,
+        "mmdcwa3rgbr1vwqv6bd:2026-03-07": true
+      }
+    }
+  }
+}

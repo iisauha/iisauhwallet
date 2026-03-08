@@ -1,0 +1,26 @@
+# Dependencies and build output
+node_modules
+dist
+dist-ssr
+build
+
+# Env and secrets — never commit
+.env
+.env.local
+.env.*.local
+*.secret
+*.credentials
+*.pem
+credentials*.json
+
+# OS and tooling
+*.local
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+vite.config.timestamp-*.mjs
+.vite
+tsconfig.tsbuildinfo
