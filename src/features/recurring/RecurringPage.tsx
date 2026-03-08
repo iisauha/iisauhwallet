@@ -777,7 +777,7 @@ export function RecurringPage() {
                           }
                         }}
                       />
-                      <label htmlFor="useLoanEst">Use estimated payment from linked loan</label>
+                      <label htmlFor="useLoanEst">Use current loan payment</label>
                     </div>
                     {useLoanEstimatedPayment ? (
                       <>
@@ -807,11 +807,11 @@ export function RecurringPage() {
                         </div>
                         {linkedLoanId && loanPaymentMap[linkedLoanId] == null ? (
                           <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
-                            No estimated payment (now) for this loan. Enter amount manually below.
+                            No current payment for this loan. Enter amount manually below.
                           </p>
                         ) : linkedLoanId && loanPaymentMap[linkedLoanId] != null ? (
                           <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
-                            Amount source: Loan estimated payment. Next occurrences will use the latest estimate.
+                            Uses Payment(now) from the linked loan.
                           </p>
                         ) : null}
                       </>

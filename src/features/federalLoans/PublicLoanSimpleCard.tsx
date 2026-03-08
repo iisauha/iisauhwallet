@@ -1,14 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
-import { formatCents } from '../../state/calc';
+import { useState, useEffect } from 'react';
 import {
   type PublicLoanSummary,
   loadPublicLoanSummary,
   savePublicLoanSummary
 } from './PublicLoanSummaryStore';
-import { Modal } from '../../ui/Modal';
+import { formatCents } from '../../state/calc';
 
 const LOAN_SIMULATOR_URL = 'https://studentaid.gov/loan-simulator/';
-const MAX_ATTACHMENT_BYTES = 350000;
 
 const inputStyle = {
   width: '100%',
@@ -41,8 +39,6 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
   const [notesInput, setNotesInput] = useState('');
   const [balanceInput, setBalanceInput] = useState('');
   const [rateInput, setRateInput] = useState('');
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const s = loadPublicLoanSummary();
@@ -90,30 +86,15 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
     persist({ ...summary, avgInterestRatePercent: rate ?? undefined });
   };
 
-  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      if (dataUrl.length > MAX_ATTACHMENT_BYTES) return;
-      const attachments = [...(summary.attachments || []), dataUrl].slice(0, 6);
-      persist({ ...summary, attachments });
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+  const handleUseAsCurrentPayment = () => {
+    const cents = toCents(paymentInput);
+    if (cents != null && cents > 0) {
+      persist({ ...summary, currentPaymentCents: cents });
+    }
   };
 
-  const removeAttachment = (index: number) => {
-    const attachments = [...(summary.attachments || [])];
-    attachments.splice(index, 1);
-    persist({ ...summary, attachments });
-    setPreviewIndex(null);
-  };
-
-  const paymentCents = summary.estimatedMonthlyPaymentCents;
-  const attachments = summary.attachments || [];
-  const previewUrl = previewIndex != null ? attachments[previewIndex] : null;
+  const estimatedCents = summary.estimatedMonthlyPaymentCents;
+  const currentCents = summary.currentPaymentCents;
 
   return (
     <div className="card" style={{ marginBottom: 16, padding: '14px 16px' }}>
@@ -132,7 +113,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
         Estimate your public loan payment
       </a>
 
-      <div className="field" style={{ marginBottom: 14 }}>
+      <div className="field" style={{ marginBottom: 10 }}>
         <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
           My estimated monthly public loan payment ($)
         </label>
@@ -148,12 +129,20 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
         />
       </div>
 
-      {paymentCents != null && paymentCents > 0 && (
-        <div className="summary-kv" style={{ marginBottom: 16 }}>
-          <span className="k">After grace</span>
-          <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-            {formatCents(paymentCents)}/mo
-          </span>
+      {estimatedCents != null && estimatedCents > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleUseAsCurrentPayment}
+          >
+            Use as current payment
+          </button>
+          {currentCents != null && currentCents > 0 && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
+              Current payment (now): {formatCents(currentCents)}/mo
+            </p>
+          )}
         </div>
       )}
 
@@ -195,14 +184,14 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
 
       <div className="field" style={{ marginTop: 4 }}>
         <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
-          Notes / screenshots
+          Notes
         </label>
         <textarea
           className="ll-control"
           value={notesInput}
           onChange={(e) => setNotesInput(e.target.value)}
           onBlur={handleSaveNotes}
-          placeholder="Text notes or paste details..."
+          placeholder="Optional text notes..."
           rows={3}
           style={{
             width: '100%',
@@ -216,89 +205,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
             minHeight: 80
           }}
         />
-        <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-          {attachments.map((dataUrl, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setPreviewIndex(i)}
-              style={{
-                padding: 0,
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                overflow: 'hidden',
-                background: 'var(--bg-secondary)',
-                cursor: 'pointer',
-                flexShrink: 0
-              }}
-            >
-              <img
-                src={dataUrl}
-                alt={`Screenshot ${i + 1}`}
-                style={{
-                  width: 72,
-                  height: 72,
-                  objectFit: 'cover',
-                  display: 'block'
-                }}
-              />
-            </button>
-          ))}
-          {attachments.length < 6 && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAddImage}
-                style={{ display: 'none' }}
-              />
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem' }}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Add screenshot
-              </button>
-            </>
-          )}
-        </div>
       </div>
-
-      <Modal
-        open={previewIndex !== null}
-        title="Screenshot"
-        onClose={() => setPreviewIndex(null)}
-      >
-        {previewUrl && previewIndex !== null ? (
-          <div>
-            <img
-              src={previewUrl}
-              alt="Preview"
-              style={{
-                width: '100%',
-                maxHeight: '60vh',
-                objectFit: 'contain',
-                borderRadius: 8,
-                marginBottom: 16
-              }}
-            />
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setPreviewIndex(null)}>
-                Close
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={() => removeAttachment(previewIndex)}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
     </div>
   );
 }

@@ -161,7 +161,7 @@ export interface RecurringItem {
   investingFromBankId?: string;
   investingTargetAccountId?: string;
   investingTargetType?: 'hysa' | 'general';
-  /** When true, recurring amount is sourced from linked loan's estimated payment (now). */
+  /** When true, recurring amount is sourced from linked loan's current Payment(now). */
   useLoanEstimatedPayment?: boolean;
   /** Loan id to use for estimated payment when useLoanEstimatedPayment is true. */
   linkedLoanId?: string;

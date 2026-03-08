@@ -2,9 +2,9 @@ import { PUBLIC_LOAN_SUMMARY_KEY } from '../../state/keys';
 
 export interface PublicLoanSummary {
   estimatedMonthlyPaymentCents: number | null;
+  /** When set, used as the public-loan Payment(now) source (e.g. after "Use as current payment"). */
+  currentPaymentCents?: number | null;
   notesText: string;
-  /** Optional: data URLs (e.g. base64 image) for screenshots. Kept small to avoid localStorage limits. */
-  attachments?: string[];
   /** Optional summary: total public loan balance (cents). */
   totalBalanceCents?: number | null;
   /** Optional summary: average public interest rate (e.g. 5.5 for 5.5%). */
@@ -13,8 +13,8 @@ export interface PublicLoanSummary {
 
 const DEFAULT: PublicLoanSummary = {
   estimatedMonthlyPaymentCents: null,
+  currentPaymentCents: null,
   notesText: '',
-  attachments: [],
   totalBalanceCents: null,
   avgInterestRatePercent: null
 };
@@ -31,17 +31,14 @@ function parse(raw: unknown): PublicLoanSummary {
     typeof o.estimatedMonthlyPaymentCents === 'number' && o.estimatedMonthlyPaymentCents >= 0
       ? o.estimatedMonthlyPaymentCents
       : null;
+  const currentPaymentCents = parseNum(o.currentPaymentCents) ?? null;
   const notesText = typeof o.notesText === 'string' ? o.notesText : '';
-  let attachments: string[] = [];
-  if (Array.isArray(o.attachments)) {
-    attachments = o.attachments.filter((x): x is string => typeof x === 'string').slice(0, 6);
-  }
   const totalBalanceCents = parseNum(o.totalBalanceCents) ?? null;
   const avgInterestRatePercent = parseNum(o.avgInterestRatePercent) ?? null;
   return {
     estimatedMonthlyPaymentCents,
+    currentPaymentCents,
     notesText,
-    attachments,
     totalBalanceCents,
     avgInterestRatePercent
   };

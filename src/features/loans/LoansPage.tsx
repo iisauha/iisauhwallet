@@ -588,6 +588,7 @@ export function LoansPage() {
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
   const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
+  const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -615,16 +616,21 @@ export function LoansPage() {
 
     let anyLater = false;
 
+    let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
       const bal = l.balanceCents || 0;
       totalBalance += bal;
       if (l.monthlyNowCents != null) totalMonthlyNow += l.monthlyNowCents;
       if (l.monthlyLaterCents != null) {
         totalMonthlyLater += l.monthlyLaterCents;
+        privateAfterGraceCents += l.monthlyLaterCents;
         anyLater = true;
       }
       weightedRateNumerator += bal * l.interestRatePercent;
     });
+
+    const publicCurrentCents = publicSummary.currentPaymentCents ?? 0;
+    if (publicCurrentCents > 0) totalMonthlyNow += publicCurrentCents;
 
     const privateTotalBalance = totalBalance;
     const publicBalanceCents = publicSummary.totalBalanceCents ?? 0;
@@ -658,6 +664,8 @@ export function LoansPage() {
       totalBalance,
       totalMonthlyNow,
       totalMonthlyLater: anyLater ? totalMonthlyLater : null,
+      publicAfterGraceCents,
+      privateAfterGraceCents,
       avgPrivateRate,
       avgPublicRate,
       payoffAge
@@ -688,16 +696,34 @@ export function LoansPage() {
             {formatCents(summary.totalBalance)}
           </span>
         </div>
-        <div className="summary-kv" style={{ marginTop: 4 }}>
-          <span className="k">Payment (now)</span>
+        <div className="summary-kv" style={{ marginTop: 4, alignItems: 'center' }}>
+          <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            Payment (now)
+            <button
+              type="button"
+              aria-label="After-grace breakdown"
+              onClick={() => setShowAfterGraceBreakdown(true)}
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--muted)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0
+              }}
+            >
+              i
+            </button>
+          </span>
           <span className="v" style={{ color: 'var(--red)' }}>
             {summary.totalMonthlyNow > 0 ? formatCents(summary.totalMonthlyNow) : '—'}
-          </span>
-        </div>
-        <div className="summary-kv" style={{ marginTop: 2 }}>
-          <span className="k">After grace</span>
-          <span className="v" style={{ color: 'var(--red)' }}>
-            {summary.totalMonthlyLater != null ? formatCents(summary.totalMonthlyLater) : '—'}
           </span>
         </div>
         {summary.avgPrivateRate != null ? (
@@ -910,6 +936,39 @@ export function LoansPage() {
             }}
           />
         ) : null}
+      </Modal>
+
+      {/* After-grace breakdown (hidden by default) */}
+      <Modal
+        open={showAfterGraceBreakdown}
+        title="After-grace breakdown"
+        onClose={() => setShowAfterGraceBreakdown(false)}
+      >
+        <div className="summary-compact" style={{ gap: 8 }}>
+          <div className="summary-kv">
+            <span className="k">Public</span>
+            <span className="v" style={{ color: 'var(--red)' }}>
+              {summary.publicAfterGraceCents > 0 ? formatCents(summary.publicAfterGraceCents) : '—'}
+            </span>
+          </div>
+          <div className="summary-kv">
+            <span className="k">Private</span>
+            <span className="v" style={{ color: 'var(--red)' }}>
+              {summary.privateAfterGraceCents > 0 ? formatCents(summary.privateAfterGraceCents) : '—'}
+            </span>
+          </div>
+          <div className="summary-kv" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+            <span className="k">Total after grace</span>
+            <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
+              {summary.totalMonthlyLater != null ? formatCents(summary.totalMonthlyLater) : '—'}
+            </span>
+          </div>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowAfterGraceBreakdown(false)}>
+            Close
+          </button>
+        </div>
       </Modal>
     </div>
   );
