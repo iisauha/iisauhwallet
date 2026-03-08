@@ -37,6 +37,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
   const [summary, setSummary] = useState<PublicLoanSummary>(() => loadPublicLoanSummary());
   const [paymentInput, setPaymentInput] = useState('');
   const [firstPaymentDateInput, setFirstPaymentDateInput] = useState('');
+  const [showFirstPaymentDetails, setShowFirstPaymentDetails] = useState(false);
   const [notesInput, setNotesInput] = useState('');
   const [balanceInput, setBalanceInput] = useState('');
   const [rateInput, setRateInput] = useState('');
@@ -136,25 +137,8 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
         />
       </div>
 
-      <div className="field" style={{ marginBottom: 10 }}>
-        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
-          First payment date (optional)
-        </label>
-        <input
-          type="date"
-          className="ll-control"
-          value={firstPaymentDateInput}
-          onChange={(e) => setFirstPaymentDateInput(e.target.value)}
-          onBlur={handleSaveFirstPaymentDate}
-          style={inputStyle}
-        />
-        <p style={{ marginTop: 2, fontSize: '0.75rem', color: 'var(--muted)' }}>
-          Before this date, the estimated payment does not count toward Payment(now). Leave blank to count it now.
-        </p>
-      </div>
-
-      {estimatedCents != null && estimatedCents > 0 && (
-        <div style={{ marginBottom: 14 }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
           <button
             type="button"
             className="btn btn-secondary"
@@ -162,13 +146,38 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
           >
             Use as current payment
           </button>
-          {currentCents != null && currentCents > 0 && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
-              Current payment (now): {formatCents(currentCents)}/mo
-            </p>
-          )}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowFirstPaymentDetails((v) => !v)}
+          >
+            {showFirstPaymentDetails ? 'Hide first payment date' : 'Use first payment date'}
+          </button>
         </div>
-      )}
+        {showFirstPaymentDetails && (
+          <div style={{ marginTop: 12, padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+              First payment date
+            </label>
+            <input
+              type="date"
+              className="ll-control"
+              value={firstPaymentDateInput}
+              onChange={(e) => setFirstPaymentDateInput(e.target.value)}
+              onBlur={handleSaveFirstPaymentDate}
+              style={inputStyle}
+            />
+            <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              When this date is reached, the estimated public loan payment becomes active in Payment(now).
+            </p>
+          </div>
+        )}
+        {currentCents != null && currentCents > 0 && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
+            Current payment (now): {formatCents(currentCents)}/mo
+          </p>
+        )}
+      </div>
 
       <div style={{ marginBottom: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
         <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 10 }}>
