@@ -473,12 +473,6 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
 function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
   const balanceCents = Math.round(parseFloat(e.balance || '0') * 100);
   const ratePercent = parseFloat(e.ratePercent || '0');
-  const termMonths =
-    e.termMonths && parseInt(e.termMonths, 10) > 0 ? parseInt(e.termMonths, 10) : undefined;
-  const nextPaymentCents =
-    e.nextPayment && parseFloat(e.nextPayment) > 0
-      ? Math.round(parseFloat(e.nextPayment) * 100)
-      : undefined;
   const idrManualAnnualIncomeCents =
     e.idrManualAnnualIncome && parseFloat(e.idrManualAnnualIncome) > 0
       ? Math.round(parseFloat(e.idrManualAnnualIncome) * 100)
@@ -486,13 +480,27 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
 
   if (!(balanceCents >= 0 && !Number.isNaN(ratePercent))) return null;
 
-  const gracePeriodEndDate =
-    e.repaymentStatus === 'in_school_interest_only' && e.gracePeriodEndDate
-      ? e.gracePeriodEndDate
-      : undefined;
-
-  const futureRepaymentPlan =
-    e.category === 'public' ? (e.futureRepaymentPlan || 'na') : undefined;
+  const isPublic = e.category === 'public';
+  const termMonths = isPublic
+    ? prev?.termMonths
+    : (e.termMonths && parseInt(e.termMonths, 10) > 0 ? parseInt(e.termMonths, 10) : undefined);
+  const nextPaymentCents = isPublic
+    ? prev?.nextPaymentCents
+    : (e.nextPayment && parseFloat(e.nextPayment) > 0
+        ? Math.round(parseFloat(e.nextPayment) * 100)
+        : undefined);
+  const repaymentStatus = isPublic
+    ? (prev?.repaymentStatus ?? 'full_repayment')
+    : e.repaymentStatus;
+  const gracePeriodEndDate = isPublic
+    ? prev?.gracePeriodEndDate
+    : (e.repaymentStatus === 'in_school_interest_only' && e.gracePeriodEndDate
+        ? e.gracePeriodEndDate
+        : undefined);
+  const futureRepaymentPlan = isPublic
+    ? (prev?.futureRepaymentPlan ?? 'na')
+    : (e.futureRepaymentPlan || undefined);
+  const nextPaymentDate = isPublic ? (prev?.nextPaymentDate ?? undefined) : (e.nextPaymentDate || undefined);
 
   const subsidyType = e.category === 'public' ? e.subsidyType : undefined;
   const disbursementDate = e.category === 'public' && e.disbursementDate ? e.disbursementDate : undefined;
@@ -509,8 +517,8 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     interestRatePercent: ratePercent,
     rateType: e.rateType,
     termMonths,
-    repaymentStatus: e.repaymentStatus,
-    futureRepaymentPlan,
+    repaymentStatus,
+    futureRepaymentPlan: futureRepaymentPlan ?? undefined,
     subsidyType,
     disbursementDate,
     borrowerType: e.category === 'public' ? e.borrowerType : undefined,
@@ -520,7 +528,7 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     paymentScheduleRanges: prev?.paymentScheduleRanges,
     gracePeriodEndDate,
     nextPaymentCents,
-    nextPaymentDate: e.nextPaymentDate || undefined,
+    nextPaymentDate,
     notes: e.notes.trim() || undefined,
     active: e.active,
     idrUseManualIncome: e.category === 'public' ? undefined : e.idrUseManualIncome,
@@ -951,7 +959,7 @@ export function LoansPage() {
 
       {loanView === 'public' && loansWithDerived.some((l) => l.category === 'public') ? (
         <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 10 }}>
-          Federal repayment plans are calculated across the entire loan portfolio. Household size, AGI, and repayment plan are defined once in Public Loan Parameters.
+          Federal repayment settings are defined once for all public loans.
         </p>
       ) : null}
 
@@ -1245,100 +1253,80 @@ function LoanEditorForm(props: {
           <option value="variable">Variable</option>
         </Select>
       </div>
-      <div className="field">
-        <label>Repayment term (months)</label>
-        <input
-          value={state.termMonths}
-          onChange={(e) => onChange({ ...state, termMonths: e.target.value })}
-          inputMode="numeric"
-          placeholder="e.g. 120"
-        />
-      </div>
-      <div className="field">
-        <label>Current status</label>
-        <Select
-          value={state.repaymentStatus}
-          onChange={(e) =>
-            onChange({
-              ...state,
-              repaymentStatus: e.target.value as any
-            })
-          }
-        >
-          <option value="in_school_interest_only">In school / interest-only</option>
-          <option value="grace_interest_only">Grace period / interest-only</option>
-          <option value="full_repayment">Full repayment</option>
-          {idrAllowed ? <option value="idr">IDR (income-driven)</option> : null}
-          <option value="deferred_forbearance">Deferred / forbearance</option>
-          <option value="custom_payment">Custom monthly payment</option>
-        </Select>
-        <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-          Current repayment status
-        </p>
-      </div>
-      {state.category === 'public' ? (
-        <div className="field">
-          <label>Plan after grace</label>
-          <Select
-            value={state.futureRepaymentPlan}
-            onChange={(e) =>
-              onChange({
-                ...state,
-                futureRepaymentPlan: (e.target.value || 'na') as FutureRepaymentPlan
-              })
-            }
-          >
-            <option value="na">N/A</option>
-            <option value="idr">IDR</option>
-            <option value="standard">Standard</option>
-            <option value="graduated">Graduated</option>
-            <option value="extended">Extended</option>
-            <option value="custom">Custom</option>
-          </Select>
-          <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-            Future repayment plan (used for &quot;after grace&quot; estimate)
-          </p>
-        </div>
+      {state.category !== 'public' ? (
+        <>
+          <div className="field">
+            <label>Repayment term (months)</label>
+            <input
+              value={state.termMonths}
+              onChange={(e) => onChange({ ...state, termMonths: e.target.value })}
+              inputMode="numeric"
+              placeholder="e.g. 120"
+            />
+          </div>
+          <div className="field">
+            <label>Current status</label>
+            <Select
+              value={state.repaymentStatus}
+              onChange={(e) =>
+                onChange({
+                  ...state,
+                  repaymentStatus: e.target.value as any
+                })
+              }
+            >
+              <option value="in_school_interest_only">In school / interest-only</option>
+              <option value="grace_interest_only">Grace period / interest-only</option>
+              <option value="full_repayment">Full repayment</option>
+              {idrAllowed ? <option value="idr">IDR (income-driven)</option> : null}
+              <option value="deferred_forbearance">Deferred / forbearance</option>
+              <option value="custom_payment">Custom monthly payment</option>
+            </Select>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Current repayment status
+            </p>
+          </div>
+          {state.repaymentStatus === 'in_school_interest_only' ? (
+            <div className="field">
+              <label>Grace Period End Date</label>
+              <input
+                type="date"
+                value={state.gracePeriodEndDate}
+                onChange={(e) => onChange({ ...state, gracePeriodEndDate: e.target.value })}
+                style={{
+                  padding: '6px 8px',
+                  borderRadius: 4,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  width: '100%'
+                }}
+              />
+              <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                Full repayment is assumed to start after this date.
+              </p>
+            </div>
+          ) : null}
+          <div className="field">
+            <label>Next payment amount ($)</label>
+            <input
+              value={state.nextPayment}
+              onChange={(e) => onChange({ ...state, nextPayment: e.target.value })}
+              inputMode="decimal"
+              placeholder="Optional"
+            />
+          </div>
+          <div className="field">
+            <label>Next payment date</label>
+            <input
+              type="date"
+              value={state.nextPaymentDate}
+              onChange={(e) => onChange({ ...state, nextPaymentDate: e.target.value })}
+            />
+          </div>
+        </>
       ) : null}
-      {state.repaymentStatus === 'in_school_interest_only' ? (
-        <div className="field">
-          <label>Grace Period End Date</label>
-          <input
-            type="date"
-            value={state.gracePeriodEndDate}
-            onChange={(e) => onChange({ ...state, gracePeriodEndDate: e.target.value })}
-            style={{
-              padding: '6px 8px',
-              borderRadius: 4,
-              border: '1px solid var(--border)',
-              background: 'var(--bg)',
-              color: 'var(--text)',
-              fontSize: '0.9rem',
-              width: '100%'
-            }}
-          />
-          <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
-            Full repayment is assumed to start after this date.
-          </p>
-        </div>
-      ) : null}
-      <div className="field">
-        <label>Next payment amount ($)</label>
-        <input
-          value={state.nextPayment}
-          onChange={(e) => onChange({ ...state, nextPayment: e.target.value })}
-          inputMode="decimal"
-          placeholder="Optional"
-        />
-      </div>
-      <div className="field">
-        <label>Next payment date</label>
-        <input
-          type="date"
-          value={state.nextPaymentDate}
-          onChange={(e) => onChange({ ...state, nextPaymentDate: e.target.value })}
-        />
-      </div>
       {state.category === 'public' ? (
         <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
           Federal plan estimates use discretionary income (AGI − 150% of poverty guideline). IBR/PAYE/ICR/RAP eligibility depends on disbursement dates.

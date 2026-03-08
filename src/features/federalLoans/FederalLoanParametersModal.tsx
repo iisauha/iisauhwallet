@@ -47,6 +47,21 @@ interface FederalLoanParametersModalProps {
   detectedAgiCents: number;
 }
 
+function toPovertyLevel(value: string): number {
+  const n = parseFloat(value.replace(/,/g, '').trim());
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function toAgiCents(value: string): number {
+  const n = parseFloat(value.replace(/,/g, '').trim());
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : 0;
+}
+
+function toDependents(value: string): number {
+  const n = parseInt(value.trim(), 10);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
 export function FederalLoanParametersModal({
   open,
   onClose,
@@ -56,10 +71,17 @@ export function FederalLoanParametersModal({
   const [params, setParams] = useState<FederalLoanParameters>(() =>
     loadFederalLoanParameters() ?? getDefaultFederalLoanParameters()
   );
+  const [povertyInput, setPovertyInput] = useState('');
+  const [agiInput, setAgiInput] = useState('');
+  const [dependentsInput, setDependentsInput] = useState('');
 
   useEffect(() => {
     if (open) {
-      setParams(loadFederalLoanParameters() ?? getDefaultFederalLoanParameters());
+      const loaded = loadFederalLoanParameters() ?? getDefaultFederalLoanParameters();
+      setParams(loaded);
+      setPovertyInput(loaded.povertyLevel ? String(loaded.povertyLevel) : '');
+      setAgiInput(loaded.agiCents ? (loaded.agiCents / 100).toFixed(2) : '');
+      setDependentsInput(loaded.dependents ? String(loaded.dependents) : '');
     }
   }, [open]);
 
@@ -69,12 +91,16 @@ export function FederalLoanParametersModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveFederalLoanParameters(params);
+    const saved: FederalLoanParameters = {
+      ...params,
+      povertyLevel: toPovertyLevel(povertyInput),
+      agiCents: toAgiCents(agiInput),
+      dependents: toDependents(dependentsInput)
+    };
+    saveFederalLoanParameters(saved);
     onSave?.();
     onClose();
   };
-
-  const agiDollars = (params.agiCents / 100).toFixed(2);
 
   return (
     <Modal open={open} title="Public Loan Parameters" onClose={onClose}>
@@ -84,12 +110,9 @@ export function FederalLoanParametersModal({
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Household size</label>
             <select
-              value={params.householdSize}
+              value={params.householdSize >= 1 && params.householdSize <= 6 ? params.householdSize : 1}
               onChange={(e) =>
-                setParams({
-                  ...params,
-                  householdSize: Number(e.target.value)
-                })
+                update({ householdSize: Math.max(1, Math.min(6, Number(e.target.value) || 1)) })
               }
               style={{ padding: '4px 8px', minWidth: 80 }}
             >
@@ -104,15 +127,11 @@ export function FederalLoanParametersModal({
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Number of dependents</label>
             <input
-              type="number"
-              min={0}
-              value={params.dependents}
-              onChange={(e) =>
-                setParams({
-                  ...params,
-                  dependents: Math.max(0, Number(e.target.value) || 0)
-                })
-              }
+              type="text"
+              inputMode="numeric"
+              value={dependentsInput}
+              onChange={(e) => setDependentsInput(e.target.value)}
+              placeholder="0"
               style={{ width: 80, padding: '4px 8px' }}
             />
           </div>
@@ -168,16 +187,11 @@ export function FederalLoanParametersModal({
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>AGI (manual, $)</label>
               <input
-                type="number"
-                min={0}
-                step={100}
-                value={agiDollars}
-                onChange={(e) =>
-                  setParams({
-                    ...params,
-                    agiCents: Math.round((Number(e.target.value) || 0) * 100)
-                  })
-                }
+                type="text"
+                inputMode="decimal"
+                value={agiInput}
+                onChange={(e) => setAgiInput(e.target.value)}
+                placeholder="0.00"
                 style={{ width: 120, padding: '4px 8px' }}
               />
             </div>
@@ -208,16 +222,11 @@ export function FederalLoanParametersModal({
               Poverty level for current year ($)
             </label>
             <input
-              type="number"
-              min={0}
-              step={100}
-              value={params.povertyLevel}
-              onChange={(e) =>
-                setParams({
-                  ...params,
-                  povertyLevel: Number(e.target.value)
-                })
-              }
+              type="text"
+              inputMode="decimal"
+              value={povertyInput}
+              onChange={(e) => setPovertyInput(e.target.value)}
+              placeholder="e.g. 15650"
               style={{ width: 120, padding: '4px 8px' }}
             />
           </div>
