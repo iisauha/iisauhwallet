@@ -1207,6 +1207,21 @@ export function LoansPage() {
         </div>
       </div>
 
+      <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ fontSize: '0.85rem', padding: '6px 10px' }}
+          onClick={() => {
+            savePrivatePaymentNowBase(0);
+            savePublicPaymentNowAdded(0);
+            setPublicPaymentNowAdded(0);
+          }}
+        >
+          Clear Payment(now)
+        </button>
+      </div>
+
       <div
         className="segmented"
         style={{
