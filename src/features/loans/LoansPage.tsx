@@ -790,32 +790,67 @@ function LoanCard(props: {
   );
 }
 
-/** Build year-end snapshot points for timeline: start, then every step years, then end. */
-function timelineSnapshotYears(globalStart: string, globalEnd: string): number[] {
+/** Format YYYY-MM-DD as "Jan 1, 2026" for timeline labels. */
+function formatShortDate(dateISO: string): string {
+  if (!dateISO) return dateISO;
+  const d = new Date(dateISO + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return dateISO;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/** Build snapshot dates for timeline: start, Jan 1 of each year in range, end. */
+function timelineSnapshotDates(globalStart: string, globalEnd: string): string[] {
   const startY = parseInt(globalStart.slice(0, 4), 10);
   const endY = parseInt(globalEnd.slice(0, 4), 10);
   const spanYears = endY - startY + 1;
   const step = spanYears > 10 ? 4 : spanYears > 5 ? 3 : spanYears > 2 ? 2 : 1;
-  const out: number[] = [];
-  for (let y = startY; y <= endY; y += step) out.push(y);
-  if (out[out.length - 1] !== endY) out.push(endY);
+  const out: string[] = [globalStart];
+  for (let y = startY; y <= endY; y += step) {
+    const d = `${y}-01-01`;
+    if (d > globalStart && d <= globalEnd) out.push(d);
+  }
+  if (out[out.length - 1] !== globalEnd) out.push(globalEnd);
   return out;
 }
 
-function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => void }) {
-  const { loan, onClose } = props;
+function DefermentInfoContent(props: {
+  loan: LoanWithDerived;
+  onClose: () => void;
+  onUpdateAccrued?: (rangeId: string, accruedCents: number | undefined) => void;
+}) {
+  const { loan, onClose, onUpdateAccrued } = props;
   const ranges = (loan.paymentScheduleRanges ?? []).slice().sort((a, b) => a.startDate.localeCompare(b.startDate));
   const defermentRanges = ranges.filter((r) => r.paymentCents === 0);
   const rate = loan.interestRatePercent / 100;
   const defaultMonthlyCents = Math.round((loan.balanceCents * rate) / 12);
 
+  const firstDefermentRange = defermentRanges[0];
+  const loanAccruedCents =
+    firstDefermentRange && typeof firstDefermentRange.accruedInterestCents === 'number' && firstDefermentRange.accruedInterestCents >= 0
+      ? firstDefermentRange.accruedInterestCents
+      : null;
+  const [accruedInputValue, setAccruedInputValue] = useState<string>(() =>
+    loanAccruedCents != null ? (loanAccruedCents / 100).toFixed(2) : ''
+  );
+  const parsedAccruedCents =
+    accruedInputValue === ''
+      ? null
+      : (() => {
+          const n = Math.round(parseFloat(String(accruedInputValue).replace(/,/g, '')) * 100);
+          return Number.isFinite(n) && n >= 0 ? n : null;
+        })();
+  const monthlyAccruedCentsForTimeline = parsedAccruedCents ?? loanAccruedCents ?? defaultMonthlyCents;
+
   const timelineSnapshots: { label: string; balanceCents: number }[] = [];
   if (ranges.length > 0) {
     const globalStart = ranges[0].startDate;
     const globalEnd = ranges[ranges.length - 1].endDate;
-    timelineSnapshots.push({ label: 'Start', balanceCents: loan.balanceCents });
-    const snapshotYears = timelineSnapshotYears(globalStart, globalEnd);
-    let nextSnapshotIdx = 0;
+    const snapshotDates = timelineSnapshotDates(globalStart, globalEnd);
+    timelineSnapshots.push({
+      label: formatShortDate(globalStart),
+      balanceCents: loan.balanceCents
+    });
+    let nextSnapshotIdx = 1;
     let bal = loan.balanceCents;
 
     for (const r of ranges) {
@@ -823,33 +858,41 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
         r.accruedInterestCents != null && r.accruedInterestCents >= 0
           ? r.accruedInterestCents
           : Math.round(bal * rate / 12);
+      const useOverride = firstDefermentRange && r.id === firstDefermentRange.id;
+      const rowAccruedEffective = useOverride ? monthlyAccruedCentsForTimeline : rowAccrued;
       const rowPayment = r.paymentCents ?? 0;
       let monthStart = r.startDate;
       const rowEnd = r.endDate;
 
       while (monthStart <= rowEnd) {
-        bal = bal + rowAccrued - rowPayment;
+        bal = bal + rowAccruedEffective - rowPayment;
         if (bal < 0) bal = 0;
-        const yearOfMonth = parseInt(monthStart.slice(0, 4), 10);
-        if (nextSnapshotIdx < snapshotYears.length && snapshotYears[nextSnapshotIdx] === yearOfMonth) {
-          timelineSnapshots.push({ label: String(snapshotYears[nextSnapshotIdx]), balanceCents: bal });
+        const nextMonth = addMonths(new Date(monthStart + 'T00:00:00'), 1);
+        const currentDate = nextMonth.toISOString().slice(0, 10);
+        while (nextSnapshotIdx < snapshotDates.length && currentDate >= snapshotDates[nextSnapshotIdx]) {
+          timelineSnapshots.push({
+            label: formatShortDate(snapshotDates[nextSnapshotIdx]),
+            balanceCents: bal
+          });
           nextSnapshotIdx += 1;
         }
-        const nextMonth = addMonths(new Date(monthStart + 'T00:00:00'), 1);
-        monthStart = nextMonth.toISOString().slice(0, 10);
+        monthStart = currentDate;
       }
     }
     timelineSnapshots.push({
-      label: 'End of range',
+      label: `End of range (${formatShortDate(globalEnd)})`,
       balanceCents: bal
     });
   }
 
-  const primaryMonthlyCents = defermentRanges.length > 0
-    ? (typeof defermentRanges[0].accruedInterestCents === 'number' && defermentRanges[0].accruedInterestCents >= 0
-        ? defermentRanges[0].accruedInterestCents
-        : defaultMonthlyCents)
-    : defaultMonthlyCents;
+  const primaryMonthlyCents = defermentRanges.length > 0 ? monthlyAccruedCentsForTimeline : defaultMonthlyCents;
+
+  const handleAccruedBlur = () => {
+    if (!firstDefermentRange || !onUpdateAccrued) return;
+    const cents = parsedAccruedCents;
+    if (cents != null) onUpdateAccrued(firstDefermentRange.id, cents);
+    else if (accruedInputValue.trim() === '') onUpdateAccrued(firstDefermentRange.id, undefined);
+  };
 
   return (
     <>
@@ -866,7 +909,31 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
         ) : null}
         <div style={{ marginTop: 8 }}>
           <span className="k" style={{ display: 'block', marginBottom: 4 }}>Monthly accrued (used in timeline)</span>
-          <span className="v" style={{ color: 'var(--red)' }}>{formatCents(primaryMonthlyCents)}/mo</span>
+          {defermentRanges.length > 0 && firstDefermentRange ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={accruedInputValue}
+                onChange={(e) => setAccruedInputValue(e.target.value)}
+                onBlur={handleAccruedBlur}
+                placeholder={defaultMonthlyCents > 0 ? (defaultMonthlyCents / 100).toFixed(2) : '—'}
+                style={{
+                  width: 72,
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem'
+                }}
+              />
+              <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>/mo</span>
+            </div>
+          ) : (
+            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(primaryMonthlyCents)}/mo</span>
+          )}
           {ranges.length === 0 ? (
             <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>
               Add a schedule range to see balance timeline.
@@ -964,7 +1031,12 @@ export function LoansPage() {
 
     let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
-      const bal = l.balanceCents || 0;
+      const bal =
+        l.category === 'private' &&
+        l.repaymentStatus === 'deferred_forbearance' &&
+        l.estimatedCurrentBalanceCents != null
+          ? l.estimatedCurrentBalanceCents
+          : (l.balanceCents || 0);
       totalBalance += bal;
       if (l.monthlyNowCents != null) totalMonthlyNow += l.monthlyNowCents;
       if (l.monthlyLaterCents != null) {
@@ -1354,7 +1426,23 @@ export function LoansPage() {
         onClose={() => setDefermentInfoLoan(null)}
       >
         {defermentInfoLoan ? (
-          <DefermentInfoContent loan={defermentInfoLoan} onClose={() => setDefermentInfoLoan(null)} />
+          <DefermentInfoContent
+            loan={defermentInfoLoan}
+            onClose={() => setDefermentInfoLoan(null)}
+            onUpdateAccrued={(rangeId, accruedCents) => {
+              const l = defermentInfoLoan;
+              if (!l?.paymentScheduleRanges) return;
+              const updated: Loan = {
+                ...l,
+                paymentScheduleRanges: l.paymentScheduleRanges.map((r) =>
+                  r.id === rangeId ? { ...r, accruedInterestCents: accruedCents } : r
+                )
+              };
+              const newLoans = (state.loans || []).map((x) => (x.id === l.id ? updated : x));
+              persist({ loans: newLoans });
+              setDefermentInfoLoan(deriveForLoan(updated, newLoans, detectedAnnualIncomeCents, null));
+            }}
+          />
         ) : null}
       </Modal>
     </div>
