@@ -165,22 +165,8 @@ function deriveMonthlyNowCents(
     return fullPaymentCents;
   }
 
-  const now = new Date();
-  const schedulePayment = getActiveSchedulePaymentCents(loan.paymentScheduleRanges, now);
-
-  if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
-    return interestOnlyMonthly;
-  }
-  if (repaymentStatus === 'deferred_forbearance') {
-    return schedulePayment != null ? schedulePayment : 0;
-  }
-  if (repaymentStatus === 'full_repayment') {
-    return schedulePayment != null ? schedulePayment : fullPaymentCents;
-  }
-  if (repaymentStatus === 'custom_payment' && loan.nextPaymentCents && loan.nextPaymentCents > 0) {
-    return loan.nextPaymentCents;
-  }
-  return fullPaymentCents;
+  // Private loans: simple manual model — Payment(now) = current monthly payment
+  return loan.nextPaymentCents ?? 0;
 }
 
 /** Returns map of loan id -> estimated monthly payment (now) in cents, or null if not available. */

@@ -11,10 +11,9 @@ import {
   type LoanBorrowerType,
   type LoanStateOfResidency,
   uid,
-  loadBirthdateISO,
-  computeInSchoolAccruedToDate
+  loadBirthdateISO
 } from '../../state/storage';
-import { getDetectedAgiFromRecurring, getActiveSchedulePaymentCents } from './loanDerivation';
+import { getDetectedAgiFromRecurring } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -27,16 +26,6 @@ function todayISO(): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
-}
-
-/** First future schedule range's payment (for "after grace" / later amount). Ranges sorted by startDate; first with startDate > today. */
-function getFirstFutureSchedulePaymentCents(loan: Loan): number | null {
-  const ranges = loan.paymentScheduleRanges;
-  if (!ranges || ranges.length === 0) return null;
-  const today = todayISO();
-  const sorted = [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const next = sorted.find((r) => r.startDate > today);
-  return next != null ? next.paymentCents : null;
 }
 
 function parseDateISO(iso: string | undefined | null): Date | null {
@@ -61,117 +50,6 @@ function addMonths(date: Date, months: number): Date {
   const d = new Date(date.getTime());
   d.setMonth(d.getMonth() + months);
   return d;
-}
-
-function daysBetween(startISO: string, endISO: string): number {
-  const a = new Date(startISO + 'T00:00:00').getTime();
-  const b = new Date(endISO + 'T00:00:00').getTime();
-  return Math.round((b - a) / (24 * 60 * 60 * 1000));
-}
-
-/** Approximate whole months between two YYYY-MM-DD dates (for deferment accrual). */
-function monthsBetween(startISO: string, endISO: string): number {
-  const days = daysBetween(startISO, endISO);
-  return Math.max(0, Math.floor(days / 30.44));
-}
-
-/**
- * For a private loan in Deferred/Forbearance, estimate balance over time from schedule rows.
- * accruedInterestCents on a row is treated as monthly accrued amount ($/mo in cents), not a lump sum.
- * Used for display only; does not affect Payment(now).
- */
-function computeDeferredBalanceTimeline(loan: Loan): {
-  estimatedCurrentBalanceCents: number;
-  balanceAtRepaymentStartCents: number | null;
-  startingBalanceCents: number;
-} | null {
-  if (loan.category !== 'private' || loan.repaymentStatus !== 'deferred_forbearance') return null;
-  const ranges = loan.paymentScheduleRanges;
-  if (!ranges || ranges.length === 0) return null;
-
-  const sorted = [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const today = todayISO();
-  const rate = loan.interestRatePercent / 100;
-  let runningBalance = loan.balanceCents;
-  let balanceAtRepaymentStart: number | null = null;
-  let estimatedCurrent: number | null = null;
-
-  for (const r of sorted) {
-    const { startDate, endDate, paymentCents, accruedInterestCents } = r;
-    if (today < startDate) {
-      estimatedCurrent = runningBalance;
-      break;
-    }
-    if (today >= startDate && today <= endDate) {
-      if (paymentCents === 0) {
-        const daysInRange = Math.max(1, daysBetween(startDate, endDate));
-        const useMonthlyAccrual = accruedInterestCents != null && accruedInterestCents >= 0;
-        const monthsInRange = Math.max(1, monthsBetween(startDate, endDate));
-        const monthsToToday = Math.min(monthsBetween(startDate, today), monthsInRange);
-        const totalAccrued = useMonthlyAccrual
-          ? accruedInterestCents * monthsInRange
-          : Math.round((runningBalance * rate) / 365 * daysInRange);
-        const accruedToToday = useMonthlyAccrual
-          ? accruedInterestCents * monthsToToday
-          : Math.round((totalAccrued * Math.max(0, daysBetween(startDate, today))) / daysInRange);
-        estimatedCurrent = runningBalance + accruedToToday;
-        runningBalance += totalAccrued;
-      } else {
-        if (balanceAtRepaymentStart == null) balanceAtRepaymentStart = runningBalance;
-        const monthRate = rate / 12;
-        let bal = runningBalance;
-        let monthStart = startDate;
-        while (monthStart <= endDate) {
-          const nextMonth = addMonths(new Date(monthStart + 'T00:00:00'), 1);
-          const monthEnd = nextMonth.toISOString().slice(0, 10);
-          const interestCents = Math.round((bal * monthRate));
-          bal = bal + interestCents - paymentCents;
-          if (bal < 0) bal = 0;
-          if (monthEnd > today) {
-            const daysToToday = Math.max(0, daysBetween(monthStart, today));
-            const partialInterest = Math.round(bal * (rate / 365) * daysToToday);
-            estimatedCurrent = bal + partialInterest;
-            break;
-          }
-          estimatedCurrent = bal;
-          monthStart = monthEnd;
-        }
-        runningBalance = bal;
-      }
-      break;
-    }
-    if (today > endDate) {
-      if (paymentCents === 0) {
-        const daysInRange = Math.max(1, daysBetween(startDate, endDate));
-        const useMonthlyAccrual = accruedInterestCents != null && accruedInterestCents >= 0;
-        const monthsInRange = Math.max(1, monthsBetween(startDate, endDate));
-        const totalAccrued = useMonthlyAccrual
-          ? accruedInterestCents * monthsInRange
-          : Math.round((runningBalance * rate) / 365 * daysInRange);
-        runningBalance += totalAccrued;
-      } else {
-        if (balanceAtRepaymentStart == null) balanceAtRepaymentStart = runningBalance;
-        const monthRate = rate / 12;
-        let bal = runningBalance;
-        let monthStart = startDate;
-        while (monthStart <= endDate) {
-          const nextMonth = addMonths(new Date(monthStart + 'T00:00:00'), 1);
-          const monthEnd = nextMonth.toISOString().slice(0, 10);
-          const interestCents = Math.round((bal * monthRate));
-          bal = bal + interestCents - paymentCents;
-          if (bal < 0) bal = 0;
-          monthStart = monthEnd;
-        }
-        runningBalance = bal;
-      }
-    }
-  }
-  if (estimatedCurrent == null) estimatedCurrent = runningBalance;
-  return {
-    estimatedCurrentBalanceCents: estimatedCurrent,
-    balanceAtRepaymentStartCents: balanceAtRepaymentStart,
-    startingBalanceCents: loan.balanceCents
-  };
 }
 
 function recurringAnnualIncomeCents(r: RecurringItem): number {
@@ -362,44 +240,19 @@ function deriveForLoan(
       payoffMonths = null;
     }
   } else {
-    // Private loan: 3 status modes with optional schedule
-    const now = new Date();
-    const scheduleNow = getActiveSchedulePaymentCents(loan.paymentScheduleRanges, now);
-    const futureSchedulePayment = getFirstFutureSchedulePaymentCents(loan);
-
-    if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
-      monthlyNowCents = interestOnlyMonthly;
-      monthlyLaterCents = futureSchedulePayment ?? fullPaymentCents;
-      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-    } else if (repaymentStatus === 'deferred_forbearance') {
-      monthlyNowCents = scheduleNow ?? 0;
-      monthlyLaterCents = futureSchedulePayment ?? fullPaymentCents;
-      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-    } else if (repaymentStatus === 'full_repayment') {
-      monthlyNowCents = scheduleNow ?? fullPaymentCents;
-      monthlyLaterCents = null;
-      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-    } else if (repaymentStatus === 'custom_payment' && loan.nextPaymentCents && loan.nextPaymentCents > 0) {
-      monthlyNowCents = loan.nextPaymentCents;
-      monthlyLaterCents = null;
-      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, loan.nextPaymentCents);
+    // Private loan: simple manual model — current payment, amortized after-grace, payoff from payment
+    const paymentNow = loan.nextPaymentCents ?? 0;
+    monthlyNowCents = paymentNow;
+    monthlyLaterCents = fullPaymentCents;
+    const monthlyInterestOnly = Math.round((balanceCents * (interestRatePercent / 100)) / 12);
+    if (paymentNow > 0 && paymentNow <= monthlyInterestOnly) {
+      payoffMonths = null;
     } else {
-      // Legacy idr or unknown: treat as full repayment
-      monthlyNowCents = scheduleNow ?? fullPaymentCents;
-      monthlyLaterCents = null;
-      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+      payoffMonths = paymentNow > 0
+        ? computeMonthsToPayoff(balanceCents, interestRatePercent, paymentNow)
+        : (fullPaymentCents ? computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents) : null);
     }
   }
-
-  const timeline =
-    category === 'private' && repaymentStatus === 'deferred_forbearance'
-      ? computeDeferredBalanceTimeline(loan)
-      : null;
-
-  const inSchoolAccrual =
-    category === 'private' && repaymentStatus === 'in_school_interest_only'
-      ? computeInSchoolAccruedToDate(loan, todayISO())
-      : null;
 
   return {
     ...loan,
@@ -410,11 +263,7 @@ function deriveForLoan(
     payoffMonths,
     federalPlans,
     totalFederalPaymentCents,
-    approximateShareCents,
-    estimatedCurrentBalanceCents: timeline?.estimatedCurrentBalanceCents ?? undefined,
-    balanceAtRepaymentStartCents: timeline?.balanceAtRepaymentStartCents ?? undefined,
-    inSchoolAccruedCents: inSchoolAccrual?.accruedInterestCents ?? undefined,
-    inSchoolTotalOwedCents: inSchoolAccrual?.totalOwedCents ?? undefined
+    approximateShareCents
   };
 }
 
@@ -528,23 +377,19 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
   const termMonths = isPublic
     ? prev?.termMonths
     : (e.termMonths && parseInt(e.termMonths, 10) > 0 ? parseInt(e.termMonths, 10) : undefined);
+  const nextPaymentStr = isPublic ? undefined : (e.nextPayment !== undefined ? String(e.nextPayment).replace(/,/g, '').trim() : '');
   const nextPaymentCents = isPublic
     ? prev?.nextPaymentCents
-    : (e.nextPayment && parseFloat(e.nextPayment) > 0
-        ? Math.round(parseFloat(e.nextPayment) * 100)
-        : undefined);
-  const repaymentStatus = isPublic
-    ? (prev?.repaymentStatus ?? 'full_repayment')
-    : e.repaymentStatus;
-  const gracePeriodEndDate = isPublic
-    ? prev?.gracePeriodEndDate
-    : (e.repaymentStatus === 'in_school_interest_only' && e.gracePeriodEndDate
-        ? e.gracePeriodEndDate
-        : undefined);
-  const futureRepaymentPlan = isPublic
-    ? (prev?.futureRepaymentPlan ?? 'na')
-    : (e.futureRepaymentPlan || undefined);
-  const nextPaymentDate = isPublic ? (prev?.nextPaymentDate ?? undefined) : (e.nextPaymentDate || undefined);
+    : (nextPaymentStr === ''
+        ? undefined
+        : (() => {
+            const n = Math.round(parseFloat(nextPaymentStr!) * 100);
+            return Number.isFinite(n) && n >= 0 ? n : undefined;
+          })());
+  const repaymentStatus = isPublic ? (prev?.repaymentStatus ?? 'full_repayment') : 'full_repayment';
+  const gracePeriodEndDate = isPublic ? prev?.gracePeriodEndDate : undefined;
+  const futureRepaymentPlan = isPublic ? (prev?.futureRepaymentPlan ?? 'na') : undefined;
+  const nextPaymentDate = isPublic ? (prev?.nextPaymentDate ?? undefined) : undefined;
 
   const subsidyType = e.category === 'public' ? e.subsidyType : undefined;
   const disbursementDate = e.category === 'public' && e.disbursementDate ? e.disbursementDate : undefined;
@@ -569,24 +414,7 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     householdSize,
     dependents,
     stateOfResidency,
-    paymentScheduleRanges: isPublic ? prev?.paymentScheduleRanges : (e.paymentScheduleRanges?.length ? e.paymentScheduleRanges.map((r) => {
-      const str = e.schedulePaymentStrings?.[r.id];
-      const cents = str !== undefined && str !== '' ? Math.round(parseFloat(String(str).replace(/,/g, '')) * 100) : r.paymentCents;
-      let accruedInterestCents: number | undefined = r.accruedInterestCents ?? undefined;
-      const accStr = e.scheduleAccruedInterestStrings?.[r.id];
-      if (accStr !== undefined) {
-        if (accStr === '') accruedInterestCents = undefined;
-        else {
-          const n = Math.round(parseFloat(String(accStr).replace(/,/g, '')) * 100);
-          if (Number.isFinite(n) && n >= 0) accruedInterestCents = n;
-        }
-      }
-      return {
-        ...r,
-        paymentCents: Number.isFinite(cents) && cents >= 0 ? cents : r.paymentCents,
-        accruedInterestCents
-      };
-    }) : undefined),
+    paymentScheduleRanges: isPublic ? prev?.paymentScheduleRanges : undefined,
     gracePeriodEndDate,
     nextPaymentCents,
     nextPaymentDate,
@@ -594,8 +422,8 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     active: e.active,
     idrUseManualIncome: e.category === 'public' ? undefined : e.idrUseManualIncome,
     idrManualAnnualIncomeCents: e.category === 'public' ? undefined : idrManualAnnualIncomeCents,
-    accruedInterestCents: isPublic ? undefined : (prev?.accruedInterestCents ?? undefined),
-    accrualLastUpdatedAt: isPublic ? undefined : (prev?.accrualLastUpdatedAt ?? undefined)
+    accruedInterestCents: isPublic ? undefined : undefined,
+    accrualLastUpdatedAt: isPublic ? undefined : undefined
   };
 }
 
@@ -624,9 +452,8 @@ function LoanCard(props: {
   onDelete: () => void;
   onPayoffAge: () => void;
   onRefinance?: () => void;
-  onShowDefermentInfo?: () => void;
 }) {
-  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance, onShowDefermentInfo } = props;
+  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance } = props;
   const [plansOpen, setPlansOpen] = useState(false);
 
   return (
@@ -653,51 +480,40 @@ function LoanCard(props: {
           {l.interestRatePercent.toFixed(2)}% {l.rateType === 'fixed' ? 'fixed' : 'variable'}
         </span>
       </div>
-      <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
-        <span style={{ color: 'var(--muted)' }}>{statusLabel(l.repaymentStatus)}</span>
-        {l.category === 'public' && l.subsidyType ? (
-          <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}> · {l.subsidyType}</span>
-        ) : null}
-      </div>
-      {l.nextPaymentDate ? (
+      {l.category === 'public' ? (
+        <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
+          <span style={{ color: 'var(--muted)' }}>{statusLabel(l.repaymentStatus)}</span>
+          {l.subsidyType ? (
+            <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}> · {l.subsidyType}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {l.category === 'public' && l.nextPaymentDate ? (
         <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
           Next payment date: {l.nextPaymentDate}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.9rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
         Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
-        {onShowDefermentInfo ? (
-          <button
-            type="button"
-            aria-label="Deferment balance details"
-            onClick={onShowDefermentInfo}
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: '50%',
-              border: '1px solid var(--border)',
-              background: 'var(--bg-secondary)',
-              color: 'var(--muted)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0
-            }}
-          >
-            i
-          </button>
-        ) : null}
       </div>
-      {l.category === 'private' && l.repaymentStatus === 'in_school_interest_only' ? (
-        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
-          Balance: {formatCents(l.balanceCents)}
-          {(l.inSchoolAccruedCents ?? 0) > 0 ? ` · Accrued interest: ${formatCents(l.inSchoolAccruedCents!)}` : null}
-          {l.inSchoolTotalOwedCents != null ? ` · Total owed: ${formatCents(l.inSchoolTotalOwedCents)}` : null}
-          <div style={{ fontSize: '0.75rem', marginTop: 2 }}>Payments apply to accrued interest first, then principal.</div>
-        </div>
+      {l.category === 'private' ? (
+        <>
+          <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+            Monthly Interest Portion: {formatCents(l.monthlyInterestCents)}
+          </div>
+          <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+            {l.payoffMonths != null && l.payoffMonths > 0 ? (
+              <>Estimated payoff: {addMonths(new Date(), l.payoffMonths).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>
+            ) : (
+              <span style={{ color: 'var(--muted)' }}>Payment may be too low to reduce balance.</span>
+            )}
+          </div>
+          {l.lender ? (
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
+              Servicer: {l.lender}
+            </div>
+          ) : null}
+        </>
       ) : null}
       {l.category === 'public' && (l.totalFederalPaymentCents != null || l.approximateShareCents != null) ? (
         <>
@@ -708,12 +524,8 @@ function LoanCard(props: {
             Approximate share of total: {l.approximateShareCents != null ? formatCents(l.approximateShareCents) : '—'} (not separately calculated)
           </div>
         </>
-      ) : l.category === 'private' && l.repaymentStatus !== 'deferred_forbearance' && l.monthlyLaterCents != null ? (
-        <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
-          After grace: {formatCents(l.monthlyLaterCents)}
-        </div>
       ) : null}
-      {!(l.category === 'private' && l.repaymentStatus === 'deferred_forbearance') ? (
+      {l.category === 'public' ? (
         <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
           {l.lender ? `Servicer: ${l.lender} · ` : null}
           Interest accrual ≈ {formatCents(l.dailyInterestCents)}/day · {formatCents(l.monthlyInterestCents)}/mo
@@ -790,206 +602,6 @@ function LoanCard(props: {
   );
 }
 
-/** Format YYYY-MM-DD as "Jan 1, 2026" for timeline labels. */
-function formatShortDate(dateISO: string): string {
-  if (!dateISO) return dateISO;
-  const d = new Date(dateISO + 'T00:00:00');
-  if (Number.isNaN(d.getTime())) return dateISO;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-/** Build snapshot dates for timeline: start, Jan 1 of each year in range, end. */
-function timelineSnapshotDates(globalStart: string, globalEnd: string): string[] {
-  const startY = parseInt(globalStart.slice(0, 4), 10);
-  const endY = parseInt(globalEnd.slice(0, 4), 10);
-  const spanYears = endY - startY + 1;
-  const step = spanYears > 10 ? 4 : spanYears > 5 ? 3 : spanYears > 2 ? 2 : 1;
-  const out: string[] = [globalStart];
-  for (let y = startY; y <= endY; y += step) {
-    const d = `${y}-01-01`;
-    if (d > globalStart && d <= globalEnd) out.push(d);
-  }
-  if (out[out.length - 1] !== globalEnd) out.push(globalEnd);
-  return out;
-}
-
-function DefermentInfoContent(props: {
-  loan: LoanWithDerived;
-  onClose: () => void;
-  onUpdateAccrued?: (rangeId: string, accruedCents: number | undefined) => void;
-}) {
-  const { loan, onClose, onUpdateAccrued } = props;
-  const ranges = (loan.paymentScheduleRanges ?? []).slice().sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const defermentRanges = ranges.filter((r) => r.paymentCents === 0);
-  const rate = loan.interestRatePercent / 100;
-  const defaultMonthlyCents = Math.round((loan.balanceCents * rate) / 12);
-
-  const firstDefermentRange = defermentRanges[0];
-  const loanAccruedCents =
-    firstDefermentRange && typeof firstDefermentRange.accruedInterestCents === 'number' && firstDefermentRange.accruedInterestCents >= 0
-      ? firstDefermentRange.accruedInterestCents
-      : null;
-  const [accruedInputValue, setAccruedInputValue] = useState<string>(() =>
-    loanAccruedCents != null ? (loanAccruedCents / 100).toFixed(2) : ''
-  );
-  const parsedAccruedCents =
-    accruedInputValue === ''
-      ? null
-      : (() => {
-          const n = Math.round(parseFloat(String(accruedInputValue).replace(/,/g, '')) * 100);
-          return Number.isFinite(n) && n >= 0 ? n : null;
-        })();
-  const monthlyAccruedCentsForTimeline = parsedAccruedCents ?? loanAccruedCents ?? defaultMonthlyCents;
-
-  const timelineSnapshots: { label: string; balanceCents: number }[] = [];
-  if (ranges.length > 0) {
-    const globalStart = ranges[0].startDate;
-    const globalEnd = ranges[ranges.length - 1].endDate;
-    const snapshotDates = timelineSnapshotDates(globalStart, globalEnd);
-    timelineSnapshots.push({
-      label: formatShortDate(globalStart),
-      balanceCents: loan.balanceCents
-    });
-    let nextSnapshotIdx = 1;
-    let bal = loan.balanceCents;
-
-    for (const r of ranges) {
-      const rowAccrued =
-        r.accruedInterestCents != null && r.accruedInterestCents >= 0
-          ? r.accruedInterestCents
-          : Math.round(bal * rate / 12);
-      const useOverride = firstDefermentRange && r.id === firstDefermentRange.id;
-      const rowAccruedEffective = useOverride ? monthlyAccruedCentsForTimeline : rowAccrued;
-      const rowPayment = r.paymentCents ?? 0;
-      let monthStart = r.startDate;
-      const rowEnd = r.endDate;
-
-      while (monthStart <= rowEnd) {
-        bal = bal + rowAccruedEffective - rowPayment;
-        if (bal < 0) bal = 0;
-        const nextMonth = addMonths(new Date(monthStart + 'T00:00:00'), 1);
-        const currentDate = nextMonth.toISOString().slice(0, 10);
-        while (nextSnapshotIdx < snapshotDates.length && currentDate >= snapshotDates[nextSnapshotIdx]) {
-          timelineSnapshots.push({
-            label: formatShortDate(snapshotDates[nextSnapshotIdx]),
-            balanceCents: bal
-          });
-          nextSnapshotIdx += 1;
-        }
-        monthStart = currentDate;
-      }
-    }
-    timelineSnapshots.push({
-      label: `End of range (${formatShortDate(globalEnd)})`,
-      balanceCents: bal
-    });
-  }
-
-  const primaryMonthlyCents = defermentRanges.length > 0 ? monthlyAccruedCentsForTimeline : defaultMonthlyCents;
-
-  const handleAccruedBlur = () => {
-    if (!firstDefermentRange || !onUpdateAccrued) return;
-    const cents = parsedAccruedCents;
-    if (cents != null) onUpdateAccrued(firstDefermentRange.id, cents);
-    else if (accruedInputValue.trim() === '') onUpdateAccrued(firstDefermentRange.id, undefined);
-  };
-
-  return (
-    <>
-      <div className="summary-compact" style={{ gap: 8 }}>
-        <div className="summary-kv">
-          <span className="k">Starting balance</span>
-          <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.balanceCents)}</span>
-        </div>
-        {loan.estimatedCurrentBalanceCents != null ? (
-          <div className="summary-kv">
-            <span className="k">Current balance</span>
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.estimatedCurrentBalanceCents)}</span>
-          </div>
-        ) : null}
-        <div style={{ marginTop: 8 }}>
-          <span className="k" style={{ display: 'block', marginBottom: 4 }}>Monthly accrued (used in timeline)</span>
-          {defermentRanges.length > 0 && firstDefermentRange ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>$</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={accruedInputValue}
-                onChange={(e) => setAccruedInputValue(e.target.value)}
-                onBlur={handleAccruedBlur}
-                placeholder={defaultMonthlyCents > 0 ? (defaultMonthlyCents / 100).toFixed(2) : '—'}
-                style={{
-                  width: 72,
-                  padding: '6px 8px',
-                  borderRadius: 6,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  fontSize: '0.9rem'
-                }}
-              />
-              <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>/mo</span>
-            </div>
-          ) : (
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(primaryMonthlyCents)}/mo</span>
-          )}
-          {ranges.length === 0 ? (
-            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>
-              Add a schedule range to see balance timeline.
-            </p>
-          ) : null}
-        </div>
-        {defermentRanges.length > 0 ? (
-          <div style={{ marginTop: 8 }}>
-            <span className="k" style={{ display: 'block', marginBottom: 4 }}>Deferred date range(s)</span>
-            {defermentRanges.map((r) => {
-              const monthlyCents =
-                r.accruedInterestCents != null && r.accruedInterestCents >= 0
-                  ? r.accruedInterestCents
-                  : defaultMonthlyCents;
-              return (
-                <div key={r.id} style={{ fontSize: '0.85rem', marginBottom: 4, padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
-                  {r.startDate} → {r.endDate}
-                  <span style={{ display: 'block', color: 'var(--muted)', marginTop: 2 }}>
-                    {formatCents(monthlyCents)}/mo, payment $0
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-        {timelineSnapshots.length > 0 ? (
-          <div style={{ marginTop: 8 }}>
-            <span className="k" style={{ display: 'block', marginBottom: 4 }}>Estimated balance timeline</span>
-            {timelineSnapshots.map((row, i) => (
-              <div key={i} style={{ fontSize: '0.85rem', marginBottom: 2, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ color: 'var(--muted)' }}>{row.label === 'End of range' ? 'End of range' : row.label}</span>
-                <span style={{ color: 'var(--red)', fontWeight: 500 }}>{formatCents(row.balanceCents)}</span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {loan.balanceAtRepaymentStartCents != null && loan.balanceAtRepaymentStartCents > 0 ? (
-          <div className="summary-kv" style={{ marginTop: 4 }}>
-            <span className="k">Estimated balance at repayment start</span>
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.balanceAtRepaymentStartCents)}</span>
-          </div>
-        ) : null}
-      </div>
-      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 12, marginBottom: 0 }}>
-        Balance changes each month by accrued amount minus payment. Scheduled payments may still allow the balance to grow if they are lower than accrued monthly interest.
-      </p>
-      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
-        The later required payment already reflects the balance growth that occurred during this period.
-      </p>
-      <div style={{ marginTop: 16 }}>
-        <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
-      </div>
-    </>
-  );
-}
-
 export type LoanViewFilter = 'public' | 'private';
 
 export function LoansPage() {
@@ -1001,7 +613,6 @@ export function LoansPage() {
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
   const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
-  const [defermentInfoLoan, setDefermentInfoLoan] = useState<LoanWithDerived | null>(null);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -1031,12 +642,7 @@ export function LoansPage() {
 
     let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
-      const bal =
-        l.category === 'private' &&
-        l.repaymentStatus === 'deferred_forbearance' &&
-        l.estimatedCurrentBalanceCents != null
-          ? l.estimatedCurrentBalanceCents
-          : (l.balanceCents || 0);
+      const bal = l.balanceCents || 0;
       totalBalance += bal;
       if (l.monthlyNowCents != null) totalMonthlyNow += l.monthlyNowCents;
       if (l.monthlyLaterCents != null) {
@@ -1102,25 +708,19 @@ export function LoansPage() {
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
 
-  /** Future-only amounts (not yet active in Payment(now)) for the hidden info box. */
-  const futureOnlyBreakdown = useMemo(() => {
-    const today = todayISO();
-    let futurePrivateCents = 0;
+  /** After-grace estimated payments for the Payment(now) info popup. */
+  const afterGraceBreakdown = useMemo(() => {
+    let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
-      const fut = getFirstFutureSchedulePaymentCents(l);
-      if (fut != null && fut > 0) futurePrivateCents += fut;
+      const am = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, l.termMonths);
+      if (am != null && am > 0) privateAfterGraceCents += am;
     });
-    const mode = publicSummary.paymentMode ?? (publicSummary.firstPaymentDate ? 'first_payment_date' : 'current_payment');
-    const estimated = publicSummary.estimatedMonthlyPaymentCents ?? 0;
-    const futurePublicCents =
-      mode === 'first_payment_date' &&
-      estimated > 0 &&
-      publicSummary.firstPaymentDate &&
-      today < publicSummary.firstPaymentDate
-        ? estimated
-        : 0;
-    const totalFutureCents = futurePrivateCents + futurePublicCents;
-    return { futurePrivateCents, futurePublicCents, totalFutureCents };
+    const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
+    return {
+      privateAfterGraceCents,
+      publicAfterGraceCents,
+      combinedAfterGraceCents: privateAfterGraceCents + publicAfterGraceCents
+    };
   }, [loansWithDerived, publicSummary]);
 
   function persist(next: Partial<LoansState>) {
@@ -1290,7 +890,6 @@ export function LoansPage() {
                   }}
                   onPayoffAge={() => setPayoffLoan(l)}
                   onRefinance={() => setRefiLoan(l)}
-                  onShowDefermentInfo={l.repaymentStatus === 'deferred_forbearance' ? () => setDefermentInfoLoan(l) : undefined}
                 />
               ))}
               <button
@@ -1332,19 +931,8 @@ export function LoansPage() {
                 editor && editor.mode === 'edit' && editor.value.id
                   ? state.loans.find((x) => x.id === editor.value.id)
                   : null;
-              let loan = editorToLoan(editor.value, existing || null);
+              const loan = editorToLoan(editor.value, existing || null);
               if (!loan) return;
-              if (existing && existing.category === 'private' && existing.repaymentStatus === 'in_school_interest_only') {
-                const newRate = parseFloat(editor.value.ratePercent);
-                if (Number.isFinite(newRate) && newRate !== existing.interestRatePercent) {
-                  const accrued = computeInSchoolAccruedToDate(existing, todayISO());
-                  if (accrued) {
-                    loan = { ...loan, accruedInterestCents: accrued.accruedInterestCents, accrualLastUpdatedAt: todayISO() };
-                  }
-                }
-              } else if (!existing && loan.category === 'private' && loan.repaymentStatus === 'in_school_interest_only') {
-                loan = { ...loan, accruedInterestCents: 0, accrualLastUpdatedAt: todayISO() };
-              }
               if (existing) {
                 persist({
                   loans: state.loans.map((x) => (x.id === existing.id ? loan : x))
@@ -1378,72 +966,40 @@ export function LoansPage() {
         {refiLoan ? <RefinanceSimulator loan={refiLoan} /> : null}
       </Modal>
 
-      {/* Future payment breakdown: only amounts not yet active in Payment(now) */}
+      {/* Future Estimated Payments (after-grace) info popup */}
       <Modal
         open={showAfterGraceBreakdown}
-        title="Future payment breakdown"
+        title="Future Estimated Payments"
         onClose={() => setShowAfterGraceBreakdown(false)}
       >
         <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
-          Only future amounts that are not yet active in Payment(now) are shown below.
+          Estimated full-repayment amounts. Private = amortized from balance, rate, and term. Public = estimated monthly payment.
         </p>
         <div className="summary-compact" style={{ gap: 8 }}>
           <div className="summary-kv">
-            <span className="k">Private (future schedule rows)</span>
+            <span className="k">Private Loans After Grace</span>
             <span className="v" style={{ color: 'var(--red)' }}>
-              {futureOnlyBreakdown.futurePrivateCents > 0 ? formatCents(futureOnlyBreakdown.futurePrivateCents) : '—'}
+              {afterGraceBreakdown.privateAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.privateAfterGraceCents) : '—'}
             </span>
           </div>
           <div className="summary-kv">
-            <span className="k">Public (first payment date not yet reached)</span>
+            <span className="k">Public Loans After Grace</span>
             <span className="v" style={{ color: 'var(--red)' }}>
-              {futureOnlyBreakdown.futurePublicCents > 0 ? formatCents(futureOnlyBreakdown.futurePublicCents) : '—'}
+              {afterGraceBreakdown.publicAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.publicAfterGraceCents) : '—'}
             </span>
           </div>
           <div className="summary-kv" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-            <span className="k">Total future hidden amount</span>
+            <span className="k">Combined After Grace</span>
             <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-              {futureOnlyBreakdown.totalFutureCents > 0 ? formatCents(futureOnlyBreakdown.totalFutureCents) : '—'}
+              {afterGraceBreakdown.combinedAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.combinedAfterGraceCents) : '—'}
             </span>
           </div>
         </div>
-        {futureOnlyBreakdown.totalFutureCents === 0 ? (
-          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 8, marginBottom: 0 }}>
-            No future hidden amounts right now.
-          </p>
-        ) : null}
         <div style={{ marginTop: 16 }}>
           <button type="button" className="btn btn-secondary" onClick={() => setShowAfterGraceBreakdown(false)}>
             Close
           </button>
         </div>
-      </Modal>
-
-      {/* Per-loan deferment balance / growth info (private Deferred / Forbearance only) */}
-      <Modal
-        open={!!defermentInfoLoan}
-        title={defermentInfoLoan ? `Deferment details: ${defermentInfoLoan.name}` : 'Deferment details'}
-        onClose={() => setDefermentInfoLoan(null)}
-      >
-        {defermentInfoLoan ? (
-          <DefermentInfoContent
-            loan={defermentInfoLoan}
-            onClose={() => setDefermentInfoLoan(null)}
-            onUpdateAccrued={(rangeId, accruedCents) => {
-              const l = defermentInfoLoan;
-              if (!l?.paymentScheduleRanges) return;
-              const updated: Loan = {
-                ...l,
-                paymentScheduleRanges: l.paymentScheduleRanges.map((r) =>
-                  r.id === rangeId ? { ...r, accruedInterestCents: accruedCents } : r
-                )
-              };
-              const newLoans = (state.loans || []).map((x) => (x.id === l.id ? updated : x));
-              persist({ loans: newLoans });
-              setDefermentInfoLoan(deriveForLoan(updated, newLoans, detectedAnnualIncomeCents, null));
-            }}
-          />
-        ) : null}
       </Modal>
     </div>
   );
@@ -1597,6 +1153,19 @@ function LoanEditorForm(props: {
       {state.category !== 'public' ? (
         <>
           <div className="field">
+            <label>Monthly payment ($)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={state.nextPayment}
+              onChange={(e) => onChange({ ...state, nextPayment: e.target.value })}
+              placeholder="0.00"
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Current monthly payment (used in Payment(now) total)
+            </p>
+          </div>
+          <div className="field">
             <label>Repayment term (months)</label>
             <input
               value={state.termMonths}
@@ -1605,89 +1174,9 @@ function LoanEditorForm(props: {
               placeholder="e.g. 120"
             />
             <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              For reference and for full-repayment calculation
+              Used for payoff estimate and after-grace amortized payment
             </p>
           </div>
-          <div className="field">
-            <label>Current status</label>
-            <Select
-              value={state.repaymentStatus === 'grace_interest_only' || state.repaymentStatus === 'idr' || state.repaymentStatus === 'custom_payment' ? 'full_repayment' : state.repaymentStatus}
-              onChange={(e) =>
-                onChange({
-                  ...state,
-                  repaymentStatus: e.target.value as Loan['repaymentStatus']
-                })
-              }
-            >
-              <option value="in_school_interest_only">In School / Interest Only</option>
-              <option value="deferred_forbearance">Deferred / Forbearance</option>
-              <option value="full_repayment">Full Repayment</option>
-            </Select>
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              In School: interest-only payment now. Deferred: use schedule below. Full: amortized or schedule override.
-            </p>
-          </div>
-          {(state.repaymentStatus === 'deferred_forbearance' || state.repaymentStatus === 'full_repayment') && (
-            <div className="field" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <label style={{ display: 'block', marginBottom: 6 }}>Payment schedule (date ranges)</label>
-              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>
-                {state.repaymentStatus === 'deferred_forbearance' ? 'Add rows so the active range for today sets Payment(now).' : 'Optional. If a range covers today, it overrides the calculated payment.'}
-              </p>
-              {(state.paymentScheduleRanges || []).map((r) => (
-                <div key={r.id} style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                    <input
-                      type="date"
-                      value={r.startDate}
-                      onChange={(e) => onChange({ ...state, paymentScheduleRanges: state.paymentScheduleRanges.map((x) => x.id === r.id ? { ...x, startDate: e.target.value } : x) })}
-                      style={{ width: 120, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
-                    />
-                    <input
-                      type="date"
-                      value={r.endDate}
-                      onChange={(e) => onChange({ ...state, paymentScheduleRanges: state.paymentScheduleRanges.map((x) => x.id === r.id ? { ...x, endDate: e.target.value } : x) })}
-                      style={{ width: 120, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
-                    />
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={state.schedulePaymentStrings?.[r.id] ?? (r.paymentCents / 100).toFixed(2)}
-                      onChange={(e) => onChange({ ...state, schedulePaymentStrings: { ...state.schedulePaymentStrings, [r.id]: e.target.value } })}
-                      placeholder="0.00"
-                      style={{ width: 80, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
-                    />
-                    <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>$/mo</span>
-                    {state.repaymentStatus === 'deferred_forbearance' ? (
-                      <>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Monthly accrued (opt):</span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={state.scheduleAccruedInterestStrings?.[r.id] ?? (r.accruedInterestCents != null ? (r.accruedInterestCents / 100).toFixed(2) : '')}
-                          onChange={(e) => onChange({ ...state, scheduleAccruedInterestStrings: { ...state.scheduleAccruedInterestStrings, [r.id]: e.target.value } })}
-                          placeholder="—"
-                          style={{ width: 72, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
-                        />
-                        <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>$</span>
-                      </>
-                    ) : null}
-                    <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.8rem' }} onClick={() => onChange({ ...state, paymentScheduleRanges: state.paymentScheduleRanges.filter((x) => x.id !== r.id) })}>Remove</button>
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem' }}
-                onClick={() => onChange({
-                  ...state,
-                  paymentScheduleRanges: [...(state.paymentScheduleRanges || []), { id: uid(), startDate: todayISO(), endDate: todayISO(), paymentCents: 0 }]
-                })}
-              >
-                Add row
-              </button>
-            </div>
-          )}
         </>
       ) : null}
       {state.category === 'public' ? (
@@ -1755,7 +1244,7 @@ function PayoffDetails(props: { loan: LoanWithDerived; birthdateISO: string | nu
             {loan.monthlyNowCents != null ? formatCents(loan.monthlyNowCents) : '—'}
           </span>
         </div>
-        {loan.repaymentStatus === 'in_school_interest_only' && loan.gracePeriodEndDate ? (
+        {loan.category === 'public' && loan.repaymentStatus === 'in_school_interest_only' && loan.gracePeriodEndDate ? (
           <div className="summary-kv">
             <span className="k">Full repayment from</span>
             <span className="v">
