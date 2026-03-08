@@ -69,8 +69,15 @@ function daysBetween(startISO: string, endISO: string): number {
   return Math.round((b - a) / (24 * 60 * 60 * 1000));
 }
 
+/** Approximate whole months between two YYYY-MM-DD dates (for deferment accrual). */
+function monthsBetween(startISO: string, endISO: string): number {
+  const days = daysBetween(startISO, endISO);
+  return Math.max(0, Math.floor(days / 30.44));
+}
+
 /**
  * For a private loan in Deferred/Forbearance, estimate balance over time from schedule rows.
+ * accruedInterestCents on a row is treated as monthly accrued amount ($/mo in cents), not a lump sum.
  * Used for display only; does not affect Payment(now).
  */
 function computeDeferredBalanceTimeline(loan: Loan): {
@@ -98,12 +105,15 @@ function computeDeferredBalanceTimeline(loan: Loan): {
     if (today >= startDate && today <= endDate) {
       if (paymentCents === 0) {
         const daysInRange = Math.max(1, daysBetween(startDate, endDate));
-        const totalAccrued =
-          accruedInterestCents != null && accruedInterestCents >= 0
-            ? accruedInterestCents
-            : Math.round((runningBalance * rate) / 365 * daysInRange);
-        const daysToToday = Math.max(0, daysBetween(startDate, today));
-        const accruedToToday = Math.round((totalAccrued * daysToToday) / daysInRange);
+        const useMonthlyAccrual = accruedInterestCents != null && accruedInterestCents >= 0;
+        const monthsInRange = Math.max(1, monthsBetween(startDate, endDate));
+        const monthsToToday = Math.min(monthsBetween(startDate, today), monthsInRange);
+        const totalAccrued = useMonthlyAccrual
+          ? accruedInterestCents * monthsInRange
+          : Math.round((runningBalance * rate) / 365 * daysInRange);
+        const accruedToToday = useMonthlyAccrual
+          ? accruedInterestCents * monthsToToday
+          : Math.round((totalAccrued * Math.max(0, daysBetween(startDate, today))) / daysInRange);
         estimatedCurrent = runningBalance + accruedToToday;
         runningBalance += totalAccrued;
       } else {
@@ -133,10 +143,11 @@ function computeDeferredBalanceTimeline(loan: Loan): {
     if (today > endDate) {
       if (paymentCents === 0) {
         const daysInRange = Math.max(1, daysBetween(startDate, endDate));
-        const totalAccrued =
-          accruedInterestCents != null && accruedInterestCents >= 0
-            ? accruedInterestCents
-            : Math.round((runningBalance * rate) / 365 * daysInRange);
+        const useMonthlyAccrual = accruedInterestCents != null && accruedInterestCents >= 0;
+        const monthsInRange = Math.max(1, monthsBetween(startDate, endDate));
+        const totalAccrued = useMonthlyAccrual
+          ? accruedInterestCents * monthsInRange
+          : Math.round((runningBalance * rate) / 365 * daysInRange);
         runningBalance += totalAccrued;
       } else {
         if (balanceAtRepaymentStart == null) balanceAtRepaymentStart = runningBalance;
@@ -777,6 +788,43 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
   const { loan, onClose } = props;
   const ranges = (loan.paymentScheduleRanges ?? []).slice().sort((a, b) => a.startDate.localeCompare(b.startDate));
   const defermentRanges = ranges.filter((r) => r.paymentCents === 0);
+  const rate = loan.interestRatePercent / 100;
+
+  const timelineRows: { label: string; balanceCents: number }[] = [];
+  if (defermentRanges.length > 0) {
+    const primary = defermentRanges[0];
+    const { startDate, endDate, accruedInterestCents } = primary;
+    const monthlyCents =
+      accruedInterestCents != null && accruedInterestCents >= 0
+        ? accruedInterestCents
+        : Math.round((loan.balanceCents * rate) / 12);
+    let balanceAtStart = loan.balanceCents;
+    const startY = parseInt(startDate.slice(0, 4), 10);
+    const endY = parseInt(endDate.slice(0, 4), 10);
+    timelineRows.push({ label: `Start of range (${startDate})`, balanceCents: balanceAtStart });
+    if (endY - startY <= 1 && startDate.slice(0, 4) === endDate.slice(0, 4)) {
+      const mos = monthsBetween(startDate, endDate);
+      if (mos > 0) {
+        timelineRows.push({
+          label: `End of range (${endDate})`,
+          balanceCents: balanceAtStart + monthlyCents * mos
+        });
+      }
+    } else {
+      for (let y = startY; y <= endY; y++) {
+        const yearEnd = `${y}-12-31`;
+        if (yearEnd < startDate) continue;
+        const cap = yearEnd > endDate ? endDate : yearEnd;
+        const mos = monthsBetween(startDate, cap);
+        const bal = balanceAtStart + monthlyCents * mos;
+        timelineRows.push({
+          label: y === endY && cap === endDate ? `End of range (${endDate})` : `End of ${y}`,
+          balanceCents: bal
+        });
+        if (cap === endDate) break;
+      }
+    }
+  }
 
   return (
     <>
@@ -794,14 +842,29 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
         {defermentRanges.length > 0 ? (
           <div style={{ marginTop: 8 }}>
             <span className="k" style={{ display: 'block', marginBottom: 4 }}>Deferred date range(s)</span>
-            {defermentRanges.map((r) => (
-              <div key={r.id} style={{ fontSize: '0.85rem', marginBottom: 4, padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
-                {r.startDate} → {r.endDate}
-                {r.accruedInterestCents != null && r.accruedInterestCents > 0 ? (
+            {defermentRanges.map((r) => {
+              const monthlyCents =
+                r.accruedInterestCents != null && r.accruedInterestCents >= 0
+                  ? r.accruedInterestCents
+                  : Math.round((loan.balanceCents * rate) / 12);
+              return (
+                <div key={r.id} style={{ fontSize: '0.85rem', marginBottom: 4, padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
+                  {r.startDate} → {r.endDate}
                   <span style={{ display: 'block', color: 'var(--muted)', marginTop: 2 }}>
-                    Accrued interest during range: {formatCents(r.accruedInterestCents)}
+                    Monthly accrued: {formatCents(monthlyCents)}/mo
                   </span>
-                ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+        {timelineRows.length > 0 ? (
+          <div style={{ marginTop: 8 }}>
+            <span className="k" style={{ display: 'block', marginBottom: 4 }}>Estimated balance timeline</span>
+            {timelineRows.map((row, i) => (
+              <div key={i} style={{ fontSize: '0.85rem', marginBottom: 2, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: 'var(--muted)' }}>{row.label}</span>
+                <span style={{ color: 'var(--red)', fontWeight: 500 }}>{formatCents(row.balanceCents)}</span>
               </div>
             ))}
           </div>
@@ -814,7 +877,7 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
         ) : null}
       </div>
       <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 12, marginBottom: 0 }}>
-        The after-grace payment that later becomes the current payment already accounts for this balance increase.
+        The later required payment already accounts for this balance increase during deferment/forbearance.
       </p>
       <div style={{ marginTop: 16 }}>
         <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
@@ -1471,7 +1534,7 @@ function LoanEditorForm(props: {
                     <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>$/mo</span>
                     {state.repaymentStatus === 'deferred_forbearance' ? (
                       <>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Accrued (opt):</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Monthly accrued (opt):</span>
                         <input
                           type="text"
                           inputMode="decimal"
