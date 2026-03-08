@@ -13,6 +13,7 @@ import {
   uid,
   loadBirthdateISO
 } from '../../state/storage';
+import { getDetectedAgiFromRecurring } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -706,13 +707,11 @@ export function LoansPage() {
 
   const birthdateISO = loadBirthdateISO();
 
-  const detectedAnnualIncomeCents = useMemo(() => {
-    const rec = (data.recurring || []).filter(
-      (r) => r.type === 'income' && r.isFullTimeJob
-    );
-    if (!rec.length) return 0;
-    return rec.reduce((s, r) => s + recurringAnnualIncomeCents(r as any), 0);
-  }, [data.recurring]);
+  const detectedAgi = useMemo(
+    () => getDetectedAgiFromRecurring((data.recurring || []) as any),
+    [data.recurring]
+  );
+  const detectedAnnualIncomeCents = detectedAgi.agiCents;
 
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
     return (state.loans || []).map((l) =>
@@ -777,7 +776,7 @@ export function LoansPage() {
     });
   }
 
-  const hasRecurringIncome = detectedAnnualIncomeCents > 0;
+  const hasRecurringIncome = detectedAgi.grossCents > 0;
 
   return (
     <div className="tab-panel active" id="loansContent">
@@ -881,6 +880,8 @@ export function LoansPage() {
           <LoanEditorForm
             state={editor.value}
             hasRecurringIncome={hasRecurringIncome}
+            agiSource={hasRecurringIncome ? 'recurring' : 'none'}
+            retirementContributionsCents={detectedAgi.retirementContributionsCents}
             onChange={(next) =>
               setEditor((prev) => (prev ? { ...prev, value: next } : prev))
             }
@@ -953,11 +954,13 @@ export function LoansPage() {
 function LoanEditorForm(props: {
   state: LoanEditorState;
   hasRecurringIncome: boolean;
+  agiSource: 'recurring' | 'none';
+  retirementContributionsCents: number;
   onChange: (next: LoanEditorState) => void;
   onCancel: () => void;
   onSave: () => void;
 }) {
-  const { state, onChange, onCancel, onSave, hasRecurringIncome } = props;
+  const { state, onChange, onCancel, onSave, hasRecurringIncome, agiSource, retirementContributionsCents } = props;
   const idrAllowed = state.category === 'public';
 
   return (
@@ -1057,6 +1060,18 @@ function LoanEditorForm(props: {
           </div>
           <div className="field">
             <label>Adjusted Gross Income (AGI)</label>
+            {agiSource === 'recurring' ? (
+              <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 4 }}>
+                AGI source: recurring full-time income
+                {retirementContributionsCents > 0
+                  ? ` · Pre-tax retirement contributions used: ${formatCents(retirementContributionsCents)}`
+                  : ''}
+              </p>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 4 }}>
+                AGI source: N/A
+              </p>
+            )}
             <div className="toggle-row">
               <input
                 type="checkbox"
@@ -1079,9 +1094,14 @@ function LoanEditorForm(props: {
               value={state.idrManualAnnualIncome}
               onChange={(e) => onChange({ ...state, idrManualAnnualIncome: e.target.value })}
               inputMode="decimal"
-              placeholder="Annual AGI ($) if manual"
+              placeholder={agiSource === 'none' ? 'Manual AGI ($)' : 'Annual AGI ($) if manual'}
               style={{ marginTop: 4 }}
             />
+            {agiSource === 'none' ? (
+              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 2 }}>
+                Detected AGI: N/A · Manual AGI: enter above if desired
+              </p>
+            ) : null}
           </div>
           <div className="field">
             <label>Household size</label>

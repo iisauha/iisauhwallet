@@ -220,28 +220,77 @@ export function getLoanEstimatedPaymentNowMap(
   return map;
 }
 
-/** Sum annual income from recurring items marked as full-time job (for AGI / loan derivation). */
-export function getDetectedAnnualIncomeCentsFromRecurring(
-  recurring: Array<{ type?: string; amountCents?: number; frequency?: string; everyNDays?: number; intervalDays?: number }>
+function annualizeCents(
+  amountCents: number,
+  freq: string,
+  everyNDays?: number,
+  intervalDays?: number
 ): number {
+  if (freq === 'monthly') return amountCents * 12;
+  if (freq === 'weekly') return Math.round(amountCents * 52);
+  if (freq === 'biweekly') return Math.round(amountCents * 26);
+  if (freq === 'yearly') return amountCents;
+  const days =
+    typeof intervalDays === 'number' && intervalDays > 0
+      ? intervalDays
+      : typeof everyNDays === 'number' && everyNDays > 0
+        ? everyNDays
+        : 30;
+  return Math.round((amountCents * 365) / days);
+}
+
+export type DetectedAgiResult = {
+  agiCents: number;
+  grossCents: number;
+  retirementContributionsCents: number;
+};
+
+/**
+ * Derive AGI from recurring full-time job income minus pre-tax employer/retirement contributions.
+ * Used for federal loan repayment calculations.
+ */
+export function getDetectedAgiFromRecurring(
+  recurring: Array<{
+    type?: string;
+    amountCents?: number;
+    frequency?: string;
+    everyNDays?: number;
+    intervalDays?: number;
+    preTaxDeductions?: Array<{ amountCents?: number; deductionType?: string }>;
+  }>
+): DetectedAgiResult {
   const recs = recurring.filter((r) => r.type === 'income' && (r as any).isFullTimeJob);
-  if (!recs.length) return 0;
-  let total = 0;
+  let grossCents = 0;
+  let retirementContributionsCents = 0;
   for (const r of recs) {
     const amt = r.amountCents || 0;
     const freq = r.frequency || 'monthly';
-    if (freq === 'monthly') total += amt * 12;
-    else if (freq === 'weekly') total += Math.round(amt * 52);
-    else if (freq === 'biweekly') total += Math.round(amt * 26);
-    else if (freq === 'yearly') total += amt;
-    else {
-      const days = typeof (r as any).intervalDays === 'number' && (r as any).intervalDays > 0
-        ? (r as any).intervalDays
-        : typeof r.everyNDays === 'number' && r.everyNDays > 0
-          ? r.everyNDays
-          : 30;
-      total += Math.round((amt * 365) / days);
+    const annual = annualizeCents(
+      amt,
+      freq,
+      r.everyNDays,
+      (r as any).intervalDays
+    );
+    grossCents += annual;
+    const deductions = r.preTaxDeductions || [];
+    for (const d of deductions) {
+      if (d.deductionType === 'retirement' && typeof d.amountCents === 'number' && d.amountCents > 0) {
+        retirementContributionsCents += annualizeCents(
+          d.amountCents,
+          freq,
+          r.everyNDays,
+          (r as any).intervalDays
+        );
+      }
     }
   }
-  return total;
+  const agiCents = Math.max(0, grossCents - retirementContributionsCents);
+  return { agiCents, grossCents, retirementContributionsCents };
+}
+
+/** Returns AGI (recurring full-time income minus pre-tax retirement contributions) for loan derivation. */
+export function getDetectedAnnualIncomeCentsFromRecurring(
+  recurring: Array<{ type?: string; amountCents?: number; frequency?: string; everyNDays?: number; intervalDays?: number; preTaxDeductions?: Array<{ amountCents?: number; deductionType?: string }> }>
+): number {
+  return getDetectedAgiFromRecurring(recurring).agiCents;
 }
