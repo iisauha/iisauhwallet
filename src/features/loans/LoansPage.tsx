@@ -496,14 +496,9 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
 
   const subsidyType = e.category === 'public' ? e.subsidyType : undefined;
   const disbursementDate = e.category === 'public' && e.disbursementDate ? e.disbursementDate : undefined;
-  const householdSize =
-    e.category === 'public' && e.householdSize
-      ? Math.max(1, Math.min(20, parseInt(e.householdSize, 10) || 1))
-      : undefined;
-  const dependents =
-    e.category === 'public' && e.dependents !== ''
-      ? Math.max(0, Math.min(20, parseInt(e.dependents, 10) || 0))
-      : undefined;
+  const householdSize = undefined;
+  const dependents = undefined;
+  const stateOfResidency = undefined;
 
   return {
     id: prev?.id || uid(),
@@ -521,15 +516,15 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     borrowerType: e.category === 'public' ? e.borrowerType : undefined,
     householdSize,
     dependents,
-    stateOfResidency: e.category === 'public' ? e.stateOfResidency : undefined,
+    stateOfResidency,
     paymentScheduleRanges: prev?.paymentScheduleRanges,
     gracePeriodEndDate,
     nextPaymentCents,
     nextPaymentDate: e.nextPaymentDate || undefined,
     notes: e.notes.trim() || undefined,
     active: e.active,
-    idrUseManualIncome: e.idrUseManualIncome,
-    idrManualAnnualIncomeCents
+    idrUseManualIncome: e.category === 'public' ? undefined : e.idrUseManualIncome,
+    idrManualAnnualIncomeCents: e.category === 'public' ? undefined : idrManualAnnualIncomeCents
   };
 }
 
@@ -1022,6 +1017,12 @@ export function LoansPage() {
         </div>
       ) : null}
 
+      {loanView === 'public' && loansWithDerived.some((l) => l.category === 'public') ? (
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 10 }}>
+          Federal repayment plans are calculated across the entire loan portfolio. Household size, AGI, and repayment plan are defined once in Public Loan Parameters.
+        </p>
+      ) : null}
+
       {loansWithDerived.length > 0
         ? (() => {
             const displayed = loansWithDerived.filter((l) => l.category === loanView);
@@ -1274,98 +1275,9 @@ function LoanEditorForm(props: {
               Parent PLUS is eligible only for Standard repayment unless consolidated.
             </p>
           </div>
-          <div className="field">
-            <label>Adjusted Gross Income (AGI)</label>
-            {agiSource === 'recurring' ? (
-              <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 4 }}>
-                AGI source: recurring full-time income
-                {retirementContributionsCents > 0
-                  ? ` · Pre-tax retirement contributions used: ${formatCents(retirementContributionsCents)}`
-                  : ''}
-              </p>
-            ) : (
-              <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 4 }}>
-                AGI source: N/A
-              </p>
-            )}
-            <div className="toggle-row">
-              <input
-                type="checkbox"
-                id="idrUseManual"
-                checked={state.idrUseManualIncome || !hasRecurringIncome}
-                onChange={(e) =>
-                  onChange({
-                    ...state,
-                    idrUseManualIncome: e.target.checked || !hasRecurringIncome
-                  })
-                }
-              />
-              <label htmlFor="idrUseManual">
-                {hasRecurringIncome
-                  ? 'Use manual AGI instead of detected full-time job income'
-                  : 'Use manual AGI'}
-              </label>
-            </div>
-            <input
-              value={state.idrManualAnnualIncome}
-              onChange={(e) => onChange({ ...state, idrManualAnnualIncome: e.target.value })}
-              inputMode="decimal"
-              placeholder={agiSource === 'none' ? 'Manual AGI ($)' : 'Annual AGI ($) if manual'}
-              style={{ marginTop: 4 }}
-            />
-            {agiSource === 'none' ? (
-              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 2 }}>
-                Detected AGI: N/A · Manual AGI: enter above if desired
-              </p>
-            ) : null}
-          </div>
-          <div className="field">
-            <label>Household size</label>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={state.householdSize}
-              onChange={(e) => onChange({ ...state, householdSize: e.target.value })}
-              inputMode="numeric"
-            />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              For poverty guideline (default 1).
-            </p>
-          </div>
-          <div className="field">
-            <label>Number of dependents</label>
-            <input
-              type="number"
-              min={0}
-              max={20}
-              value={state.dependents}
-              onChange={(e) => onChange({ ...state, dependents: e.target.value })}
-              inputMode="numeric"
-            />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              Default 0.
-            </p>
-          </div>
-          <div className="field">
-            <label>State of residency</label>
-            <Select
-              value={state.stateOfResidency}
-              onChange={(e) =>
-                onChange({
-                  ...state,
-                  stateOfResidency: (e.target.value as LoanStateOfResidency) || 'contiguous'
-                })
-              }
-            >
-              <option value="contiguous">48 contiguous states / D.C.</option>
-              <option value="AK">Alaska</option>
-              <option value="HI">Hawaii</option>
-            </Select>
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              For federal poverty guideline.
-            </p>
-          </div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
+            Household size, AGI, repayment plan, and poverty level are set in Public Loan Parameters (above).
+          </p>
         </>
       ) : null}
       <div className="field">

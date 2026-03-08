@@ -83,18 +83,23 @@ export function FederalLoanParametersModal({
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Household</legend>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Household size</label>
-            <input
-              type="number"
-              min={1}
+            <select
               value={params.householdSize}
               onChange={(e) =>
                 setParams({
                   ...params,
-                  householdSize: Math.max(1, Number(e.target.value) || 1)
+                  householdSize: Number(e.target.value)
                 })
               }
-              style={{ width: 80, padding: '4px 8px' }}
-            />
+              style={{ padding: '4px 8px', minWidth: 80 }}
+            >
+              <option value={1}>1</option>
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+              <option value={4}>4</option>
+              <option value={5}>5</option>
+              <option value={6}>6</option>
+            </select>
           </div>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Number of dependents</label>
