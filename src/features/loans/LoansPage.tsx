@@ -4,8 +4,6 @@ import { formatCents } from '../../state/calc';
 import {
   loadLoans,
   saveLoans,
-  loadFederalRepaymentConfig,
-  saveFederalRepaymentConfig,
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
@@ -19,12 +17,7 @@ import { getDetectedAgiFromRecurring } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
-import {
-  loadFederalLoanParameters,
-  computeEstimatedMonthlyPaymentCents
-} from '../federalLoans/FederalLoanParametersStore';
-import { FederalLoanParametersModal } from '../federalLoans/FederalLoanParametersModal';
-import { FederalLoanSummaryCard } from '../federalLoans/FederalLoanSummaryCard';
+import { PublicLoanEstimatorCard } from '../federalLoans/PublicLoanEstimatorCard';
 
 function todayISO(): string {
   const d = new Date();
@@ -122,17 +115,6 @@ function computeMonthsToPayoff(
   return Math.ceil(n);
 }
 
-// ----- Federal repayment plan formulas and eligibility -----
-// Poverty guidelines: 2025 HHS (48 contiguous; AK/HI higher). Amounts in dollars.
-/** Discretionary income = AGI - threshold. Threshold: IBR/PAYE use 150% of poverty level; ICR uses 100%. */
-function discretionaryIncomeDollars(
-  agiCents: number,
-  thresholdDollars: number
-): number {
-  const agiDollars = agiCents / 100;
-  return Math.max(0, agiDollars - thresholdDollars);
-}
-
 export type FederalPlanRow = {
   planId: 'ibr' | 'paye' | 'icr';
   planName: string;
@@ -148,97 +130,6 @@ export type FederalTotals = {
   lowestTotalCents: number | null;
 };
 
-const PHASE_OUT_DATE = '2028-07-01';
-const ALL_PLANS_CUTOFF = '2026-07-01';
-const PAYE_NO_LOAN_BEFORE = '2007-10-01';
-const PAYE_AT_LEAST_ONE_AFTER = '2011-10-01';
-
-function parseDateCompare(iso: string): number {
-  return new Date(iso + 'T00:00:00').getTime();
-}
-
-function allPublicLoansDisbursedBefore(loans: Loan[], before: string): boolean {
-  const cutoff = parseDateCompare(before);
-  for (const l of loans) {
-    if (l.category !== 'public') continue;
-    const d = l.disbursementDate;
-    if (!d || parseDateCompare(d) >= cutoff) return false;
-  }
-  return true;
-}
-
-function hasNoPublicLoanBefore(loans: Loan[], before: string): boolean {
-  const t = parseDateCompare(before);
-  for (const l of loans) {
-    if (l.category !== 'public') continue;
-    const d = l.disbursementDate;
-    if (d && parseDateCompare(d) < t) return false;
-  }
-  return true;
-}
-
-function hasAtLeastOnePublicLoanAfter(loans: Loan[], after: string): boolean {
-  const t = parseDateCompare(after);
-  for (const l of loans) {
-    if (l.category !== 'public') continue;
-    const d = l.disbursementDate;
-    if (d && parseDateCompare(d) >= t) return true;
-  }
-  return false;
-}
-
-/** One total federal payment (IBR/PAYE/ICR) based on total eligible public balance + income. Uses user-editable poverty level. */
-function computeFederalPlanTotals(
-  allPublicLoans: Loan[],
-  agiCents: number,
-  povertyLevelDollars: number
-): FederalTotals {
-  const eligible = allPublicLoans.filter((l) => l.category === 'public' && l.borrowerType !== 'parent');
-  const totalEligibleBalanceCents = eligible.reduce((s, l) => s + l.balanceCents, 0);
-  const threshold150 = 1.5 * povertyLevelDollars;
-  const threshold100 = 1.0 * povertyLevelDollars;
-  const disc150 = discretionaryIncomeDollars(agiCents, threshold150);
-  const disc100 = discretionaryIncomeDollars(agiCents, threshold100);
-  const now = new Date();
-  const phaseOutTime = parseDateCompare(PHASE_OUT_DATE);
-  const allBeforeCutoff = allPublicLoansDisbursedBefore(allPublicLoans, ALL_PLANS_CUTOFF);
-  const noLoanBefore2007 = hasNoPublicLoanBefore(allPublicLoans, PAYE_NO_LOAN_BEFORE);
-  const atLeastOneAfter2011 = hasAtLeastOnePublicLoanAfter(allPublicLoans, PAYE_AT_LEAST_ONE_AFTER);
-  const beforePhaseOut = now.getTime() < phaseOutTime;
-
-  const plans: FederalPlanRow[] = [];
-
-  const ibrEligible = eligible.length > 0 && allBeforeCutoff && beforePhaseOut;
-  const ibrTotalCents = Math.round((disc150 * 0.1 / 12) * 100);
-  plans.push({ planId: 'ibr', planName: 'IBR (New 2014)', monthlyPaymentCents: ibrTotalCents, forgivenessYears: 20, eligible: ibrEligible });
-
-  const payeEligible = eligible.length > 0 && allBeforeCutoff && noLoanBefore2007 && atLeastOneAfter2011 && beforePhaseOut;
-  plans.push({
-    planId: 'paye',
-    planName: 'PAYE',
-    monthlyPaymentCents: ibrTotalCents,
-    forgivenessYears: 20,
-    eligible: payeEligible,
-    note: 'May sunset 7/1/2028; forgiveness uncertain.'
-  });
-
-  const icrEligible = eligible.length > 0 && allBeforeCutoff && beforePhaseOut;
-  const icrTotalCents = Math.round((disc100 * 0.2 / 12) * 100);
-  plans.push({
-    planId: 'icr',
-    planName: 'ICR',
-    monthlyPaymentCents: icrTotalCents,
-    forgivenessYears: 25,
-    eligible: icrEligible,
-    note: 'May sunset 7/1/2028; forgiveness uncertain.'
-  });
-
-  const eligiblePlans = plans.filter((p) => p.eligible);
-  const lowestTotalCents = eligiblePlans.length > 0 ? Math.min(...eligiblePlans.map((p) => p.monthlyPaymentCents)) : null;
-
-  return { totalEligibleBalanceCents, plans, lowestTotalCents };
-}
-
 type LoanWithDerived = Loan & {
   monthlyNowCents: number | null;
   monthlyLaterCents: number | null;
@@ -246,18 +137,9 @@ type LoanWithDerived = Loan & {
   monthlyInterestCents: number;
   payoffMonths: number | null;
   federalPlans?: FederalPlanRow[];
-  /** Total federal (IBR/PAYE/ICR) monthly payment; same for all eligible public loans. */
   totalFederalPaymentCents?: number | null;
-  /** This loan's approximate share of total federal payment (display only). */
   approximateShareCents?: number | null;
 };
-
-function getAgiCents(loan: Loan, detectedAnnualIncomeCents: number): number {
-  const useManual = loan.idrUseManualIncome;
-  return useManual
-    ? Math.max(0, loan.idrManualAnnualIncomeCents ?? 0)
-    : Math.max(0, detectedAnnualIncomeCents);
-}
 
 function getActiveMonthlyPayment(loan: LoanWithDerived): number | null {
   const today = new Date();
@@ -699,16 +581,11 @@ export type LoanViewFilter = 'public' | 'private';
 export function LoansPage() {
   const data = useLedgerStore((s) => s.data);
   const [state, setState] = useState<LoansState>(() => loadLoans());
-  const [federalConfig, setFederalConfig] = useState(() => loadFederalRepaymentConfig());
   const [loanView, setLoanView] = useState<LoanViewFilter>('public');
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
-  const [federalParams, setFederalParams] = useState<ReturnType<typeof loadFederalLoanParameters>>(
-    () => loadFederalLoanParameters()
-  );
-  const [federalParamsModalOpen, setFederalParamsModalOpen] = useState(false);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -718,39 +595,15 @@ export function LoansPage() {
   );
   const detectedAnnualIncomeCents = detectedAgi.agiCents;
 
-  const federalTotals = useMemo(() => {
-    const publicLoans = (state.loans || []).filter((l) => l.category === 'public');
-    if (!publicLoans.length) return null;
-    const agi =
-      federalParams?.useRecurringIncome !== false
-        ? detectedAnnualIncomeCents
-        : (federalParams?.agiCents ?? 0);
-    const povertyLevelDollars = federalParams?.povertyLevel ?? federalConfig.povertyLevelDollars;
-    const totals = computeFederalPlanTotals(
-      publicLoans,
-      federalParams ? agi : getAgiCents(publicLoans[0], detectedAnnualIncomeCents),
-      povertyLevelDollars
-    );
-    if (federalParams) {
-      const selectedPayment = computeEstimatedMonthlyPaymentCents(
-        federalParams,
-        federalParams.useRecurringIncome ? detectedAnnualIncomeCents : null
-      );
-      return { ...totals, lowestTotalCents: selectedPayment };
-    }
-    return totals;
-  }, [
-    state.loans,
-    detectedAnnualIncomeCents,
-    federalConfig.povertyLevelDollars,
-    federalParams
-  ]);
-
+  const privateLoans = useMemo(
+    () => (state.loans || []).filter((l) => l.category === 'private'),
+    [state.loans]
+  );
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
-    return (state.loans || []).map((l) =>
-      deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents, federalTotals)
+    return privateLoans.map((l) =>
+      deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents, null)
     );
-  }, [state.loans, detectedAnnualIncomeCents, federalTotals]);
+  }, [state.loans, privateLoans, detectedAnnualIncomeCents]);
 
   const summary = useMemo(() => {
     let totalBalance = 0;
@@ -852,180 +705,115 @@ export function LoansPage() {
         </div>
       </div>
 
-      {loansWithDerived.length > 0 ? (
-        <div
-          className="segmented"
-          style={{
-            display: 'flex',
-            gap: 0,
-            marginBottom: 12,
-            borderRadius: 8,
-            padding: 2,
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)'
-          }}
-          role="tablist"
-          aria-label="Loan type"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={loanView === 'public'}
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              fontSize: '0.9rem',
-              fontWeight: loanView === 'public' ? 600 : 400,
-              border: 'none',
-              borderRadius: 6,
-              background: loanView === 'public' ? 'var(--bg)' : 'transparent',
-              color: loanView === 'public' ? 'var(--fg)' : 'var(--muted)',
-              cursor: 'pointer'
-            }}
-            onClick={() => setLoanView('public')}
-          >
-            Public
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={loanView === 'private'}
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              fontSize: '0.9rem',
-              fontWeight: loanView === 'private' ? 600 : 400,
-              border: 'none',
-              borderRadius: 6,
-              background: loanView === 'private' ? 'var(--bg)' : 'transparent',
-              color: loanView === 'private' ? 'var(--fg)' : 'var(--muted)',
-              cursor: 'pointer'
-            }}
-            onClick={() => setLoanView('private')}
-          >
-            Private
-          </button>
-        </div>
-      ) : null}
-
-      {loansWithDerived.length === 0 ? (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <p style={{ marginTop: 0, marginBottom: 8, color: 'var(--muted)', fontSize: '0.9rem' }}>
-            Track student and other loans here. All values are manual and for estimates only.
-          </p>
-          <button
-            type="button"
-            className="btn btn-add"
-            onClick={() =>
-              setEditor({
-                mode: 'add',
-                value: { ...loanToEditor(null, hasRecurringIncome), category: loanView }
-              })
-            }
-          >
-            + Add {loanView === 'public' ? 'Public' : 'Private'} Loan
-          </button>
-        </div>
-      ) : null}
-
-      {loanView === 'public' ? (
-        <div style={{ marginBottom: 12 }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ width: '100%', marginBottom: federalParams && loansWithDerived.some((l) => l.category === 'public') ? 8 : 0 }}
-            onClick={() => setFederalParamsModalOpen(true)}
-          >
-            Define Public Loan Parameters
-          </button>
-          {federalParams && loansWithDerived.some((l) => l.category === 'public') ? (
-            <FederalLoanSummaryCard
-              totalBalanceCents={(state.loans || [])
-                .filter((l) => l.category === 'public')
-                .reduce((s, l) => s + (l.balanceCents ?? 0), 0)}
-              repaymentPlan={federalParams.repaymentPlan}
-              estimatedPaymentCents={
-                federalTotals?.lowestTotalCents ??
-                computeEstimatedMonthlyPaymentCents(
-                  federalParams,
-                  federalParams.useRecurringIncome ? detectedAnnualIncomeCents : null
-                )
-              }
-              numPublicLoans={(state.loans || []).filter((l) => l.category === 'public').length}
-            />
-          ) : null}
-        </div>
-      ) : null}
-
-      {loanView === 'public' && loansWithDerived.some((l) => l.category === 'public') ? (
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 10 }}>
-          Federal repayment settings are defined once for all public loans.
-        </p>
-      ) : null}
-
-      {loansWithDerived.length > 0
-        ? (() => {
-            const displayed = loansWithDerived.filter((l) => l.category === loanView);
-            if (displayed.length === 0) {
-              return (
-                <div className="card" style={{ marginBottom: 16, padding: 12 }}>
-                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>
-                    {loanView === 'public' ? 'No public loans.' : 'No private loans.'} Switch tab or add a loan.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn btn-add"
-                    style={{ marginTop: 8 }}
-                    onClick={() =>
-                      setEditor({
-                        mode: 'add',
-                        value: { ...loanToEditor(null, hasRecurringIncome), category: loanView }
-                      })
-                    }
-                  >
-                    + Add {loanView === 'public' ? 'Public' : 'Private'} Loan
-                  </button>
-                </div>
-              );
-            }
-            return displayed.map((l) => (
-              <LoanCard
-                key={l.id}
-                loan={l}
-                onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
-                onDelete={() => {
-                  if (!confirm('Delete this loan?')) return;
-                  persist({ loans: state.loans.filter((x) => x.id !== l.id) });
-                }}
-                onPayoffAge={() => setPayoffLoan(l)}
-                onBreakdown={() => setScheduleLoan(l)}
-                onRefinance={l.category === 'private' ? () => setRefiLoan(l) : undefined}
-              />
-            ));
-          })()
-        : null}
-      {loansWithDerived.length > 0 ? (
+      <div
+        className="segmented"
+        style={{
+          display: 'flex',
+          gap: 0,
+          marginBottom: 12,
+          borderRadius: 8,
+          padding: 2,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border)'
+        }}
+        role="tablist"
+        aria-label="Loan type"
+      >
         <button
           type="button"
-          className="btn btn-add"
-          style={{ width: '100%', marginTop: 8 }}
-          onClick={() =>
-            setEditor({
-              mode: 'add',
-              value: { ...loanToEditor(null, hasRecurringIncome), category: loanView }
-            })
-          }
+          role="tab"
+          aria-selected={loanView === 'public'}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            fontSize: '0.9rem',
+            fontWeight: loanView === 'public' ? 600 : 400,
+            border: 'none',
+            borderRadius: 6,
+            background: loanView === 'public' ? 'var(--bg)' : 'transparent',
+            color: loanView === 'public' ? 'var(--fg)' : 'var(--muted)',
+            cursor: 'pointer'
+          }}
+          onClick={() => setLoanView('public')}
         >
-          + Add {loanView === 'public' ? 'Public' : 'Private'} Loan
+          Public
         </button>
-      ) : null}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={loanView === 'private'}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            fontSize: '0.9rem',
+            fontWeight: loanView === 'private' ? 600 : 400,
+            border: 'none',
+            borderRadius: 6,
+            background: loanView === 'private' ? 'var(--bg)' : 'transparent',
+            color: loanView === 'private' ? 'var(--fg)' : 'var(--muted)',
+            cursor: 'pointer'
+          }}
+          onClick={() => setLoanView('private')}
+        >
+          Private
+        </button>
+      </div>
 
-      <FederalLoanParametersModal
-        open={federalParamsModalOpen}
-        onClose={() => setFederalParamsModalOpen(false)}
-        onSave={() => setFederalParams(loadFederalLoanParameters())}
-        detectedAgiCents={detectedAnnualIncomeCents}
-      />
+      {loanView === 'public' ? (
+        <PublicLoanEstimatorCard />
+      ) : (
+        <>
+          {loansWithDerived.length === 0 ? (
+            <div className="card" style={{ marginBottom: 16 }}>
+              <p style={{ marginTop: 0, marginBottom: 8, color: 'var(--muted)', fontSize: '0.9rem' }}>
+                No private loans. Track student and other private loans here. All values are manual and for estimates only.
+              </p>
+              <button
+                type="button"
+                className="btn btn-add"
+                onClick={() =>
+                  setEditor({
+                    mode: 'add',
+                    value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
+                  })
+                }
+              >
+                + Add Private Loan
+              </button>
+            </div>
+          ) : (
+            <>
+              {loansWithDerived.map((l) => (
+                <LoanCard
+                  key={l.id}
+                  loan={l}
+                  onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
+                  onDelete={() => {
+                    if (!confirm('Delete this loan?')) return;
+                    persist({ loans: state.loans.filter((x) => x.id !== l.id) });
+                  }}
+                  onPayoffAge={() => setPayoffLoan(l)}
+                  onBreakdown={() => setScheduleLoan(l)}
+                  onRefinance={() => setRefiLoan(l)}
+                />
+              ))}
+              <button
+                type="button"
+                className="btn btn-add"
+                style={{ width: '100%', marginTop: 8 }}
+                onClick={() =>
+                  setEditor({
+                    mode: 'add',
+                    value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
+                  })
+                }
+              >
+                + Add Private Loan
+              </button>
+            </>
+          )}
+        </>
+      )}
 
       {/* Loan editor modal */}
       <Modal

@@ -36,6 +36,7 @@ export const LOANS_KEY = 'iisauhwallet_loans_v1';
 export const BIRTHDATE_KEY = 'iisauhwallet_birthdate_v1';
 export const FEDERAL_REPAYMENT_CONFIG_KEY = 'iisauhwallet_federal_repayment_v1';
 export const FEDERAL_LOAN_PARAMETERS_KEY = 'iisauhwallet_federal_loan_params_v1';
+export const PUBLIC_LOAN_ESTIMATOR_KEY = 'iisauhwallet_public_loan_estimator_v1';
 
 // Detected activity inbox (optional backend when configured).
 export const DETECTED_ACTIVITY_KEY = 'iisauhwallet_detected_activity_v1';
