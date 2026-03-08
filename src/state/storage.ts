@@ -637,6 +637,8 @@ export type PaymentScheduleRange = {
   /** Rate assumed for this range (%; for variable loans can differ from loan's current rate). */
   ratePercent?: number;
   note?: string;
+  /** Optional: interest accrued during this date range (e.g. for $0 deferment rows). Used for balance timeline. */
+  accruedInterestCents?: number | null;
 };
 
 export type Loan = {
