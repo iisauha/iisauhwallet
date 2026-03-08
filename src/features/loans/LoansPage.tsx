@@ -504,7 +504,13 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     stateOfResidency: l.stateOfResidency ?? 'contiguous',
     paymentScheduleRanges: l.paymentScheduleRanges ?? [],
     schedulePaymentStrings: {},
-    scheduleAccruedInterestStrings: {}
+    scheduleAccruedInterestStrings: (() => {
+      const out: Record<string, string> = {};
+      (l.paymentScheduleRanges ?? []).forEach((r) => {
+        if (r.accruedInterestCents != null) out[r.id] = (r.accruedInterestCents / 100).toFixed(2);
+      });
+      return out;
+    })()
   };
 }
 
@@ -840,7 +846,7 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
   }
 
   const primaryMonthlyCents = defermentRanges.length > 0
-    ? (defermentRanges[0].accruedInterestCents != null && defermentRanges[0].accruedInterestCents >= 0
+    ? (typeof defermentRanges[0].accruedInterestCents === 'number' && defermentRanges[0].accruedInterestCents >= 0
         ? defermentRanges[0].accruedInterestCents
         : defaultMonthlyCents)
     : defaultMonthlyCents;
