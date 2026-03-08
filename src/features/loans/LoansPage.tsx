@@ -10,6 +10,8 @@ import {
   savePrivatePaymentNowBase,
   loadLastRecomputeDate,
   applyRecomputeCycleToPrivateBalances,
+  loadPaymentNowManualOverride,
+  savePaymentNowManualOverride,
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
@@ -946,7 +948,7 @@ function LoanCard(props: {
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onEdit}>Edit</button>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onPayoffAge}>Payoff age</button>
-        {onRefinance ? <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onRefinance}>Refinance</button> : null}
+        {onRefinance ? <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onRefinance}>After-grace refinance</button> : null}
       </div>
     </div>
   );
@@ -959,12 +961,15 @@ export function LoansPage() {
   const [state, setState] = useState<LoansState>(() => loadLoans());
   const [loanView, setLoanView] = useState<LoanViewFilter>('public');
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
-  const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
+  const [refiLoan, setRefiLoan] = useState<LoanWithDerived | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
   const [publicPaymentNowAdded, setPublicPaymentNowAdded] = useState(() => loadPublicPaymentNowAdded());
   const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
   const [showRecomputeConfirm, setShowRecomputeConfirm] = useState(false);
+  const [paymentNowOverride, setPaymentNowOverride] = useState<number | null>(() => loadPaymentNowManualOverride());
+  const [showEditPaymentNow, setShowEditPaymentNow] = useState(false);
+  const [editPaymentInput, setEditPaymentInput] = useState('');
 
   const birthdateISO = loadBirthdateISO();
 
@@ -1039,7 +1044,10 @@ export function LoansPage() {
       persistedPrivateBase !== null && persistedPrivateBase !== undefined
         ? persistedPrivateBase
         : derivedPrivatePaymentNowBase;
-    const totalMonthlyNow = privatePaymentNowBase + publicPaymentNowAdded;
+    const totalMonthlyNow =
+      paymentNowOverride !== null && paymentNowOverride !== undefined
+        ? paymentNowOverride
+        : privatePaymentNowBase + publicPaymentNowAdded;
 
     const privateTotalBalance = totalBalance;
     const publicBalanceCents = publicSummary.totalBalanceCents ?? 0;
@@ -1085,7 +1093,7 @@ export function LoansPage() {
       publicPaymentNowAdded,
       publicEstimateCents
     };
-  }, [loansWithDerived, birthdateISO, publicSummary, publicPaymentNowAdded]);
+  }, [loansWithDerived, birthdateISO, publicSummary, publicPaymentNowAdded, paymentNowOverride]);
 
   /** After-grace: per private loan use first future value (custom → full repayment → interest-only). */
   const afterGraceBreakdown = useMemo(() => {
@@ -1213,12 +1221,11 @@ export function LoansPage() {
           className="btn btn-secondary"
           style={{ fontSize: '0.85rem', padding: '6px 10px' }}
           onClick={() => {
-            savePrivatePaymentNowBase(0);
-            savePublicPaymentNowAdded(0);
-            setPublicPaymentNowAdded(0);
+            setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
+            setShowEditPaymentNow(true);
           }}
         >
-          Clear Payment(now)
+          Edit Payment(now)
         </button>
       </div>
 
@@ -1397,10 +1404,10 @@ export function LoansPage() {
         ) : null}
       </Modal>
 
-      {/* Refinance modal (private loans only) */}
+      {/* Refinance modal (private loans only) — uses this loan's after-grace value */}
       <Modal
         open={!!refiLoan}
-        title="Refinance simulation"
+        title="After-grace refinance"
         onClose={() => setRefiLoan(null)}
       >
         {refiLoan ? <RefinanceSimulator loan={refiLoan} /> : null}
@@ -1454,6 +1461,57 @@ export function LoansPage() {
             }}
           >
             Confirm
+          </button>
+        </div>
+      </Modal>
+
+      {/* Edit Payment(now) modal */}
+      <Modal
+        open={showEditPaymentNow}
+        title="Edit Payment(now)"
+        onClose={() => setShowEditPaymentNow(false)}
+      >
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
+          Set the visible Payment(now) to any value (e.g. 0). This is a display override only; it does not change balances or other calculations.
+        </p>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4, fontSize: '0.9rem' }}>Payment(now) ($)</label>
+          <input
+            type="number"
+            min={0}
+            step={0.01}
+            value={editPaymentInput}
+            onChange={(e) => setEditPaymentInput(e.target.value)}
+            style={{ width: '100%', padding: 8, fontSize: '1rem', borderRadius: 6, border: '1px solid var(--border)' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              const parsed = parseFloat(editPaymentInput);
+              const cents = Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : 0;
+              savePaymentNowManualOverride(cents);
+              setPaymentNowOverride(cents);
+              setShowEditPaymentNow(false);
+            }}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              savePaymentNowManualOverride(null);
+              setPaymentNowOverride(null);
+              setShowEditPaymentNow(false);
+            }}
+          >
+            Reset to computed
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowEditPaymentNow(false)}>
+            Cancel
           </button>
         </div>
       </Modal>
@@ -1932,48 +1990,57 @@ function PayoffDetails(props: { loan: LoanWithDerived; birthdateISO: string | nu
   );
 }
 
-function RefinanceSimulator(props: { loan: Loan }) {
+function RefinanceSimulator(props: { loan: LoanWithDerived }) {
   const { loan } = props;
   const [ratePercent, setRatePercent] = useState<string>(String(loan.interestRatePercent));
   const [termMonths, setTermMonths] = useState<string>(
     loan.termMonths != null ? String(loan.termMonths) : '120'
   );
-  const [overridePayment, setOverridePayment] = useState<string>('');
+
+  const currentAfterGraceCents = loan.futureFullRepaymentCents ?? 0;
 
   const derived = useMemo(() => {
-    const currentPayment =
-      computeAmortizedPaymentCents(loan.balanceCents, loan.interestRatePercent, loan.termMonths) ??
-      computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent);
-    const currentMonths = computeMonthsToPayoff(
-      loan.balanceCents,
-      loan.interestRatePercent,
-      currentPayment
-    );
+    const currentMonths =
+      currentAfterGraceCents > 0
+        ? computeMonthsToPayoff(
+            loan.balanceCents,
+            loan.interestRatePercent,
+            currentAfterGraceCents
+          )
+        : null;
 
     const newRate = parseFloat(ratePercent || '0');
     const newTerm = termMonths && parseInt(termMonths, 10) > 0 ? parseInt(termMonths, 10) : 0;
-    let refiPayment =
+    const refiPayment =
       computeAmortizedPaymentCents(loan.balanceCents, newRate, newTerm) ??
       computeInterestOnlyMonthlyCents(loan.balanceCents, newRate);
-    const override =
-      overridePayment && parseFloat(overridePayment) > 0
-        ? Math.round(parseFloat(overridePayment) * 100)
-        : null;
-    if (override != null) refiPayment = override;
     const refiMonths =
       refiPayment != null
         ? computeMonthsToPayoff(loan.balanceCents, newRate, refiPayment)
         : null;
 
-    return { currentPayment, currentMonths, refiPayment, refiMonths };
-  }, [loan, ratePercent, termMonths, overridePayment]);
+    return { currentMonths, refiPayment, refiMonths };
+  }, [loan.balanceCents, loan.interestRatePercent, currentAfterGraceCents, ratePercent, termMonths]);
 
   return (
     <>
       <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0 }}>
-        This tool compares your current loan to a simplified refinance scenario. All values
+        Refinance this loan&apos;s after-grace repayment value with new rate and term. All values
         are estimates only and do not reflect lender-specific terms.
       </p>
+      <div className="summary-compact" style={{ marginBottom: 12 }}>
+        <div className="summary-kv">
+          <span className="k">Current after-grace value</span>
+          <span className="v">
+            {currentAfterGraceCents > 0 ? formatCents(currentAfterGraceCents) : '—'}
+          </span>
+        </div>
+        {currentAfterGraceCents === 0 ? (
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>
+            No after-grace value for this loan; set ranges or full repayment to see a value.
+          </p>
+        ) : null}
+      </div>
       <div className="field">
         <label>New interest rate (%)</label>
         <input
@@ -1990,31 +2057,16 @@ function RefinanceSimulator(props: { loan: Loan }) {
           inputMode="numeric"
         />
       </div>
-      <div className="field">
-        <label>Optional monthly payment override ($)</label>
-        <input
-          value={overridePayment}
-          onChange={(e) => setOverridePayment(e.target.value)}
-          inputMode="decimal"
-          placeholder="Optional"
-        />
-      </div>
 
       <div className="summary-compact" style={{ marginTop: 8 }}>
+        {derived.currentMonths != null ? (
+          <div className="summary-kv">
+            <span className="k">Current est. months to payoff</span>
+            <span className="v">~{derived.currentMonths} months</span>
+          </div>
+        ) : null}
         <div className="summary-kv">
-          <span className="k">Current est. payment</span>
-          <span className="v">
-            {derived.currentPayment != null ? formatCents(derived.currentPayment) : '—'}
-          </span>
-        </div>
-        <div className="summary-kv">
-          <span className="k">Current est. months to payoff</span>
-          <span className="v">
-            {derived.currentMonths != null ? `~${derived.currentMonths} months` : '—'}
-          </span>
-        </div>
-        <div className="summary-kv">
-          <span className="k">Refinanced est. payment</span>
+          <span className="k">Refinanced after-grace value</span>
           <span className="v">
             {derived.refiPayment != null ? formatCents(derived.refiPayment) : '—'}
           </span>

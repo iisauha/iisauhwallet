@@ -24,7 +24,8 @@ import {
   FEDERAL_REPAYMENT_CONFIG_KEY,
   PUBLIC_PAYMENT_NOW_ADDED_KEY,
   PRIVATE_PAYMENT_NOW_BASE_KEY,
-  LAST_RECOMPUTE_DATE_KEY
+  LAST_RECOMPUTE_DATE_KEY,
+  PAYMENT_NOW_MANUAL_OVERRIDE_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -789,6 +790,28 @@ export function loadLastRecomputeDate(): string | null {
 export function saveLastRecomputeDate(dateISO: string) {
   try {
     if (dateISO) localStorage.setItem(LAST_RECOMPUTE_DATE_KEY, dateISO);
+  } catch (_) {}
+}
+
+export function loadPaymentNowManualOverride(): number | null {
+  try {
+    const raw = localStorage.getItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY);
+    if (raw == null) return null;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function savePaymentNowManualOverride(cents: number | null) {
+  try {
+    if (cents === null || cents === undefined) {
+      localStorage.removeItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY);
+      return;
+    }
+    const value = Math.max(0, Math.round(cents));
+    localStorage.setItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY, String(value));
   } catch (_) {}
 }
 
