@@ -8,6 +8,8 @@ import {
   savePublicPaymentNowAdded,
   loadPrivatePaymentNowBase,
   savePrivatePaymentNowBase,
+  loadLastRecomputeDate,
+  applyRecomputeCycleToPrivateBalances,
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
@@ -18,9 +20,8 @@ import {
   type LoanStateOfResidency,
   uid,
   loadBirthdateISO,
-  addMonthlyInterestToPrivateBalances
 } from '../../state/storage';
-import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal } from './loanDerivation';
+import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimatedPaymentNowMap } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -963,6 +964,7 @@ export function LoansPage() {
   const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
   const [publicPaymentNowAdded, setPublicPaymentNowAdded] = useState(() => loadPublicPaymentNowAdded());
   const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
+  const [showRecomputeConfirm, setShowRecomputeConfirm] = useState(false);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -1291,16 +1293,7 @@ export function LoansPage() {
                   type="button"
                   className="btn btn-secondary"
                   style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                  onClick={() => {
-                  addMonthlyInterestToPrivateBalances();
-                  const loansState = loadLoans();
-                  const newPrivateTotal = getPrivatePaymentNowTotal(
-                    loansState.loans || [],
-                    detectedAnnualIncomeCents
-                  );
-                  savePrivatePaymentNowBase(newPrivateTotal);
-                  setState(loadLoans());
-                }}
+                  onClick={() => setShowRecomputeConfirm(true)}
                 >
                   Recompute your Payment(now)
                 </button>
@@ -1396,6 +1389,58 @@ export function LoansPage() {
         onClose={() => setRefiLoan(null)}
       >
         {refiLoan ? <RefinanceSimulator loan={refiLoan} /> : null}
+      </Modal>
+
+      {/* Recompute Payment(now) confirmation */}
+      <Modal
+        open={showRecomputeConfirm}
+        title="Recompute Payment(now)"
+        onClose={() => setShowRecomputeConfirm(false)}
+      >
+        <p style={{ marginTop: 0, marginBottom: 16 }}>
+          This will apply one recompute cycle to private loan balances and then recalculate Payment(now). Continue?
+        </p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowRecomputeConfirm(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              const today = todayISO();
+              const lastDate = loadLastRecomputeDate();
+              if (lastDate === today) {
+                const loansState = loadLoans();
+                savePrivatePaymentNowBase(
+                  getPrivatePaymentNowTotal(loansState.loans || [], detectedAnnualIncomeCents)
+                );
+                setState(loadLoans());
+                setShowRecomputeConfirm(false);
+                return;
+              }
+              const loansState = loadLoans();
+              const map = getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedAnnualIncomeCents);
+              const paymentNowByLoanId: Record<string, number> = {};
+              for (const [id, cents] of Object.entries(map)) {
+                if (cents != null && cents > 0) paymentNowByLoanId[id] = cents;
+              }
+              applyRecomputeCycleToPrivateBalances(paymentNowByLoanId);
+              const newState = loadLoans();
+              savePrivatePaymentNowBase(
+                getPrivatePaymentNowTotal(newState.loans || [], detectedAnnualIncomeCents)
+              );
+              setState(loadLoans());
+              setShowRecomputeConfirm(false);
+            }}
+          >
+            Confirm
+          </button>
+        </div>
       </Modal>
 
       {/* Future Estimated Payments (after-grace) info popup */}

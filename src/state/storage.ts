@@ -23,7 +23,8 @@ import {
   BIRTHDATE_KEY,
   FEDERAL_REPAYMENT_CONFIG_KEY,
   PUBLIC_PAYMENT_NOW_ADDED_KEY,
-  PRIVATE_PAYMENT_NOW_BASE_KEY
+  PRIVATE_PAYMENT_NOW_BASE_KEY,
+  LAST_RECOMPUTE_DATE_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -775,6 +776,22 @@ export function savePrivatePaymentNowBase(cents: number | null) {
   } catch (_) {}
 }
 
+export function loadLastRecomputeDate(): string | null {
+  try {
+    const raw = localStorage.getItem(LAST_RECOMPUTE_DATE_KEY);
+    if (raw == null || typeof raw !== 'string') return null;
+    return raw.trim() || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveLastRecomputeDate(dateISO: string) {
+  try {
+    if (dateISO) localStorage.setItem(LAST_RECOMPUTE_DATE_KEY, dateISO);
+  } catch (_) {}
+}
+
 function todayISO(): string {
   return nowIso().slice(0, 10);
 }
@@ -810,18 +827,18 @@ export function computeInSchoolAccruedToDate(
 }
 
 /**
- * Add one month's interest to each private loan's current balance.
- * Used at start of Recompute so balances reflect interest growth before recalculating Payment(now).
+ * Apply one recompute cycle: add each private loan's current Payment(now) contribution to that loan's balance.
+ * Then persist lastRecomputeDate so same-day repeated recompute does not apply again.
  */
-export function addMonthlyInterestToPrivateBalances(): void {
+export function applyRecomputeCycleToPrivateBalances(paymentNowByLoanId: Record<string, number>): void {
   const today = todayISO();
   const state = loadLoans();
   const loans = state.loans.map((l: Loan) => {
     if (l.category !== 'private') return l;
+    const addCents = paymentNowByLoanId[l.id] ?? 0;
+    if (addCents <= 0) return l;
     const balanceCents = l.balanceCents ?? 0;
-    if (balanceCents <= 0 || !(l.interestRatePercent > 0)) return l;
-    const monthlyInterestCents = Math.round((balanceCents / 100) * (l.interestRatePercent / 100) / 12 * 100);
-    const newBalance = balanceCents + monthlyInterestCents;
+    const newBalance = balanceCents + addCents;
     return {
       ...l,
       balanceCents: newBalance,
@@ -829,6 +846,7 @@ export function addMonthlyInterestToPrivateBalances(): void {
     };
   });
   saveLoans({ ...state, loans });
+  saveLastRecomputeDate(today);
 }
 
 /**
