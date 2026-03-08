@@ -15,6 +15,8 @@ import {
 } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getRecurringIncomeOccurrencesInWindow, getRecurringOccurrencesInWindow } from '../../state/calc';
+import { loadLoans } from '../../state/storage';
+import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../loans/loanDerivation';
 
 function todayKey() {
   const d = new Date();
@@ -62,7 +64,16 @@ export function UpcomingPage() {
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
 
-  const recurringCosts = useMemo(() => getRecurringOccurrencesInWindow(data, windowDays), [data, windowDays]);
+  const loanPaymentMap = useMemo(() => {
+    const loansState = loadLoans();
+    const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
+    return getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
+  }, [data.recurring]);
+
+  const recurringCosts = useMemo(
+    () => getRecurringOccurrencesInWindow(data, windowDays, loanPaymentMap),
+    [data, windowDays, loanPaymentMap]
+  );
   const recurringIncome = useMemo(() => getRecurringIncomeOccurrencesInWindow(data, windowDays), [data, windowDays]);
 
   const costsInWindow = useMemo(() => {

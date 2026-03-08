@@ -163,7 +163,11 @@ export type RecurringIncomeOccurrence = {
   recurringId: string;
 };
 
-export function getRecurringOccurrencesInWindow(data: LedgerData, windowDays: number): RecurringExpenseOccurrence[] {
+export function getRecurringOccurrencesInWindow(
+  data: LedgerData,
+  windowDays: number,
+  loanAmountMap?: Record<string, number | null>
+): RecurringExpenseOccurrence[] {
   const today = new Date();
   const todayKey = toLocalDateKey(today);
   const endDate = addDaysLocal(today, windowDays);
@@ -189,14 +193,19 @@ export function getRecurringOccurrencesInWindow(data: LedgerData, windowDays: nu
       else if (freq === 'monthly' && r.useLastDayOfMonth) current = new Date(current.getFullYear(), current.getMonth() + 2, 0);
       else current = addMonthsPreserveDay(start, current, 1);
     }
+    function resolveFullAmount(): number {
+      if (loanAmountMap && r.useLoanEstimatedPayment && r.linkedLoanId && loanAmountMap[r.linkedLoanId] != null) {
+        return loanAmountMap[r.linkedLoanId]!;
+      }
+      return r.expectedMinCents != null && r.expectedMaxCents != null
+        ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+        : typeof r.amountCents === 'number'
+          ? r.amountCents
+          : 0;
+    }
     function pushOccurrence(dateKey: string) {
       const isSplitRec = !!r.isSplit && typeof r.myPortionCents === 'number' && r.myPortionCents > 0;
-      const fullAmount =
-        r.expectedMinCents != null && r.expectedMaxCents != null
-          ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
-          : typeof r.amountCents === 'number'
-            ? r.amountCents
-            : 0;
+      const fullAmount = resolveFullAmount();
       const amountCents = isSplitRec ? r.myPortionCents : fullAmount;
       const minCents = isSplitRec ? null : typeof r.expectedMinCents === 'number' ? r.expectedMinCents : null;
       const maxCents = isSplitRec ? null : typeof r.expectedMaxCents === 'number' ? r.expectedMaxCents : null;
@@ -214,12 +223,7 @@ export function getRecurringOccurrencesInWindow(data: LedgerData, windowDays: nu
         subcategory: r.subcategory,
         isSplit: isSplitRec,
         myPortionCents: isSplitRec ? r.myPortionCents : null,
-        fullAmountCents:
-          r.expectedMinCents != null && r.expectedMaxCents != null
-            ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
-            : typeof r.amountCents === 'number'
-              ? r.amountCents
-              : 0
+        fullAmountCents: fullAmount
       });
     }
     while (current < today && (!end || current <= end)) {

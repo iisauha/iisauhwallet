@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
-import { loadData, loadSubTracker, loadInvesting, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { loadData, loadSubTracker, loadInvesting, loadLoans, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../features/loans/loanDerivation';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
@@ -533,6 +534,10 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         }
       }
 
+      const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring(next.recurring || []);
+      const loansState = loadLoans();
+      const loanPaymentMap = getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
+
       next.recurring.forEach((r: any) => {
         if (!r || !r.autoPay) return;
         if ((r.type || 'expense') === 'income') {
@@ -560,12 +565,17 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           const regKey = (r.id || '') + ':' + dateKey;
           if (!next.recurringPosted[regKey]) {
             const recType = r.type || 'expense';
-            const fullAmountCents =
-              r.expectedMinCents != null && r.expectedMaxCents != null
-                ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
-                : typeof r.amountCents === 'number'
-                  ? r.amountCents
-                  : 0;
+            let fullAmountCents: number;
+            if (recType !== 'income' && r.useLoanEstimatedPayment && r.linkedLoanId && loanPaymentMap[r.linkedLoanId] != null) {
+              fullAmountCents = loanPaymentMap[r.linkedLoanId]!;
+            } else {
+              fullAmountCents =
+                r.expectedMinCents != null && r.expectedMaxCents != null
+                  ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+                  : typeof r.amountCents === 'number'
+                    ? r.amountCents
+                    : 0;
+            }
             if (recType === 'income') {
               if (r.applyToSnapshot && r.paymentTargetId) {
                 const bank = next.banks.find((b: any) => b.id === r.paymentTargetId);

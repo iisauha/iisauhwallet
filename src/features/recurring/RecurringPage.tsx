@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatLongLocalDate, parseCents } from '../../state/calc';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
-import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting } from '../../state/storage';
+import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans } from '../../state/storage';
+import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../loans/loanDerivation';
 import { useDropdownCollapsed, useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 
@@ -60,8 +61,18 @@ export function RecurringPage() {
   const [investingFromBankId, setInvestingFromBankId] = useState('');
   const [investingTargetAccountId, setInvestingTargetAccountId] = useState('');
   const [investingTargetType, setInvestingTargetType] = useState<'hysa' | 'general' | ''>('');
+  const [useLoanEstimatedPayment, setUseLoanEstimatedPayment] = useState(false);
+  const [linkedLoanId, setLinkedLoanId] = useState('');
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
+
+  const loansState = useMemo(() => loadLoans(), []);
+  const loanPaymentMap = useMemo(() => {
+    const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
+    return getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
+  }, [data.recurring, loansState.loans]);
+  const loanList = loansState.loans || [];
+  const showLoanLinkSection = type === 'expense' && (category === 'loan_payment' || !!linkedLoanId);
 
   const recurring = (data as any).recurring || [];
   const income = recurring.filter((r: any) => r.type === 'income');
@@ -280,6 +291,14 @@ export function RecurringPage() {
                       {getCategoryName(cfg, r.category || 'uncategorized')} • {r.frequency || 'monthly'} • start{' '}
                       {formatLongLocalDate(r.startDate)} {r.autoPay ? '• autopay' : ''}
                     </div>
+                    {r.useLoanEstimatedPayment && r.linkedLoanId ? (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>
+                        Amount source: Loan estimated payment
+                        {loanList.find((l) => l.id === r.linkedLoanId)?.name
+                          ? ` · ${loanList.find((l) => l.id === r.linkedLoanId)!.name}`
+                          : ''}
+                      </div>
+                    ) : null}
                     <div className="btn-row">
                       <button
                         type="button"
@@ -288,7 +307,13 @@ export function RecurringPage() {
                           setEditingId(r.id);
                           setType((r.type as any) || 'expense');
                           setName(r.name || '');
-                          setAmount(((r.amountCents || 0) / 100).toFixed(2));
+                          const loanCents =
+                            r.useLoanEstimatedPayment &&
+                            r.linkedLoanId &&
+                            loanPaymentMap[r.linkedLoanId] != null
+                              ? loanPaymentMap[r.linkedLoanId]!
+                              : r.amountCents || 0;
+                          setAmount((loanCents / 100).toFixed(2));
                           setExpectedMin(
                             typeof r.expectedMinCents === 'number' ? (r.expectedMinCents / 100).toFixed(2) : ''
                           );
@@ -314,6 +339,8 @@ export function RecurringPage() {
                               : ''
                           );
                           setUseLastDayOfMonth(!!r.useLastDayOfMonth);
+                          setUseLoanEstimatedPayment(!!r.useLoanEstimatedPayment);
+                          setLinkedLoanId(r.linkedLoanId || '');
                           setOpen(true);
                         }}
                       >
@@ -369,6 +396,8 @@ export function RecurringPage() {
           setInvestingFromBankId('');
           setInvestingTargetAccountId('');
           setInvestingTargetType('');
+          setUseLoanEstimatedPayment(false);
+          setLinkedLoanId('');
           setOpen(true);
         }}
       >
@@ -392,7 +421,13 @@ export function RecurringPage() {
             </div>
             <div className="field">
               <label>Amount ($)</label>
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0.00" />
+              <input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                inputMode="decimal"
+                placeholder="0.00"
+                readOnly={useLoanEstimatedPayment && !!linkedLoanId && loanPaymentMap[linkedLoanId] != null}
+              />
             </div>
             <div className="field">
               <label>Expected min ($) optional</label>
@@ -721,6 +756,68 @@ export function RecurringPage() {
                     </Select>
                   </div>
                 ) : null}
+                {showLoanLinkSection ? (
+                  <div className="field" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                    <div className="toggle-row">
+                      <input
+                        type="checkbox"
+                        id="useLoanEst"
+                        checked={useLoanEstimatedPayment}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setUseLoanEstimatedPayment(checked);
+                          if (checked) {
+                            setExpectedMin('');
+                            setExpectedMax('');
+                            if (linkedLoanId && loanPaymentMap[linkedLoanId] != null) {
+                              setAmount((loanPaymentMap[linkedLoanId]! / 100).toFixed(2));
+                            } else {
+                              setAmount('');
+                            }
+                          }
+                        }}
+                      />
+                      <label htmlFor="useLoanEst">Use estimated payment from linked loan</label>
+                    </div>
+                    {useLoanEstimatedPayment ? (
+                      <>
+                        <div className="field" style={{ marginTop: 6 }}>
+                          <label>Linked loan</label>
+                          <Select
+                            value={linkedLoanId}
+                            onChange={(e) => {
+                              const id = e.target.value;
+                              setLinkedLoanId(id);
+                              if (id && loanPaymentMap[id] != null) {
+                                setAmount((loanPaymentMap[id]! / 100).toFixed(2));
+                                setExpectedMin('');
+                                setExpectedMax('');
+                              } else {
+                                setAmount('');
+                              }
+                            }}
+                          >
+                            <option value="">— Select loan —</option>
+                            {loanList.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        {linkedLoanId && loanPaymentMap[linkedLoanId] == null ? (
+                          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
+                            No estimated payment (now) for this loan. Enter amount manually below.
+                          </p>
+                        ) : linkedLoanId && loanPaymentMap[linkedLoanId] != null ? (
+                          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
+                            Amount source: Loan estimated payment. Next occurrences will use the latest estimate.
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
               </>
             )}
 
@@ -917,8 +1014,12 @@ export function RecurringPage() {
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => {
-                  const amountCents = parseCents(amount);
-                  if (!(amountCents > 0)) return;
+                  const resolvedCents =
+                    useLoanEstimatedPayment && linkedLoanId && loanPaymentMap[linkedLoanId] != null
+                      ? loanPaymentMap[linkedLoanId]!
+                      : parseCents(amount);
+                  if (!(resolvedCents > 0)) return;
+                  const amountCents = resolvedCents;
                   const expectedMinCents = expectedMin.trim() ? parseCents(expectedMin) : undefined;
                   const expectedMaxCents = expectedMax.trim() ? parseCents(expectedMax) : undefined;
                   const every =
@@ -1012,7 +1113,10 @@ export function RecurringPage() {
                     investingTargetType:
                       type !== 'income' && investingTransferEnabled && investingTargetType
                         ? investingTargetType
-                        : undefined
+                        : undefined,
+                    useLoanEstimatedPayment:
+                      type !== 'income' && useLoanEstimatedPayment && linkedLoanId ? true : undefined,
+                    linkedLoanId: type !== 'income' && useLoanEstimatedPayment && linkedLoanId ? linkedLoanId : undefined
                   };
                   if (editingId) {
                     actions.updateRecurringItem(editingId, payload);
