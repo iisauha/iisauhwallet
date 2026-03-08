@@ -3,6 +3,7 @@
  * Used by recurring integration to resolve "estimated payment (now)" by loan id.
  */
 import type { Loan } from '../../state/storage';
+import { loadFederalRepaymentConfig } from '../../state/storage';
 
 function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
   const r = ratePercent / 100;
@@ -31,35 +32,10 @@ function computeAmortizedPaymentCents(
   return Math.round(paymentDollars * 100);
 }
 
-const FPG_2025_CONTIGUOUS = [0, 15650, 21150, 26650, 32150, 37650, 43150, 48650, 54150] as const;
-const FPG_2025_AK = [0, 19550, 26450, 33350, 40250, 47150, 54050, 60950, 67850] as const;
-const FPG_2025_HI = [0, 17980, 24320, 30660, 37000, 43340, 49680, 56020, 62360] as const;
-const FPG_ADD_PER_PERSON_CONTIGUOUS = 5500;
-const FPG_ADD_PER_PERSON_AK = 6900;
-const FPG_ADD_PER_PERSON_HI = 6340;
-
-function getFederalPovertyGuidelineDollars(
-  householdSize: number,
-  stateOfResidency: 'contiguous' | 'AK' | 'HI'
-): number {
-  const size = Math.max(1, Math.min(householdSize, 20));
-  const table =
-    stateOfResidency === 'AK' ? FPG_2025_AK : stateOfResidency === 'HI' ? FPG_2025_HI : FPG_2025_CONTIGUOUS;
-  const addPer =
-    stateOfResidency === 'AK' ? FPG_ADD_PER_PERSON_AK : stateOfResidency === 'HI' ? FPG_ADD_PER_PERSON_HI : FPG_ADD_PER_PERSON_CONTIGUOUS;
-  if (size <= 8) return table[size] as number;
-  return (table[8] as number) + (size - 8) * addPer;
-}
-
-function discretionaryIncomeDollars(
-  agiCents: number,
-  householdSize: number,
-  stateOfResidency: 'contiguous' | 'AK' | 'HI'
-): number {
-  const fpg = getFederalPovertyGuidelineDollars(householdSize, stateOfResidency);
-  const threshold = 1.5 * fpg;
+/** Discretionary income = AGI - threshold (dollars). IBR/PAYE use 150% of poverty level; ICR uses 100%. */
+function discretionaryIncomeDollars(agiCents: number, thresholdDollars: number): number {
   const agiDollars = agiCents / 100;
-  return Math.max(0, agiDollars - threshold);
+  return Math.max(0, agiDollars - thresholdDollars);
 }
 
 const PHASE_OUT_DATE = '2028-07-01';
@@ -108,13 +84,15 @@ function getAgiCents(loan: Loan, detectedAnnualIncomeCents: number): number {
     : Math.max(0, detectedAnnualIncomeCents);
 }
 
-/** One total federal payment (IBR/PAYE/ICR only) from total eligible public balance + income. */
+/** One total federal payment (IBR/PAYE/ICR only) from total eligible public balance + income. Uses user-editable poverty level. */
 function computeFederalTotalPaymentCents(allPublicLoans: Loan[], agiCents: number): number | null {
   const eligible = allPublicLoans.filter((l) => l.category === 'public' && l.borrowerType !== 'parent');
   if (eligible.length === 0) return null;
-  const householdSize = Math.max(1, eligible[0].householdSize ?? 1);
-  const stateOfResidency = (eligible[0].stateOfResidency ?? 'contiguous') as 'contiguous' | 'AK' | 'HI';
-  const discDollars = discretionaryIncomeDollars(agiCents, householdSize, stateOfResidency);
+  const { povertyLevelDollars } = loadFederalRepaymentConfig();
+  const threshold150 = 1.5 * povertyLevelDollars;
+  const threshold100 = 1.0 * povertyLevelDollars;
+  const disc150 = discretionaryIncomeDollars(agiCents, threshold150);
+  const disc100 = discretionaryIncomeDollars(agiCents, threshold100);
   const now = new Date();
   const phaseOutTime = parseDateCompare(PHASE_OUT_DATE);
   const allBeforeCutoff = allPublicLoansDisbursedBefore(allPublicLoans, ALL_PLANS_CUTOFF);
@@ -123,25 +101,15 @@ function computeFederalTotalPaymentCents(allPublicLoans: Loan[], agiCents: numbe
   const beforePhaseOut = now.getTime() < phaseOutTime;
 
   const candidates: number[] = [];
-  const ibrCents = Math.round(((discDollars * 0.1) / 12) * 100);
+  const ibrCents = Math.round((disc150 * 0.1 / 12) * 100);
   if (allBeforeCutoff && beforePhaseOut) candidates.push(ibrCents);
 
-  const payeCapCents = eligible.reduce((s, l) => {
-    const st = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 120);
-    return s + (st ?? 0);
-  }, 0);
-  if (allBeforeCutoff && noLoanBefore2007 && atLeastOneAfter2011 && beforePhaseOut && payeCapCents > 0) {
-    candidates.push(Math.min(ibrCents, payeCapCents));
+  if (allBeforeCutoff && noLoanBefore2007 && atLeastOneAfter2011 && beforePhaseOut) {
+    candidates.push(ibrCents);
   }
 
-  const icr20Cents = Math.round(((discDollars * 0.2) / 12) * 100);
-  const icr12Total = eligible.reduce((s, l) => {
-    const t = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 144);
-    return s + (t ?? 0);
-  }, 0);
-  if (allBeforeCutoff && beforePhaseOut) {
-    candidates.push(icr12Total > 0 ? Math.min(icr20Cents, icr12Total) : icr20Cents);
-  }
+  const icrCents = Math.round((disc100 * 0.2 / 12) * 100);
+  if (allBeforeCutoff && beforePhaseOut) candidates.push(icrCents);
 
   return candidates.length > 0 ? Math.min(...candidates) : null;
 }

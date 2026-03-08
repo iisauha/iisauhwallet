@@ -4,6 +4,8 @@ import { formatCents } from '../../state/calc';
 import {
   loadLoans,
   saveLoans,
+  loadFederalRepaymentConfig,
+  saveFederalRepaymentConfig,
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
@@ -116,36 +118,13 @@ function computeMonthsToPayoff(
 
 // ----- Federal repayment plan formulas and eligibility -----
 // Poverty guidelines: 2025 HHS (48 contiguous; AK/HI higher). Amounts in dollars.
-const FPG_2025_CONTIGUOUS = [0, 15650, 21150, 26650, 32150, 37650, 43150, 48650, 54150] as const;
-const FPG_2025_AK = [0, 19550, 26450, 33350, 40250, 47150, 54050, 60950, 67850] as const;
-const FPG_2025_HI = [0, 17980, 24320, 30660, 37000, 43340, 49680, 56020, 62360] as const;
-const FPG_ADD_PER_PERSON_CONTIGUOUS = 5500;
-const FPG_ADD_PER_PERSON_AK = 6900;
-const FPG_ADD_PER_PERSON_HI = 6340;
-
-function getFederalPovertyGuidelineDollars(
-  householdSize: number,
-  stateOfResidency: 'contiguous' | 'AK' | 'HI'
-): number {
-  const size = Math.max(1, Math.min(householdSize, 20));
-  const table =
-    stateOfResidency === 'AK' ? FPG_2025_AK : stateOfResidency === 'HI' ? FPG_2025_HI : FPG_2025_CONTIGUOUS;
-  const addPer =
-    stateOfResidency === 'AK' ? FPG_ADD_PER_PERSON_AK : stateOfResidency === 'HI' ? FPG_ADD_PER_PERSON_HI : FPG_ADD_PER_PERSON_CONTIGUOUS;
-  if (size <= 8) return table[size] as number;
-  return (table[8] as number) + (size - 8) * addPer;
-}
-
-/** Discretionary income = AGI - (150% × FPG). Returns dollars (for plan formulas). */
+/** Discretionary income = AGI - threshold. Threshold: IBR/PAYE use 150% of poverty level; ICR uses 100%. */
 function discretionaryIncomeDollars(
   agiCents: number,
-  householdSize: number,
-  stateOfResidency: 'contiguous' | 'AK' | 'HI'
+  thresholdDollars: number
 ): number {
-  const fpg = getFederalPovertyGuidelineDollars(householdSize, stateOfResidency);
-  const threshold = 1.5 * fpg;
   const agiDollars = agiCents / 100;
-  return Math.max(0, agiDollars - threshold);
+  return Math.max(0, agiDollars - thresholdDollars);
 }
 
 export type FederalPlanRow = {
@@ -154,6 +133,7 @@ export type FederalPlanRow = {
   monthlyPaymentCents: number;
   forgivenessYears: number;
   eligible: boolean;
+  note?: string;
 };
 
 export type FederalTotals = {
@@ -201,16 +181,18 @@ function hasAtLeastOnePublicLoanAfter(loans: Loan[], after: string): boolean {
   return false;
 }
 
-/** One total federal payment (IBR/PAYE/ICR) based on total eligible public balance + income. */
+/** One total federal payment (IBR/PAYE/ICR) based on total eligible public balance + income. Uses user-editable poverty level. */
 function computeFederalPlanTotals(
   allPublicLoans: Loan[],
-  agiCents: number
+  agiCents: number,
+  povertyLevelDollars: number
 ): FederalTotals {
   const eligible = allPublicLoans.filter((l) => l.category === 'public' && l.borrowerType !== 'parent');
   const totalEligibleBalanceCents = eligible.reduce((s, l) => s + l.balanceCents, 0);
-  const householdSize = Math.max(1, eligible[0]?.householdSize ?? 1);
-  const stateOfResidency = (eligible[0]?.stateOfResidency ?? 'contiguous') as 'contiguous' | 'AK' | 'HI';
-  const discDollars = discretionaryIncomeDollars(agiCents, householdSize, stateOfResidency);
+  const threshold150 = 1.5 * povertyLevelDollars;
+  const threshold100 = 1.0 * povertyLevelDollars;
+  const disc150 = discretionaryIncomeDollars(agiCents, threshold150);
+  const disc100 = discretionaryIncomeDollars(agiCents, threshold100);
   const now = new Date();
   const phaseOutTime = parseDateCompare(PHASE_OUT_DATE);
   const allBeforeCutoff = allPublicLoansDisbursedBefore(allPublicLoans, ALL_PLANS_CUTOFF);
@@ -221,26 +203,29 @@ function computeFederalPlanTotals(
   const plans: FederalPlanRow[] = [];
 
   const ibrEligible = eligible.length > 0 && allBeforeCutoff && beforePhaseOut;
-  const ibrTotalCents = Math.round(((discDollars * 0.1) / 12) * 100);
-  plans.push({ planId: 'ibr', planName: 'IBR', monthlyPaymentCents: ibrTotalCents, forgivenessYears: 20, eligible: ibrEligible });
+  const ibrTotalCents = Math.round((disc150 * 0.1 / 12) * 100);
+  plans.push({ planId: 'ibr', planName: 'IBR (New 2014)', monthlyPaymentCents: ibrTotalCents, forgivenessYears: 20, eligible: ibrEligible });
 
   const payeEligible = eligible.length > 0 && allBeforeCutoff && noLoanBefore2007 && atLeastOneAfter2011 && beforePhaseOut;
-  const payeUncappedCents = ibrTotalCents;
-  const payeCapCents = eligible.reduce((s, l) => {
-    const st = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 120);
-    return s + (st ?? 0);
-  }, 0);
-  const payeTotalCents = payeCapCents > 0 ? Math.min(payeUncappedCents, payeCapCents) : payeUncappedCents;
-  plans.push({ planId: 'paye', planName: 'PAYE', monthlyPaymentCents: payeTotalCents, forgivenessYears: 20, eligible: payeEligible });
+  plans.push({
+    planId: 'paye',
+    planName: 'PAYE',
+    monthlyPaymentCents: ibrTotalCents,
+    forgivenessYears: 20,
+    eligible: payeEligible,
+    note: 'May sunset 7/1/2028; forgiveness uncertain.'
+  });
 
   const icrEligible = eligible.length > 0 && allBeforeCutoff && beforePhaseOut;
-  const icr20PctCents = Math.round(((discDollars * 0.2) / 12) * 100);
-  const icr12TotalCents = eligible.reduce((s, l) => {
-    const t = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 144);
-    return s + (t ?? 0);
-  }, 0);
-  const icrTotalCents = icr12TotalCents > 0 ? Math.min(icr20PctCents, icr12TotalCents) : icr20PctCents;
-  plans.push({ planId: 'icr', planName: 'ICR', monthlyPaymentCents: icrTotalCents, forgivenessYears: 25, eligible: icrEligible });
+  const icrTotalCents = Math.round((disc100 * 0.2 / 12) * 100);
+  plans.push({
+    planId: 'icr',
+    planName: 'ICR',
+    monthlyPaymentCents: icrTotalCents,
+    forgivenessYears: 25,
+    eligible: icrEligible,
+    note: 'May sunset 7/1/2028; forgiveness uncertain.'
+  });
 
   const eligiblePlans = plans.filter((p) => p.eligible);
   const lowestTotalCents = eligiblePlans.length > 0 ? Math.min(...eligiblePlans.map((p) => p.monthlyPaymentCents)) : null;
@@ -617,12 +602,6 @@ function LoanCard(props: {
         {l.lender ? `Servicer: ${l.lender} · ` : null}
         Interest accrual ≈ {formatCents(l.dailyInterestCents)}/day · {formatCents(l.monthlyInterestCents)}/mo
       </div>
-      {l.category === 'public' && (l.repaymentStatus === 'idr' || l.repaymentStatus === 'in_school_interest_only' || l.repaymentStatus === 'grace_interest_only') ? (
-        <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 0, marginBottom: 6 }}>
-          Interest may continue to accrue during IBR/PAYE/ICR.
-          {l.subsidyType === 'subsidized' ? ' Estimated accrual shown; subsidized IBR may reduce unpaid interest for the first 3 years.' : ''}
-        </p>
-      ) : null}
       {l.category === 'public' && l.federalPlans && l.federalPlans.length > 0 ? (
         <div style={{ marginBottom: 8 }}>
           <button
@@ -659,9 +638,14 @@ function LoanCard(props: {
                           }}
                         >
                           <td style={{ padding: '4px 8px' }}>
-                            {p.planName}
+                            <span>{p.planName}</span>
                             {p.planId === lowestId ? ' (lowest)' : ''}
                             {!p.eligible ? ' (not eligible)' : ''}
+                            {p.note ? (
+                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
+                                {p.note}
+                              </span>
+                            ) : null}
                           </td>
                           <td style={{ textAlign: 'right', padding: '4px 8px' }}>
                             {formatCents(p.monthlyPaymentCents)}
@@ -690,13 +674,19 @@ function LoanCard(props: {
   );
 }
 
+export type LoanViewFilter = 'public' | 'private';
+
 export function LoansPage() {
   const data = useLedgerStore((s) => s.data);
   const [state, setState] = useState<LoansState>(() => loadLoans());
+  const [federalConfig, setFederalConfig] = useState(() => loadFederalRepaymentConfig());
+  const [loanView, setLoanView] = useState<LoanViewFilter>('public');
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
+  const [editingPoverty, setEditingPoverty] = useState(false);
+  const [povertyInput, setPovertyInput] = useState('');
 
   const birthdateISO = loadBirthdateISO();
 
@@ -710,8 +700,8 @@ export function LoansPage() {
     const publicLoans = (state.loans || []).filter((l) => l.category === 'public');
     if (!publicLoans.length) return null;
     const agi = getAgiCents(publicLoans[0], detectedAnnualIncomeCents);
-    return computeFederalPlanTotals(publicLoans, agi);
-  }, [state.loans, detectedAnnualIncomeCents]);
+    return computeFederalPlanTotals(publicLoans, agi, federalConfig.povertyLevelDollars);
+  }, [state.loans, detectedAnnualIncomeCents, federalConfig.povertyLevelDollars]);
 
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
     return (state.loans || []).map((l) =>
@@ -819,6 +809,62 @@ export function LoansPage() {
         </div>
       </div>
 
+      {loansWithDerived.length > 0 ? (
+        <div
+          className="segmented"
+          style={{
+            display: 'flex',
+            gap: 0,
+            marginBottom: 12,
+            borderRadius: 8,
+            padding: 2,
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border)'
+          }}
+          role="tablist"
+          aria-label="Loan type"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={loanView === 'public'}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              fontSize: '0.9rem',
+              fontWeight: loanView === 'public' ? 600 : 400,
+              border: 'none',
+              borderRadius: 6,
+              background: loanView === 'public' ? 'var(--bg)' : 'transparent',
+              color: loanView === 'public' ? 'var(--fg)' : 'var(--muted)',
+              cursor: 'pointer'
+            }}
+            onClick={() => setLoanView('public')}
+          >
+            Public
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={loanView === 'private'}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              fontSize: '0.9rem',
+              fontWeight: loanView === 'private' ? 600 : 400,
+              border: 'none',
+              borderRadius: 6,
+              background: loanView === 'private' ? 'var(--bg)' : 'transparent',
+              color: loanView === 'private' ? 'var(--fg)' : 'var(--muted)',
+              cursor: 'pointer'
+            }}
+            onClick={() => setLoanView('private')}
+          >
+            Private
+          </button>
+        </div>
+      ) : null}
+
       {loansWithDerived.length === 0 ? (
         <div className="card" style={{ marginBottom: 16 }}>
           <p style={{ marginTop: 0, marginBottom: 8, color: 'var(--muted)', fontSize: '0.9rem' }}>
@@ -839,25 +885,128 @@ export function LoansPage() {
         </div>
       ) : null}
 
-      {loansWithDerived.some((l) => l.category === 'public') ? (
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 10 }}>
-          IBR, PAYE, and ICR payments use your total eligible federal balance and income. Amounts per loan below are approximate shares only.
-        </p>
+      {loanView === 'public' && loansWithDerived.some((l) => l.category === 'public') ? (
+        <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
+          <div className="summary-kv" style={{ marginTop: 0, marginBottom: 6 }}>
+            <span className="k">Poverty level used</span>
+            <span className="v">
+              {editingPoverty ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--muted)' }}>$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={povertyInput}
+                    onChange={(e) => setPovertyInput(e.target.value)}
+                    style={{ width: 100, padding: '4px 8px' }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+                    onClick={() => {
+                      const val = Math.round(Number(povertyInput));
+                      if (!Number.isNaN(val) && val >= 0) {
+                        const next = { povertyLevelDollars: val };
+                        setFederalConfig(next);
+                        saveFederalRepaymentConfig(next);
+                        setEditingPoverty(false);
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+                    onClick={() => {
+                      setEditingPoverty(false);
+                      setPovertyInput(String(federalConfig.povertyLevelDollars));
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <>${federalConfig.povertyLevelDollars.toLocaleString()}</>
+              )}
+            </span>
+          </div>
+          {!editingPoverty ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+              onClick={() => {
+                setPovertyInput(String(federalConfig.povertyLevelDollars));
+                setEditingPoverty(true);
+              }}
+            >
+              Edit poverty level
+            </button>
+          ) : null}
+        </div>
       ) : null}
-      {loansWithDerived.map((l) => (
-        <LoanCard
-          key={l.id}
-          loan={l}
-          onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
-          onDelete={() => {
-            if (!confirm('Delete this loan?')) return;
-            persist({ loans: state.loans.filter((x) => x.id !== l.id) });
-          }}
-          onPayoffAge={() => setPayoffLoan(l)}
-          onBreakdown={() => setScheduleLoan(l)}
-          onRefinance={l.category === 'private' ? () => setRefiLoan(l) : undefined}
-        />
-      ))}
+
+      {loansWithDerived.length > 0
+        ? (() => {
+            const displayed = loansWithDerived.filter((l) => l.category === loanView);
+            if (displayed.length === 0) {
+              return (
+                <div className="card" style={{ marginBottom: 16, padding: 12 }}>
+                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>
+                    {loanView === 'public' ? 'No public loans.' : 'No private loans.'} Switch tab or add a loan.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-add"
+                    style={{ marginTop: 8 }}
+                    onClick={() =>
+                      setEditor({
+                        mode: 'add',
+                        value: loanToEditor(null, hasRecurringIncome)
+                      })
+                    }
+                  >
+                    + Add loan
+                  </button>
+                </div>
+              );
+            }
+            return displayed.map((l) => (
+              <LoanCard
+                key={l.id}
+                loan={l}
+                onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
+                onDelete={() => {
+                  if (!confirm('Delete this loan?')) return;
+                  persist({ loans: state.loans.filter((x) => x.id !== l.id) });
+                }}
+                onPayoffAge={() => setPayoffLoan(l)}
+                onBreakdown={() => setScheduleLoan(l)}
+                onRefinance={l.category === 'private' ? () => setRefiLoan(l) : undefined}
+              />
+            ));
+          })()
+        : null}
+      {loansWithDerived.length > 0 ? (
+        <button
+          type="button"
+          className="btn btn-add"
+          style={{ width: '100%', marginTop: 8 }}
+          onClick={() =>
+            setEditor({
+              mode: 'add',
+              value: loanToEditor(null, hasRecurringIncome)
+            })
+          }
+        >
+          + Add loan
+        </button>
+      ) : null}
 
       {loansWithDerived.length > 0 ? (
         <button

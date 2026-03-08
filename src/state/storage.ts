@@ -20,7 +20,8 @@ import {
   UI_DROPDOWN_STATE_KEY,
   UPCOMING_WINDOW_KEY,
   LOANS_KEY,
-  BIRTHDATE_KEY
+  BIRTHDATE_KEY,
+  FEDERAL_REPAYMENT_CONFIG_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -701,6 +702,32 @@ export function loadLoans(): LoansState {
 export function saveLoans(state: LoansState) {
   try {
     localStorage.setItem(LOANS_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
+export type FederalRepaymentConfig = {
+  povertyLevelDollars: number;
+};
+
+const DEFAULT_POVERTY_LEVEL_DOLLARS = 15650;
+
+export function loadFederalRepaymentConfig(): FederalRepaymentConfig {
+  try {
+    const raw = localStorage.getItem(FEDERAL_REPAYMENT_CONFIG_KEY);
+    if (!raw) return { povertyLevelDollars: DEFAULT_POVERTY_LEVEL_DOLLARS };
+    const parsed = JSON.parse(raw) as FederalRepaymentConfig;
+    if (typeof parsed.povertyLevelDollars === 'number' && parsed.povertyLevelDollars >= 0) {
+      return { povertyLevelDollars: parsed.povertyLevelDollars };
+    }
+    return { povertyLevelDollars: DEFAULT_POVERTY_LEVEL_DOLLARS };
+  } catch (_) {
+    return { povertyLevelDollars: DEFAULT_POVERTY_LEVEL_DOLLARS };
+  }
+}
+
+export function saveFederalRepaymentConfig(config: FederalRepaymentConfig) {
+  try {
+    localStorage.setItem(FEDERAL_REPAYMENT_CONFIG_KEY, JSON.stringify(config));
   } catch (_) {}
 }
 
