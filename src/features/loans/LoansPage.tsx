@@ -238,6 +238,8 @@ type LoanWithDerived = Loan & {
 };
 
 function getActiveMonthlyPayment(loan: LoanWithDerived): number | null {
+  // Private: range-based only; no legacy grace override
+  if (loan.category === 'private') return loan.monthlyNowCents;
   const today = new Date();
   if (loan.gracePeriodEndDate) {
     const graceEnd = new Date(loan.gracePeriodEndDate + 'T00:00:00');
