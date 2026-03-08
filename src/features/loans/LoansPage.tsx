@@ -593,8 +593,9 @@ function LoanCard(props: {
   onDelete: () => void;
   onPayoffAge: () => void;
   onRefinance?: () => void;
+  onShowDefermentInfo?: () => void;
 }) {
-  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance } = props;
+  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance, onShowDefermentInfo } = props;
   const [plansOpen, setPlansOpen] = useState(false);
 
   return (
@@ -632,19 +633,33 @@ function LoanCard(props: {
           Next payment date: {l.nextPaymentDate}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
+      <div style={{ fontSize: '0.9rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
         Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
+        {onShowDefermentInfo ? (
+          <button
+            type="button"
+            aria-label="Deferment balance details"
+            onClick={onShowDefermentInfo}
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--muted)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0
+            }}
+          >
+            i
+          </button>
+        ) : null}
       </div>
-      {l.category === 'private' && l.repaymentStatus === 'deferred_forbearance' && l.estimatedCurrentBalanceCents != null && l.estimatedCurrentBalanceCents > 0 ? (
-        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
-          Estimated current balance: {formatCents(l.estimatedCurrentBalanceCents)}
-          {l.balanceAtRepaymentStartCents != null && l.balanceAtRepaymentStartCents > 0 ? (
-            <span style={{ display: 'block', marginTop: 2 }}>
-              Balance at repayment start: {formatCents(l.balanceAtRepaymentStartCents)}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
       {l.category === 'public' && (l.totalFederalPaymentCents != null || l.approximateShareCents != null) ? (
         <>
           <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 2 }}>
@@ -654,15 +669,17 @@ function LoanCard(props: {
             Approximate share of total: {l.approximateShareCents != null ? formatCents(l.approximateShareCents) : '—'} (not separately calculated)
           </div>
         </>
-      ) : l.category === 'private' || l.monthlyLaterCents != null ? (
+      ) : l.category === 'private' && l.repaymentStatus !== 'deferred_forbearance' && l.monthlyLaterCents != null ? (
         <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
-          After grace: {l.monthlyLaterCents != null ? formatCents(l.monthlyLaterCents) : '—'}
+          After grace: {formatCents(l.monthlyLaterCents)}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
-        {l.lender ? `Servicer: ${l.lender} · ` : null}
-        Interest accrual ≈ {formatCents(l.dailyInterestCents)}/day · {formatCents(l.monthlyInterestCents)}/mo
-      </div>
+      {!(l.category === 'private' && l.repaymentStatus === 'deferred_forbearance') ? (
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
+          {l.lender ? `Servicer: ${l.lender} · ` : null}
+          Interest accrual ≈ {formatCents(l.dailyInterestCents)}/day · {formatCents(l.monthlyInterestCents)}/mo
+        </div>
+      ) : null}
       {l.category === 'public' && l.federalPlans && l.federalPlans.length > 0 ? (
         <div style={{ marginBottom: 8 }}>
           <button
@@ -734,6 +751,56 @@ function LoanCard(props: {
   );
 }
 
+function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => void }) {
+  const { loan, onClose } = props;
+  const ranges = (loan.paymentScheduleRanges ?? []).slice().sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const defermentRanges = ranges.filter((r) => r.paymentCents === 0);
+
+  return (
+    <>
+      <div className="summary-compact" style={{ gap: 8 }}>
+        <div className="summary-kv">
+          <span className="k">Starting balance</span>
+          <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.balanceCents)}</span>
+        </div>
+        {loan.estimatedCurrentBalanceCents != null && loan.estimatedCurrentBalanceCents > 0 ? (
+          <div className="summary-kv">
+            <span className="k">Estimated current balance</span>
+            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.estimatedCurrentBalanceCents)}</span>
+          </div>
+        ) : null}
+        {defermentRanges.length > 0 ? (
+          <div style={{ marginTop: 8 }}>
+            <span className="k" style={{ display: 'block', marginBottom: 4 }}>Deferred date range(s)</span>
+            {defermentRanges.map((r) => (
+              <div key={r.id} style={{ fontSize: '0.85rem', marginBottom: 4, padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
+                {r.startDate} → {r.endDate}
+                {r.accruedInterestCents != null && r.accruedInterestCents > 0 ? (
+                  <span style={{ display: 'block', color: 'var(--muted)', marginTop: 2 }}>
+                    Accrued interest during range: {formatCents(r.accruedInterestCents)}
+                  </span>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {loan.balanceAtRepaymentStartCents != null && loan.balanceAtRepaymentStartCents > 0 ? (
+          <div className="summary-kv" style={{ marginTop: 4 }}>
+            <span className="k">Estimated balance at repayment start</span>
+            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.balanceAtRepaymentStartCents)}</span>
+          </div>
+        ) : null}
+      </div>
+      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 12, marginBottom: 0 }}>
+        The after-grace payment that later becomes the current payment already accounts for this balance increase.
+      </p>
+      <div style={{ marginTop: 16 }}>
+        <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
+      </div>
+    </>
+  );
+}
+
 export type LoanViewFilter = 'public' | 'private';
 
 export function LoansPage() {
@@ -745,6 +812,7 @@ export function LoansPage() {
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
   const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
+  const [defermentInfoLoan, setDefermentInfoLoan] = useState<LoanWithDerived | null>(null);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -840,6 +908,27 @@ export function LoansPage() {
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
 
+  /** Future-only amounts (not yet active in Payment(now)) for the hidden info box. */
+  const futureOnlyBreakdown = useMemo(() => {
+    const today = todayISO();
+    let futurePrivateCents = 0;
+    loansWithDerived.forEach((l) => {
+      const fut = getFirstFutureSchedulePaymentCents(l);
+      if (fut != null && fut > 0) futurePrivateCents += fut;
+    });
+    const mode = publicSummary.paymentMode ?? (publicSummary.firstPaymentDate ? 'first_payment_date' : 'current_payment');
+    const estimated = publicSummary.estimatedMonthlyPaymentCents ?? 0;
+    const futurePublicCents =
+      mode === 'first_payment_date' &&
+      estimated > 0 &&
+      publicSummary.firstPaymentDate &&
+      today < publicSummary.firstPaymentDate
+        ? estimated
+        : 0;
+    const totalFutureCents = futurePrivateCents + futurePublicCents;
+    return { futurePrivateCents, futurePublicCents, totalFutureCents };
+  }, [loansWithDerived, publicSummary]);
+
   function persist(next: Partial<LoansState>) {
     setState((prev) => {
       const merged: LoansState = {
@@ -869,7 +958,7 @@ export function LoansPage() {
             Payment (now)
             <button
               type="button"
-              aria-label="After-grace breakdown"
+              aria-label="Future payment breakdown"
               onClick={() => setShowAfterGraceBreakdown(true)}
               style={{
                 width: 22,
@@ -1007,6 +1096,7 @@ export function LoansPage() {
                   }}
                   onPayoffAge={() => setPayoffLoan(l)}
                   onRefinance={() => setRefiLoan(l)}
+                  onShowDefermentInfo={l.repaymentStatus === 'deferred_forbearance' ? () => setDefermentInfoLoan(l) : undefined}
                 />
               ))}
               <button
@@ -1083,37 +1173,56 @@ export function LoansPage() {
         {refiLoan ? <RefinanceSimulator loan={refiLoan} /> : null}
       </Modal>
 
-      {/* After-grace breakdown (hidden by default) */}
+      {/* Future payment breakdown: only amounts not yet active in Payment(now) */}
       <Modal
         open={showAfterGraceBreakdown}
-        title="After-grace breakdown"
+        title="Future payment breakdown"
         onClose={() => setShowAfterGraceBreakdown(false)}
       >
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
+          Only future amounts that are not yet active in Payment(now) are shown below.
+        </p>
         <div className="summary-compact" style={{ gap: 8 }}>
           <div className="summary-kv">
-            <span className="k">Public</span>
+            <span className="k">Private (future schedule rows)</span>
             <span className="v" style={{ color: 'var(--red)' }}>
-              {summary.publicAfterGraceCents > 0 ? formatCents(summary.publicAfterGraceCents) : '—'}
+              {futureOnlyBreakdown.futurePrivateCents > 0 ? formatCents(futureOnlyBreakdown.futurePrivateCents) : '—'}
             </span>
           </div>
           <div className="summary-kv">
-            <span className="k">Private</span>
+            <span className="k">Public (first payment date not yet reached)</span>
             <span className="v" style={{ color: 'var(--red)' }}>
-              {summary.privateAfterGraceCents > 0 ? formatCents(summary.privateAfterGraceCents) : '—'}
+              {futureOnlyBreakdown.futurePublicCents > 0 ? formatCents(futureOnlyBreakdown.futurePublicCents) : '—'}
             </span>
           </div>
           <div className="summary-kv" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-            <span className="k">Total after grace</span>
+            <span className="k">Total future hidden amount</span>
             <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-              {summary.totalMonthlyLater != null ? formatCents(summary.totalMonthlyLater) : '—'}
+              {futureOnlyBreakdown.totalFutureCents > 0 ? formatCents(futureOnlyBreakdown.totalFutureCents) : '—'}
             </span>
           </div>
         </div>
+        {futureOnlyBreakdown.totalFutureCents === 0 ? (
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 8, marginBottom: 0 }}>
+            No future hidden amounts right now.
+          </p>
+        ) : null}
         <div style={{ marginTop: 16 }}>
           <button type="button" className="btn btn-secondary" onClick={() => setShowAfterGraceBreakdown(false)}>
             Close
           </button>
         </div>
+      </Modal>
+
+      {/* Per-loan deferment balance / growth info (private Deferred / Forbearance only) */}
+      <Modal
+        open={!!defermentInfoLoan}
+        title={defermentInfoLoan ? `Deferment details: ${defermentInfoLoan.name}` : 'Deferment details'}
+        onClose={() => setDefermentInfoLoan(null)}
+      >
+        {defermentInfoLoan ? (
+          <DefermentInfoContent loan={defermentInfoLoan} onClose={() => setDefermentInfoLoan(null)} />
+        ) : null}
       </Modal>
     </div>
   );
