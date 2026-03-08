@@ -87,7 +87,12 @@ export function FederalLoanParametersModal({
               type="number"
               min={1}
               value={params.householdSize}
-              onChange={(e) => update({ householdSize: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+              onChange={(e) =>
+                setParams({
+                  ...params,
+                  householdSize: Math.max(1, Number(e.target.value) || 1)
+                })
+              }
               style={{ width: 80, padding: '4px 8px' }}
             />
           </div>
@@ -97,7 +102,12 @@ export function FederalLoanParametersModal({
               type="number"
               min={0}
               value={params.dependents}
-              onChange={(e) => update({ dependents: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+              onChange={(e) =>
+                setParams({
+                  ...params,
+                  dependents: Math.max(0, Number(e.target.value) || 0)
+                })
+              }
               style={{ width: 80, padding: '4px 8px' }}
             />
           </div>
@@ -158,7 +168,10 @@ export function FederalLoanParametersModal({
                 step={100}
                 value={agiDollars}
                 onChange={(e) =>
-                  update({ agiCents: Math.round(parseFloat(e.target.value || '0') * 100) })
+                  setParams({
+                    ...params,
+                    agiCents: Math.round((Number(e.target.value) || 0) * 100)
+                  })
                 }
                 style={{ width: 120, padding: '4px 8px' }}
               />
@@ -195,7 +208,10 @@ export function FederalLoanParametersModal({
               step={100}
               value={params.povertyLevel}
               onChange={(e) =>
-                update({ povertyLevel: Math.max(0, parseFloat(e.target.value || '0') || 0) })
+                setParams({
+                  ...params,
+                  povertyLevel: Math.max(0, Number(e.target.value) || 0)
+                })
               }
               style={{ width: 120, padding: '4px 8px' }}
             />
