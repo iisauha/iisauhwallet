@@ -149,16 +149,21 @@ function discretionaryIncomeDollars(
 }
 
 export type FederalPlanRow = {
-  planId: 'ibr' | 'paye' | 'icr' | 'rap' | 'standard';
+  planId: 'ibr' | 'paye' | 'icr';
   planName: string;
   monthlyPaymentCents: number;
   forgivenessYears: number;
   eligible: boolean;
 };
 
+export type FederalTotals = {
+  totalEligibleBalanceCents: number;
+  plans: FederalPlanRow[];
+  lowestTotalCents: number | null;
+};
+
 const PHASE_OUT_DATE = '2028-07-01';
-const RAP_START_DATE = '2026-07-01';
-const ALL_PLANS_CUTOFF = '2026-07-01'; // IBR/PAYE/ICR only if all disbursed before this
+const ALL_PLANS_CUTOFF = '2026-07-01';
 const PAYE_NO_LOAN_BEFORE = '2007-10-01';
 const PAYE_AT_LEAST_ONE_AFTER = '2011-10-01';
 
@@ -196,107 +201,51 @@ function hasAtLeastOnePublicLoanAfter(loans: Loan[], after: string): boolean {
   return false;
 }
 
-function computeFederalPlans(
-  loan: Loan,
+/** One total federal payment (IBR/PAYE/ICR) based on total eligible public balance + income. */
+function computeFederalPlanTotals(
   allPublicLoans: Loan[],
   agiCents: number
-): { plans: FederalPlanRow[]; lowestEligibleCents: number | null } {
-  const plans: FederalPlanRow[] = [];
-  const isParent = loan.borrowerType === 'parent';
-  const householdSize = Math.max(1, loan.householdSize ?? 1);
-  const stateOfResidency = loan.stateOfResidency ?? 'contiguous';
+): FederalTotals {
+  const eligible = allPublicLoans.filter((l) => l.category === 'public' && l.borrowerType !== 'parent');
+  const totalEligibleBalanceCents = eligible.reduce((s, l) => s + l.balanceCents, 0);
+  const householdSize = Math.max(1, eligible[0]?.householdSize ?? 1);
+  const stateOfResidency = (eligible[0]?.stateOfResidency ?? 'contiguous') as 'contiguous' | 'AK' | 'HI';
   const discDollars = discretionaryIncomeDollars(agiCents, householdSize, stateOfResidency);
   const now = new Date();
   const phaseOutTime = parseDateCompare(PHASE_OUT_DATE);
-  const rapStartTime = parseDateCompare(RAP_START_DATE);
-
-  const standard120 = computeAmortizedPaymentCents(
-    loan.balanceCents,
-    loan.interestRatePercent,
-    120
-  );
-  const standardCents = standard120 ?? computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent);
-  const icr12Year = computeAmortizedPaymentCents(loan.balanceCents, loan.interestRatePercent, 144);
-
   const allBeforeCutoff = allPublicLoansDisbursedBefore(allPublicLoans, ALL_PLANS_CUTOFF);
   const noLoanBefore2007 = hasNoPublicLoanBefore(allPublicLoans, PAYE_NO_LOAN_BEFORE);
   const atLeastOneAfter2011 = hasAtLeastOnePublicLoanAfter(allPublicLoans, PAYE_AT_LEAST_ONE_AFTER);
   const beforePhaseOut = now.getTime() < phaseOutTime;
-  const rapAvailable = now.getTime() >= rapStartTime;
 
-  // IBR: 10% discretionary / 12; 20 yr forgiveness. Eligible if all disbursed before 7/1/2026, not parent.
-  const ibrEligible = loan.category === 'public' && !isParent && allBeforeCutoff && beforePhaseOut;
-  const ibrMonthlyDollars = (discDollars * 0.1) / 12;
-  const ibrCents = Math.round(ibrMonthlyDollars * 100);
-  plans.push({
-    planId: 'ibr',
-    planName: 'IBR',
-    monthlyPaymentCents: ibrCents,
-    forgivenessYears: 20,
-    eligible: ibrEligible
-  });
+  const plans: FederalPlanRow[] = [];
 
-  // PAYE: 10% discretionary / 12, cap at Standard 10-yr; 20 yr. No loan before 10/1/2007, at least one after 10/1/2011; before phase out.
-  const payeEligible =
-    loan.category === 'public' &&
-    !isParent &&
-    allBeforeCutoff &&
-    noLoanBefore2007 &&
-    atLeastOneAfter2011 &&
-    beforePhaseOut;
-  const payeUncapped = (discDollars * 0.1) / 12;
-  const payeCapped =
-    standardCents != null ? Math.min(payeUncapped * 100, standardCents) : payeUncapped * 100;
-  const payeCents = Math.round(payeCapped);
-  plans.push({
-    planId: 'paye',
-    planName: 'PAYE',
-    monthlyPaymentCents: payeCents,
-    forgivenessYears: 20,
-    eligible: payeEligible
-  });
+  const ibrEligible = eligible.length > 0 && allBeforeCutoff && beforePhaseOut;
+  const ibrTotalCents = Math.round(((discDollars * 0.1) / 12) * 100);
+  plans.push({ planId: 'ibr', planName: 'IBR', monthlyPaymentCents: ibrTotalCents, forgivenessYears: 20, eligible: ibrEligible });
 
-  // ICR: lesser of 20% discretionary/12 or 12-year amortized; 25 yr. Estimates only. Phase out.
-  const icrEligible = loan.category === 'public' && !isParent && allBeforeCutoff && beforePhaseOut;
-  const icr20Pct = (discDollars * 0.2) / 12;
-  const icr12YearCents = icr12Year ?? Infinity;
-  const icrCents = Math.round(Math.min(icr20Pct * 100, icr12YearCents));
-  plans.push({
-    planId: 'icr',
-    planName: 'ICR',
-    monthlyPaymentCents: icrCents,
-    forgivenessYears: 25,
-    eligible: icrEligible
-  });
+  const payeEligible = eligible.length > 0 && allBeforeCutoff && noLoanBefore2007 && atLeastOneAfter2011 && beforePhaseOut;
+  const payeUncappedCents = ibrTotalCents;
+  const payeCapCents = eligible.reduce((s, l) => {
+    const st = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 120);
+    return s + (st ?? 0);
+  }, 0);
+  const payeTotalCents = payeCapCents > 0 ? Math.min(payeUncappedCents, payeCapCents) : payeUncappedCents;
+  plans.push({ planId: 'paye', planName: 'PAYE', monthlyPaymentCents: payeTotalCents, forgivenessYears: 20, eligible: payeEligible });
 
-  // RAP: 6% discretionary / 12, min $10/mo; 30 yr. Available from 7/1/2026.
-  const rapEligible = loan.category === 'public' && !isParent && rapAvailable;
-  const rapUncapped = (discDollars * 0.06) / 12;
-  const rapCents = Math.max(1000, Math.round(rapUncapped * 100)); // $10 min = 1000 cents
-  plans.push({
-    planId: 'rap',
-    planName: 'RAP',
-    monthlyPaymentCents: rapCents,
-    forgivenessYears: 30,
-    eligible: rapEligible
-  });
-
-  // Standard 10-year: always eligible
-  plans.push({
-    planId: 'standard',
-    planName: 'Standard',
-    monthlyPaymentCents: standardCents,
-    forgivenessYears: 10,
-    eligible: true
-  });
+  const icrEligible = eligible.length > 0 && allBeforeCutoff && beforePhaseOut;
+  const icr20PctCents = Math.round(((discDollars * 0.2) / 12) * 100);
+  const icr12TotalCents = eligible.reduce((s, l) => {
+    const t = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 144);
+    return s + (t ?? 0);
+  }, 0);
+  const icrTotalCents = icr12TotalCents > 0 ? Math.min(icr20PctCents, icr12TotalCents) : icr20PctCents;
+  plans.push({ planId: 'icr', planName: 'ICR', monthlyPaymentCents: icrTotalCents, forgivenessYears: 25, eligible: icrEligible });
 
   const eligiblePlans = plans.filter((p) => p.eligible);
-  const lowestEligibleCents =
-    eligiblePlans.length > 0
-      ? Math.min(...eligiblePlans.map((p) => p.monthlyPaymentCents))
-      : null;
+  const lowestTotalCents = eligiblePlans.length > 0 ? Math.min(...eligiblePlans.map((p) => p.monthlyPaymentCents)) : null;
 
-  return { plans, lowestEligibleCents };
+  return { totalEligibleBalanceCents, plans, lowestTotalCents };
 }
 
 type LoanWithDerived = Loan & {
@@ -306,6 +255,10 @@ type LoanWithDerived = Loan & {
   monthlyInterestCents: number;
   payoffMonths: number | null;
   federalPlans?: FederalPlanRow[];
+  /** Total federal (IBR/PAYE/ICR) monthly payment; same for all eligible public loans. */
+  totalFederalPaymentCents?: number | null;
+  /** This loan's approximate share of total federal payment (display only). */
+  approximateShareCents?: number | null;
 };
 
 function getAgiCents(loan: Loan, detectedAnnualIncomeCents: number): number {
@@ -318,7 +271,8 @@ function getAgiCents(loan: Loan, detectedAnnualIncomeCents: number): number {
 function deriveForLoan(
   loan: Loan,
   allLoans: Loan[],
-  detectedAnnualIncomeCents: number
+  detectedAnnualIncomeCents: number,
+  federalTotals: FederalTotals | null
 ): LoanWithDerived {
   const { balanceCents, interestRatePercent, repaymentStatus, termMonths, category } = loan;
   const allPublicLoans = allLoans.filter((l) => l.category === 'public');
@@ -338,38 +292,48 @@ function deriveForLoan(
   let monthlyLaterCents: number | null = null;
   let payoffMonths: number | null = null;
   let federalPlans: FederalPlanRow[] | undefined;
+  let totalFederalPaymentCents: number | null | undefined;
+  let approximateShareCents: number | null | undefined;
 
   const isPublicInSchoolOrGrace =
     category === 'public' &&
     (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only');
 
   if (category === 'public') {
-    const agiCents = getAgiCents(loan, detectedAnnualIncomeCents);
-    const { plans, lowestEligibleCents } = computeFederalPlans(loan, allPublicLoans, agiCents);
-    federalPlans = plans;
+    const isParent = loan.borrowerType === 'parent';
+    const eligibleForIdr = !isParent && federalTotals && federalTotals.totalEligibleBalanceCents > 0;
+    const totalPayment = federalTotals?.lowestTotalCents ?? null;
+    federalPlans = federalTotals?.plans;
+
+    if (eligibleForIdr && federalTotals) {
+      totalFederalPaymentCents = federalTotals.lowestTotalCents;
+      approximateShareCents =
+        federalTotals.totalEligibleBalanceCents > 0 && federalTotals.lowestTotalCents != null
+          ? Math.round((balanceCents / federalTotals.totalEligibleBalanceCents) * federalTotals.lowestTotalCents)
+          : null;
+    }
 
     if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
-      // In school: $0 current payment (per Part 6). After grace = lowest eligible plan.
       monthlyNowCents = 0;
-      monthlyLaterCents = lowestEligibleCents;
+      monthlyLaterCents = eligibleForIdr ? approximateShareCents ?? null : null;
       payoffMonths =
-        monthlyLaterCents != null && monthlyLaterCents > 0
-          ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyLaterCents)
+        totalPayment != null && totalPayment > 0
+          ? computeMonthsToPayoff(balanceCents, interestRatePercent, approximateShareCents ?? fullPaymentCents)
           : computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
     } else if (repaymentStatus === 'full_repayment') {
       monthlyNowCents = fullPaymentCents;
       monthlyLaterCents = null;
       payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
     } else if (repaymentStatus === 'idr') {
-      monthlyNowCents = lowestEligibleCents;
+      monthlyNowCents = eligibleForIdr ? approximateShareCents ?? null : null;
       monthlyLaterCents = null;
       payoffMonths =
-        monthlyNowCents != null && monthlyNowCents > 0
-          ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyNowCents)
+        totalPayment != null && (approximateShareCents ?? 0) > 0
+          ? computeMonthsToPayoff(balanceCents, interestRatePercent, approximateShareCents!)
           : null;
     } else if (repaymentStatus === 'deferred_forbearance') {
       monthlyNowCents = 0;
-      monthlyLaterCents = lowestEligibleCents ?? fullPaymentCents;
+      monthlyLaterCents = eligibleForIdr ? approximateShareCents ?? fullPaymentCents : fullPaymentCents;
       payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
     } else if (repaymentStatus === 'custom_payment') {
       const custom = loan.nextPaymentCents && loan.nextPaymentCents > 0 ? loan.nextPaymentCents : null;
@@ -417,7 +381,9 @@ function deriveForLoan(
     dailyInterestCents,
     monthlyInterestCents,
     payoffMonths,
-    federalPlans
+    federalPlans,
+    totalFederalPaymentCents,
+    approximateShareCents
   };
 }
 
@@ -630,15 +596,33 @@ function LoanCard(props: {
           Next payment date: {l.nextPaymentDate}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: 6 }}>
-        Estimated payment after grace:{' '}
-        {l.monthlyLaterCents != null ? formatCents(l.monthlyLaterCents) : '—'}
+      <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
+        Payment now: {l.monthlyNowCents != null ? formatCents(l.monthlyNowCents) : '—'}
       </div>
-      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>
-        {l.lender ? `Servicer: ${l.lender}` : null}
-        {l.lender ? ' · ' : null}
-        Daily ≈ {formatCents(l.dailyInterestCents)}
+      {l.category === 'public' && (l.totalFederalPaymentCents != null || l.approximateShareCents != null) ? (
+        <>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 2 }}>
+            Total federal payment (after grace): {l.totalFederalPaymentCents != null ? formatCents(l.totalFederalPaymentCents) : '—'}
+          </div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
+            Approximate share of total: {l.approximateShareCents != null ? formatCents(l.approximateShareCents) : '—'} (not separately calculated)
+          </div>
+        </>
+      ) : l.category === 'private' || l.monthlyLaterCents != null ? (
+        <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
+          After grace: {l.monthlyLaterCents != null ? formatCents(l.monthlyLaterCents) : '—'}
+        </div>
+      ) : null}
+      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
+        {l.lender ? `Servicer: ${l.lender} · ` : null}
+        Interest accrual ≈ {formatCents(l.dailyInterestCents)}/day · {formatCents(l.monthlyInterestCents)}/mo
       </div>
+      {l.category === 'public' && (l.repaymentStatus === 'idr' || l.repaymentStatus === 'in_school_interest_only' || l.repaymentStatus === 'grace_interest_only') ? (
+        <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 0, marginBottom: 6 }}>
+          Interest may continue to accrue during IBR/PAYE/ICR.
+          {l.subsidyType === 'subsidized' ? ' Estimated accrual shown; subsidized IBR may reduce unpaid interest for the first 3 years.' : ''}
+        </p>
+      ) : null}
       {l.category === 'public' && l.federalPlans && l.federalPlans.length > 0 ? (
         <div style={{ marginBottom: 8 }}>
           <button
@@ -651,37 +635,46 @@ function LoanCard(props: {
           </button>
           {plansOpen ? (
             <div style={{ marginTop: 8, overflowX: 'auto' }}>
-              <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <th style={{ textAlign: 'left', padding: '4px 8px' }}>Plan</th>
-                    <th style={{ textAlign: 'right', padding: '4px 8px' }}>Monthly payment</th>
-                    <th style={{ textAlign: 'right', padding: '4px 8px' }}>Forgiveness</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {l.federalPlans.map((p) => (
-                    <tr
-                      key={p.planId}
-                      style={{
-                        borderBottom: '1px solid var(--border)',
-                        opacity: p.eligible ? 1 : 0.6
-                      }}
-                    >
-                      <td style={{ padding: '4px 8px' }}>
-                        {p.planName}
-                        {!p.eligible ? ' (not eligible)' : ''}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '4px 8px' }}>
-                        {formatCents(p.monthlyPaymentCents)}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '4px 8px' }}>
-                        {p.forgivenessYears} years
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {(() => {
+                const eligible = l.federalPlans!.filter((p) => p.eligible);
+                const lowestId = eligible.length > 0
+                  ? eligible.reduce((a, b) => (a.monthlyPaymentCents <= b.monthlyPaymentCents ? a : b)).planId
+                  : null;
+                return (
+                  <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                        <th style={{ textAlign: 'left', padding: '4px 8px' }}>Plan</th>
+                        <th style={{ textAlign: 'right', padding: '4px 8px' }}>Total monthly</th>
+                        <th style={{ textAlign: 'right', padding: '4px 8px' }}>Forgiveness</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {l.federalPlans!.map((p) => (
+                        <tr
+                          key={p.planId}
+                          style={{
+                            borderBottom: '1px solid var(--border)',
+                            opacity: p.eligible ? 1 : 0.6
+                          }}
+                        >
+                          <td style={{ padding: '4px 8px' }}>
+                            {p.planName}
+                            {p.planId === lowestId ? ' (lowest)' : ''}
+                            {!p.eligible ? ' (not eligible)' : ''}
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '4px 8px' }}>
+                            {formatCents(p.monthlyPaymentCents)}
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '4px 8px' }}>
+                            {p.forgivenessYears} years
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
           ) : null}
         </div>
@@ -713,11 +706,18 @@ export function LoansPage() {
   );
   const detectedAnnualIncomeCents = detectedAgi.agiCents;
 
+  const federalTotals = useMemo(() => {
+    const publicLoans = (state.loans || []).filter((l) => l.category === 'public');
+    if (!publicLoans.length) return null;
+    const agi = getAgiCents(publicLoans[0], detectedAnnualIncomeCents);
+    return computeFederalPlanTotals(publicLoans, agi);
+  }, [state.loans, detectedAnnualIncomeCents]);
+
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
     return (state.loans || []).map((l) =>
-      deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents)
+      deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents, federalTotals)
     );
-  }, [state.loans, detectedAnnualIncomeCents]);
+  }, [state.loans, detectedAnnualIncomeCents, federalTotals]);
 
   const summary = useMemo(() => {
     let totalBalance = 0;
@@ -839,6 +839,11 @@ export function LoansPage() {
         </div>
       ) : null}
 
+      {loansWithDerived.some((l) => l.category === 'public') ? (
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 10 }}>
+          IBR, PAYE, and ICR payments use your total eligible federal balance and income. Amounts per loan below are approximate shares only.
+        </p>
+      ) : null}
       {loansWithDerived.map((l) => (
         <LoanCard
           key={l.id}

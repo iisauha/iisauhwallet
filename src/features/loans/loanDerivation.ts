@@ -63,7 +63,6 @@ function discretionaryIncomeDollars(
 }
 
 const PHASE_OUT_DATE = '2028-07-01';
-const RAP_START_DATE = '2026-07-01';
 const ALL_PLANS_CUTOFF = '2026-07-01';
 const PAYE_NO_LOAN_BEFORE = '2007-10-01';
 const PAYE_AT_LEAST_ONE_AFTER = '2011-10-01';
@@ -109,53 +108,40 @@ function getAgiCents(loan: Loan, detectedAnnualIncomeCents: number): number {
     : Math.max(0, detectedAnnualIncomeCents);
 }
 
-function computeFederalLowestCents(
-  loan: Loan,
-  allPublicLoans: Loan[],
-  agiCents: number
-): number | null {
-  const isParent = loan.borrowerType === 'parent';
-  const householdSize = Math.max(1, loan.householdSize ?? 1);
-  const stateOfResidency = (loan.stateOfResidency ?? 'contiguous') as 'contiguous' | 'AK' | 'HI';
+/** One total federal payment (IBR/PAYE/ICR only) from total eligible public balance + income. */
+function computeFederalTotalPaymentCents(allPublicLoans: Loan[], agiCents: number): number | null {
+  const eligible = allPublicLoans.filter((l) => l.category === 'public' && l.borrowerType !== 'parent');
+  if (eligible.length === 0) return null;
+  const householdSize = Math.max(1, eligible[0].householdSize ?? 1);
+  const stateOfResidency = (eligible[0].stateOfResidency ?? 'contiguous') as 'contiguous' | 'AK' | 'HI';
   const discDollars = discretionaryIncomeDollars(agiCents, householdSize, stateOfResidency);
   const now = new Date();
   const phaseOutTime = parseDateCompare(PHASE_OUT_DATE);
-  const rapStartTime = parseDateCompare(RAP_START_DATE);
-
-  const standard120 = computeAmortizedPaymentCents(loan.balanceCents, loan.interestRatePercent, 120);
-  const standardCents = standard120 ?? computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent);
-  const icr12Year = computeAmortizedPaymentCents(loan.balanceCents, loan.interestRatePercent, 144);
-
   const allBeforeCutoff = allPublicLoansDisbursedBefore(allPublicLoans, ALL_PLANS_CUTOFF);
   const noLoanBefore2007 = hasNoPublicLoanBefore(allPublicLoans, PAYE_NO_LOAN_BEFORE);
   const atLeastOneAfter2011 = hasAtLeastOnePublicLoanAfter(allPublicLoans, PAYE_AT_LEAST_ONE_AFTER);
   const beforePhaseOut = now.getTime() < phaseOutTime;
-  const rapAvailable = now.getTime() >= rapStartTime;
 
   const candidates: number[] = [];
+  const ibrCents = Math.round(((discDollars * 0.1) / 12) * 100);
+  if (allBeforeCutoff && beforePhaseOut) candidates.push(ibrCents);
 
-  if (loan.category === 'public' && !isParent && allBeforeCutoff && beforePhaseOut) {
-    candidates.push(Math.round((discDollars * 0.1) / 12 * 100));
+  const payeCapCents = eligible.reduce((s, l) => {
+    const st = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 120);
+    return s + (st ?? 0);
+  }, 0);
+  if (allBeforeCutoff && noLoanBefore2007 && atLeastOneAfter2011 && beforePhaseOut && payeCapCents > 0) {
+    candidates.push(Math.min(ibrCents, payeCapCents));
   }
-  if (
-    loan.category === 'public' &&
-    !isParent &&
-    allBeforeCutoff &&
-    noLoanBefore2007 &&
-    atLeastOneAfter2011 &&
-    beforePhaseOut &&
-    standardCents != null
-  ) {
-    const payeUncapped = (discDollars * 0.1) / 12 * 100;
-    candidates.push(Math.round(Math.min(payeUncapped, standardCents)));
+
+  const icr20Cents = Math.round(((discDollars * 0.2) / 12) * 100);
+  const icr12Total = eligible.reduce((s, l) => {
+    const t = computeAmortizedPaymentCents(l.balanceCents, l.interestRatePercent, 144);
+    return s + (t ?? 0);
+  }, 0);
+  if (allBeforeCutoff && beforePhaseOut) {
+    candidates.push(icr12Total > 0 ? Math.min(icr20Cents, icr12Total) : icr20Cents);
   }
-  if (loan.category === 'public' && !isParent && allBeforeCutoff && beforePhaseOut && icr12Year != null) {
-    candidates.push(Math.round(Math.min((discDollars * 0.2) / 12 * 100, icr12Year)));
-  }
-  if (loan.category === 'public' && !isParent && rapAvailable) {
-    candidates.push(Math.max(1000, Math.round((discDollars * 0.06) / 12 * 100)));
-  }
-  if (standardCents != null) candidates.push(standardCents);
 
   return candidates.length > 0 ? Math.min(...candidates) : null;
 }
@@ -171,9 +157,6 @@ function deriveMonthlyNowCents(
   const fullPaymentCents = computeAmortizedPaymentCents(balanceCents, interestRatePercent, termMonths) ?? interestOnlyMonthly;
 
   if (category === 'public') {
-    const agiCents = getAgiCents(loan, detectedAnnualIncomeCents);
-    const lowestEligibleCents = computeFederalLowestCents(loan, allPublicLoans, agiCents);
-
     if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
       return 0;
     }
@@ -181,7 +164,8 @@ function deriveMonthlyNowCents(
       return fullPaymentCents;
     }
     if (repaymentStatus === 'idr') {
-      return lowestEligibleCents;
+      const agiCents = getAgiCents(loan, detectedAnnualIncomeCents);
+      return computeFederalTotalPaymentCents(allPublicLoans, agiCents);
     }
     if (repaymentStatus === 'deferred_forbearance') {
       return 0;
