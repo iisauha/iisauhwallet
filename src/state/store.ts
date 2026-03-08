@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
-import { loadData, loadSubTracker, loadInvesting, loadLoans, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { loadData, loadSubTracker, loadInvesting, loadLoans, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid, applyInSchoolLoanPayment } from './storage';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../features/loans/loanDerivation';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
@@ -698,6 +698,12 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (idx === -1) return { needsBankSelection: false };
       const item: any = list[idx];
       const amount = item.amountCents || 0;
+      if (kind === 'out' && amount > 0 && item.recurringId) {
+        const recurring = next.recurring?.find((r: any) => r.id === item.recurringId);
+        if (recurring?.linkedLoanId && recurring?.useLoanEstimatedPayment) {
+          applyInSchoolLoanPayment(recurring.linkedLoanId, amount);
+        }
+      }
       const resolved = opts || {};
 
       const addSpendingFromPendingIfNeeded = (pending: any, paymentSource: 'card' | 'bank' | 'cash', paymentTargetId?: string) => {

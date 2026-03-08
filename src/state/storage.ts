@@ -665,6 +665,10 @@ export type Loan = {
   active?: boolean;
   /** When repayment status is in_school_interest_only: optional grace period end (full repayment starts after this). YYYY-MM-DD */
   gracePeriodEndDate?: string;
+  /** Private in-school interest-only: accrued unpaid interest (cents). Version 1 live accrual. */
+  accruedInterestCents?: number | null;
+  /** Private in-school interest-only: date through which accrual was last applied. YYYY-MM-DD. */
+  accrualLastUpdatedAt?: string | null;
   // Federal repayment / IDR (public loans).
   idrUseManualIncome?: boolean;
   /** Manual AGI when not using detected full-time income. Cents per year. */
@@ -705,6 +709,69 @@ export function saveLoans(state: LoansState) {
   try {
     localStorage.setItem(LOANS_KEY, JSON.stringify(state));
   } catch (_) {}
+}
+
+function todayISO(): string {
+  return nowIso().slice(0, 10);
+}
+
+function daysBetween(startISO: string, endISO: string): number {
+  const a = new Date(startISO + 'T00:00:00').getTime();
+  const b = new Date(endISO + 'T00:00:00').getTime();
+  return Math.max(0, Math.round((b - a) / (24 * 60 * 60 * 1000)));
+}
+
+/**
+ * For private In School / Interest Only: compute accrued interest through asOfISO (lazy, does not persist).
+ * Returns null if loan is not private in_school_interest_only.
+ */
+export function computeInSchoolAccruedToDate(
+  loan: Loan,
+  asOfISO: string
+): { accruedInterestCents: number; totalOwedCents: number } | null {
+  if (loan.category !== 'private' || loan.repaymentStatus !== 'in_school_interest_only') return null;
+  let accrued = loan.accruedInterestCents ?? 0;
+  const last = loan.accrualLastUpdatedAt;
+  if (last && last < asOfISO) {
+    const days = daysBetween(last, asOfISO);
+    if (days > 0 && loan.balanceCents > 0 && loan.interestRatePercent > 0) {
+      const dailyCents = (loan.balanceCents * (loan.interestRatePercent / 100)) / 365;
+      accrued += Math.round(dailyCents * days);
+    }
+  }
+  return {
+    accruedInterestCents: accrued,
+    totalOwedCents: loan.balanceCents + accrued
+  };
+}
+
+/**
+ * Apply a confirmed payment to a private In School / Interest Only loan.
+ * Interest first, then principal. Updates and saves loans.
+ */
+export function applyInSchoolLoanPayment(loanId: string, amountCents: number): void {
+  if (!(amountCents > 0)) return;
+  const state = loadLoans();
+  const loan = state.loans.find((l) => l.id === loanId);
+  if (!loan || loan.category !== 'private' || loan.repaymentStatus !== 'in_school_interest_only') return;
+  const today = todayISO();
+  const { accruedInterestCents } = computeInSchoolAccruedToDate(loan, today) ?? { accruedInterestCents: 0, totalOwedCents: loan.balanceCents };
+  let newAccrued = accruedInterestCents - amountCents;
+  if (newAccrued < 0) newAccrued = 0;
+  let remainder = amountCents - accruedInterestCents;
+  if (remainder < 0) remainder = 0;
+  let newBalance = loan.balanceCents - remainder;
+  if (newBalance < 0) newBalance = 0;
+  const updated: Loan = {
+    ...loan,
+    balanceCents: newBalance,
+    accruedInterestCents: newAccrued,
+    accrualLastUpdatedAt: today
+  };
+  saveLoans({
+    ...state,
+    loans: state.loans.map((l) => (l.id === loanId ? updated : l))
+  });
 }
 
 export type FederalRepaymentConfig = {

@@ -11,7 +11,8 @@ import {
   type LoanBorrowerType,
   type LoanStateOfResidency,
   uid,
-  loadBirthdateISO
+  loadBirthdateISO,
+  computeInSchoolAccruedToDate
 } from '../../state/storage';
 import { getDetectedAgiFromRecurring, getActiveSchedulePaymentCents } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
@@ -254,6 +255,10 @@ type LoanWithDerived = Loan & {
   estimatedCurrentBalanceCents?: number | null;
   /** For private deferred: balance at start of first repayment range (display only). */
   balanceAtRepaymentStartCents?: number | null;
+  /** For private in-school interest-only: accrued unpaid interest to date (display). */
+  inSchoolAccruedCents?: number | null;
+  /** For private in-school interest-only: principal + accrued (display). */
+  inSchoolTotalOwedCents?: number | null;
 };
 
 function getActiveMonthlyPayment(loan: LoanWithDerived): number | null {
@@ -380,6 +385,11 @@ function deriveForLoan(
       ? computeDeferredBalanceTimeline(loan)
       : null;
 
+  const inSchoolAccrual =
+    category === 'private' && repaymentStatus === 'in_school_interest_only'
+      ? computeInSchoolAccruedToDate(loan, todayISO())
+      : null;
+
   return {
     ...loan,
     monthlyNowCents,
@@ -391,7 +401,9 @@ function deriveForLoan(
     totalFederalPaymentCents,
     approximateShareCents,
     estimatedCurrentBalanceCents: timeline?.estimatedCurrentBalanceCents ?? undefined,
-    balanceAtRepaymentStartCents: timeline?.balanceAtRepaymentStartCents ?? undefined
+    balanceAtRepaymentStartCents: timeline?.balanceAtRepaymentStartCents ?? undefined,
+    inSchoolAccruedCents: inSchoolAccrual?.accruedInterestCents ?? undefined,
+    inSchoolTotalOwedCents: inSchoolAccrual?.totalOwedCents ?? undefined
   };
 }
 
@@ -564,7 +576,9 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     notes: e.notes.trim() || undefined,
     active: e.active,
     idrUseManualIncome: e.category === 'public' ? undefined : e.idrUseManualIncome,
-    idrManualAnnualIncomeCents: e.category === 'public' ? undefined : idrManualAnnualIncomeCents
+    idrManualAnnualIncomeCents: e.category === 'public' ? undefined : idrManualAnnualIncomeCents,
+    accruedInterestCents: isPublic ? undefined : (prev?.accruedInterestCents ?? undefined),
+    accrualLastUpdatedAt: isPublic ? undefined : (prev?.accrualLastUpdatedAt ?? undefined)
   };
 }
 
@@ -660,6 +674,14 @@ function LoanCard(props: {
           </button>
         ) : null}
       </div>
+      {l.category === 'private' && l.repaymentStatus === 'in_school_interest_only' ? (
+        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
+          Balance: {formatCents(l.balanceCents)}
+          {(l.inSchoolAccruedCents ?? 0) > 0 ? ` · Accrued interest: ${formatCents(l.inSchoolAccruedCents!)}` : null}
+          {l.inSchoolTotalOwedCents != null ? ` · Total owed: ${formatCents(l.inSchoolTotalOwedCents)}` : null}
+          <div style={{ fontSize: '0.75rem', marginTop: 2 }}>Payments apply to accrued interest first, then principal.</div>
+        </div>
+      ) : null}
       {l.category === 'public' && (l.totalFederalPaymentCents != null || l.approximateShareCents != null) ? (
         <>
           <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 2 }}>
@@ -1138,8 +1160,19 @@ export function LoansPage() {
                 editor && editor.mode === 'edit' && editor.value.id
                   ? state.loans.find((x) => x.id === editor.value.id)
                   : null;
-              const loan = editorToLoan(editor.value, existing || null);
+              let loan = editorToLoan(editor.value, existing || null);
               if (!loan) return;
+              if (existing && existing.category === 'private' && existing.repaymentStatus === 'in_school_interest_only') {
+                const newRate = parseFloat(editor.value.ratePercent);
+                if (Number.isFinite(newRate) && newRate !== existing.interestRatePercent) {
+                  const accrued = computeInSchoolAccruedToDate(existing, todayISO());
+                  if (accrued) {
+                    loan = { ...loan, accruedInterestCents: accrued.accruedInterestCents, accrualLastUpdatedAt: todayISO() };
+                  }
+                }
+              } else if (!existing && loan.category === 'private' && loan.repaymentStatus === 'in_school_interest_only') {
+                loan = { ...loan, accruedInterestCents: 0, accrualLastUpdatedAt: todayISO() };
+              }
               if (existing) {
                 persist({
                   loans: state.loans.map((x) => (x.id === existing.id ? loan : x))
