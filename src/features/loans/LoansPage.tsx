@@ -190,6 +190,7 @@ type LoanEditorState = {
   rateType: Loan['rateType'];
   termMonths: string;
   repaymentStatus: Loan['repaymentStatus'];
+  gracePeriodEndDate: string;
   nextPayment: string;
   nextPaymentDate: string;
   notes: string;
@@ -209,6 +210,7 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       rateType: 'fixed',
       termMonths: '',
       repaymentStatus: 'full_repayment',
+      gracePeriodEndDate: '',
       nextPayment: '',
       nextPaymentDate: '',
       notes: '',
@@ -227,6 +229,7 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     rateType: l.rateType,
     termMonths: l.termMonths != null ? String(l.termMonths) : '',
     repaymentStatus: l.repaymentStatus,
+    gracePeriodEndDate: l.gracePeriodEndDate || '',
     nextPayment: l.nextPaymentCents != null ? (l.nextPaymentCents / 100).toFixed(2) : '',
     nextPaymentDate: l.nextPaymentDate || '',
     notes: l.notes || '',
@@ -253,6 +256,11 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
 
   if (!(balanceCents >= 0 && !Number.isNaN(ratePercent))) return null;
 
+  const gracePeriodEndDate =
+    e.repaymentStatus === 'in_school_interest_only' && e.gracePeriodEndDate
+      ? e.gracePeriodEndDate
+      : undefined;
+
   return {
     id: prev?.id || uid(),
     name: e.name.trim() || 'Loan',
@@ -263,6 +271,7 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     rateType: e.rateType,
     termMonths,
     repaymentStatus: e.repaymentStatus,
+    gracePeriodEndDate,
     nextPaymentCents,
     nextPaymentDate: e.nextPaymentDate || undefined,
     notes: e.notes.trim() || undefined,
@@ -478,6 +487,21 @@ export function LoansPage() {
               <strong>Estimated payment later:</strong>{' '}
               {l.monthlyLaterCents != null ? formatCents(l.monthlyLaterCents) : '—'}
             </div>
+            {l.repaymentStatus === 'in_school_interest_only' && l.gracePeriodEndDate ? (
+              <div style={{ marginTop: 4, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                Grace Period Ends:{' '}
+                {(() => {
+                  const d = parseDateISO(l.gracePeriodEndDate);
+                  return d
+                    ? d.toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
+                    : l.gracePeriodEndDate;
+                })()}
+              </div>
+            ) : null}
             <div style={{ marginTop: 4, fontSize: '0.85rem', color: 'var(--muted)' }}>
               Daily interest ≈ {formatCents(l.dailyInterestCents)} • Monthly interest ≈{' '}
               {formatCents(l.monthlyInterestCents)}
@@ -705,6 +729,28 @@ function LoanEditorForm(props: {
           <option value="custom_payment">Custom monthly payment</option>
         </Select>
       </div>
+      {state.repaymentStatus === 'in_school_interest_only' ? (
+        <div className="field">
+          <label>Grace Period End Date</label>
+          <input
+            type="date"
+            value={state.gracePeriodEndDate}
+            onChange={(e) => onChange({ ...state, gracePeriodEndDate: e.target.value })}
+            style={{
+              padding: '6px 8px',
+              borderRadius: 4,
+              border: '1px solid var(--border)',
+              background: 'var(--bg)',
+              color: 'var(--text)',
+              fontSize: '0.9rem',
+              width: '100%'
+            }}
+          />
+          <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
+            Full repayment is assumed to start after this date.
+          </p>
+        </div>
+      ) : null}
       <div className="field">
         <label>Next payment amount ($)</label>
         <input
@@ -826,6 +872,23 @@ function PayoffDetails(props: { loan: LoanWithDerived; birthdateISO: string | nu
             {loan.monthlyNowCents != null ? formatCents(loan.monthlyNowCents) : '—'}
           </span>
         </div>
+        {loan.repaymentStatus === 'in_school_interest_only' && loan.gracePeriodEndDate ? (
+          <div className="summary-kv">
+            <span className="k">Full repayment from</span>
+            <span className="v">
+              {(() => {
+                const d = parseDateISO(loan.gracePeriodEndDate);
+                return d
+                  ? d.toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                  : loan.gracePeriodEndDate;
+              })()}
+            </span>
+          </div>
+        ) : null}
         <div className="summary-kv">
           <span className="k">Estimated payoff date</span>
           <span className="v">

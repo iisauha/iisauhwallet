@@ -629,6 +629,8 @@ export type Loan = {
   nextPaymentDate?: string; // YYYY-MM-DD
   notes?: string;
   active?: boolean;
+  /** When repayment status is in_school_interest_only: optional grace period end (full repayment starts after this). YYYY-MM-DD */
+  gracePeriodEndDate?: string;
   // IDR-related (public loans).
   idrUseManualIncome?: boolean;
   idrManualAnnualIncomeCents?: number;
