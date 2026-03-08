@@ -28,12 +28,20 @@ export function getActiveSchedulePaymentCents(
   return null;
 }
 
-function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
-  const r = ratePercent / 100;
-  if (!(balanceCents > 0 && r > 0)) return 0;
-  const monthlyRate = r / 12;
-  const dollars = (balanceCents / 100) * monthlyRate;
+const BILLING_CYCLE_DAYS = 30.44;
+
+function computeMonthlyInterestCents(
+  balanceCents: number,
+  ratePercent: number,
+  billingDays: number = BILLING_CYCLE_DAYS
+): number {
+  if (!(balanceCents > 0)) return 0;
+  const dollars = (balanceCents / 100) * (ratePercent / 100) / 365.25 * billingDays;
   return Math.round(dollars * 100);
+}
+
+function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
+  return computeMonthlyInterestCents(balanceCents, ratePercent);
 }
 
 function computeAmortizedPaymentCents(
@@ -53,6 +61,36 @@ function computeAmortizedPaymentCents(
     paymentDollars = (principal * rMonthly * pow) / (pow - 1);
   }
   return Math.round(paymentDollars * 100);
+}
+
+function monthsBetween(startISO: string, endISO: string): number {
+  const a = new Date(startISO + 'T00:00:00');
+  const b = new Date(endISO + 'T00:00:00');
+  const months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  return Math.max(0, months);
+}
+
+function getRangeDerivedTermMonths(ranges: PrivatePaymentRange[]): number {
+  if (ranges.length === 0) return 0;
+  let earliest = ranges[0].startDate;
+  let latest = ranges[0].endDate;
+  for (const r of ranges) {
+    if (r.startDate < earliest) earliest = r.startDate;
+    if (r.endDate > latest) latest = r.endDate;
+  }
+  return monthsBetween(earliest, latest);
+}
+
+function computeFullRepaymentBreakdown(
+  balanceCents: number,
+  ratePercent: number,
+  termMonths: number
+): { fullRepaymentCents: number } {
+  const monthlyInterestCents = computeMonthlyInterestCents(balanceCents, ratePercent);
+  const amortizedCents = computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
+  const principalPortionCents = Math.max(0, amortizedCents - monthlyInterestCents);
+  const fullRepaymentCents = monthlyInterestCents + principalPortionCents;
+  return { fullRepaymentCents };
 }
 
 /** Discretionary income = AGI - threshold (dollars). IBR/PAYE use 150% of poverty level; ICR uses 100%. */
@@ -167,13 +205,14 @@ function deriveMonthlyNowCents(
     return fullPaymentCents;
   }
 
-  // Private loans: range-based or legacy single mode
+  // Private loans: range-based or legacy single mode; term derived from ranges
   const ranges = getEffectivePrivateRanges(loan);
+  const derivedTermMonths = getRangeDerivedTermMonths(ranges);
   const today = new Date();
   const key = toDateKey(today);
   const active = getActivePrivateRange(ranges, key);
   if (active) {
-    return paymentCentsFromPrivateRange(active, loan.balanceCents, loan.interestRatePercent, loan.termMonths);
+    return paymentCentsFromPrivateRange(active, loan.balanceCents, loan.interestRatePercent, derivedTermMonths);
   }
   return 0;
 }
@@ -209,15 +248,16 @@ function paymentCentsFromPrivateRange(
   range: PrivatePaymentRange,
   balanceCents: number,
   ratePercent: number,
-  termMonths: number | undefined | null
+  derivedTermMonths: number
 ): number {
   switch (range.mode) {
     case 'deferred':
       return 0;
     case 'interest_only':
-      return computeInterestOnlyMonthlyCents(balanceCents, ratePercent);
+      return computeMonthlyInterestCents(balanceCents, ratePercent);
     case 'full_repayment':
-      return computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
+      if (derivedTermMonths <= 0) return computeMonthlyInterestCents(balanceCents, ratePercent);
+      return computeFullRepaymentBreakdown(balanceCents, ratePercent, derivedTermMonths).fullRepaymentCents;
     case 'custom_monthly':
       return range.customPaymentCents ?? 0;
     default:

@@ -71,12 +71,21 @@ function recurringAnnualIncomeCents(r: RecurringItem): number {
   return Math.round((amt * 365) / days);
 }
 
-function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
-  const r = ratePercent / 100;
-  if (!(balanceCents > 0 && r > 0)) return 0;
-  const monthlyRate = r / 12;
-  const dollars = (balanceCents / 100) * monthlyRate;
+const BILLING_CYCLE_DAYS = 30.44;
+
+/** Monthly interest: (balance * rate/100 / 365.25) * billingCycleDays. Used for interest-only and full-repayment interest portion. */
+function computeMonthlyInterestCents(
+  balanceCents: number,
+  ratePercent: number,
+  billingDays: number = BILLING_CYCLE_DAYS
+): number {
+  if (!(balanceCents > 0)) return 0;
+  const dollars = (balanceCents / 100) * (ratePercent / 100) / 365.25 * billingDays;
   return Math.round(dollars * 100);
+}
+
+function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
+  return computeMonthlyInterestCents(balanceCents, ratePercent);
 }
 
 function computeAmortizedPaymentCents(
@@ -96,6 +105,19 @@ function computeAmortizedPaymentCents(
     paymentDollars = (principal * rMonthly * pow) / (pow - 1);
   }
   return Math.round(paymentDollars * 100);
+}
+
+/** Full repayment = monthly interest + principal portion. Principal = max(0, amortized - monthlyInterest). */
+function computeFullRepaymentBreakdown(
+  balanceCents: number,
+  ratePercent: number,
+  termMonths: number
+): { monthlyInterestCents: number; amortizedCents: number; principalPortionCents: number; fullRepaymentCents: number } {
+  const monthlyInterestCents = computeMonthlyInterestCents(balanceCents, ratePercent);
+  const amortizedCents = computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
+  const principalPortionCents = Math.max(0, amortizedCents - monthlyInterestCents);
+  const fullRepaymentCents = monthlyInterestCents + principalPortionCents;
+  return { monthlyInterestCents, amortizedCents, principalPortionCents, fullRepaymentCents };
 }
 
 function computeMonthsToPayoff(
@@ -171,19 +193,22 @@ function getFirstFullRepaymentRange(ranges: PrivatePaymentRange[]): PrivatePayme
   return found;
 }
 
+/** derivedTermMonths: from getRangeDerivedTermMonths(ranges). Used for full_repayment and not for interest_only. */
 function paymentCentsFromPrivateRange(
   range: PrivatePaymentRange,
   balanceCents: number,
   ratePercent: number,
-  termMonths: number | undefined | null
+  derivedTermMonths: number
 ): number {
   switch (range.mode) {
     case 'deferred':
       return 0;
     case 'interest_only':
-      return Math.round((balanceCents * (ratePercent / 100)) / 12);
+      return computeMonthlyInterestCents(balanceCents, ratePercent);
     case 'full_repayment':
-      return computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
+      if (derivedTermMonths <= 0) return computeMonthlyInterestCents(balanceCents, ratePercent);
+      const { fullRepaymentCents } = computeFullRepaymentBreakdown(balanceCents, ratePercent, derivedTermMonths);
+      return fullRepaymentCents;
     case 'custom_monthly':
       return range.customPaymentCents ?? 0;
     default:
@@ -197,6 +222,18 @@ function monthsBetween(startISO: string, endISO: string): number {
   const b = new Date(endISO + 'T00:00:00');
   const months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
   return Math.max(0, months);
+}
+
+/** Derive total loan span in months from earliest range start to latest range end. */
+function getRangeDerivedTermMonths(ranges: PrivatePaymentRange[]): number {
+  if (ranges.length === 0) return 0;
+  let earliest = ranges[0].startDate;
+  let latest = ranges[0].endDate;
+  for (const r of ranges) {
+    if (r.startDate < earliest) earliest = r.startDate;
+    if (r.endDate > latest) latest = r.endDate;
+  }
+  return monthsBetween(earliest, latest);
 }
 
 export type FederalPlanRow = {
@@ -225,6 +262,12 @@ type LoanWithDerived = Loan & {
   approximateShareCents?: number | null;
   /** Private only: future full-repayment amount when not yet in full repayment (for hidden breakdown). */
   futureFullRepaymentCents?: number | null;
+  /** Private only: interest portion of future full repayment (for hidden breakdown). */
+  futureFullRepaymentInterestCents?: number | null;
+  /** Private only: principal portion of future full repayment (for hidden breakdown). */
+  futureFullRepaymentPrincipalCents?: number | null;
+  /** Private only: latest range end date (YYYY-MM-DD) for payoff timeline. */
+  latestRangeEndISO?: string;
   /** Private only: mode of the active range (for display). */
   activePrivateRangeMode?: PrivatePaymentRangeMode | null;
   /** For private deferred: estimated balance today from schedule timeline (display only). */
@@ -329,44 +372,60 @@ function deriveForLoan(
       payoffMonths = null;
     }
   } else {
-    // Private loan: range-based payment logic
+    // Private loan: range-based payment logic; term derived from ranges
     const todayISO = toDateKey(new Date());
     const effectiveRanges = getEffectivePrivateRanges(loan);
+    const derivedTermMonths = getRangeDerivedTermMonths(effectiveRanges);
     const activeRange = getActivePrivateRange(effectiveRanges, todayISO);
     const paymentNow = activeRange
-      ? paymentCentsFromPrivateRange(activeRange, balanceCents, interestRatePercent, termMonths)
+      ? paymentCentsFromPrivateRange(activeRange, balanceCents, interestRatePercent, derivedTermMonths)
       : 0;
     monthlyNowCents = paymentNow;
 
+    // Future full repayment: computed from balance/rate/range-derived term (never reuse interest-only amount)
+    const fullRepaymentBreakdown =
+      derivedTermMonths > 0
+        ? computeFullRepaymentBreakdown(balanceCents, interestRatePercent, derivedTermMonths)
+        : null;
+    const futureFullPayment = fullRepaymentBreakdown?.fullRepaymentCents ?? 0;
+
     const firstFutureFull = getFirstFutureFullRepaymentRange(effectiveRanges, todayISO);
     const inFullRepaymentNow = activeRange?.mode === 'full_repayment';
-    const futureAmortized = fullPaymentCents ?? 0;
     let futureFullRepaymentCents: number | null = null;
-    if (!inFullRepaymentNow && firstFutureFull != null && futureAmortized > 0) {
-      monthlyLaterCents = futureAmortized;
-      futureFullRepaymentCents = futureAmortized;
+    let futureFullRepaymentInterestCents: number | null = null;
+    let futureFullRepaymentPrincipalCents: number | null = null;
+    if (!inFullRepaymentNow && firstFutureFull != null && futureFullPayment > 0 && fullRepaymentBreakdown) {
+      monthlyLaterCents = futureFullPayment;
+      futureFullRepaymentCents = futureFullPayment;
+      futureFullRepaymentInterestCents = fullRepaymentBreakdown.monthlyInterestCents;
+      futureFullRepaymentPrincipalCents = fullRepaymentBreakdown.principalPortionCents;
     } else {
-      monthlyLaterCents = inFullRepaymentNow ? futureAmortized : (futureAmortized || null);
+      monthlyLaterCents = inFullRepaymentNow ? futureFullPayment : (futureFullPayment || null);
     }
 
     const firstFullRange = getFirstFullRepaymentRange(effectiveRanges);
-    if (firstFullRange && futureAmortized > 0) {
+    if (firstFullRange && futureFullPayment > 0) {
       if (todayISO < firstFullRange.startDate) {
         const monthsUntilStart = monthsBetween(todayISO, firstFullRange.startDate);
-        const payoffFromStart = computeMonthsToPayoff(balanceCents, interestRatePercent, futureAmortized);
+        const payoffFromStart = computeMonthsToPayoff(balanceCents, interestRatePercent, futureFullPayment);
         payoffMonths = payoffFromStart != null ? monthsUntilStart + payoffFromStart : null;
       } else {
-        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, futureAmortized);
+        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, futureFullPayment);
       }
     } else {
-      const monthlyInterestOnly = Math.round((balanceCents * (interestRatePercent / 100)) / 12);
+      const monthlyInterestOnly = computeMonthlyInterestCents(balanceCents, interestRatePercent);
       if (paymentNow > 0 && paymentNow <= monthlyInterestOnly) {
         payoffMonths = null;
       } else {
         payoffMonths = paymentNow > 0
           ? computeMonthsToPayoff(balanceCents, interestRatePercent, paymentNow)
-          : (fullPaymentCents ? computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents) : null);
+          : (futureFullPayment > 0 ? computeMonthsToPayoff(balanceCents, interestRatePercent, futureFullPayment) : null);
       }
+    }
+
+    let latestRangeEndISO = '';
+    for (const r of effectiveRanges) {
+      if (r.endDate > latestRangeEndISO) latestRangeEndISO = r.endDate;
     }
 
     return {
@@ -380,7 +439,10 @@ function deriveForLoan(
       totalFederalPaymentCents,
       approximateShareCents,
       futureFullRepaymentCents,
-      activePrivateRangeMode: activeRange?.mode ?? null
+      futureFullRepaymentInterestCents: futureFullRepaymentInterestCents ?? undefined,
+      futureFullRepaymentPrincipalCents: futureFullRepaymentPrincipalCents ?? undefined,
+      activePrivateRangeMode: activeRange?.mode ?? null,
+      latestRangeEndISO: latestRangeEndISO || undefined
     };
   }
 
@@ -535,7 +597,7 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
   const isPublic = e.category === 'public';
   const termMonths = isPublic
     ? prev?.termMonths
-    : (e.termMonths && parseInt(e.termMonths, 10) > 0 ? parseInt(e.termMonths, 10) : undefined);
+    : undefined;
   const nextPaymentStr = isPublic ? undefined : (e.nextPayment !== undefined ? String(e.nextPayment).replace(/,/g, '').trim() : '');
   const nextPaymentCents = isPublic
     ? prev?.nextPaymentCents
@@ -883,17 +945,18 @@ export function LoansPage() {
       privateTotalBalance > 0 ? weightedRateNumerator / privateTotalBalance : null;
     const avgPublicRate = publicSummary.avgInterestRatePercent ?? null;
 
-    const now = new Date();
+    // Payoff age: based on loan whose repayment timeline ends the latest (latest range end date across private loans)
     let latestPayoffDate: Date | null = null;
     loansWithDerived.forEach((l) => {
-      if (l.payoffMonths != null && l.payoffMonths > 0) {
-        const estDate = addMonths(now, l.payoffMonths);
-        if (!latestPayoffDate || estDate > latestPayoffDate) latestPayoffDate = estDate;
+      const endISO = (l as LoanWithDerived).latestRangeEndISO;
+      if (endISO) {
+        const d = new Date(endISO + 'T00:00:00');
+        if (!latestPayoffDate || d > latestPayoffDate) latestPayoffDate = d;
       }
     });
 
     let payoffAge: number | null = null;
-    if (latestPayoffDate) {
+    if (latestPayoffDate && birthdateISO) {
       payoffAge = computeAgeFromBirthdate(birthdateISO, latestPayoffDate);
     }
 
@@ -909,16 +972,26 @@ export function LoansPage() {
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
 
-  /** After-grace: per private loan use first future full-repayment value (only loans not yet in full repayment). */
+  /** After-grace: per private loan use first future full-repayment (interest + principal), only loans not yet in full repayment. */
   const afterGraceBreakdown = useMemo(() => {
-    const privateLoansBreakdown: { name: string; afterGraceCents: number }[] = [];
+    const privateLoansBreakdown: {
+      name: string;
+      afterGraceCents: number;
+      interestCents?: number;
+      principalCents?: number;
+    }[] = [];
     let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
       if (l.category !== 'private') return;
       const cents = l.futureFullRepaymentCents ?? 0;
       if (cents > 0) {
         privateAfterGraceCents += cents;
-        privateLoansBreakdown.push({ name: l.name, afterGraceCents: cents });
+        privateLoansBreakdown.push({
+          name: l.name,
+          afterGraceCents: cents,
+          interestCents: l.futureFullRepaymentInterestCents ?? undefined,
+          principalCents: l.futureFullRepaymentPrincipalCents ?? undefined
+        });
       }
     });
     const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
@@ -1190,9 +1263,16 @@ export function LoansPage() {
             <>
               <div style={{ marginBottom: 4, fontSize: '0.85rem', fontWeight: 600 }}>Private Loan After Grace Breakdown</div>
               {afterGraceBreakdown.privateLoansBreakdown.map((row) => (
-                <div key={row.name} className="summary-kv">
-                  <span className="k">{row.name}</span>
-                  <span className="v" style={{ color: 'var(--red)' }}>{formatCents(row.afterGraceCents)}</span>
+                <div key={row.name} style={{ marginBottom: 8 }}>
+                  <div className="summary-kv">
+                    <span className="k">{row.name}</span>
+                    <span className="v" style={{ color: 'var(--red)' }}>{formatCents(row.afterGraceCents)}</span>
+                  </div>
+                  {row.interestCents != null && row.principalCents != null ? (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8, marginTop: 2 }}>
+                      Interest: {formatCents(row.interestCents)} · Principal: {formatCents(row.principalCents)} · Full: {formatCents(row.afterGraceCents)}
+                    </div>
+                  ) : null}
                 </div>
               ))}
               <div className="summary-kv" style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
@@ -1378,18 +1458,6 @@ function LoanEditorForm(props: {
       </div>
       {state.category !== 'public' ? (
         <>
-          <div className="field">
-            <label>Repayment term (months)</label>
-            <input
-              value={state.termMonths}
-              onChange={(e) => onChange({ ...state, termMonths: e.target.value })}
-              inputMode="numeric"
-              placeholder="e.g. 120"
-            />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              Used for payoff estimate and after-grace amortized payment
-            </p>
-          </div>
           <div className="field">
             <label style={{ display: 'block', marginBottom: 6 }}>Payment date ranges</label>
             <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
