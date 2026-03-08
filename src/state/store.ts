@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
-import { loadData, loadSubTracker, loadInvesting, loadLoans, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid, applyInSchoolLoanPayment } from './storage';
+import { loadData, loadSubTracker, loadInvesting, loadLoans, saveLoans, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../features/loans/loanDerivation';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
@@ -698,10 +698,26 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (idx === -1) return { needsBankSelection: false };
       const item: any = list[idx];
       const amount = item.amountCents || 0;
+      // Apply posted loan payment to private loan balances (per-loan breakdown).
       if (kind === 'out' && amount > 0 && item.recurringId) {
         const recurring = next.recurring?.find((r: any) => r.id === item.recurringId);
-        if (recurring?.linkedLoanId && recurring?.useLoanEstimatedPayment) {
-          applyInSchoolLoanPayment(recurring.linkedLoanId, amount);
+        if (recurring?.useLoanEstimatedPayment) {
+          const breakdown: Record<string, number> = item.meta?.privateLoanBreakdownCents
+            ? { ...item.meta.privateLoanBreakdownCents }
+            : recurring.linkedLoanId
+              ? { [recurring.linkedLoanId]: amount }
+              : {};
+          if (Object.keys(breakdown).length > 0) {
+            const loansState = loadLoans();
+            const loans = loansState.loans.map((l: any) => {
+              if (l.category !== 'private') return l;
+              const sub = breakdown[l.id] ?? 0;
+              if (sub <= 0) return l;
+              const newBalance = Math.max(0, (l.balanceCents || 0) - sub);
+              return { ...l, balanceCents: newBalance };
+            });
+            saveLoans({ ...loansState, loans });
+          }
         }
       }
       const resolved = opts || {};

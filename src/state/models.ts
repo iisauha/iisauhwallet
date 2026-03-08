@@ -69,6 +69,8 @@ export interface PendingTransferMeta {
   originalTitle?: string;
   originalNotes?: string;
   originalAccount?: string;
+  /** Per-loan cents to subtract from private loan balances when this outbound is posted (loanId -> cents). */
+  privateLoanBreakdownCents?: Record<string, number>;
 }
 
 export interface PurchaseSplitSnapshot {

@@ -445,10 +445,18 @@ function deriveForLoan(
     let futureFullRepaymentInterestCents: number | null = null;
     let futureFullRepaymentPrincipalCents: number | null = null;
     let futureValueFromCustom = false;
-    if (firstFuture != null) {
+    // 1) If active range is Custom Monthly Payment, include it in hidden future/grace (manual override).
+    if (activeRange?.mode === 'custom_monthly') {
+      const customCents = activeRange.customPaymentCents ?? 0;
+      futureFullRepaymentCents = customCents;
+      futureValueFromCustom = true;
+      if (customCents > 0) monthlyLaterCents = customCents;
+    }
+    // 2) Else use first future range: custom overrides all calculations, then full_repayment, then interest_only.
+    if (futureFullRepaymentCents == null && firstFuture != null) {
       let futureCents = 0;
-      if (firstFuture.mode === 'custom_monthly' && (firstFuture.customPaymentCents ?? 0) > 0) {
-        futureCents = firstFuture.customPaymentCents!;
+      if (firstFuture.mode === 'custom_monthly') {
+        futureCents = firstFuture.customPaymentCents ?? 0;
         futureValueFromCustom = true;
       } else if (firstFuture.mode === 'full_repayment' && fullRepaymentBreakdown) {
         futureCents = fullRepaymentBreakdown.fullRepaymentCents;
@@ -457,10 +465,8 @@ function deriveForLoan(
       } else if (firstFuture.mode === 'interest_only') {
         futureCents = computeMonthlyInterestCents(balanceCents, interestRatePercent);
       }
-      if (futureCents > 0) {
-        monthlyLaterCents = futureCents;
-        futureFullRepaymentCents = futureCents;
-      }
+      futureFullRepaymentCents = futureCents;
+      if (futureCents > 0) monthlyLaterCents = futureCents;
     }
     if (futureFullRepaymentCents == null && inFullRepaymentNow && futureFullPayment > 0) {
       monthlyLaterCents = futureFullPayment;
@@ -827,24 +833,6 @@ function LoanCard(props: {
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             Current range: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '—'}
           </div>
-          {onToggleExcludeFromPayment ? (
-            <div className="toggle-row" style={{ marginBottom: 6 }}>
-              <input
-                type="checkbox"
-                id={`exclude-payment-${l.id}`}
-                checked={!!l.excludeFromCurrentPayment}
-                onChange={(e) => onToggleExcludeFromPayment(e.target.checked)}
-              />
-              <label htmlFor={`exclude-payment-${l.id}`} style={{ fontSize: '0.85rem' }}>
-                Exclude from Payment(now)
-              </label>
-            </div>
-          ) : null}
-          {l.excludeFromCurrentPayment ? (
-            <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 0, marginBottom: 4 }}>
-              Excluded from current payment total but included in grace period estimates.
-            </p>
-          ) : null}
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             Monthly interest: {formatCents(l.monthlyInterestCents)}
           </div>
@@ -1058,7 +1046,9 @@ export function LoansPage() {
       privateAfterGraceCents,
       avgPrivateRate,
       avgPublicRate,
-      payoffAge
+      payoffAge,
+      publicBalanceCents,
+      privateBalanceCents: privateTotalBalance
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
 
@@ -1075,14 +1065,15 @@ export function LoansPage() {
     loansWithDerived.forEach((l) => {
       if (l.category !== 'private') return;
       const cents = l.futureFullRepaymentCents ?? 0;
-      if (cents > 0) {
+      const fromCustom = l.futureValueFromCustom ?? false;
+      if (cents > 0 || fromCustom) {
         privateAfterGraceCents += cents;
         privateLoansBreakdown.push({
           name: l.name,
           afterGraceCents: cents,
           interestCents: l.futureFullRepaymentInterestCents ?? undefined,
           principalCents: l.futureFullRepaymentPrincipalCents ?? undefined,
-          fromCustom: l.futureValueFromCustom ?? false
+          fromCustom
         });
       }
     });
@@ -1118,6 +1109,14 @@ export function LoansPage() {
           <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
             {formatCents(summary.totalBalance)}
           </span>
+        </div>
+        <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
+          <span className="k">Public</span>
+          <span className="v" style={{ color: 'var(--muted)' }}>{formatCents(summary.publicBalanceCents ?? 0)}</span>
+        </div>
+        <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          <span className="k">Private</span>
+          <span className="v" style={{ color: 'var(--muted)' }}>{formatCents(summary.privateBalanceCents ?? 0)}</span>
         </div>
         <div className="summary-kv" style={{ marginTop: 4, alignItems: 'center' }}>
           <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1251,6 +1250,19 @@ export function LoansPage() {
             </div>
           ) : (
             <>
+              <div style={{ marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+                  onClick={() => setState(loadLoans())}
+                >
+                  Recompute your Payment(now)
+                </button>
+                <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                  Re-run current balances, rates, and ranges to refresh Payment(now).
+                </p>
+              </div>
               {loansWithDerived.map((l) => (
                 <LoanCard
                   key={l.id}
@@ -1362,7 +1374,7 @@ export function LoansPage() {
                   </div>
                   {row.fromCustom ? (
                     <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8, marginTop: 2 }}>
-                      Future payment (manual): {formatCents(row.afterGraceCents)}
+                      Manual input override: {formatCents(row.afterGraceCents)}
                     </div>
                   ) : row.interestCents != null && row.principalCents != null ? (
                     <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8, marginTop: 2 }}>

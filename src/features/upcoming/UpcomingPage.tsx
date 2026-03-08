@@ -679,6 +679,24 @@ export function UpcomingPage() {
                               investingAccountId: rec.investingTargetAccountId
                             }
                           : undefined;
+                      let privateLoanBreakdownCents: Record<string, number> | undefined;
+                      if (rec?.useLoanEstimatedPayment && cents > 0) {
+                        const loansState = loadLoans();
+                        const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
+                        const loanPaymentMap = getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
+                        if (rec.linkedLoanId) {
+                          privateLoanBreakdownCents = { [rec.linkedLoanId]: cents };
+                        } else {
+                          const privateLoans = (loansState.loans || []).filter(
+                            (l: any) => l.category === 'private' && !l.excludeFromCurrentPayment
+                          );
+                          privateLoanBreakdownCents = {};
+                          for (const l of privateLoans) {
+                            const amt = loanPaymentMap[l.id];
+                            if (amt != null && amt > 0) privateLoanBreakdownCents![l.id] = amt;
+                          }
+                        }
+                      }
                       const meta = {
                         ...(baseMeta || {}),
                         source: 'upcoming',
@@ -690,7 +708,10 @@ export function UpcomingPage() {
                         originalAccount:
                           item.paymentSource && item.paymentTargetId
                             ? `${item.paymentSource}:${item.paymentTargetId}`
-                            : item.paymentSource || undefined
+                            : item.paymentSource || undefined,
+                        ...(privateLoanBreakdownCents && Object.keys(privateLoanBreakdownCents).length > 0
+                          ? { privateLoanBreakdownCents }
+                          : {})
                       };
                       actions.addPendingOutbound({
                         label: item.recurringName,
