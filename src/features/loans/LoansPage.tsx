@@ -183,6 +183,17 @@ function getFirstFutureFullRepaymentRange(ranges: PrivatePaymentRange[], afterIS
   return null;
 }
 
+/** First future range that has a payment (custom, full_repayment, or interest_only). Used for hidden future/grace value. */
+function getFirstFutureRepaymentRange(ranges: PrivatePaymentRange[], afterISO: string): PrivatePaymentRange | null {
+  const sorted = [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  for (const r of sorted) {
+    if (r.startDate <= afterISO) continue;
+    if (r.mode === 'deferred') continue;
+    return r;
+  }
+  return null;
+}
+
 /** Earliest range with mode full_repayment (by start date). For payoff start. */
 function getFirstFullRepaymentRange(ranges: PrivatePaymentRange[]): PrivatePaymentRange | null {
   let found: PrivatePaymentRange | null = null;
@@ -222,6 +233,40 @@ function monthsBetween(startISO: string, endISO: string): number {
   const b = new Date(endISO + 'T00:00:00');
   const months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
   return Math.max(0, months);
+}
+
+/** Days between two YYYY-MM-DD dates (for accrual). */
+function daysBetween(startISO: string, endISO: string): number {
+  const a = new Date(startISO + 'T00:00:00').getTime();
+  const b = new Date(endISO + 'T00:00:00').getTime();
+  return Math.max(0, Math.round((b - a) / (24 * 60 * 60 * 1000)));
+}
+
+/** Lender-style unpaid interest: balance * (rate/100) / 365.25 * elapsedDays. */
+function computeUnpaidInterestFromAccrual(
+  balanceCents: number,
+  ratePercent: number,
+  anchorISO: string,
+  asOfISO: string
+): number {
+  const days = daysBetween(anchorISO, asOfISO);
+  if (days <= 0) return 0;
+  const dollars = (balanceCents / 100) * (ratePercent / 100) / 365.25 * days;
+  return Math.round(dollars * 100);
+}
+
+/** Unpaid interest for private loan: override → manual; else accrual anchor → estimated; else fallback. */
+function getUnpaidInterestForPrivate(loan: Loan, asOfISO: string): { cents: number; source: 'manual' | 'estimated' | 'fallback' } {
+  const override = loan.unpaidInterestOverrideCents;
+  if (override != null && override >= 0) {
+    return { cents: override, source: 'manual' };
+  }
+  const anchor = loan.accrualAnchorDate;
+  if (anchor) {
+    const cents = computeUnpaidInterestFromAccrual(loan.balanceCents, loan.interestRatePercent, anchor, asOfISO);
+    return { cents, source: 'estimated' };
+  }
+  return { cents: 0, source: 'fallback' };
 }
 
 /** Derive total loan span in months from earliest range start to latest range end. */
@@ -268,8 +313,13 @@ type LoanWithDerived = Loan & {
   futureFullRepaymentPrincipalCents?: number | null;
   /** Private only: latest range end date (YYYY-MM-DD) for payoff timeline. */
   latestRangeEndISO?: string;
+  /** Private only: true when hidden future/grace value came from a custom monthly range (manual override). */
+  futureValueFromCustom?: boolean;
   /** Private only: mode of the active range (for display). */
   activePrivateRangeMode?: PrivatePaymentRangeMode | null;
+  /** Private only: unpaid interest cents and source (manual / estimated). */
+  unpaidInterestCents?: number;
+  unpaidInterestSource?: 'manual' | 'estimated' | 'fallback';
   /** For private deferred: estimated balance today from schedule timeline (display only). */
   estimatedCurrentBalanceCents?: number | null;
   /** For private deferred: balance at start of first repayment range (display only). */
@@ -382,25 +432,38 @@ function deriveForLoan(
       : 0;
     monthlyNowCents = paymentNow;
 
-    // Future full repayment: computed from balance/rate/range-derived term (never reuse interest-only amount)
+    // Future/grace value: first future range (custom → full_repayment → interest_only). Custom overrides calculated.
     const fullRepaymentBreakdown =
       derivedTermMonths > 0
         ? computeFullRepaymentBreakdown(balanceCents, interestRatePercent, derivedTermMonths)
         : null;
     const futureFullPayment = fullRepaymentBreakdown?.fullRepaymentCents ?? 0;
 
-    const firstFutureFull = getFirstFutureFullRepaymentRange(effectiveRanges, todayISO);
+    const firstFuture = getFirstFutureRepaymentRange(effectiveRanges, todayISO);
     const inFullRepaymentNow = activeRange?.mode === 'full_repayment';
     let futureFullRepaymentCents: number | null = null;
     let futureFullRepaymentInterestCents: number | null = null;
     let futureFullRepaymentPrincipalCents: number | null = null;
-    if (!inFullRepaymentNow && firstFutureFull != null && futureFullPayment > 0 && fullRepaymentBreakdown) {
+    let futureValueFromCustom = false;
+    if (firstFuture != null) {
+      let futureCents = 0;
+      if (firstFuture.mode === 'custom_monthly' && (firstFuture.customPaymentCents ?? 0) > 0) {
+        futureCents = firstFuture.customPaymentCents!;
+        futureValueFromCustom = true;
+      } else if (firstFuture.mode === 'full_repayment' && fullRepaymentBreakdown) {
+        futureCents = fullRepaymentBreakdown.fullRepaymentCents;
+        futureFullRepaymentInterestCents = fullRepaymentBreakdown.monthlyInterestCents;
+        futureFullRepaymentPrincipalCents = fullRepaymentBreakdown.principalPortionCents;
+      } else if (firstFuture.mode === 'interest_only') {
+        futureCents = computeMonthlyInterestCents(balanceCents, interestRatePercent);
+      }
+      if (futureCents > 0) {
+        monthlyLaterCents = futureCents;
+        futureFullRepaymentCents = futureCents;
+      }
+    }
+    if (futureFullRepaymentCents == null && inFullRepaymentNow && futureFullPayment > 0) {
       monthlyLaterCents = futureFullPayment;
-      futureFullRepaymentCents = futureFullPayment;
-      futureFullRepaymentInterestCents = fullRepaymentBreakdown.monthlyInterestCents;
-      futureFullRepaymentPrincipalCents = fullRepaymentBreakdown.principalPortionCents;
-    } else {
-      monthlyLaterCents = inFullRepaymentNow ? futureFullPayment : (futureFullPayment || null);
     }
 
     const firstFullRange = getFirstFullRepaymentRange(effectiveRanges);
@@ -428,6 +491,8 @@ function deriveForLoan(
       if (r.endDate > latestRangeEndISO) latestRangeEndISO = r.endDate;
     }
 
+    const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForPrivate(loan, todayISO);
+
     return {
       ...loan,
       monthlyNowCents,
@@ -441,8 +506,11 @@ function deriveForLoan(
       futureFullRepaymentCents,
       futureFullRepaymentInterestCents: futureFullRepaymentInterestCents ?? undefined,
       futureFullRepaymentPrincipalCents: futureFullRepaymentPrincipalCents ?? undefined,
+      futureValueFromCustom: futureValueFromCustom || undefined,
       activePrivateRangeMode: activeRange?.mode ?? null,
-      latestRangeEndISO: latestRangeEndISO || undefined
+      latestRangeEndISO: latestRangeEndISO || undefined,
+      unpaidInterestCents: unpaidInterestCents,
+      unpaidInterestSource: unpaidInterestSource
     };
   }
 
@@ -490,6 +558,10 @@ type LoanEditorState = {
   privatePaymentMode: 'interest_only' | 'full_repayment' | 'custom_monthly';
   /** Private: date ranges (start, end, mode, custom $ string). */
   privatePaymentRanges: { id: string; startDate: string; endDate: string; mode: PrivatePaymentRangeMode; customPayment: string }[];
+  /** Private: interest accrual anchor date (YYYY-MM-DD). */
+  accrualAnchorDate: string;
+  /** Private: manual unpaid interest override ($ string). */
+  unpaidInterestOverride: string;
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -522,10 +594,13 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       scheduleAccruedInterestStrings: {},
       excludeFromCurrentPayment: false,
       privatePaymentMode: 'full_repayment',
-      privatePaymentRanges: []
+      privatePaymentRanges: [],
+      accrualAnchorDate: '',
+      unpaidInterestOverride: ''
     };
   }
-  const privRanges = (l as Loan).privatePaymentRanges;
+  const priv = l as Loan;
+  const privRanges = priv.privatePaymentRanges;
   const defaultRanges =
     privRanges && privRanges.length > 0
       ? privRanges.map((r) => ({
@@ -540,8 +615,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
             id: uid(),
             startDate: toDateKey(new Date()),
             endDate: FAR_FUTURE_ISO,
-            mode: ((l as Loan).privatePaymentMode ?? 'full_repayment') as PrivatePaymentRangeMode,
-            customPayment: (l as Loan).nextPaymentCents != null ? ((l as Loan).nextPaymentCents! / 100).toFixed(2) : ''
+            mode: (priv.privatePaymentMode ?? 'full_repayment') as PrivatePaymentRangeMode,
+            customPayment: priv.nextPaymentCents != null ? (priv.nextPaymentCents / 100).toFixed(2) : ''
           }
         ];
   return {
@@ -579,8 +654,10 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       return out;
     })(),
     excludeFromCurrentPayment: l.excludeFromCurrentPayment ?? false,
-    privatePaymentMode: (l as Loan).privatePaymentMode ?? 'custom_monthly',
-    privatePaymentRanges: defaultRanges
+    privatePaymentMode: priv.privatePaymentMode ?? 'custom_monthly',
+    privatePaymentRanges: defaultRanges,
+    accrualAnchorDate: priv.accrualAnchorDate ?? '',
+    unpaidInterestOverride: priv.unpaidInterestOverrideCents != null ? (priv.unpaidInterestOverrideCents / 100).toFixed(2) : ''
   };
 }
 
@@ -649,6 +726,13 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     accrualLastUpdatedAt: isPublic ? undefined : undefined,
     excludeFromCurrentPayment: isPublic ? undefined : e.excludeFromCurrentPayment,
     privatePaymentMode: isPublic ? undefined : e.privatePaymentMode,
+    accrualAnchorDate: isPublic ? undefined : (e.accrualAnchorDate?.trim() || undefined),
+    unpaidInterestOverrideCents: isPublic ? undefined : (() => {
+      const s = e.unpaidInterestOverride?.replace(/,/g, '').trim();
+      if (s === '') return undefined;
+      const n = Math.round(parseFloat(s) * 100);
+      return Number.isFinite(n) && n >= 0 ? n : undefined;
+    })(),
     privatePaymentRanges:
       isPublic
         ? undefined
@@ -764,6 +848,12 @@ function LoanCard(props: {
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             Monthly interest: {formatCents(l.monthlyInterestCents)}
           </div>
+          {(l.unpaidInterestCents != null && l.unpaidInterestCents > 0) || l.unpaidInterestSource === 'manual' || l.unpaidInterestSource === 'estimated' ? (
+            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+              Unpaid interest: {formatCents(l.unpaidInterestCents ?? 0)}
+              {l.unpaidInterestSource === 'manual' ? ' (manual)' : l.unpaidInterestSource === 'estimated' ? ' (from accrual date)' : ''}
+            </div>
+          ) : null}
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             {l.payoffMonths != null && l.payoffMonths > 0 ? (
               <>Estimated payoff: {addMonths(new Date(), l.payoffMonths).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>
@@ -972,13 +1062,14 @@ export function LoansPage() {
     };
   }, [loansWithDerived, birthdateISO, publicSummary]);
 
-  /** After-grace: per private loan use first future full-repayment (interest + principal), only loans not yet in full repayment. */
+  /** After-grace: per private loan use first future value (custom → full repayment → interest-only). */
   const afterGraceBreakdown = useMemo(() => {
     const privateLoansBreakdown: {
       name: string;
       afterGraceCents: number;
       interestCents?: number;
       principalCents?: number;
+      fromCustom?: boolean;
     }[] = [];
     let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
@@ -990,7 +1081,8 @@ export function LoansPage() {
           name: l.name,
           afterGraceCents: cents,
           interestCents: l.futureFullRepaymentInterestCents ?? undefined,
-          principalCents: l.futureFullRepaymentPrincipalCents ?? undefined
+          principalCents: l.futureFullRepaymentPrincipalCents ?? undefined,
+          fromCustom: l.futureValueFromCustom ?? false
         });
       }
     });
@@ -1268,7 +1360,11 @@ export function LoansPage() {
                     <span className="k">{row.name}</span>
                     <span className="v" style={{ color: 'var(--red)' }}>{formatCents(row.afterGraceCents)}</span>
                   </div>
-                  {row.interestCents != null && row.principalCents != null ? (
+                  {row.fromCustom ? (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8, marginTop: 2 }}>
+                      Future payment (manual): {formatCents(row.afterGraceCents)}
+                    </div>
+                  ) : row.interestCents != null && row.principalCents != null ? (
                     <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8, marginTop: 2 }}>
                       Interest: {formatCents(row.interestCents)} · Principal: {formatCents(row.principalCents)} · Full: {formatCents(row.afterGraceCents)}
                     </div>
@@ -1576,6 +1672,31 @@ function LoanEditorForm(props: {
             >
               Add range
             </button>
+          </div>
+          <div className="field">
+            <label>Interest accrual anchor date (optional)</label>
+            <input
+              type="date"
+              value={state.accrualAnchorDate}
+              onChange={(e) => onChange({ ...state, accrualAnchorDate: e.target.value })}
+              style={{ maxWidth: 160 }}
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Start date for lender-style daily unpaid interest: balance × rate / 365.25 × days since this date.
+            </p>
+          </div>
+          <div className="field">
+            <label>Unpaid interest override ($, optional)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={state.unpaidInterestOverride}
+              onChange={(e) => onChange({ ...state, unpaidInterestOverride: e.target.value })}
+              placeholder="Leave blank to use accrual estimate"
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Manual unpaid interest; overrides accrual-from-anchor estimate when set.
+            </p>
           </div>
           <div className="toggle-row" style={{ marginTop: 4 }}>
             <input

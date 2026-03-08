@@ -699,6 +699,10 @@ export type Loan = {
   privatePaymentMode?: 'interest_only' | 'full_repayment' | 'custom_monthly';
   /** Private only: date ranges that define payment mode over time. If present and non-empty, overrides privatePaymentMode. */
   privatePaymentRanges?: PrivatePaymentRange[];
+  /** Private only: interest accrual anchor/reset date for lender-style daily accrual. YYYY-MM-DD. */
+  accrualAnchorDate?: string | null;
+  /** Private only: manual override for unpaid interest (cents). When set, overrides estimated accrual. */
+  unpaidInterestOverrideCents?: number | null;
 };
 
 export type LoansState = {
