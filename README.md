@@ -100,6 +100,17 @@ Manage categories, colors, and other configuration so the app matches how you th
 
 ---
 
+## Deploy to GitHub Pages
+
+The repo is set up for auto-deploy to GitHub Pages on every push to `main`.
+
+1. **One-time setup** — In the repo on GitHub: **Settings → Pages → Build and deployment → Source**: choose **GitHub Actions**.
+2. **Deploy** — Push to `main`. The workflow in `.github/workflows/deploy.yml` runs: it builds the app and deploys the `dist` output. The site will be at `https://<your-username>.github.io/iisauhwallet/`.
+
+No extra config needed; just push to `main` and GitHub runs the deploy.
+
+---
+
 ## Project philosophy
 
 - **Manual-first** — You enter and control your data.
