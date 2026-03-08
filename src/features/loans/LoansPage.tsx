@@ -649,12 +649,17 @@ export function LoansPage() {
     });
 
     const publicCurrentCents = (() => {
-      if (publicSummary.currentPaymentCents != null && publicSummary.currentPaymentCents > 0) return publicSummary.currentPaymentCents;
+      const mode = publicSummary.paymentMode ?? (publicSummary.firstPaymentDate ? 'first_payment_date' : 'current_payment');
       const estimated = publicSummary.estimatedMonthlyPaymentCents ?? 0;
-      if (estimated <= 0) return 0;
-      const first = publicSummary.firstPaymentDate;
-      if (first && todayISO() < first) return 0;
-      return estimated;
+      if (mode === 'first_payment_date') {
+        if (estimated <= 0) return 0;
+        const first = publicSummary.firstPaymentDate;
+        if (!first || todayISO() < first) return 0;
+        return estimated;
+      }
+      return (publicSummary.currentPaymentCents != null && publicSummary.currentPaymentCents > 0)
+        ? publicSummary.currentPaymentCents
+        : 0;
     })();
     if (publicCurrentCents > 0) totalMonthlyNow += publicCurrentCents;
 

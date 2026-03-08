@@ -1,11 +1,15 @@
 import { PUBLIC_LOAN_SUMMARY_KEY } from '../../state/keys';
 
+export type PublicLoanPaymentMode = 'current_payment' | 'first_payment_date';
+
 export interface PublicLoanSummary {
   estimatedMonthlyPaymentCents: number | null;
   /** When set, used as the public-loan Payment(now) source (e.g. after "Use as current payment"). */
   currentPaymentCents?: number | null;
-  /** Optional first payment date (YYYY-MM-DD). Before this date, estimated payment does not contribute to Payment(now). */
+  /** Optional first payment date (YYYY-MM-DD). In first_payment_date mode, estimated payment contributes only when today >= this date. */
   firstPaymentDate?: string | null;
+  /** How public payment is applied to Payment(now): current_payment = use currentPaymentCents now; first_payment_date = use estimated only when today >= firstPaymentDate. */
+  paymentMode?: PublicLoanPaymentMode | null;
   notesText: string;
   /** Optional summary: total public loan balance (cents). */
   totalBalanceCents?: number | null;
@@ -17,6 +21,7 @@ const DEFAULT: PublicLoanSummary = {
   estimatedMonthlyPaymentCents: null,
   currentPaymentCents: null,
   firstPaymentDate: null,
+  paymentMode: 'current_payment',
   notesText: '',
   totalBalanceCents: null,
   avgInterestRatePercent: null
@@ -36,6 +41,12 @@ function parse(raw: unknown): PublicLoanSummary {
       : null;
   const currentPaymentCents = parseNum(o.currentPaymentCents) ?? null;
   const firstPaymentDate = typeof o.firstPaymentDate === 'string' && o.firstPaymentDate.trim() ? o.firstPaymentDate.trim() : null;
+  const paymentMode =
+    o.paymentMode === 'current_payment' || o.paymentMode === 'first_payment_date'
+      ? o.paymentMode
+      : firstPaymentDate
+        ? ('first_payment_date' as const)
+        : ('current_payment' as const);
   const notesText = typeof o.notesText === 'string' ? o.notesText : '';
   const totalBalanceCents = parseNum(o.totalBalanceCents) ?? null;
   const avgInterestRatePercent = parseNum(o.avgInterestRatePercent) ?? null;
@@ -43,6 +54,7 @@ function parse(raw: unknown): PublicLoanSummary {
     estimatedMonthlyPaymentCents,
     currentPaymentCents,
     firstPaymentDate,
+    paymentMode,
     notesText,
     totalBalanceCents,
     avgInterestRatePercent

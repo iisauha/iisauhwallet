@@ -62,6 +62,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
         : ''
     );
     setFirstPaymentDateInput(s.firstPaymentDate ?? '');
+    setShowFirstPaymentDetails(s.paymentMode === 'first_payment_date');
   }, []);
 
   const persist = (next: PublicLoanSummary) => {
@@ -92,7 +93,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
   const handleUseAsCurrentPayment = () => {
     const cents = toCents(paymentInput);
     if (cents != null && cents > 0) {
-      persist({ ...summary, currentPaymentCents: cents });
+      persist({ ...summary, paymentMode: 'current_payment', currentPaymentCents: cents });
     }
   };
 
@@ -149,7 +150,12 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => setShowFirstPaymentDetails((v) => !v)}
+            onClick={() => {
+              setShowFirstPaymentDetails((v) => !v);
+              if (!showFirstPaymentDetails) {
+                persist({ ...summary, paymentMode: 'first_payment_date' });
+              }
+            }}
           >
             {showFirstPaymentDetails ? 'Hide first payment date' : 'Use first payment date'}
           </button>
@@ -168,15 +174,15 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
               style={inputStyle}
             />
             <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              When this date is reached, the estimated public loan payment becomes active in Payment(now).
+              When this date is reached, your estimated public loan payment will automatically be added to Payment(now).
             </p>
           </div>
         )}
-        {currentCents != null && currentCents > 0 && (
+        {summary.paymentMode === 'current_payment' && currentCents != null && currentCents > 0 ? (
           <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
             Current payment (now): {formatCents(currentCents)}/mo
           </p>
-        )}
+        ) : null}
       </div>
 
       <div style={{ marginBottom: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
