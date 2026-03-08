@@ -166,7 +166,8 @@ export type RecurringIncomeOccurrence = {
 export function getRecurringOccurrencesInWindow(
   data: LedgerData,
   windowDays: number,
-  loanAmountMap?: Record<string, number | null>
+  loanAmountMap?: Record<string, number | null>,
+  totalVisiblePaymentNowCents?: number | null
 ): RecurringExpenseOccurrence[] {
   const today = new Date();
   const todayKey = toLocalDateKey(today);
@@ -194,8 +195,9 @@ export function getRecurringOccurrencesInWindow(
       else current = addMonthsPreserveDay(start, current, 1);
     }
     function resolveFullAmount(): number {
-      if (loanAmountMap && r.useLoanEstimatedPayment && r.linkedLoanId && loanAmountMap[r.linkedLoanId] != null) {
-        return loanAmountMap[r.linkedLoanId]!;
+      if (loanAmountMap && r.useLoanEstimatedPayment) {
+        if (r.linkedLoanId && loanAmountMap[r.linkedLoanId] != null) return loanAmountMap[r.linkedLoanId]!;
+        if (!r.linkedLoanId && totalVisiblePaymentNowCents != null && totalVisiblePaymentNowCents > 0) return totalVisiblePaymentNowCents;
       }
       return r.expectedMinCents != null && r.expectedMaxCents != null
         ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)

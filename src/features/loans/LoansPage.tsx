@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLedgerStore } from '../../state/store';
 import { formatCents } from '../../state/calc';
 import {
   loadLoans,
   saveLoans,
+  loadPublicPaymentNowAdded,
+  savePublicPaymentNowAdded,
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
@@ -13,13 +15,14 @@ import {
   type LoanBorrowerType,
   type LoanStateOfResidency,
   uid,
-  loadBirthdateISO
+  loadBirthdateISO,
+  addAccruedInterestToPrivateBalances
 } from '../../state/storage';
 import { getDetectedAgiFromRecurring } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
-import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
+import { loadPublicLoanSummary, savePublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { PublicLoanSimpleCard } from '../federalLoans/PublicLoanSimpleCard';
 
 function todayISO(): string {
@@ -953,9 +956,25 @@ export function LoansPage() {
   const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
+  const [publicPaymentNowAdded, setPublicPaymentNowAdded] = useState(() => loadPublicPaymentNowAdded());
   const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
 
   const birthdateISO = loadBirthdateISO();
+
+  useEffect(() => {
+    const s = publicSummary;
+    if (s.paymentMode !== 'first_payment_date' || !s.firstPaymentDate || (s.estimatedMonthlyPaymentCents ?? 0) <= 0 || s.firstPaymentDateAutoAddPaused) return;
+    const today = todayISO();
+    if (s.firstPaymentDate > today) return;
+    const last = s.firstPaymentDateLastAutoAddedAt;
+    if (last != null && last >= s.firstPaymentDate) return;
+    const addCents = s.estimatedMonthlyPaymentCents!;
+    savePublicPaymentNowAdded(loadPublicPaymentNowAdded() + addCents);
+    savePublicLoanSummary({ ...s, firstPaymentDateLastAutoAddedAt: today });
+    setPublicPaymentNowAdded(loadPublicPaymentNowAdded());
+    setPublicSummary(loadPublicLoanSummary());
+  }, [publicSummary]);
+
 
   const detectedAgi = useMemo(
     () => getDetectedAgiFromRecurring((data.recurring || []) as any),
@@ -975,7 +994,7 @@ export function LoansPage() {
 
   const summary = useMemo(() => {
     let totalBalance = 0;
-    let totalMonthlyNow = 0;
+    let privatePaymentNowBase = 0;
     let totalMonthlyLater = 0;
     let weightedRateNumerator = 0;
 
@@ -985,7 +1004,7 @@ export function LoansPage() {
     loansWithDerived.forEach((l) => {
       const bal = l.balanceCents || 0;
       totalBalance += bal;
-      if (l.monthlyNowCents != null && !l.excludeFromCurrentPayment) totalMonthlyNow += l.monthlyNowCents;
+      if (l.monthlyNowCents != null && !l.excludeFromCurrentPayment) privatePaymentNowBase += l.monthlyNowCents;
       if (l.monthlyLaterCents != null) {
         totalMonthlyLater += l.monthlyLaterCents;
         privateAfterGraceCents += l.monthlyLaterCents;
@@ -994,7 +1013,7 @@ export function LoansPage() {
       weightedRateNumerator += bal * l.interestRatePercent;
     });
 
-    const publicCurrentCents = (() => {
+    const publicEstimateCents = (() => {
       const mode = publicSummary.paymentMode ?? (publicSummary.firstPaymentDate ? 'first_payment_date' : 'current_payment');
       const estimated = publicSummary.estimatedMonthlyPaymentCents ?? 0;
       if (mode === 'first_payment_date') {
@@ -1005,9 +1024,10 @@ export function LoansPage() {
       }
       return (publicSummary.currentPaymentCents != null && publicSummary.currentPaymentCents > 0)
         ? publicSummary.currentPaymentCents
-        : 0;
+        : (estimated > 0 ? estimated : 0);
     })();
-    if (publicCurrentCents > 0) totalMonthlyNow += publicCurrentCents;
+
+    const totalMonthlyNow = privatePaymentNowBase + publicPaymentNowAdded;
 
     const privateTotalBalance = totalBalance;
     const publicBalanceCents = publicSummary.totalBalanceCents ?? 0;
@@ -1048,9 +1068,12 @@ export function LoansPage() {
       avgPublicRate,
       payoffAge,
       publicBalanceCents,
-      privateBalanceCents: privateTotalBalance
+      privateBalanceCents: privateTotalBalance,
+      privatePaymentNowBase,
+      publicPaymentNowAdded,
+      publicEstimateCents
     };
-  }, [loansWithDerived, birthdateISO, publicSummary]);
+  }, [loansWithDerived, birthdateISO, publicSummary, publicPaymentNowAdded]);
 
   /** After-grace: per private loan use first future value (custom → full repayment → interest-only). */
   const afterGraceBreakdown = useMemo(() => {
@@ -1227,7 +1250,10 @@ export function LoansPage() {
       </div>
 
       {loanView === 'public' ? (
-        <PublicLoanSimpleCard onSave={() => setPublicSummary(loadPublicLoanSummary())} />
+        <PublicLoanSimpleCard
+          onSave={() => setPublicSummary(loadPublicLoanSummary())}
+          onAddToPaymentNow={() => setPublicPaymentNowAdded(loadPublicPaymentNowAdded())}
+        />
       ) : (
         <>
           {loansWithDerived.length === 0 ? (
@@ -1255,7 +1281,10 @@ export function LoansPage() {
                   type="button"
                   className="btn btn-secondary"
                   style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                  onClick={() => setState(loadLoans())}
+                  onClick={() => {
+                  addAccruedInterestToPrivateBalances();
+                  setState(loadLoans());
+                }}
                 >
                   Recompute your Payment(now)
                 </button>

@@ -15,7 +15,7 @@ import {
 } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getRecurringIncomeOccurrencesInWindow, getRecurringOccurrencesInWindow } from '../../state/calc';
-import { loadLoans } from '../../state/storage';
+import { loadLoans, loadPublicPaymentNowAdded } from '../../state/storage';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../loans/loanDerivation';
 
 function todayKey() {
@@ -70,9 +70,20 @@ export function UpcomingPage() {
     return getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
   }, [data.recurring]);
 
+  const totalVisiblePaymentNowCents = useMemo(() => {
+    const loansState = loadLoans();
+    const privateLoans = (loansState.loans || []).filter((l: any) => l.category === 'private' && !l.excludeFromCurrentPayment);
+    let privateTotal = 0;
+    for (const l of privateLoans) {
+      const amt = loanPaymentMap[l.id];
+      if (amt != null && amt > 0) privateTotal += amt;
+    }
+    return privateTotal + loadPublicPaymentNowAdded();
+  }, [loanPaymentMap]);
+
   const recurringCosts = useMemo(
-    () => getRecurringOccurrencesInWindow(data, windowDays, loanPaymentMap),
-    [data, windowDays, loanPaymentMap]
+    () => getRecurringOccurrencesInWindow(data, windowDays, loanPaymentMap, totalVisiblePaymentNowCents),
+    [data, windowDays, loanPaymentMap, totalVisiblePaymentNowCents]
   );
   const recurringIncome = useMemo(() => getRecurringIncomeOccurrencesInWindow(data, windowDays), [data, windowDays]);
 
@@ -697,6 +708,8 @@ export function UpcomingPage() {
                           }
                         }
                       }
+                      const publicPortionCents =
+                        rec?.useLoanEstimatedPayment && !rec.linkedLoanId ? loadPublicPaymentNowAdded() : 0;
                       const meta = {
                         ...(baseMeta || {}),
                         source: 'upcoming',
@@ -711,7 +724,9 @@ export function UpcomingPage() {
                             : item.paymentSource || undefined,
                         ...(privateLoanBreakdownCents && Object.keys(privateLoanBreakdownCents).length > 0
                           ? { privateLoanBreakdownCents }
-                          : {})
+                          : {}),
+                        ...(publicPortionCents > 0 ? { publicPortionCents } : {}),
+                        totalVisiblePaymentNowCents: cents
                       };
                       actions.addPendingOutbound({
                         label: item.recurringName,

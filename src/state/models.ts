@@ -71,6 +71,10 @@ export interface PendingTransferMeta {
   originalAccount?: string;
   /** Per-loan cents to subtract from private loan balances when this outbound is posted (loanId -> cents). */
   privateLoanBreakdownCents?: Record<string, number>;
+  /** Public portion of the payment (cents) to subtract from visible Payment(now) when posted; does not reduce private balances. */
+  publicPortionCents?: number;
+  /** Total visible Payment(now) at move-to-pending time (for deterministic posting). */
+  totalVisiblePaymentNowCents?: number;
 }
 
 export interface PurchaseSplitSnapshot {

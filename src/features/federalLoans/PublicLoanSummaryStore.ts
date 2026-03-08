@@ -10,8 +10,12 @@ export interface PublicLoanSummary {
   firstPaymentDate?: string | null;
   /** How public payment is applied to Payment(now): current_payment = use currentPaymentCents now; first_payment_date = use estimated only when today >= firstPaymentDate. */
   paymentMode?: PublicLoanPaymentMode | null;
+  /** When true, first-payment-date auto-add to Payment(now) is paused (does not clear the estimate). */
+  firstPaymentDateAutoAddPaused?: boolean;
+  /** Last date (YYYY-MM-DD) we auto-added public to Payment(now) due to first payment date; used to avoid double-add. */
+  firstPaymentDateLastAutoAddedAt?: string | null;
   notesText: string;
-  /** Optional summary: total public loan balance (cents). */
+  /** Optional summary: total public loan balance (cents). User-editable; reduced when posted. */
   totalBalanceCents?: number | null;
   /** Optional summary: average public interest rate (e.g. 5.5 for 5.5%). */
   avgInterestRatePercent?: number | null;
@@ -22,6 +26,8 @@ const DEFAULT: PublicLoanSummary = {
   currentPaymentCents: null,
   firstPaymentDate: null,
   paymentMode: 'current_payment',
+  firstPaymentDateAutoAddPaused: false,
+  firstPaymentDateLastAutoAddedAt: null,
   notesText: '',
   totalBalanceCents: null,
   avgInterestRatePercent: null
@@ -47,6 +53,11 @@ function parse(raw: unknown): PublicLoanSummary {
       : firstPaymentDate
         ? ('first_payment_date' as const)
         : ('current_payment' as const);
+  const firstPaymentDateAutoAddPaused = o.firstPaymentDateAutoAddPaused === true;
+  const firstPaymentDateLastAutoAddedAt =
+    typeof o.firstPaymentDateLastAutoAddedAt === 'string' && o.firstPaymentDateLastAutoAddedAt.trim()
+      ? o.firstPaymentDateLastAutoAddedAt.trim()
+      : null;
   const notesText = typeof o.notesText === 'string' ? o.notesText : '';
   const totalBalanceCents = parseNum(o.totalBalanceCents) ?? null;
   const avgInterestRatePercent = parseNum(o.avgInterestRatePercent) ?? null;
@@ -55,6 +66,8 @@ function parse(raw: unknown): PublicLoanSummary {
     currentPaymentCents,
     firstPaymentDate,
     paymentMode,
+    firstPaymentDateAutoAddPaused,
+    firstPaymentDateLastAutoAddedAt,
     notesText,
     totalBalanceCents,
     avgInterestRatePercent

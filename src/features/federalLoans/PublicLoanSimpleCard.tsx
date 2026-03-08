@@ -4,6 +4,7 @@ import {
   loadPublicLoanSummary,
   savePublicLoanSummary
 } from './PublicLoanSummaryStore';
+import { loadPublicPaymentNowAdded, savePublicPaymentNowAdded } from '../../state/storage';
 import { formatCents } from '../../state/calc';
 
 const LOAN_SIMULATOR_URL = 'https://studentaid.gov/loan-simulator/';
@@ -32,8 +33,13 @@ function toRate(s: string): number | null {
   return n;
 }
 
-export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
-  const { onSave } = props;
+function todayISO(): string {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymentNow?: () => void }) {
+  const { onSave, onAddToPaymentNow } = props;
   const [summary, setSummary] = useState<PublicLoanSummary>(() => loadPublicLoanSummary());
   const [paymentInput, setPaymentInput] = useState('');
   const [firstPaymentDateInput, setFirstPaymentDateInput] = useState('');
@@ -105,6 +111,22 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
   const estimatedCents = summary.estimatedMonthlyPaymentCents;
   const currentCents = summary.currentPaymentCents;
 
+  const publicEstimateCents =
+    summary.paymentMode === 'first_payment_date'
+      ? (summary.estimatedMonthlyPaymentCents ?? 0) > 0 && summary.firstPaymentDate && summary.firstPaymentDate <= todayISO()
+        ? (summary.estimatedMonthlyPaymentCents ?? 0)
+        : 0
+      : (summary.currentPaymentCents != null && summary.currentPaymentCents > 0)
+        ? summary.currentPaymentCents
+        : (summary.estimatedMonthlyPaymentCents ?? 0);
+
+  const handleAddToPaymentNow = () => {
+    if (publicEstimateCents <= 0) return;
+    const current = loadPublicPaymentNowAdded();
+    savePublicPaymentNowAdded(current + publicEstimateCents);
+    onAddToPaymentNow?.();
+  };
+
   return (
     <div className="card" style={{ marginBottom: 16, padding: '14px 16px' }}>
       <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loans</h4>
@@ -143,6 +165,14 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
           <button
             type="button"
             className="btn btn-secondary"
+            onClick={handleAddToPaymentNow}
+            disabled={publicEstimateCents <= 0}
+          >
+            Add to Payment(now)
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
             onClick={handleUseAsCurrentPayment}
           >
             Use as current payment
@@ -173,9 +203,25 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
               onBlur={handleSaveFirstPaymentDate}
               style={inputStyle}
             />
-            <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              When this date is reached, your estimated public loan payment will automatically be added to Payment(now).
+            <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              When this date is reached, your estimated public loan payment can be automatically added to Payment(now).
             </p>
+            <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>Auto-add when date reached:</span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+                onClick={() => persist({ ...summary, firstPaymentDateAutoAddPaused: !summary.firstPaymentDateAutoAddPaused })}
+              >
+                {summary.firstPaymentDateAutoAddPaused ? 'Paused' : 'Active'}
+              </button>
+            </div>
+            {summary.firstPaymentDateAutoAddPaused ? (
+              <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                Paused. Use &quot;Add to Payment(now)&quot; manually if you want to include public in Payment(now).
+              </p>
+            ) : null}
           </div>
         )}
         {summary.paymentMode === 'current_payment' && currentCents != null && currentCents > 0 ? (

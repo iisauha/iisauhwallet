@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
-import { loadData, loadSubTracker, loadInvesting, loadLoans, saveLoans, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { loadData, loadSubTracker, loadInvesting, loadLoans, saveLoans, loadPublicPaymentNowAdded, savePublicPaymentNowAdded, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { loadPublicLoanSummary, savePublicLoanSummary } from '../features/federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../features/loans/loanDerivation';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
@@ -566,8 +567,25 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           if (!next.recurringPosted[regKey]) {
             const recType = r.type || 'expense';
             let fullAmountCents: number;
-            if (recType !== 'income' && r.useLoanEstimatedPayment && r.linkedLoanId && loanPaymentMap[r.linkedLoanId] != null) {
-              fullAmountCents = loanPaymentMap[r.linkedLoanId]!;
+            if (recType !== 'income' && r.useLoanEstimatedPayment) {
+              if (r.linkedLoanId && loanPaymentMap[r.linkedLoanId] != null) {
+                fullAmountCents = loanPaymentMap[r.linkedLoanId]!;
+              } else if (!r.linkedLoanId) {
+                const privateLoans = (loansState.loans || []).filter((l: any) => l.category === 'private' && !l.excludeFromCurrentPayment);
+                let privateTotal = 0;
+                for (const l of privateLoans) {
+                  const amt = loanPaymentMap[l.id];
+                  if (amt != null && amt > 0) privateTotal += amt;
+                }
+                fullAmountCents = privateTotal + loadPublicPaymentNowAdded();
+              } else {
+                fullAmountCents =
+                  r.expectedMinCents != null && r.expectedMaxCents != null
+                    ? Math.round((r.expectedMinCents + r.expectedMaxCents) / 2)
+                    : typeof r.amountCents === 'number'
+                      ? r.amountCents
+                      : 0;
+              }
             } else {
               fullAmountCents =
                 r.expectedMinCents != null && r.expectedMaxCents != null
@@ -698,7 +716,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (idx === -1) return { needsBankSelection: false };
       const item: any = list[idx];
       const amount = item.amountCents || 0;
-      // Apply posted loan payment to private loan balances (per-loan breakdown).
+      // Apply posted loan payment: only private portion reduces private loan balances; public portion reduces visible Payment(now) only.
       if (kind === 'out' && amount > 0 && item.recurringId) {
         const recurring = next.recurring?.find((r: any) => r.id === item.recurringId);
         if (recurring?.useLoanEstimatedPayment) {
@@ -707,6 +725,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
             : recurring.linkedLoanId
               ? { [recurring.linkedLoanId]: amount }
               : {};
+          const todayKey = toLocalDateKey(new Date());
           if (Object.keys(breakdown).length > 0) {
             const loansState = loadLoans();
             const loans = loansState.loans.map((l: any) => {
@@ -714,9 +733,21 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
               const sub = breakdown[l.id] ?? 0;
               if (sub <= 0) return l;
               const newBalance = Math.max(0, (l.balanceCents || 0) - sub);
-              return { ...l, balanceCents: newBalance };
+              return { ...l, balanceCents: newBalance, accrualLastUpdatedAt: todayKey };
             });
             saveLoans({ ...loansState, loans });
+          }
+          const publicPortionCents = item.meta?.publicPortionCents ?? 0;
+          if (publicPortionCents > 0) {
+            const current = loadPublicPaymentNowAdded();
+            savePublicPaymentNowAdded(Math.max(0, current - publicPortionCents));
+            const pub = loadPublicLoanSummary();
+            if (pub.totalBalanceCents != null && pub.totalBalanceCents > 0) {
+              savePublicLoanSummary({
+                ...pub,
+                totalBalanceCents: Math.max(0, pub.totalBalanceCents - publicPortionCents)
+              });
+            }
           }
         }
       }

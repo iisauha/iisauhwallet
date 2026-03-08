@@ -21,7 +21,8 @@ import {
   UPCOMING_WINDOW_KEY,
   LOANS_KEY,
   BIRTHDATE_KEY,
-  FEDERAL_REPAYMENT_CONFIG_KEY
+  FEDERAL_REPAYMENT_CONFIG_KEY,
+  PUBLIC_PAYMENT_NOW_ADDED_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -733,6 +734,24 @@ export function saveLoans(state: LoansState) {
   } catch (_) {}
 }
 
+export function loadPublicPaymentNowAdded(): number {
+  try {
+    const raw = localStorage.getItem(PUBLIC_PAYMENT_NOW_ADDED_KEY);
+    if (raw == null) return 0;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+export function savePublicPaymentNowAdded(cents: number) {
+  try {
+    const value = Math.max(0, Math.round(cents));
+    localStorage.setItem(PUBLIC_PAYMENT_NOW_ADDED_KEY, String(value));
+  } catch (_) {}
+}
+
 function todayISO(): string {
   return nowIso().slice(0, 10);
 }
@@ -765,6 +784,32 @@ export function computeInSchoolAccruedToDate(
     accruedInterestCents: accrued,
     totalOwedCents: loan.balanceCents + accrued
   };
+}
+
+/**
+ * Add newly accrued interest to each private loan's current balance (from last accrual date to today).
+ * Used before recomputing Payment(now) so balances reflect interest growth. Does not change loan math.
+ */
+export function addAccruedInterestToPrivateBalances(): void {
+  const today = todayISO();
+  const state = loadLoans();
+  const loans = state.loans.map((l: Loan) => {
+    if (l.category !== 'private') return l;
+    const balanceCents = l.balanceCents ?? 0;
+    if (balanceCents <= 0 || !(l.interestRatePercent > 0)) return l;
+    const fromISO = l.accrualLastUpdatedAt || l.accrualAnchorDate || today;
+    if (fromISO >= today) return l;
+    const days = daysBetween(fromISO, today);
+    if (days <= 0) return l;
+    const interestCents = Math.round((balanceCents / 100) * (l.interestRatePercent / 100) / 365.25 * days * 100);
+    const newBalance = balanceCents + interestCents;
+    return {
+      ...l,
+      balanceCents: newBalance,
+      accrualLastUpdatedAt: today
+    };
+  });
+  saveLoans({ ...state, loans });
 }
 
 /**
