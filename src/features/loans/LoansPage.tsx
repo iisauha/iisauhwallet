@@ -13,7 +13,7 @@ import {
   uid,
   loadBirthdateISO
 } from '../../state/storage';
-import { getDetectedAgiFromRecurring } from './loanDerivation';
+import { getDetectedAgiFromRecurring, getActiveSchedulePaymentCents } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -26,6 +26,16 @@ function todayISO(): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
+}
+
+/** First future schedule range's payment (for "after grace" / later amount). Ranges sorted by startDate; first with startDate > today. */
+function getFirstFutureSchedulePaymentCents(loan: Loan): number | null {
+  const ranges = loan.paymentScheduleRanges;
+  if (!ranges || ranges.length === 0) return null;
+  const today = todayISO();
+  const sorted = [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const next = sorted.find((r) => r.startDate > today);
+  return next != null ? next.paymentCents : null;
 }
 
 function parseDateISO(iso: string | undefined | null): Date | null {
@@ -232,30 +242,32 @@ function deriveForLoan(
       payoffMonths = null;
     }
   } else {
-    // Private loan: unchanged behavior
-    const futurePlan = loan.futureRepaymentPlan || 'na';
+    // Private loan: 3 status modes with optional schedule
+    const now = new Date();
+    const scheduleNow = getActiveSchedulePaymentCents(loan.paymentScheduleRanges, now);
+    const futureSchedulePayment = getFirstFutureSchedulePaymentCents(loan);
+
     if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
       monthlyNowCents = interestOnlyMonthly;
-      monthlyLaterCents = fullPaymentCents;
-      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-    } else if (repaymentStatus === 'full_repayment') {
-      monthlyNowCents = fullPaymentCents;
-      monthlyLaterCents = null;
+      monthlyLaterCents = futureSchedulePayment ?? fullPaymentCents;
       payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
     } else if (repaymentStatus === 'deferred_forbearance') {
-      monthlyNowCents = 0;
-      monthlyLaterCents = fullPaymentCents;
+      monthlyNowCents = scheduleNow ?? 0;
+      monthlyLaterCents = futureSchedulePayment ?? fullPaymentCents;
       payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
-    } else if (repaymentStatus === 'custom_payment') {
-      const custom = loan.nextPaymentCents && loan.nextPaymentCents > 0 ? loan.nextPaymentCents : null;
-      monthlyNowCents = custom;
+    } else if (repaymentStatus === 'full_repayment') {
+      monthlyNowCents = scheduleNow ?? fullPaymentCents;
       monthlyLaterCents = null;
-      payoffMonths =
-        custom != null ? computeMonthsToPayoff(balanceCents, interestRatePercent, custom) : null;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    } else if (repaymentStatus === 'custom_payment' && loan.nextPaymentCents && loan.nextPaymentCents > 0) {
+      monthlyNowCents = loan.nextPaymentCents;
+      monthlyLaterCents = null;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, loan.nextPaymentCents);
     } else {
-      monthlyNowCents = null;
+      // Legacy idr or unknown: treat as full repayment
+      monthlyNowCents = scheduleNow ?? fullPaymentCents;
       monthlyLaterCents = null;
-      payoffMonths = null;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
     }
   }
 
@@ -296,6 +308,8 @@ type LoanEditorState = {
   householdSize: string;
   dependents: string;
   stateOfResidency: LoanStateOfResidency;
+  paymentScheduleRanges: PaymentScheduleRange[];
+  schedulePaymentStrings: Record<string, string>;
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -322,7 +336,9 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       borrowerType: 'student',
       householdSize: '1',
       dependents: '0',
-      stateOfResidency: 'contiguous'
+      stateOfResidency: 'contiguous',
+      paymentScheduleRanges: [],
+      schedulePaymentStrings: {}
     };
   }
   return {
@@ -349,7 +365,9 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     borrowerType: l.borrowerType ?? 'student',
     householdSize: String(l.householdSize ?? 1),
     dependents: String(l.dependents ?? 0),
-    stateOfResidency: l.stateOfResidency ?? 'contiguous'
+    stateOfResidency: l.stateOfResidency ?? 'contiguous',
+    paymentScheduleRanges: l.paymentScheduleRanges ?? [],
+    schedulePaymentStrings: {}
   };
 }
 
@@ -408,7 +426,11 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     householdSize,
     dependents,
     stateOfResidency,
-    paymentScheduleRanges: prev?.paymentScheduleRanges,
+    paymentScheduleRanges: isPublic ? prev?.paymentScheduleRanges : (e.paymentScheduleRanges?.length ? e.paymentScheduleRanges.map((r) => {
+      const str = e.schedulePaymentStrings?.[r.id];
+      const cents = str !== undefined && str !== '' ? Math.round(parseFloat(String(str).replace(/,/g, '')) * 100) : r.paymentCents;
+      return { ...r, paymentCents: Number.isFinite(cents) && cents >= 0 ? cents : r.paymentCents };
+    }) : undefined),
     gracePeriodEndDate,
     nextPaymentCents,
     nextPaymentDate,
@@ -629,7 +651,14 @@ export function LoansPage() {
       weightedRateNumerator += bal * l.interestRatePercent;
     });
 
-    const publicCurrentCents = publicSummary.currentPaymentCents ?? 0;
+    const publicCurrentCents = (() => {
+      if (publicSummary.currentPaymentCents != null && publicSummary.currentPaymentCents > 0) return publicSummary.currentPaymentCents;
+      const estimated = publicSummary.estimatedMonthlyPaymentCents ?? 0;
+      if (estimated <= 0) return 0;
+      const first = publicSummary.firstPaymentDate;
+      if (first && todayISO() < first) return 0;
+      return estimated;
+    })();
     if (publicCurrentCents > 0) totalMonthlyNow += publicCurrentCents;
 
     const privateTotalBalance = totalBalance;
@@ -1129,68 +1158,74 @@ function LoanEditorForm(props: {
               inputMode="numeric"
               placeholder="e.g. 120"
             />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              For reference and for full-repayment calculation
+            </p>
           </div>
           <div className="field">
             <label>Current status</label>
             <Select
-              value={state.repaymentStatus}
+              value={state.repaymentStatus === 'grace_interest_only' || state.repaymentStatus === 'idr' || state.repaymentStatus === 'custom_payment' ? 'full_repayment' : state.repaymentStatus}
               onChange={(e) =>
                 onChange({
                   ...state,
-                  repaymentStatus: e.target.value as any
+                  repaymentStatus: e.target.value as Loan['repaymentStatus']
                 })
               }
             >
-              <option value="in_school_interest_only">In school / interest-only</option>
-              <option value="grace_interest_only">Grace period / interest-only</option>
-              <option value="full_repayment">Full repayment</option>
-              {idrAllowed ? <option value="idr">IDR (income-driven)</option> : null}
-              <option value="deferred_forbearance">Deferred / forbearance</option>
-              <option value="custom_payment">Custom monthly payment</option>
+              <option value="in_school_interest_only">In School / Interest Only</option>
+              <option value="deferred_forbearance">Deferred / Forbearance</option>
+              <option value="full_repayment">Full Repayment</option>
             </Select>
             <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              Current repayment status
+              In School: interest-only payment now. Deferred: use schedule below. Full: amortized or schedule override.
             </p>
           </div>
-          {state.repaymentStatus === 'in_school_interest_only' ? (
-            <div className="field">
-              <label>Grace Period End Date</label>
-              <input
-                type="date"
-                value={state.gracePeriodEndDate}
-                onChange={(e) => onChange({ ...state, gracePeriodEndDate: e.target.value })}
-                style={{
-                  padding: '6px 8px',
-                  borderRadius: 4,
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg)',
-                  color: 'var(--text)',
-                  fontSize: '0.9rem',
-                  width: '100%'
-                }}
-              />
-              <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
-                Full repayment is assumed to start after this date.
+          {(state.repaymentStatus === 'deferred_forbearance' || state.repaymentStatus === 'full_repayment') && (
+            <div className="field" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', marginBottom: 6 }}>Payment schedule (date ranges)</label>
+              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>
+                {state.repaymentStatus === 'deferred_forbearance' ? 'Add rows so the active range for today sets Payment(now).' : 'Optional. If a range covers today, it overrides the calculated payment.'}
               </p>
+              {(state.paymentScheduleRanges || []).map((r) => (
+                <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                  <input
+                    type="date"
+                    value={r.startDate}
+                    onChange={(e) => onChange({ ...state, paymentScheduleRanges: state.paymentScheduleRanges.map((x) => x.id === r.id ? { ...x, startDate: e.target.value } : x) })}
+                    style={{ width: 120, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+                  />
+                  <input
+                    type="date"
+                    value={r.endDate}
+                    onChange={(e) => onChange({ ...state, paymentScheduleRanges: state.paymentScheduleRanges.map((x) => x.id === r.id ? { ...x, endDate: e.target.value } : x) })}
+                    style={{ width: 120, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+                  />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={state.schedulePaymentStrings?.[r.id] ?? (r.paymentCents / 100).toFixed(2)}
+                    onChange={(e) => onChange({ ...state, schedulePaymentStrings: { ...state.schedulePaymentStrings, [r.id]: e.target.value } })}
+                    placeholder="0.00"
+                    style={{ width: 80, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+                  />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>$/mo</span>
+                  <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.8rem' }} onClick={() => onChange({ ...state, paymentScheduleRanges: state.paymentScheduleRanges.filter((x) => x.id !== r.id) })}>Remove</button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.85rem' }}
+                onClick={() => onChange({
+                  ...state,
+                  paymentScheduleRanges: [...(state.paymentScheduleRanges || []), { id: uid(), startDate: todayISO(), endDate: todayISO(), paymentCents: 0 }]
+                })}
+              >
+                Add row
+              </button>
             </div>
-          ) : null}
-          <div className="field">
-            <label>Next payment amount ($)</label>
-            <input
-              value={state.nextPayment}
-              onChange={(e) => onChange({ ...state, nextPayment: e.target.value })}
-              inputMode="decimal"
-              placeholder="Optional"
-            />
-          </div>
-          <div className="field">
-            <label>Next payment date</label>
-            <input
-              type="date"
-              value={state.nextPaymentDate}
-              onChange={(e) => onChange({ ...state, nextPaymentDate: e.target.value })}
-            />
-          </div>
+          )}
         </>
       ) : null}
       {state.category === 'public' ? (

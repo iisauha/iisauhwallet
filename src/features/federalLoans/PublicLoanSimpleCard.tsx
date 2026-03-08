@@ -36,6 +36,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
   const { onSave } = props;
   const [summary, setSummary] = useState<PublicLoanSummary>(() => loadPublicLoanSummary());
   const [paymentInput, setPaymentInput] = useState('');
+  const [firstPaymentDateInput, setFirstPaymentDateInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
   const [balanceInput, setBalanceInput] = useState('');
   const [rateInput, setRateInput] = useState('');
@@ -59,6 +60,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
         ? String(s.avgInterestRatePercent)
         : ''
     );
+    setFirstPaymentDateInput(s.firstPaymentDate ?? '');
   }, []);
 
   const persist = (next: PublicLoanSummary) => {
@@ -91,6 +93,11 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
     if (cents != null && cents > 0) {
       persist({ ...summary, currentPaymentCents: cents });
     }
+  };
+
+  const handleSaveFirstPaymentDate = () => {
+    const v = firstPaymentDateInput.trim();
+    persist({ ...summary, firstPaymentDate: v || undefined });
   };
 
   const estimatedCents = summary.estimatedMonthlyPaymentCents;
@@ -127,6 +134,23 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void }) {
           placeholder="0.00"
           style={inputStyle}
         />
+      </div>
+
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+          First payment date (optional)
+        </label>
+        <input
+          type="date"
+          className="ll-control"
+          value={firstPaymentDateInput}
+          onChange={(e) => setFirstPaymentDateInput(e.target.value)}
+          onBlur={handleSaveFirstPaymentDate}
+          style={inputStyle}
+        />
+        <p style={{ marginTop: 2, fontSize: '0.75rem', color: 'var(--muted)' }}>
+          Before this date, the estimated payment does not count toward Payment(now). Leave blank to count it now.
+        </p>
       </div>
 
       {estimatedCents != null && estimatedCents > 0 && (

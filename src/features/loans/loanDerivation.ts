@@ -3,7 +3,28 @@
  * Used by recurring integration to resolve "estimated payment (now)" by loan id.
  */
 import type { Loan } from '../../state/storage';
+import type { PaymentScheduleRange } from '../../state/storage';
 import { loadFederalRepaymentConfig } from '../../state/storage';
+
+function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** If the given date falls within a schedule range, return that range's payment (cents); else null. */
+export function getActiveSchedulePaymentCents(
+  ranges: PaymentScheduleRange[] | undefined,
+  asOf: Date
+): number | null {
+  if (!ranges || ranges.length === 0) return null;
+  const key = toDateKey(asOf);
+  for (const r of ranges) {
+    if (key >= r.startDate && key <= r.endDate) return r.paymentCents;
+  }
+  return null;
+}
 
 function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
   const r = ratePercent / 100;
@@ -144,14 +165,17 @@ function deriveMonthlyNowCents(
     return fullPaymentCents;
   }
 
+  const now = new Date();
+  const schedulePayment = getActiveSchedulePaymentCents(loan.paymentScheduleRanges, now);
+
   if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
     return interestOnlyMonthly;
   }
-  if (repaymentStatus === 'full_repayment') {
-    return fullPaymentCents;
-  }
   if (repaymentStatus === 'deferred_forbearance') {
-    return 0;
+    return schedulePayment != null ? schedulePayment : 0;
+  }
+  if (repaymentStatus === 'full_repayment') {
+    return schedulePayment != null ? schedulePayment : fullPaymentCents;
   }
   if (repaymentStatus === 'custom_payment' && loan.nextPaymentCents && loan.nextPaymentCents > 0) {
     return loan.nextPaymentCents;

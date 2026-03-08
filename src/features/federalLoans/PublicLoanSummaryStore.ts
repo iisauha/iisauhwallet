@@ -4,6 +4,8 @@ export interface PublicLoanSummary {
   estimatedMonthlyPaymentCents: number | null;
   /** When set, used as the public-loan Payment(now) source (e.g. after "Use as current payment"). */
   currentPaymentCents?: number | null;
+  /** Optional first payment date (YYYY-MM-DD). Before this date, estimated payment does not contribute to Payment(now). */
+  firstPaymentDate?: string | null;
   notesText: string;
   /** Optional summary: total public loan balance (cents). */
   totalBalanceCents?: number | null;
@@ -14,6 +16,7 @@ export interface PublicLoanSummary {
 const DEFAULT: PublicLoanSummary = {
   estimatedMonthlyPaymentCents: null,
   currentPaymentCents: null,
+  firstPaymentDate: null,
   notesText: '',
   totalBalanceCents: null,
   avgInterestRatePercent: null
@@ -32,12 +35,14 @@ function parse(raw: unknown): PublicLoanSummary {
       ? o.estimatedMonthlyPaymentCents
       : null;
   const currentPaymentCents = parseNum(o.currentPaymentCents) ?? null;
+  const firstPaymentDate = typeof o.firstPaymentDate === 'string' && o.firstPaymentDate.trim() ? o.firstPaymentDate.trim() : null;
   const notesText = typeof o.notesText === 'string' ? o.notesText : '';
   const totalBalanceCents = parseNum(o.totalBalanceCents) ?? null;
   const avgInterestRatePercent = parseNum(o.avgInterestRatePercent) ?? null;
   return {
     estimatedMonthlyPaymentCents,
     currentPaymentCents,
+    firstPaymentDate,
     notesText,
     totalBalanceCents,
     avgInterestRatePercent
