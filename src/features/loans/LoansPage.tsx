@@ -253,6 +253,17 @@ function getAgiCents(loan: Loan, detectedAnnualIncomeCents: number): number {
     : Math.max(0, detectedAnnualIncomeCents);
 }
 
+function getActiveMonthlyPayment(loan: LoanWithDerived): number | null {
+  const today = new Date();
+  if (loan.gracePeriodEndDate) {
+    const graceEnd = new Date(loan.gracePeriodEndDate + 'T00:00:00');
+    if (today >= graceEnd) {
+      return loan.monthlyLaterCents ?? loan.monthlyNowCents;
+    }
+  }
+  return loan.monthlyNowCents;
+}
+
 function deriveForLoan(
   loan: Loan,
   allLoans: Loan[],
@@ -582,7 +593,7 @@ function LoanCard(props: {
         </div>
       ) : null}
       <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
-        Payment now: {l.monthlyNowCents != null ? formatCents(l.monthlyNowCents) : '—'}
+        Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
       </div>
       {l.category === 'public' && (l.totalFederalPaymentCents != null || l.approximateShareCents != null) ? (
         <>
