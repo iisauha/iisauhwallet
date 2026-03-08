@@ -215,7 +215,7 @@ export function FederalLoanParametersModal({
               onChange={(e) =>
                 setParams({
                   ...params,
-                  povertyLevel: Math.max(0, Number(e.target.value) || 0)
+                  povertyLevel: Number(e.target.value)
                 })
               }
               style={{ width: 120, padding: '4px 8px' }}

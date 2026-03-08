@@ -697,8 +697,6 @@ export function LoansPage() {
   const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
-  const [editingPoverty, setEditingPoverty] = useState(false);
-  const [povertyInput, setPovertyInput] = useState('');
   const [federalParams, setFederalParams] = useState<ReturnType<typeof loadFederalLoanParameters>>(
     () => loadFederalLoanParameters()
   );
@@ -947,72 +945,6 @@ export function LoansPage() {
               }
               numPublicLoans={(state.loans || []).filter((l) => l.category === 'public').length}
             />
-          ) : null}
-        </div>
-      ) : null}
-
-      {loanView === 'public' && !federalParams && loansWithDerived.some((l) => l.category === 'public') ? (
-        <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
-          <div className="summary-kv" style={{ marginTop: 0, marginBottom: 6 }}>
-            <span className="k">Poverty level used</span>
-            <span className="v">
-              {editingPoverty ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--muted)' }}>$</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={100}
-                    value={povertyInput}
-                    onChange={(e) => setPovertyInput(e.target.value)}
-                    style={{ width: 100, padding: '4px 8px' }}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: '4px 10px', fontSize: '0.85rem' }}
-                    onClick={() => {
-                      const val = Math.round(Number(povertyInput));
-                      if (!Number.isNaN(val) && val >= 0) {
-                        const next = { povertyLevelDollars: val };
-                        setFederalConfig(next);
-                        saveFederalRepaymentConfig(next);
-                        setEditingPoverty(false);
-                      }
-                    }}
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: '4px 10px', fontSize: '0.85rem' }}
-                    onClick={() => {
-                      setEditingPoverty(false);
-                      setPovertyInput(String(federalConfig.povertyLevelDollars));
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </span>
-              ) : (
-                <>${federalConfig.povertyLevelDollars.toLocaleString()}</>
-              )}
-            </span>
-          </div>
-          {!editingPoverty ? (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-              onClick={() => {
-                setPovertyInput(String(federalConfig.povertyLevelDollars));
-                setEditingPoverty(true);
-              }}
-            >
-              Edit poverty level
-            </button>
           ) : null}
         </div>
       ) : null}
