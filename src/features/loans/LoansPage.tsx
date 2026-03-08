@@ -784,56 +784,66 @@ function LoanCard(props: {
   );
 }
 
+/** Build year-end snapshot points for timeline: start, then every step years, then end. */
+function timelineSnapshotYears(globalStart: string, globalEnd: string): number[] {
+  const startY = parseInt(globalStart.slice(0, 4), 10);
+  const endY = parseInt(globalEnd.slice(0, 4), 10);
+  const spanYears = endY - startY + 1;
+  const step = spanYears > 10 ? 4 : spanYears > 5 ? 3 : spanYears > 2 ? 2 : 1;
+  const out: number[] = [];
+  for (let y = startY; y <= endY; y += step) out.push(y);
+  if (out[out.length - 1] !== endY) out.push(endY);
+  return out;
+}
+
 function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => void }) {
   const { loan, onClose } = props;
   const ranges = (loan.paymentScheduleRanges ?? []).slice().sort((a, b) => a.startDate.localeCompare(b.startDate));
   const defermentRanges = ranges.filter((r) => r.paymentCents === 0);
   const rate = loan.interestRatePercent / 100;
-
   const defaultMonthlyCents = Math.round((loan.balanceCents * rate) / 12);
-  const timelineRows: { label: string; balanceCents: number; monthsFromStart?: number; year?: number; isEndOfRange?: boolean }[] = [];
-  let primaryMonthlyCents = defaultMonthlyCents;
-  if (defermentRanges.length > 0) {
-    const primary = defermentRanges[0];
-    const { startDate, endDate, accruedInterestCents } = primary;
-    primaryMonthlyCents =
-      accruedInterestCents != null && accruedInterestCents >= 0
-        ? accruedInterestCents
-        : defaultMonthlyCents;
-    const balanceAtStart = loan.balanceCents;
-    const startY = parseInt(startDate.slice(0, 4), 10);
-    const endY = parseInt(endDate.slice(0, 4), 10);
-    timelineRows.push({ label: `Start of range (${startDate})`, balanceCents: balanceAtStart });
-    if (endY - startY <= 1 && startDate.slice(0, 4) === endDate.slice(0, 4)) {
-      const mos = monthsBetween(startDate, endDate);
-      if (mos > 0) {
-        timelineRows.push({
-          label: `End of range (${endDate})`,
-          balanceCents: balanceAtStart + primaryMonthlyCents * mos,
-          monthsFromStart: mos,
-          year: endY,
-          isEndOfRange: true
-        });
-      }
-    } else {
-      for (let y = startY; y <= endY; y++) {
-        const yearEnd = `${y}-12-31`;
-        if (yearEnd < startDate) continue;
-        const cap = yearEnd > endDate ? endDate : yearEnd;
-        const mos = monthsBetween(startDate, cap);
-        const bal = balanceAtStart + primaryMonthlyCents * mos;
-        const isEndOfRange = cap === endDate;
-        timelineRows.push({
-          label: isEndOfRange ? `End of range (${endDate})` : `End of ${y}`,
-          balanceCents: bal,
-          monthsFromStart: mos,
-          year: parseInt(cap.slice(0, 4), 10),
-          isEndOfRange
-        });
-        if (isEndOfRange) break;
+
+  const timelineSnapshots: { label: string; balanceCents: number }[] = [];
+  if (ranges.length > 0) {
+    const globalStart = ranges[0].startDate;
+    const globalEnd = ranges[ranges.length - 1].endDate;
+    timelineSnapshots.push({ label: 'Start', balanceCents: loan.balanceCents });
+    const snapshotYears = timelineSnapshotYears(globalStart, globalEnd);
+    let nextSnapshotIdx = 0;
+    let bal = loan.balanceCents;
+
+    for (const r of ranges) {
+      const rowAccrued =
+        r.accruedInterestCents != null && r.accruedInterestCents >= 0
+          ? r.accruedInterestCents
+          : Math.round(bal * rate / 12);
+      const rowPayment = r.paymentCents ?? 0;
+      let monthStart = r.startDate;
+      const rowEnd = r.endDate;
+
+      while (monthStart <= rowEnd) {
+        bal = bal + rowAccrued - rowPayment;
+        if (bal < 0) bal = 0;
+        const yearOfMonth = parseInt(monthStart.slice(0, 4), 10);
+        if (nextSnapshotIdx < snapshotYears.length && snapshotYears[nextSnapshotIdx] === yearOfMonth) {
+          timelineSnapshots.push({ label: String(snapshotYears[nextSnapshotIdx]), balanceCents: bal });
+          nextSnapshotIdx += 1;
+        }
+        const nextMonth = addMonths(new Date(monthStart + 'T00:00:00'), 1);
+        monthStart = nextMonth.toISOString().slice(0, 10);
       }
     }
+    timelineSnapshots.push({
+      label: 'End of range',
+      balanceCents: bal
+    });
   }
+
+  const primaryMonthlyCents = defermentRanges.length > 0
+    ? (defermentRanges[0].accruedInterestCents != null && defermentRanges[0].accruedInterestCents >= 0
+        ? defermentRanges[0].accruedInterestCents
+        : defaultMonthlyCents)
+    : defaultMonthlyCents;
 
   return (
     <>
@@ -842,18 +852,18 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
           <span className="k">Starting balance</span>
           <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.balanceCents)}</span>
         </div>
-        {loan.estimatedCurrentBalanceCents != null && loan.estimatedCurrentBalanceCents > 0 ? (
+        {loan.estimatedCurrentBalanceCents != null ? (
           <div className="summary-kv">
-            <span className="k">Estimated current balance</span>
+            <span className="k">Current balance</span>
             <span className="v" style={{ color: 'var(--red)' }}>{formatCents(loan.estimatedCurrentBalanceCents)}</span>
           </div>
         ) : null}
         <div style={{ marginTop: 8 }}>
-          <span className="k" style={{ display: 'block', marginBottom: 4 }}>Monthly accrued</span>
-          <span className="v" style={{ color: 'var(--red)' }}>{formatCents(defermentRanges.length > 0 ? primaryMonthlyCents : defaultMonthlyCents)}/mo</span>
-          {defermentRanges.length === 0 ? (
+          <span className="k" style={{ display: 'block', marginBottom: 4 }}>Monthly accrued (used in timeline)</span>
+          <span className="v" style={{ color: 'var(--red)' }}>{formatCents(primaryMonthlyCents)}/mo</span>
+          {ranges.length === 0 ? (
             <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>
-              From interest rate. Add a $0 payment schedule range to see balance timeline.
+              Add a schedule range to see balance timeline.
             </p>
           ) : null}
         </div>
@@ -869,28 +879,20 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
                 <div key={r.id} style={{ fontSize: '0.85rem', marginBottom: 4, padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
                   {r.startDate} → {r.endDate}
                   <span style={{ display: 'block', color: 'var(--muted)', marginTop: 2 }}>
-                    {formatCents(monthlyCents)}/mo × months in range
+                    {formatCents(monthlyCents)}/mo, payment $0
                   </span>
                 </div>
               );
             })}
           </div>
         ) : null}
-        {timelineRows.length > 0 ? (
+        {timelineSnapshots.length > 0 ? (
           <div style={{ marginTop: 8 }}>
             <span className="k" style={{ display: 'block', marginBottom: 4 }}>Estimated balance timeline</span>
-            {timelineRows.map((row, i) => (
-              <div key={i} style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-                {row.monthsFromStart != null && row.monthsFromStart > 0 && row.year != null ? (
-                  <span style={{ color: 'var(--muted)' }}>
-                    {formatCents(primaryMonthlyCents)}/mo × {row.monthsFromStart} months (in {row.year}) → balance ={' '}
-                    <span style={{ color: 'var(--red)', fontWeight: 500 }}>{formatCents(row.balanceCents)}</span>
-                  </span>
-                ) : (
-                  <span style={{ color: 'var(--muted)' }}>
-                    {row.label} → balance = <span style={{ color: 'var(--red)', fontWeight: 500 }}>{formatCents(row.balanceCents)}</span>
-                  </span>
-                )}
+            {timelineSnapshots.map((row, i) => (
+              <div key={i} style={{ fontSize: '0.85rem', marginBottom: 2, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: 'var(--muted)' }}>{row.label === 'End of range' ? 'End of range' : row.label}</span>
+                <span style={{ color: 'var(--red)', fontWeight: 500 }}>{formatCents(row.balanceCents)}</span>
               </div>
             ))}
           </div>
@@ -903,7 +905,10 @@ function DefermentInfoContent(props: { loan: LoanWithDerived; onClose: () => voi
         ) : null}
       </div>
       <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 12, marginBottom: 0 }}>
-        The later required payment already accounts for this balance increase during deferment/forbearance.
+        Balance changes each month by accrued amount minus payment. Scheduled payments may still allow the balance to grow if they are lower than accrued monthly interest.
+      </p>
+      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
+        The later required payment already reflects the balance growth that occurred during this period.
       </p>
       <div style={{ marginTop: 16 }}>
         <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
