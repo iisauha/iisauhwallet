@@ -6,6 +6,7 @@ import {
   saveLoans,
   type LoansState,
   type Loan,
+  type FutureRepaymentPlan,
   uid,
   loadBirthdateISO
 } from '../../state/storage';
@@ -117,6 +118,20 @@ type LoanWithDerived = Loan & {
   payoffMonths: number | null;
 };
 
+function computeIdrMonthlyCents(
+  loan: Loan,
+  detectedAnnualIncomeCents: number,
+  idrManualIncomeCents: number | undefined
+): number {
+  const useManual = loan.idrUseManualIncome;
+  const annualIncomeCents = useManual
+    ? Math.max(0, idrManualIncomeCents || 0)
+    : Math.max(0, detectedAnnualIncomeCents);
+  const annualIncomeDollars = annualIncomeCents / 100;
+  const idrMonthlyDollars = (annualIncomeDollars * 0.1) / 12; // ~10% of gross income
+  return Math.max(0, Math.round(idrMonthlyDollars * 100));
+}
+
 function deriveForLoan(
   loan: Loan,
   detectedAnnualIncomeCents: number,
@@ -133,23 +148,42 @@ function deriveForLoan(
   let monthlyLaterCents: number | null = null;
   let payoffMonths: number | null = null;
 
+  const isPublicInSchoolOrGrace =
+    category === 'public' &&
+    (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only');
+  const futurePlan = loan.futureRepaymentPlan || 'na';
+
   if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
     monthlyNowCents = interestOnlyMonthly;
-    monthlyLaterCents = fullPaymentCents;
-    payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    if (isPublicInSchoolOrGrace) {
+      if (futurePlan === 'idr') {
+        const idrCents = computeIdrMonthlyCents(loan, detectedAnnualIncomeCents, idrManualIncomeCents);
+        monthlyLaterCents = idrCents || null;
+        payoffMonths = monthlyLaterCents
+          ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyLaterCents)
+          : computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+      } else if (futurePlan === 'custom' && loan.nextPaymentCents && loan.nextPaymentCents > 0) {
+        monthlyLaterCents = loan.nextPaymentCents;
+        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, loan.nextPaymentCents);
+      } else if (futurePlan === 'standard' || futurePlan === 'graduated' || futurePlan === 'extended') {
+        monthlyLaterCents = fullPaymentCents;
+        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+      } else {
+        // N/A or unknown: no after-grace estimate shown; payoff uses standard for projection
+        monthlyLaterCents = null;
+        payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+      }
+    } else {
+      monthlyLaterCents = fullPaymentCents;
+      payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+    }
   } else if (repaymentStatus === 'full_repayment') {
     monthlyNowCents = fullPaymentCents;
     monthlyLaterCents = null;
     payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
   } else if (repaymentStatus === 'idr' && category === 'public') {
-    const useManual = loan.idrUseManualIncome;
-    const annualIncomeCents = useManual
-      ? Math.max(0, idrManualIncomeCents || 0)
-      : Math.max(0, detectedAnnualIncomeCents);
-    const annualIncomeDollars = annualIncomeCents / 100;
-    const idrMonthlyDollars = (annualIncomeDollars * 0.1) / 12; // ~10% of gross income
-    const idrMonthlyCents = Math.max(0, Math.round(idrMonthlyDollars * 100));
-    monthlyNowCents = idrMonthlyCents || null;
+    const idrCents = computeIdrMonthlyCents(loan, detectedAnnualIncomeCents, idrManualIncomeCents);
+    monthlyNowCents = idrCents || null;
     monthlyLaterCents = null;
     payoffMonths = monthlyNowCents
       ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyNowCents)
@@ -190,6 +224,7 @@ type LoanEditorState = {
   rateType: Loan['rateType'];
   termMonths: string;
   repaymentStatus: Loan['repaymentStatus'];
+  futureRepaymentPlan: FutureRepaymentPlan;
   gracePeriodEndDate: string;
   nextPayment: string;
   nextPaymentDate: string;
@@ -210,6 +245,7 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       rateType: 'fixed',
       termMonths: '',
       repaymentStatus: 'full_repayment',
+      futureRepaymentPlan: 'na',
       gracePeriodEndDate: '',
       nextPayment: '',
       nextPaymentDate: '',
@@ -229,6 +265,7 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     rateType: l.rateType,
     termMonths: l.termMonths != null ? String(l.termMonths) : '',
     repaymentStatus: l.repaymentStatus,
+    futureRepaymentPlan: l.futureRepaymentPlan || 'na',
     gracePeriodEndDate: l.gracePeriodEndDate || '',
     nextPayment: l.nextPaymentCents != null ? (l.nextPaymentCents / 100).toFixed(2) : '',
     nextPaymentDate: l.nextPaymentDate || '',
@@ -261,6 +298,9 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
       ? e.gracePeriodEndDate
       : undefined;
 
+  const futureRepaymentPlan =
+    e.category === 'public' ? (e.futureRepaymentPlan || 'na') : undefined;
+
   return {
     id: prev?.id || uid(),
     name: e.name.trim() || 'Loan',
@@ -271,6 +311,7 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     rateType: e.rateType,
     termMonths,
     repaymentStatus: e.repaymentStatus,
+    futureRepaymentPlan,
     gracePeriodEndDate,
     nextPaymentCents,
     nextPaymentDate: e.nextPaymentDate || undefined,
@@ -464,7 +505,7 @@ export function LoansPage() {
               </span>
             </div>
             <div>
-              <strong>Status:</strong>{' '}
+              <strong>Current status:</strong>{' '}
               <span style={{ textTransform: 'none' }}>
                 {l.repaymentStatus === 'in_school_interest_only'
                   ? 'In school / interest-only'
@@ -479,12 +520,32 @@ export function LoansPage() {
                           : 'Custom monthly payment'}
               </span>
             </div>
+            {l.category === 'public' &&
+            (l.repaymentStatus === 'in_school_interest_only' ||
+              l.repaymentStatus === 'grace_interest_only') &&
+            l.futureRepaymentPlan &&
+            l.futureRepaymentPlan !== 'na' ? (
+              <div>
+                <strong>Plan after grace:</strong>{' '}
+                <span style={{ textTransform: 'none' }}>
+                  {l.futureRepaymentPlan === 'idr'
+                    ? 'IDR'
+                    : l.futureRepaymentPlan === 'standard'
+                      ? 'Standard'
+                      : l.futureRepaymentPlan === 'graduated'
+                        ? 'Graduated'
+                        : l.futureRepaymentPlan === 'extended'
+                          ? 'Extended'
+                          : 'Custom'}
+                </span>
+              </div>
+            ) : null}
             <div style={{ marginTop: 4 }}>
               <strong>Estimated payment (now):</strong>{' '}
               {l.monthlyNowCents != null ? formatCents(l.monthlyNowCents) : '—'}
             </div>
             <div>
-              <strong>Estimated payment later:</strong>{' '}
+              <strong>Estimated payment after grace:</strong>{' '}
               {l.monthlyLaterCents != null ? formatCents(l.monthlyLaterCents) : '—'}
             </div>
             {l.repaymentStatus === 'in_school_interest_only' && l.gracePeriodEndDate ? (
@@ -711,7 +772,7 @@ function LoanEditorForm(props: {
         />
       </div>
       <div className="field">
-        <label>Repayment status</label>
+        <label>Current status</label>
         <Select
           value={state.repaymentStatus}
           onChange={(e) =>
@@ -728,7 +789,34 @@ function LoanEditorForm(props: {
           <option value="deferred_forbearance">Deferred / forbearance</option>
           <option value="custom_payment">Custom monthly payment</option>
         </Select>
+        <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          Current repayment status
+        </p>
       </div>
+      {state.category === 'public' ? (
+        <div className="field">
+          <label>Plan after grace</label>
+          <Select
+            value={state.futureRepaymentPlan}
+            onChange={(e) =>
+              onChange({
+                ...state,
+                futureRepaymentPlan: (e.target.value || 'na') as FutureRepaymentPlan
+              })
+            }
+          >
+            <option value="na">N/A</option>
+            <option value="idr">IDR</option>
+            <option value="standard">Standard</option>
+            <option value="graduated">Graduated</option>
+            <option value="extended">Extended</option>
+            <option value="custom">Custom</option>
+          </Select>
+          <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+            Future repayment plan (used for &quot;after grace&quot; estimate)
+          </p>
+        </div>
+      ) : null}
       {state.repaymentStatus === 'in_school_interest_only' ? (
         <div className="field">
           <label>Grace Period End Date</label>
@@ -768,12 +856,18 @@ function LoanEditorForm(props: {
           onChange={(e) => onChange({ ...state, nextPaymentDate: e.target.value })}
         />
       </div>
-      {state.repaymentStatus === 'idr' && idrAllowed ? (
+      {(state.repaymentStatus === 'idr' && idrAllowed) ||
+      (state.category === 'public' && state.futureRepaymentPlan === 'idr') ? (
         <div
           className="field"
           style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 8 }}
         >
-          <label style={{ display: 'block', marginBottom: 4 }}>IDR income source</label>
+          <label style={{ display: 'block', marginBottom: 4 }}>
+            IDR income source
+            {state.repaymentStatus !== 'idr' && state.futureRepaymentPlan === 'idr'
+              ? ' (for after-grace estimate)'
+              : ''}
+          </label>
           <div className="toggle-row">
             <input
               type="checkbox"

@@ -615,6 +615,9 @@ export type LoanRepaymentStatus =
   | 'deferred_forbearance'
   | 'custom_payment';
 
+/** For public loans: expected repayment plan after grace. N/A = not yet chosen. */
+export type FutureRepaymentPlan = 'na' | 'idr' | 'standard' | 'graduated' | 'extended' | 'custom';
+
 export type Loan = {
   id: string;
   name: string;
@@ -625,6 +628,8 @@ export type Loan = {
   rateType: LoanRateType;
   termMonths?: number; // custom repayment term in months
   repaymentStatus: LoanRepaymentStatus;
+  /** Public loans only: plan to use after grace (when status is in-school or grace). */
+  futureRepaymentPlan?: FutureRepaymentPlan;
   nextPaymentCents?: number;
   nextPaymentDate?: string; // YYYY-MM-DD
   notes?: string;
