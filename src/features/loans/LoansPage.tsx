@@ -7,6 +7,7 @@ import {
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
+  type PaymentScheduleRange,
   uid,
   loadBirthdateISO
 } from '../../state/storage';
@@ -138,7 +139,13 @@ function deriveForLoan(
   idrManualIncomeCents: number | undefined
 ): LoanWithDerived {
   const { balanceCents, interestRatePercent, repaymentStatus, termMonths, category } = loan;
-  const dailyInterestCents = Math.round((balanceCents * (interestRatePercent / 100)) / 365);
+  const isPublicSubsidizedInSchoolOrGrace =
+    category === 'public' &&
+    loan.subsidyType === 'subsidized' &&
+    (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only');
+  const dailyInterestCents = isPublicSubsidizedInSchoolOrGrace
+    ? 0
+    : Math.round((balanceCents * (interestRatePercent / 100)) / 365);
   const monthlyInterestCents = dailyInterestCents * 30;
 
   const interestOnlyMonthly = computeInterestOnlyMonthlyCents(balanceCents, interestRatePercent);
@@ -154,7 +161,7 @@ function deriveForLoan(
   const futurePlan = loan.futureRepaymentPlan || 'na';
 
   if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
-    monthlyNowCents = interestOnlyMonthly;
+    monthlyNowCents = isPublicSubsidizedInSchoolOrGrace ? 0 : interestOnlyMonthly;
     if (isPublicInSchoolOrGrace) {
       if (futurePlan === 'idr') {
         const idrCents = computeIdrMonthlyCents(loan, detectedAnnualIncomeCents, idrManualIncomeCents);
@@ -225,6 +232,8 @@ type LoanEditorState = {
   termMonths: string;
   repaymentStatus: Loan['repaymentStatus'];
   futureRepaymentPlan: FutureRepaymentPlan;
+  subsidyType: 'subsidized' | 'unsubsidized';
+  disbursementDate: string;
   gracePeriodEndDate: string;
   nextPayment: string;
   nextPaymentDate: string;
@@ -246,6 +255,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       termMonths: '',
       repaymentStatus: 'full_repayment',
       futureRepaymentPlan: 'na',
+      subsidyType: 'unsubsidized',
+      disbursementDate: '',
       gracePeriodEndDate: '',
       nextPayment: '',
       nextPaymentDate: '',
@@ -266,6 +277,8 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     termMonths: l.termMonths != null ? String(l.termMonths) : '',
     repaymentStatus: l.repaymentStatus,
     futureRepaymentPlan: l.futureRepaymentPlan || 'na',
+    subsidyType: l.subsidyType || 'unsubsidized',
+    disbursementDate: l.disbursementDate || '',
     gracePeriodEndDate: l.gracePeriodEndDate || '',
     nextPayment: l.nextPaymentCents != null ? (l.nextPaymentCents / 100).toFixed(2) : '',
     nextPaymentDate: l.nextPaymentDate || '',
@@ -301,6 +314,12 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
   const futureRepaymentPlan =
     e.category === 'public' ? (e.futureRepaymentPlan || 'na') : undefined;
 
+  const subsidyType = e.category === 'public' ? e.subsidyType : undefined;
+  const disbursementDate =
+    e.category === 'public' && e.subsidyType === 'unsubsidized' && e.disbursementDate
+      ? e.disbursementDate
+      : undefined;
+
   return {
     id: prev?.id || uid(),
     name: e.name.trim() || 'Loan',
@@ -312,6 +331,9 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     termMonths,
     repaymentStatus: e.repaymentStatus,
     futureRepaymentPlan,
+    subsidyType,
+    disbursementDate,
+    paymentScheduleRanges: prev?.paymentScheduleRanges,
     gracePeriodEndDate,
     nextPaymentCents,
     nextPaymentDate: e.nextPaymentDate || undefined,
@@ -328,6 +350,7 @@ export function LoansPage() {
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
+  const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -378,11 +401,8 @@ export function LoansPage() {
     });
 
     let payoffAge: number | null = null;
-    let payoffDateStr: string | null = null;
     if (latestPayoffDate) {
-      const d: Date = latestPayoffDate;
-      payoffAge = computeAgeFromBirthdate(birthdateISO, d);
-      payoffDateStr = d.toLocaleDateString();
+      payoffAge = computeAgeFromBirthdate(birthdateISO, latestPayoffDate);
     }
 
     return {
@@ -390,8 +410,7 @@ export function LoansPage() {
       totalMonthlyNow,
       totalMonthlyLater: anyLater ? totalMonthlyLater : null,
       weightedRate,
-      payoffAge,
-      payoffDateStr
+      payoffAge
     };
   }, [loansWithDerived, birthdateISO]);
 
@@ -410,41 +429,41 @@ export function LoansPage() {
 
   return (
     <div className="tab-panel active" id="loansContent">
-      <p className="section-title">Loans</p>
+      <p className="section-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      <div className="summary-compact" style={{ marginBottom: 16 }}>
-        <div className="summary-kv">
-          <span className="k">Total loan balance</span>
-          <span className="v" style={{ color: 'var(--red)' }}>
+      <div className="summary-compact" style={{ marginBottom: 12, padding: '10px 12px' }}>
+        <div className="summary-kv" style={{ marginTop: 0 }}>
+          <span className="k">Total balance</span>
+          <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
             {formatCents(summary.totalBalance)}
           </span>
         </div>
-        <div className="summary-kv">
-          <span className="k">Estimated monthly payment (now)</span>
+        <div className="summary-kv" style={{ marginTop: 4 }}>
+          <span className="k">Payment (now)</span>
           <span className="v" style={{ color: 'var(--red)' }}>
             {summary.totalMonthlyNow > 0 ? formatCents(summary.totalMonthlyNow) : '—'}
           </span>
         </div>
-        <div className="summary-kv">
-          <span className="k">Estimated payment after school/grace</span>
+        <div className="summary-kv" style={{ marginTop: 2 }}>
+          <span className="k">After grace</span>
           <span className="v" style={{ color: 'var(--red)' }}>
             {summary.totalMonthlyLater != null ? formatCents(summary.totalMonthlyLater) : '—'}
           </span>
         </div>
-        <div className="summary-kv">
-          <span className="k">Weighted average rate</span>
+        <div className="summary-kv" style={{ marginTop: 2 }}>
+          <span className="k">Avg rate</span>
           <span className="v">
-            {summary.totalBalance > 0 ? `${summary.weightedRate.toFixed(2)}% APR` : '—'}
+            {summary.totalBalance > 0 ? `${summary.weightedRate.toFixed(2)}%` : '—'}
           </span>
         </div>
-        <div className="summary-kv">
-          <span className="k">Projected payoff age</span>
+        <div className="summary-kv" style={{ marginTop: 2 }}>
+          <span className="k">Payoff age</span>
           <span className="v">
-            {summary.payoffAge != null && summary.payoffDateStr
-              ? `${summary.payoffAge} yrs (≈ ${summary.payoffDateStr})`
+            {summary.payoffAge != null
+              ? `${summary.payoffAge} yrs`
               : birthdateISO
                 ? '—'
-                : 'Add your birthdate in Settings'}
+                : 'Set birthdate in Settings'}
           </span>
         </div>
       </div>
@@ -470,143 +489,64 @@ export function LoansPage() {
       ) : null}
 
       {loansWithDerived.map((l) => (
-        <div className="card" key={l.id} style={{ marginBottom: 12 }}>
-          <div className="row" style={{ marginBottom: 4 }}>
-            <span className="name" style={{ fontSize: '1.05rem' }}>
+        <div className="card" key={l.id} style={{ marginBottom: 10, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <span className="name" style={{ fontSize: '1rem', fontWeight: 600 }}>
               {l.name}
             </span>
             <span
               style={{
-                fontSize: '0.8rem',
+                fontSize: '0.7rem',
                 padding: '2px 6px',
                 borderRadius: 999,
                 background: l.category === 'public' ? 'rgba(59,130,246,0.15)' : 'rgba(234,179,8,0.15)',
-                color: l.category === 'public' ? 'var(--blue)' : 'var(--yellow)',
-                marginLeft: 8
+                color: l.category === 'public' ? 'var(--blue)' : 'var(--yellow)'
               }}
             >
               {l.category === 'public' ? 'Public' : 'Private'}
             </span>
           </div>
-          {l.lender ? (
-            <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
-              Servicer: {l.lender}
-            </div>
-          ) : null}
-          <div style={{ fontSize: '0.9rem' }}>
-            <div>
-              <strong>Balance:</strong>{' '}
-              <span style={{ color: 'var(--red)' }}>{formatCents(l.balanceCents)}</span>
-            </div>
-            <div>
-              <strong>Rate:</strong>{' '}
-              <span>
-                {l.interestRatePercent.toFixed(2)}% {l.rateType === 'fixed' ? 'fixed' : 'variable'}
-              </span>
-            </div>
-            <div>
-              <strong>Current status:</strong>{' '}
-              <span style={{ textTransform: 'none' }}>
-                {l.repaymentStatus === 'in_school_interest_only'
-                  ? 'In school / interest-only'
-                  : l.repaymentStatus === 'grace_interest_only'
-                    ? 'Grace period / interest-only'
-                    : l.repaymentStatus === 'full_repayment'
-                      ? 'Full repayment'
-                      : l.repaymentStatus === 'idr'
-                        ? 'IDR (estimated)'
-                        : l.repaymentStatus === 'deferred_forbearance'
-                          ? 'Deferred / forbearance'
-                          : 'Custom monthly payment'}
-              </span>
-            </div>
-            {l.category === 'public' &&
-            (l.repaymentStatus === 'in_school_interest_only' ||
-              l.repaymentStatus === 'grace_interest_only') &&
-            l.futureRepaymentPlan &&
-            l.futureRepaymentPlan !== 'na' ? (
-              <div>
-                <strong>Plan after grace:</strong>{' '}
-                <span style={{ textTransform: 'none' }}>
-                  {l.futureRepaymentPlan === 'idr'
-                    ? 'IDR'
-                    : l.futureRepaymentPlan === 'standard'
-                      ? 'Standard'
-                      : l.futureRepaymentPlan === 'graduated'
-                        ? 'Graduated'
-                        : l.futureRepaymentPlan === 'extended'
-                          ? 'Extended'
-                          : 'Custom'}
-                </span>
-              </div>
-            ) : null}
-            <div style={{ marginTop: 4 }}>
-              <strong>Estimated payment (now):</strong>{' '}
-              {l.monthlyNowCents != null ? formatCents(l.monthlyNowCents) : '—'}
-            </div>
-            <div>
-              <strong>Estimated payment after grace:</strong>{' '}
-              {l.monthlyLaterCents != null ? formatCents(l.monthlyLaterCents) : '—'}
-            </div>
-            {l.repaymentStatus === 'in_school_interest_only' && l.gracePeriodEndDate ? (
-              <div style={{ marginTop: 4, fontSize: '0.85rem', color: 'var(--muted)' }}>
-                Grace Period Ends:{' '}
-                {(() => {
-                  const d = parseDateISO(l.gracePeriodEndDate);
-                  return d
-                    ? d.toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })
-                    : l.gracePeriodEndDate;
-                })()}
-              </div>
-            ) : null}
-            <div style={{ marginTop: 4, fontSize: '0.85rem', color: 'var(--muted)' }}>
-              Daily interest ≈ {formatCents(l.dailyInterestCents)} • Monthly interest ≈{' '}
-              {formatCents(l.monthlyInterestCents)}
-            </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px', marginBottom: 6 }}>
+            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(l.balanceCents)}</span>
+            <span style={{ fontSize: '0.9rem' }}>
+              {l.interestRatePercent.toFixed(2)}% {l.rateType === 'fixed' ? 'fixed' : 'variable'}
+            </span>
           </div>
-          <div className="btn-row" style={{ marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() =>
-                setEditor({
-                  mode: 'edit',
-                  value: loanToEditor(l, hasRecurringIncome)
-                })
-              }
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                if (!confirm('Delete this loan?')) return;
-                persist({ loans: state.loans.filter((x) => x.id !== l.id) });
-              }}
-            >
-              Delete
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setPayoffLoan(l)}
-            >
-              See payoff age
-            </button>
-            {l.category === 'private' ? (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setRefiLoan(l)}
-              >
-                Refinance
-              </button>
+          <div style={{ fontSize: '0.85rem', marginBottom: 6 }}>
+            <span style={{ color: 'var(--muted)' }}>
+              {l.repaymentStatus === 'in_school_interest_only'
+                ? 'In school'
+                : l.repaymentStatus === 'grace_interest_only'
+                  ? 'Grace'
+                  : l.repaymentStatus === 'full_repayment'
+                    ? 'Full repayment'
+                    : l.repaymentStatus === 'idr'
+                      ? 'IDR'
+                      : l.repaymentStatus === 'deferred_forbearance'
+                        ? 'Deferred'
+                        : 'Custom'}
+            </span>
+            {' · '}
+            <span style={{ color: 'var(--red)' }}>
+              Now: {l.monthlyNowCents != null ? formatCents(l.monthlyNowCents) : '—'}
+            </span>
+            {l.monthlyLaterCents != null ? (
+              <>
+                {' · '}
+                <span>After grace: {formatCents(l.monthlyLaterCents)}</span>
+              </>
             ) : null}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>
+            {l.lender ? `Servicer: ${l.lender} · ` : null}
+            Daily ≈ {formatCents(l.dailyInterestCents)} · Monthly ≈ {formatCents(l.monthlyInterestCents)}
+          </div>
+          <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
+            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}>Edit</button>
+            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => { if (!confirm('Delete this loan?')) return; persist({ loans: state.loans.filter((x) => x.id !== l.id) }); }}>Delete</button>
+            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setPayoffLoan(l)}>Payoff age</button>
+            <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setScheduleLoan(l)}>Breakdown</button>
+            {l.category === 'private' ? <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={() => setRefiLoan(l)}>Refinance</button> : null}
           </div>
         </div>
       ))}
@@ -680,6 +620,28 @@ export function LoansPage() {
       >
         {refiLoan ? <RefinanceSimulator loan={refiLoan} /> : null}
       </Modal>
+
+      {/* Payment breakdown / schedule modal */}
+      <Modal
+        open={!!scheduleLoan}
+        title="Payment breakdown"
+        onClose={() => setScheduleLoan(null)}
+      >
+        {scheduleLoan ? (
+          <PaymentScheduleModal
+            loan={scheduleLoan}
+            onClose={() => setScheduleLoan(null)}
+            onSave={(ranges) => {
+              persist({
+                loans: state.loans.map((l) =>
+                  l.id === scheduleLoan.id ? { ...l, paymentScheduleRanges: ranges } : l
+                )
+              });
+              setScheduleLoan(null);
+            }}
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }
@@ -729,6 +691,50 @@ function LoanEditorForm(props: {
           <option value="private">Private</option>
         </Select>
       </div>
+      {state.category === 'public' ? (
+        <>
+          <div className="field">
+            <label>Subsidy type</label>
+            <Select
+              value={state.subsidyType}
+              onChange={(e) =>
+                onChange({
+                  ...state,
+                  subsidyType: e.target.value === 'subsidized' ? 'subsidized' : 'unsubsidized'
+                })
+              }
+            >
+              <option value="subsidized">Subsidized</option>
+              <option value="unsubsidized">Unsubsidized</option>
+            </Select>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Subsidized: no interest during school/grace. Unsubsidized: interest from disbursement.
+            </p>
+          </div>
+          {state.subsidyType === 'unsubsidized' ? (
+            <div className="field">
+              <label>Disbursement date</label>
+              <input
+                type="date"
+                value={state.disbursementDate}
+                onChange={(e) => onChange({ ...state, disbursementDate: e.target.value })}
+                style={{
+                  padding: '6px 8px',
+                  borderRadius: 4,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  width: '100%'
+                }}
+              />
+              <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                Date interest started accruing
+              </p>
+            </div>
+          ) : null}
+        </>
+      ) : null}
       <div className="field">
         <label>Current balance ($)</label>
         <input
@@ -1097,6 +1103,235 @@ function RefinanceSimulator(props: { loan: Loan }) {
             {derived.refiMonths != null ? `~${derived.refiMonths} months` : '—'}
           </span>
         </div>
+      </div>
+    </>
+  );
+}
+
+function sortRanges(ranges: PaymentScheduleRange[]): PaymentScheduleRange[] {
+  return [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+function rangesOverlap(a: { startDate: string; endDate: string }, b: { startDate: string; endDate: string }): boolean {
+  return a.startDate < b.endDate && a.endDate > b.startDate;
+}
+
+function PaymentScheduleModal(props: {
+  loan: LoanWithDerived;
+  onClose: () => void;
+  onSave: (ranges: PaymentScheduleRange[]) => void;
+}) {
+  const { loan, onClose, onSave } = props;
+  const [ranges, setRanges] = useState<PaymentScheduleRange[]>(() =>
+    sortRanges(loan.paymentScheduleRanges || [])
+  );
+  const [adding, setAdding] = useState(false);
+  const [addStart, setAddStart] = useState(todayISO());
+  const [addEnd, setAddEnd] = useState('');
+  const [addPayment, setAddPayment] = useState(
+    loan.monthlyNowCents != null ? (loan.monthlyNowCents / 100).toFixed(2) : ''
+  );
+  const [addRate, setAddRate] = useState(loan.interestRatePercent ? String(loan.interestRatePercent) : '');
+  const [addNote, setAddNote] = useState('');
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const sortedRanges = useMemo(() => sortRanges(ranges), [ranges]);
+
+  function handleGenerate() {
+    const newRanges: PaymentScheduleRange[] = [];
+    const start = todayISO();
+    if (loan.monthlyNowCents != null && loan.monthlyNowCents > 0) {
+      const end = loan.gracePeriodEndDate || addMonths(new Date(), 12).toISOString().slice(0, 10);
+      newRanges.push({
+        id: uid(),
+        startDate: start,
+        endDate: end,
+        paymentCents: loan.monthlyNowCents,
+        ratePercent: loan.interestRatePercent,
+        note: 'Estimated (current)'
+      });
+    }
+    if (loan.monthlyLaterCents != null && loan.monthlyLaterCents > 0 && loan.gracePeriodEndDate) {
+      const graceEnd = loan.gracePeriodEndDate;
+      const laterEnd = addMonths(new Date(graceEnd + 'T00:00:00'), 120).toISOString().slice(0, 10);
+      newRanges.push({
+        id: uid(),
+        startDate: graceEnd,
+        endDate: laterEnd,
+        paymentCents: loan.monthlyLaterCents,
+        ratePercent: loan.interestRatePercent,
+        note: 'Estimated (after grace)'
+      });
+    }
+    if (newRanges.length > 0) setRanges((prev) => sortRanges([...prev, ...newRanges]));
+  }
+
+  function handleAdd() {
+    setAddError(null);
+    if (!addStart || !addEnd) {
+      setAddError('Start and end date required');
+      return;
+    }
+    if (addStart >= addEnd) {
+      setAddError('End date must be after start date');
+      return;
+    }
+    const paymentCents = Math.round(parseFloat(addPayment || '0') * 100);
+    if (!(paymentCents > 0)) {
+      setAddError('Payment must be greater than 0');
+      return;
+    }
+    const newRange: PaymentScheduleRange = {
+      id: uid(),
+      startDate: addStart,
+      endDate: addEnd,
+      paymentCents,
+      ratePercent: addRate ? parseFloat(addRate) : undefined,
+      note: addNote.trim() || undefined
+    };
+    for (const r of ranges) {
+      if (rangesOverlap(newRange, r)) {
+        setAddError('This range overlaps an existing range');
+        return;
+      }
+    }
+    setRanges((prev) => sortRanges([...prev, newRange]));
+    setAdding(false);
+    setAddStart(todayISO());
+    setAddEnd('');
+    setAddPayment(loan.monthlyNowCents != null ? (loan.monthlyNowCents / 100).toFixed(2) : '');
+    setAddRate(String(loan.interestRatePercent));
+    setAddNote('');
+  }
+
+  return (
+    <>
+      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
+        Optional payment schedule ranges. No gaps or overlaps.
+      </p>
+      <div style={{ marginBottom: 8 }}>
+        <button type="button" className="btn btn-secondary" style={{ marginRight: 8 }} onClick={handleGenerate}>
+          Generate estimated schedule
+        </button>
+        <button type="button" className="btn btn-secondary" onClick={() => setAdding(true)}>
+          Add range
+        </button>
+      </div>
+      {loan.rateType === 'variable' ? (
+        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '4px 0 8px' }}>
+          Variable-rate: each range stores its rate. Use “Recompute” to update a range’s payment when the loan’s rate changes.
+        </p>
+      ) : null}
+      {sortedRanges.length > 0 ? (
+        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0' }}>
+          {sortedRanges.map((r) => {
+            const recomputedPayment =
+              loan.rateType === 'variable' && loan.interestRatePercent != null
+                ? computeAmortizedPaymentCents(
+                    loan.balanceCents,
+                    loan.interestRatePercent,
+                    loan.termMonths
+                  ) ?? computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent)
+                : null;
+            const rateDiffers =
+              loan.rateType === 'variable' &&
+              r.ratePercent != null &&
+              Math.abs(r.ratePercent - (loan.interestRatePercent ?? 0)) > 0.01;
+            return (
+              <li
+                key={r.id}
+                style={{
+                  padding: '6px 8px',
+                  marginBottom: 4,
+                  background: 'var(--bg-muted, rgba(0,0,0,0.05))',
+                  borderRadius: 4,
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8
+                }}
+              >
+                <span>
+                  {r.startDate} – {r.endDate} = {formatCents(r.paymentCents)}
+                  {r.ratePercent != null ? ` (${r.ratePercent.toFixed(2)}%)` : ''}
+                </span>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {loan.rateType === 'variable' && rateDiffers && recomputedPayment != null ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        setRanges((prev) =>
+                          prev.map((x) =>
+                            x.id === r.id
+                              ? {
+                                  ...x,
+                                  paymentCents: recomputedPayment,
+                                  ratePercent: loan.interestRatePercent
+                                }
+                              : x
+                          )
+                        );
+                      }}
+                    >
+                      Recompute with current rate
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                    onClick={() => {
+                      setRanges((prev) => prev.filter((x) => x.id !== r.id));
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {adding ? (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, marginTop: 8 }}>
+          <div className="field">
+            <label>Start date</label>
+            <input type="date" value={addStart} onChange={(e) => setAddStart(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>End date</label>
+            <input type="date" value={addEnd} onChange={(e) => setAddEnd(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Payment ($)</label>
+            <input
+              value={addPayment}
+              onChange={(e) => setAddPayment(e.target.value)}
+              inputMode="decimal"
+            />
+          </div>
+          <div className="field">
+            <label>Rate % (optional)</label>
+            <input value={addRate} onChange={(e) => setAddRate(e.target.value)} inputMode="decimal" />
+          </div>
+          <div className="field">
+            <label>Note (optional)</label>
+            <input value={addNote} onChange={(e) => setAddNote(e.target.value)} placeholder="Optional" />
+          </div>
+          {addError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', marginTop: 4 }}>{addError}</p> : null}
+          <div className="btn-row" style={{ marginTop: 8 }}>
+            <button type="button" className="btn btn-secondary" onClick={() => { setAdding(false); setAddError(null); }}>Cancel</button>
+            <button type="button" className="btn btn-secondary" onClick={handleAdd}>Add</button>
+          </div>
+        </div>
+      ) : null}
+      <div className="btn-row" style={{ marginTop: 12 }}>
+        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button type="button" className="btn btn-secondary" onClick={() => onSave(ranges)}>Save</button>
       </div>
     </>
   );

@@ -618,6 +618,20 @@ export type LoanRepaymentStatus =
 /** For public loans: expected repayment plan after grace. N/A = not yet chosen. */
 export type FutureRepaymentPlan = 'na' | 'idr' | 'standard' | 'graduated' | 'extended' | 'custom';
 
+/** Public loan subsidy: subsidized = no interest during school/grace; unsubsidized = interest from disbursement. */
+export type LoanSubsidyType = 'subsidized' | 'unsubsidized';
+
+/** One range in a loan's payment schedule. Dates are YYYY-MM-DD. */
+export type PaymentScheduleRange = {
+  id: string;
+  startDate: string;
+  endDate: string;
+  paymentCents: number;
+  /** Rate assumed for this range (%; for variable loans can differ from loan's current rate). */
+  ratePercent?: number;
+  note?: string;
+};
+
 export type Loan = {
   id: string;
   name: string;
@@ -630,6 +644,12 @@ export type Loan = {
   repaymentStatus: LoanRepaymentStatus;
   /** Public loans only: plan to use after grace (when status is in-school or grace). */
   futureRepaymentPlan?: FutureRepaymentPlan;
+  /** Public loans only: subsidized (no interest in school/grace) vs unsubsidized. */
+  subsidyType?: LoanSubsidyType;
+  /** For unsubsidized public loans: date interest started accruing. YYYY-MM-DD */
+  disbursementDate?: string;
+  /** Optional payment schedule ranges (start/end date + payment + optional rate). */
+  paymentScheduleRanges?: PaymentScheduleRange[];
   nextPaymentCents?: number;
   nextPaymentDate?: string; // YYYY-MM-DD
   notes?: string;
