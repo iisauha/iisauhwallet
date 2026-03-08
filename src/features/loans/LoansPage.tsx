@@ -17,7 +17,8 @@ import { getDetectedAgiFromRecurring } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
-import { PublicLoanEstimatorCard } from '../federalLoans/PublicLoanEstimatorCard';
+import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
+import { PublicLoanSimpleCard } from '../federalLoans/PublicLoanSimpleCard';
 
 function todayISO(): string {
   const d = new Date();
@@ -586,6 +587,7 @@ export function LoansPage() {
   const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
   const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
+  const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
 
   const birthdateISO = loadBirthdateISO();
 
@@ -624,10 +626,15 @@ export function LoansPage() {
       weightedRateNumerator += bal * l.interestRatePercent;
     });
 
+    const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
+    if (publicAfterGraceCents > 0) {
+      totalMonthlyLater += publicAfterGraceCents;
+      anyLater = true;
+    }
+
     const weightedRate =
       totalBalance > 0 ? weightedRateNumerator / totalBalance : 0;
 
-    // Use the latest payoff among loans (rough approximation).
     const now = new Date();
     let latestPayoffDate: Date | null = null;
     loansWithDerived.forEach((l) => {
@@ -649,7 +656,7 @@ export function LoansPage() {
       weightedRate,
       payoffAge
     };
-  }, [loansWithDerived, birthdateISO]);
+  }, [loansWithDerived, birthdateISO, publicSummary]);
 
   function persist(next: Partial<LoansState>) {
     setState((prev) => {
@@ -760,7 +767,7 @@ export function LoansPage() {
       </div>
 
       {loanView === 'public' ? (
-        <PublicLoanEstimatorCard />
+        <PublicLoanSimpleCard onSave={() => setPublicSummary(loadPublicLoanSummary())} />
       ) : (
         <>
           {loansWithDerived.length === 0 ? (
