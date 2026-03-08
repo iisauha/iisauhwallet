@@ -465,10 +465,9 @@ function LoanCard(props: {
   onEdit: () => void;
   onDelete: () => void;
   onPayoffAge: () => void;
-  onBreakdown: () => void;
   onRefinance?: () => void;
 }) {
-  const { loan: l, onEdit, onDelete, onPayoffAge, onBreakdown, onRefinance } = props;
+  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance } = props;
   const [plansOpen, setPlansOpen] = useState(false);
 
   return (
@@ -592,7 +591,6 @@ function LoanCard(props: {
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onEdit}>Edit</button>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onPayoffAge}>Payoff age</button>
-        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onBreakdown}>Breakdown</button>
         {onRefinance ? <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onRefinance}>Refinance</button> : null}
       </div>
     </div>
@@ -608,7 +606,6 @@ export function LoansPage() {
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<Loan | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
-  const [scheduleLoan, setScheduleLoan] = useState<LoanWithDerived | null>(null);
   const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
   const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
 
@@ -867,7 +864,6 @@ export function LoansPage() {
                     persist({ loans: state.loans.filter((x) => x.id !== l.id) });
                   }}
                   onPayoffAge={() => setPayoffLoan(l)}
-                  onBreakdown={() => setScheduleLoan(l)}
                   onRefinance={() => setRefiLoan(l)}
                 />
               ))}
@@ -943,28 +939,6 @@ export function LoansPage() {
         onClose={() => setRefiLoan(null)}
       >
         {refiLoan ? <RefinanceSimulator loan={refiLoan} /> : null}
-      </Modal>
-
-      {/* Payment breakdown / schedule modal */}
-      <Modal
-        open={!!scheduleLoan}
-        title="Payment breakdown"
-        onClose={() => setScheduleLoan(null)}
-      >
-        {scheduleLoan ? (
-          <PaymentScheduleModal
-            loan={scheduleLoan}
-            onClose={() => setScheduleLoan(null)}
-            onSave={(ranges) => {
-              persist({
-                loans: state.loans.map((l) =>
-                  l.id === scheduleLoan.id ? { ...l, paymentScheduleRanges: ranges } : l
-                )
-              });
-              setScheduleLoan(null);
-            }}
-          />
-        ) : null}
       </Modal>
 
       {/* After-grace breakdown (hidden by default) */}
@@ -1424,235 +1398,6 @@ function RefinanceSimulator(props: { loan: Loan }) {
             {derived.refiMonths != null ? `~${derived.refiMonths} months` : '—'}
           </span>
         </div>
-      </div>
-    </>
-  );
-}
-
-function sortRanges(ranges: PaymentScheduleRange[]): PaymentScheduleRange[] {
-  return [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
-}
-
-function rangesOverlap(a: { startDate: string; endDate: string }, b: { startDate: string; endDate: string }): boolean {
-  return a.startDate < b.endDate && a.endDate > b.startDate;
-}
-
-function PaymentScheduleModal(props: {
-  loan: LoanWithDerived;
-  onClose: () => void;
-  onSave: (ranges: PaymentScheduleRange[]) => void;
-}) {
-  const { loan, onClose, onSave } = props;
-  const [ranges, setRanges] = useState<PaymentScheduleRange[]>(() =>
-    sortRanges(loan.paymentScheduleRanges || [])
-  );
-  const [adding, setAdding] = useState(false);
-  const [addStart, setAddStart] = useState(todayISO());
-  const [addEnd, setAddEnd] = useState('');
-  const [addPayment, setAddPayment] = useState(
-    loan.monthlyNowCents != null ? (loan.monthlyNowCents / 100).toFixed(2) : ''
-  );
-  const [addRate, setAddRate] = useState(loan.interestRatePercent ? String(loan.interestRatePercent) : '');
-  const [addNote, setAddNote] = useState('');
-  const [addError, setAddError] = useState<string | null>(null);
-
-  const sortedRanges = useMemo(() => sortRanges(ranges), [ranges]);
-
-  function handleGenerate() {
-    const newRanges: PaymentScheduleRange[] = [];
-    const start = todayISO();
-    if (loan.monthlyNowCents != null && loan.monthlyNowCents > 0) {
-      const end = loan.gracePeriodEndDate || addMonths(new Date(), 12).toISOString().slice(0, 10);
-      newRanges.push({
-        id: uid(),
-        startDate: start,
-        endDate: end,
-        paymentCents: loan.monthlyNowCents,
-        ratePercent: loan.interestRatePercent,
-        note: 'Estimated (current)'
-      });
-    }
-    if (loan.monthlyLaterCents != null && loan.monthlyLaterCents > 0 && loan.gracePeriodEndDate) {
-      const graceEnd = loan.gracePeriodEndDate;
-      const laterEnd = addMonths(new Date(graceEnd + 'T00:00:00'), 120).toISOString().slice(0, 10);
-      newRanges.push({
-        id: uid(),
-        startDate: graceEnd,
-        endDate: laterEnd,
-        paymentCents: loan.monthlyLaterCents,
-        ratePercent: loan.interestRatePercent,
-        note: 'Estimated (after grace)'
-      });
-    }
-    if (newRanges.length > 0) setRanges((prev) => sortRanges([...prev, ...newRanges]));
-  }
-
-  function handleAdd() {
-    setAddError(null);
-    if (!addStart || !addEnd) {
-      setAddError('Start and end date required');
-      return;
-    }
-    if (addStart >= addEnd) {
-      setAddError('End date must be after start date');
-      return;
-    }
-    const paymentCents = Math.round(parseFloat(addPayment || '0') * 100);
-    if (!(paymentCents > 0)) {
-      setAddError('Payment must be greater than 0');
-      return;
-    }
-    const newRange: PaymentScheduleRange = {
-      id: uid(),
-      startDate: addStart,
-      endDate: addEnd,
-      paymentCents,
-      ratePercent: addRate ? parseFloat(addRate) : undefined,
-      note: addNote.trim() || undefined
-    };
-    for (const r of ranges) {
-      if (rangesOverlap(newRange, r)) {
-        setAddError('This range overlaps an existing range');
-        return;
-      }
-    }
-    setRanges((prev) => sortRanges([...prev, newRange]));
-    setAdding(false);
-    setAddStart(todayISO());
-    setAddEnd('');
-    setAddPayment(loan.monthlyNowCents != null ? (loan.monthlyNowCents / 100).toFixed(2) : '');
-    setAddRate(String(loan.interestRatePercent));
-    setAddNote('');
-  }
-
-  return (
-    <>
-      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
-        Optional payment schedule ranges. No gaps or overlaps.
-      </p>
-      <div style={{ marginBottom: 8 }}>
-        <button type="button" className="btn btn-secondary" style={{ marginRight: 8 }} onClick={handleGenerate}>
-          Generate estimated schedule
-        </button>
-        <button type="button" className="btn btn-secondary" onClick={() => setAdding(true)}>
-          Add range
-        </button>
-      </div>
-      {loan.rateType === 'variable' ? (
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '4px 0 8px' }}>
-          Variable-rate: each range stores its rate. Use “Recompute” to update a range’s payment when the loan’s rate changes.
-        </p>
-      ) : null}
-      {sortedRanges.length > 0 ? (
-        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0' }}>
-          {sortedRanges.map((r) => {
-            const recomputedPayment =
-              loan.rateType === 'variable' && loan.interestRatePercent != null
-                ? computeAmortizedPaymentCents(
-                    loan.balanceCents,
-                    loan.interestRatePercent,
-                    loan.termMonths
-                  ) ?? computeInterestOnlyMonthlyCents(loan.balanceCents, loan.interestRatePercent)
-                : null;
-            const rateDiffers =
-              loan.rateType === 'variable' &&
-              r.ratePercent != null &&
-              Math.abs(r.ratePercent - (loan.interestRatePercent ?? 0)) > 0.01;
-            return (
-              <li
-                key={r.id}
-                style={{
-                  padding: '6px 8px',
-                  marginBottom: 4,
-                  background: 'var(--bg-muted, rgba(0,0,0,0.05))',
-                  borderRadius: 4,
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 8
-                }}
-              >
-                <span>
-                  {r.startDate} – {r.endDate} = {formatCents(r.paymentCents)}
-                  {r.ratePercent != null ? ` (${r.ratePercent.toFixed(2)}%)` : ''}
-                </span>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {loan.rateType === 'variable' && rateDiffers && recomputedPayment != null ? (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: '2px 8px', fontSize: '0.8rem' }}
-                      onClick={() => {
-                        setRanges((prev) =>
-                          prev.map((x) =>
-                            x.id === r.id
-                              ? {
-                                  ...x,
-                                  paymentCents: recomputedPayment,
-                                  ratePercent: loan.interestRatePercent
-                                }
-                              : x
-                          )
-                        );
-                      }}
-                    >
-                      Recompute with current rate
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: '2px 8px', fontSize: '0.8rem' }}
-                    onClick={() => {
-                      setRanges((prev) => prev.filter((x) => x.id !== r.id));
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-      {adding ? (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, marginTop: 8 }}>
-          <div className="field">
-            <label>Start date</label>
-            <input type="date" value={addStart} onChange={(e) => setAddStart(e.target.value)} />
-          </div>
-          <div className="field">
-            <label>End date</label>
-            <input type="date" value={addEnd} onChange={(e) => setAddEnd(e.target.value)} />
-          </div>
-          <div className="field">
-            <label>Payment ($)</label>
-            <input
-              value={addPayment}
-              onChange={(e) => setAddPayment(e.target.value)}
-              inputMode="decimal"
-            />
-          </div>
-          <div className="field">
-            <label>Rate % (optional)</label>
-            <input value={addRate} onChange={(e) => setAddRate(e.target.value)} inputMode="decimal" />
-          </div>
-          <div className="field">
-            <label>Note (optional)</label>
-            <input value={addNote} onChange={(e) => setAddNote(e.target.value)} placeholder="Optional" />
-          </div>
-          {addError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', marginTop: 4 }}>{addError}</p> : null}
-          <div className="btn-row" style={{ marginTop: 8 }}>
-            <button type="button" className="btn btn-secondary" onClick={() => { setAdding(false); setAddError(null); }}>Cancel</button>
-            <button type="button" className="btn btn-secondary" onClick={handleAdd}>Add</button>
-          </div>
-        </div>
-      ) : null}
-      <div className="btn-row" style={{ marginTop: 12 }}>
-        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn btn-secondary" onClick={() => onSave(ranges)}>Save</button>
       </div>
     </>
   );
