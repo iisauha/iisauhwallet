@@ -124,6 +124,7 @@ export function renderSpendingPieChart(canvas: HTMLCanvasElement, slices: Spendi
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: { duration: 420 },
       plugins: {
         legend: { display: false }
       }

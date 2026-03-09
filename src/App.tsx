@@ -39,7 +39,7 @@ function MainApp() {
 
   return (
     <>
-      <div style={{ position: 'relative', minHeight: '100%' }}>{content}</div>
+      <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>{content}</div>
       <nav className="tabs" aria-label="Sections">
         <button type="button" className={tab === 'snapshot' ? 'tab active' : 'tab'} onClick={() => setTab('snapshot')}>
           Snapshot

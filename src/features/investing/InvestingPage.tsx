@@ -552,6 +552,7 @@ function CoastFireProjectionChart({
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: { duration: 420 },
         plugins: {
           legend: {
             display: true,

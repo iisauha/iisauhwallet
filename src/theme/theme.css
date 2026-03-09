@@ -1,90 +1,126 @@
-/* Theme overrides. Root applies transition in styles.css. */
+/* Theme overrides for surfaces, borders, and accent only.
+   Semantic colors (--green, --red, --semantic-positive, --semantic-negative) are NEVER
+   overridden here so income/gains stay green and expenses/losses stay red in all themes. */
+
 [data-theme="blue"] {
   --bg: #0f172a;
   --bg-secondary: #1a2332;
   --surface: #1e293b;
+  --surface-hover: #243447;
   --border: #334155;
+  --border-subtle: #2d3a4a;
   --text: #f1f5f9;
   --muted: #94a3b8;
   --accent: #0ea5e9;
   --accent-hover: #38bdf8;
+  --shadow: 0 1px 6px rgba(0,0,0,0.18);
+  --shadow-strong: 0 2px 10px rgba(0,0,0,0.22);
 }
 [data-theme="green"] {
-  --bg: #0f172a;
-  --bg-secondary: #1a2332;
-  --surface: #1e293b;
-  --border: #334155;
+  --bg: #0d1912;
+  --bg-secondary: #16281c;
+  --surface: #1c2e22;
+  --surface-hover: #243829;
+  --border: #2d4a36;
+  --border-subtle: #243829;
   --text: #f1f5f9;
-  --muted: #94a3b8;
+  --muted: #94a89a;
   --accent: #22c55e;
   --accent-hover: #4ade80;
+  --shadow: 0 1px 6px rgba(0,0,0,0.2);
+  --shadow-strong: 0 2px 10px rgba(0,0,0,0.24);
 }
 [data-theme="teal"] {
-  --bg: #0f172a;
-  --bg-secondary: #1a2332;
-  --surface: #1e293b;
-  --border: #334155;
+  --bg: #0d1919;
+  --bg-secondary: #162828;
+  --surface: #1c2e2e;
+  --surface-hover: #243838;
+  --border: #2d4a4a;
+  --border-subtle: #243838;
   --text: #f1f5f9;
-  --muted: #94a3b8;
+  --muted: #94a3a3;
   --accent: #14b8a6;
   --accent-hover: #2dd4bf;
+  --shadow: 0 1px 6px rgba(0,0,0,0.2);
+  --shadow-strong: 0 2px 10px rgba(0,0,0,0.24);
 }
 [data-theme="purple"] {
-  --bg: #0f172a;
-  --bg-secondary: #1a2332;
-  --surface: #1e293b;
-  --border: #334155;
+  --bg: #140f1a;
+  --bg-secondary: #1e1628;
+  --surface: #261e32;
+  --surface-hover: #2e243d;
+  --border: #3d334d;
+  --border-subtle: #2e243d;
   --text: #f1f5f9;
-  --muted: #94a3b8;
+  --muted: #a89bb5;
   --accent: #a855f7;
   --accent-hover: #c084fc;
+  --shadow: 0 1px 6px rgba(0,0,0,0.22);
+  --shadow-strong: 0 2px 10px rgba(0,0,0,0.28);
 }
 [data-theme="amber"] {
-  --bg: #0f172a;
-  --bg-secondary: #1a2332;
-  --surface: #1e293b;
-  --border: #334155;
+  --bg: #1a150d;
+  --bg-secondary: #282016;
+  --surface: #2e261c;
+  --surface-hover: #383024;
+  --border: #4a3d2d;
+  --border-subtle: #383024;
   --text: #f1f5f9;
-  --muted: #94a3b8;
+  --muted: #a89b8a;
   --accent: #f59e0b;
   --accent-hover: #fbbf24;
+  --shadow: 0 1px 6px rgba(0,0,0,0.2);
+  --shadow-strong: 0 2px 10px rgba(0,0,0,0.24);
 }
 [data-theme="rose"] {
-  --bg: #0f172a;
-  --bg-secondary: #1a2332;
-  --surface: #1e293b;
-  --border: #334155;
+  --bg: #1a0f12;
+  --bg-secondary: #28161e;
+  --surface: #2e1c22;
+  --surface-hover: #382428;
+  --border: #4a2d36;
+  --border-subtle: #382428;
   --text: #f1f5f9;
-  --muted: #94a3b8;
+  --muted: #a8949a;
   --accent: #f43f5e;
   --accent-hover: #fb7185;
+  --shadow: 0 1px 6px rgba(0,0,0,0.2);
+  --shadow-strong: 0 2px 10px rgba(0,0,0,0.24);
 }
 [data-theme="light"] {
   --bg: #f8fafc;
   --bg-secondary: #f1f5f9;
   --surface: #ffffff;
+  --surface-hover: #f1f5f9;
   --border: #e2e8f0;
+  --border-subtle: #cbd5e1;
   --text: #0f172a;
   --muted: #64748b;
   --accent: #0369a1;
   --accent-hover: #0284c7;
+  --shadow: 0 1px 4px rgba(0,0,0,0.06);
+  --shadow-strong: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* Smooth theme transition on the root element */
+/* Smooth theme transition */
 html {
-  transition: background-color 0.22s ease, color 0.22s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 body {
-  transition: background-color 0.22s ease, color 0.22s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 .card,
 .summary,
 .tabs,
+.btn,
 .btn-primary,
+.tab,
 .tab.active,
+.ll-toggle,
 .ll-toggle.active,
-.ll-control:focus,
-.ll-select:focus,
-input[type="date"].ll-control:focus {
-  transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+.ll-control,
+.ll-select,
+input[type="date"].ll-control,
+.section-header,
+.modal {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
 }
