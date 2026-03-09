@@ -26,8 +26,8 @@ import {
   PRIVATE_PAYMENT_NOW_BASE_KEY,
   LAST_RECOMPUTE_DATE_KEY,
   PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
-  APP_THEME_KEY,
-  APP_ACCENT_CUSTOM_KEY,
+  APP_THEME_COLOR_KEY,
+  APP_ACCENT_COLOR_KEY,
   APP_FONT_FAMILY_KEY,
   APP_FONT_SCALE_KEY
 } from './keys';
@@ -819,38 +819,38 @@ export function savePaymentNowManualOverride(cents: number | null) {
   } catch (_) {}
 }
 
-const VALID_THEMES = new Set([
-  'blue', 'green', 'light', 'purple', 'amber', 'rose', 'teal',
-  'red', 'indigo', 'cyan', 'emerald', 'orange', 'slate', 'custom'
-]);
+const DEFAULT_THEME_COLOR = '#1e293b';
+const DEFAULT_ACCENT_COLOR = '#0ea5e9';
 
-export function loadAppTheme(): string {
-  try {
-    const raw = localStorage.getItem(APP_THEME_KEY);
-    if (raw && VALID_THEMES.has(raw)) return raw;
-  } catch (_) {}
-  return 'blue';
+function isValidHex(hex: string): boolean {
+  return /^#[0-9A-Fa-f]{6}$/.test(hex);
 }
 
-export function saveAppTheme(themeId: string) {
+export function loadAppThemeColor(): string {
   try {
-    if (VALID_THEMES.has(themeId)) localStorage.setItem(APP_THEME_KEY, themeId);
+    const raw = localStorage.getItem(APP_THEME_COLOR_KEY);
+    if (raw && isValidHex(raw)) return raw;
+  } catch (_) {}
+  return DEFAULT_THEME_COLOR;
+}
+
+export function saveAppThemeColor(hex: string) {
+  try {
+    if (isValidHex(hex)) localStorage.setItem(APP_THEME_COLOR_KEY, hex);
   } catch (_) {}
 }
 
-const DEFAULT_CUSTOM_ACCENT = '#0ea5e9';
-
-export function loadAppAccentCustom(): string {
+export function loadAppAccentColor(): string {
   try {
-    const raw = localStorage.getItem(APP_ACCENT_CUSTOM_KEY);
-    if (raw && /^#[0-9A-Fa-f]{6}$/.test(raw)) return raw;
+    const raw = localStorage.getItem(APP_ACCENT_COLOR_KEY);
+    if (raw && isValidHex(raw)) return raw;
   } catch (_) {}
-  return DEFAULT_CUSTOM_ACCENT;
+  return DEFAULT_ACCENT_COLOR;
 }
 
-export function saveAppAccentCustom(hex: string) {
+export function saveAppAccentColor(hex: string) {
   try {
-    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) localStorage.setItem(APP_ACCENT_CUSTOM_KEY, hex);
+    if (isValidHex(hex)) localStorage.setItem(APP_ACCENT_COLOR_KEY, hex);
   } catch (_) {}
 }
 

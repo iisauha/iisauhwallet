@@ -11,7 +11,7 @@ import {
 } from '../../state/storage';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
-import { THEME_OPTIONS } from '../../theme/themes';
+import { normalizeHex } from '../../theme/themeUtils';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 
 /** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
@@ -39,23 +39,6 @@ function downloadJsonFile(filename: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-const THEME_ACCENT_COLORS: Record<string, string> = {
-  blue: '#0ea5e9',
-  green: '#22c55e',
-  teal: '#14b8a6',
-  cyan: '#06b6d4',
-  emerald: '#10b981',
-  purple: '#a855f7',
-  indigo: '#6366f1',
-  amber: '#f59e0b',
-  orange: '#f97316',
-  rose: '#f43f5e',
-  red: '#ef4444',
-  slate: '#64748b',
-  light: '#0369a1',
-  custom: '#0ea5e9',
-};
-
 const FONT_FAMILY_OPTIONS = [
   { key: 'system', label: 'System default' },
   { key: 'inter', label: 'Inter' },
@@ -78,95 +61,161 @@ const FONT_SCALE_OPTIONS = [
   { value: 1.06, label: 'Large' },
 ];
 
+function ColorCustomize({
+  value,
+  onChange,
+  inputValue,
+  onInputChange,
+}: {
+  value: string;
+  onChange: (hex: string) => void;
+  inputValue: string;
+  onInputChange: (v: string) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => {
+          const hex = e.target.value;
+          onChange(hex);
+          onInputChange(hex);
+        }}
+        style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
+      />
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => onInputChange(e.target.value)}
+        onBlur={() => {
+          const normalized = normalizeHex(inputValue);
+          if (normalized) onChange(normalized);
+        }}
+        placeholder="#000000"
+        style={{
+          flex: 1,
+          minWidth: 100,
+          padding: '8px 12px',
+          borderRadius: 8,
+          border: '1px solid var(--border)',
+          background: 'var(--bg)',
+          color: 'var(--text)',
+          fontSize: '0.9rem',
+        }}
+      />
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
-  const { theme, setTheme, customAccentHex, setCustomAccent } = useTheme();
+  const { themeColor, setThemeColor, accentColor, setAccentColor } = useTheme();
   const { fontFamily, fontScale, setFontFamily, setFontScale } = useAppearance();
   const [manageOpen, setManageOpen] = useState(false);
   const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
-  const [customAccentInput, setCustomAccentInput] = useState(customAccentHex);
+  const [themeCustomizeOpen, setThemeCustomizeOpen] = useState(false);
+  const [accentCustomizeOpen, setAccentCustomizeOpen] = useState(false);
+  const [themeHexInput, setThemeHexInput] = useState(themeColor);
+  const [accentHexInput, setAccentHexInput] = useState(accentColor);
   useEffect(() => {
-    setCustomAccentInput(customAccentHex);
-  }, [theme, customAccentHex]);
+    setThemeHexInput(themeColor);
+  }, [themeColor]);
+  useEffect(() => {
+    setAccentHexInput(accentColor);
+  }, [accentColor]);
 
   return (
     <div className="tab-panel active" id="settingsContent">
       <p className="section-title">Appearance</p>
 
       <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
-        Theme / accent color
+        Theme
       </p>
       <div className="settings-section" style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          {THEME_OPTIONS.map((opt) => {
-            const isSelected = theme === opt.id;
-            const accentColor = opt.id === 'custom' ? customAccentHex : (THEME_ACCENT_COLORS[opt.id] ?? 'var(--accent)');
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setTheme(opt.id)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '10px 14px',
-                  borderRadius: 12,
-                  border: isSelected ? `2px solid ${accentColor}` : '1px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  minWidth: 72,
-                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-                  boxShadow: isSelected ? `0 0 0 1px ${accentColor}` : undefined,
-                }}
-              >
-                <span
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 8,
-                    background: accentColor,
-                  }}
-                />
-                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{opt.label}</span>
-              </button>
-            );
-          })}
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
+          Backgrounds, surfaces, cards, borders.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: themeColor,
+              border: '2px solid var(--border)',
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '8px 14px', fontSize: '0.9rem' }}
+            onClick={() => setThemeCustomizeOpen((o) => !o)}
+          >
+            {themeCustomizeOpen ? 'Done' : 'Customize'}
+          </button>
         </div>
-        {theme === 'custom' ? (
+        {themeCustomizeOpen ? (
           <div style={{ marginTop: 12 }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 6 }}>
-              Custom accent color
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input
-                type="color"
-                value={customAccentHex}
-                onChange={(e) => setCustomAccent(e.target.value)}
-                style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
-              />
-              <input
-                type="text"
-                value={customAccentInput}
-                onChange={(e) => {
-                  const v = e.target.value.trim();
-                  setCustomAccentInput(v);
-                  if (/^#[0-9A-Fa-f]{6}$/.test(v)) setCustomAccent(v);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg)',
-                  color: 'var(--text)',
-                  fontSize: '0.9rem',
-                }}
-              />
-            </div>
+            <ColorCustomize
+              value={themeColor}
+              onChange={(hex) => {
+                setThemeColor(hex);
+                setThemeHexInput(hex);
+              }}
+              inputValue={themeHexInput}
+              onInputChange={(v) => {
+                setThemeHexInput(v);
+                const n = normalizeHex(v);
+                if (n) setThemeColor(n);
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
+        Accent
+      </p>
+      <div className="settings-section" style={{ marginBottom: 20 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
+          Buttons, active tabs, highlights, icons.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: accentColor,
+              border: '2px solid var(--border)',
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '8px 14px', fontSize: '0.9rem' }}
+            onClick={() => setAccentCustomizeOpen((o) => !o)}
+          >
+            {accentCustomizeOpen ? 'Done' : 'Customize'}
+          </button>
+        </div>
+        {accentCustomizeOpen ? (
+          <div style={{ marginTop: 12 }}>
+            <ColorCustomize
+              value={accentColor}
+              onChange={(hex) => {
+                setAccentColor(hex);
+                setAccentHexInput(hex);
+              }}
+              inputValue={accentHexInput}
+              onInputChange={(v) => {
+                setAccentHexInput(v);
+                const n = normalizeHex(v);
+                if (n) setAccentColor(n);
+              }}
+            />
           </div>
         ) : null}
       </div>
