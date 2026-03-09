@@ -14,6 +14,19 @@ import { useAppearance } from '../../theme/AppearanceContext';
 import { THEME_OPTIONS } from '../../theme/themes';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 
+/** Returns date string for export filenames: MonthDayYear, e.g. March82026 (no spaces, no leading zero on day). */
+function getExportDateString(): string {
+  const d = new Date();
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const month = months[d.getMonth()];
+  const day = d.getDate();
+  const year = d.getFullYear();
+  return `${month}${day}${year}`;
+}
+
 function downloadJsonFile(filename: string, text: string) {
   const blob = new Blob([text], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -258,8 +271,8 @@ export function SettingsPage() {
           className="btn btn-secondary"
           onClick={async () => {
             const text = exportJSON();
-            const ts = new Date().toISOString().replace(/[:.]/g, '-');
-            const filename = `iisauhwallet-backup-${ts}.json`;
+            const baseName = getExportDateString();
+            const filename = `${baseName}.json`;
 
             // Attempt share sheet first (best for iOS PWA).
             try {
