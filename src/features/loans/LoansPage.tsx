@@ -1090,6 +1090,7 @@ export function LoansPage() {
       publicBalanceCents,
       privateBalanceCents: privateTotalBalance,
       privatePaymentNowBase,
+      derivedPrivatePaymentNowBase,
       publicPaymentNowAdded,
       publicEstimateCents
     };
@@ -1310,18 +1311,39 @@ export function LoansPage() {
             </div>
           ) : (
             <>
-              <div style={{ marginBottom: 10 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                  onClick={() => setShowRecomputeConfirm(true)}
-                >
-                  Recompute your Payment(now)
-                </button>
-                <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
-                  Re-run current balances, rates, and ranges to refresh Payment(now).
-                </p>
+              <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+                    onClick={() => setShowRecomputeConfirm(true)}
+                  >
+                    Recompute your Payment(now)
+                  </button>
+                  <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    Re-run current balances, rates, and ranges to refresh the Payment(now) total.
+                  </p>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+                    onClick={() => {
+                      const current = summary.totalMonthlyNow;
+                      const addCents = summary.derivedPrivatePaymentNowBase ?? 0;
+                      const newValue = current + addCents;
+                      savePaymentNowManualOverride(newValue);
+                      setPaymentNowOverride(newValue);
+                    }}
+                  >
+                    Add current private loan payments to Payment(now)
+                  </button>
+                  <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    Add the sum of each private loan&apos;s current Payment(now) into the general Payment(now) field. Does not change balances or loan data.
+                  </p>
+                </div>
               </div>
               {loansWithDerived.map((l) => (
                 <LoanCard
@@ -1420,7 +1442,7 @@ export function LoansPage() {
         onClose={() => setShowRecomputeConfirm(false)}
       >
         <p style={{ marginTop: 0, marginBottom: 16 }}>
-          This will apply one recompute cycle to private loan balances and then recalculate Payment(now). Continue?
+          This will apply one recompute cycle to private loan balances and update the same Payment(now) total. Continue?
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
