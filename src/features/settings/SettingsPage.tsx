@@ -14,8 +14,8 @@ import { useAppearance } from '../../theme/AppearanceContext';
 import { THEME_OPTIONS } from '../../theme/themes';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 
-/** Returns date string for export filenames: MonthDayYear, e.g. March82026 (no spaces, no leading zero on day). */
-function getExportDateString(): string {
+/** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
+function getExportFileName(): string {
   const d = new Date();
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -24,7 +24,7 @@ function getExportDateString(): string {
   const month = months[d.getMonth()];
   const day = d.getDate();
   const year = d.getFullYear();
-  return `${month}${day}${year}`;
+  return `${month}_${day}_${year}.json`;
 }
 
 function downloadJsonFile(filename: string, text: string) {
@@ -271,14 +271,13 @@ export function SettingsPage() {
           className="btn btn-secondary"
           onClick={async () => {
             const text = exportJSON();
-            const baseName = getExportDateString();
-            const filename = `${baseName}.json`;
+            const fileName = getExportFileName();
 
             // Attempt share sheet first (best for iOS PWA).
             try {
               const nav: any = navigator as any;
               if (nav.share) {
-                const file = new File([text], filename, { type: 'application/json' });
+                const file = new File([text], fileName, { type: 'application/json' });
                 await nav.share({ files: [file], title: 'Backup', text: 'iisauhwallet backup' });
                 return;
               }
@@ -299,8 +298,8 @@ export function SettingsPage() {
               }
             } catch (_) {}
 
-            // Last resort: download.
-            downloadJsonFile(filename, text);
+            // Last resort: download single JSON file.
+            downloadJsonFile(fileName, text);
           }}
         >
           Export JSON
