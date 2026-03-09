@@ -955,12 +955,99 @@ function LoanCard(props: {
   );
 }
 
+/** Simulator only: consolidated private loan monthly payment from total balance + rate + term. Does not modify any loan data. */
+function ConsolidatedLoanSimulatorModal(props: {
+  totalPrivateBalanceCents: number;
+  currentTotalAfterGraceCents: number;
+  onClose: () => void;
+}) {
+  const { totalPrivateBalanceCents, currentTotalAfterGraceCents, onClose } = props;
+  const [rateInput, setRateInput] = useState('');
+  const [termYearsInput, setTermYearsInput] = useState('10');
+
+  const derived = useMemo(() => {
+    const rate = parseFloat(rateInput || '0');
+    const termYears = parseFloat(termYearsInput || '0');
+    const termMonths = termYears > 0 ? Math.round(termYears * 12) : 0;
+    const newMonthly =
+      totalPrivateBalanceCents > 0 && termMonths > 0
+        ? computeAmortizedPaymentCents(totalPrivateBalanceCents, rate, termMonths) ??
+          computeInterestOnlyMonthlyCents(totalPrivateBalanceCents, rate)
+        : totalPrivateBalanceCents > 0
+          ? computeInterestOnlyMonthlyCents(totalPrivateBalanceCents, rate)
+          : null;
+    const diffCents = newMonthly != null && currentTotalAfterGraceCents > 0 ? newMonthly - currentTotalAfterGraceCents : null;
+    return { newMonthly, diffCents };
+  }, [totalPrivateBalanceCents, currentTotalAfterGraceCents, rateInput, termYearsInput]);
+
+  return (
+    <Modal open title="Consolidated loan (simulator)" onClose={onClose}>
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
+        Simulate one consolidated private loan using your total private balance. This does not change any real loan data.
+      </p>
+      <div className="summary-compact" style={{ marginBottom: 12 }}>
+        <div className="summary-kv">
+          <span className="k">Total private balance</span>
+          <span className="v">{formatCents(totalPrivateBalanceCents)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k">Current total private after-grace payment</span>
+          <span className="v">{currentTotalAfterGraceCents > 0 ? formatCents(currentTotalAfterGraceCents) : '—'}</span>
+        </div>
+      </div>
+      <div className="field">
+        <label>New interest rate (%)</label>
+        <input
+          className="ll-control"
+          value={rateInput}
+          onChange={(e) => setRateInput(e.target.value)}
+          inputMode="decimal"
+          placeholder="e.g. 6.5"
+          style={{ maxWidth: 140 }}
+        />
+      </div>
+      <div className="field">
+        <label>New term (years)</label>
+        <input
+          className="ll-control"
+          value={termYearsInput}
+          onChange={(e) => setTermYearsInput(e.target.value)}
+          inputMode="numeric"
+          placeholder="e.g. 10"
+          style={{ maxWidth: 140 }}
+        />
+      </div>
+      <div className="summary-compact" style={{ marginTop: 12 }}>
+        <div className="summary-kv">
+          <span className="k">New consolidated monthly payment</span>
+          <span className="v">{derived.newMonthly != null ? formatCents(derived.newMonthly) : '—'}</span>
+        </div>
+        {derived.diffCents != null && currentTotalAfterGraceCents > 0 ? (
+          <div className="summary-kv">
+            <span className="k">Difference vs current after-grace</span>
+            <span className={`v ${derived.diffCents > 0 ? 'neg' : 'pos'}`}>
+              {derived.diffCents > 0 ? '+' : ''}{formatCents(derived.diffCents)}
+            </span>
+          </div>
+        ) : null}
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <button type="button" className="btn btn-primary" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export type LoanViewFilter = 'public' | 'private';
 
 export function LoansPage() {
   const data = useLedgerStore((s) => s.data);
   const [state, setState] = useState<LoansState>(() => loadLoans());
-  const [loanView, setLoanView] = useState<LoanViewFilter>('public');
+  const [showPublic, setShowPublic] = useState(true);
+  const [showPrivate, setShowPrivate] = useState(false);
+  const [showConsolidationModal, setShowConsolidationModal] = useState(false);
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<LoanWithDerived | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
@@ -1256,137 +1343,144 @@ export function LoansPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={loanView === 'public'}
+          aria-selected={showPublic}
           style={{
             flex: 1,
             padding: '8px 12px',
             fontSize: '0.9rem',
-            fontWeight: loanView === 'public' ? 600 : 400,
+            fontWeight: showPublic ? 600 : 400,
             border: 'none',
             borderRadius: 6,
-            background: loanView === 'public' ? 'var(--bg)' : 'transparent',
-            color: loanView === 'public' ? 'var(--fg)' : 'var(--muted)',
+            background: showPublic ? 'var(--bg)' : 'transparent',
+            color: showPublic ? 'var(--fg)' : 'var(--muted)',
             cursor: 'pointer'
           }}
-          onClick={() => setLoanView('public')}
+          onClick={() => setShowPublic((s) => !s)}
         >
           Public
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={loanView === 'private'}
+          aria-selected={showPrivate}
           style={{
             flex: 1,
             padding: '8px 12px',
             fontSize: '0.9rem',
-            fontWeight: loanView === 'private' ? 600 : 400,
+            fontWeight: showPrivate ? 600 : 400,
             border: 'none',
             borderRadius: 6,
-            background: loanView === 'private' ? 'var(--bg)' : 'transparent',
-            color: loanView === 'private' ? 'var(--fg)' : 'var(--muted)',
+            background: showPrivate ? 'var(--bg)' : 'transparent',
+            color: showPrivate ? 'var(--fg)' : 'var(--muted)',
             cursor: 'pointer'
           }}
-          onClick={() => setLoanView('private')}
+          onClick={() => setShowPrivate((s) => !s)}
         >
           Private
         </button>
       </div>
 
-      {loanView === 'public' ? (
-        <PublicLoanSimpleCard
-          onSave={() => setPublicSummary(loadPublicLoanSummary())}
-          onAddToPaymentNow={() => setPublicPaymentNowAdded(loadPublicPaymentNowAdded())}
-        />
-      ) : (
+      {showPublic ? (
+        <div style={{ marginBottom: 16 }}>
+          <PublicLoanSimpleCard
+            onSave={() => setPublicSummary(loadPublicLoanSummary())}
+            onAddToPaymentNow={() => setPublicPaymentNowAdded(loadPublicPaymentNowAdded())}
+          />
+        </div>
+      ) : null}
+      {showPrivate ? (
         <>
           {loansWithDerived.length === 0 ? (
-            <div className="card" style={{ marginBottom: 16 }}>
-              <p style={{ marginTop: 0, marginBottom: 8, color: 'var(--muted)', fontSize: '0.9rem' }}>
-                No private loans. Track student and other private loans here. All values are manual and for estimates only.
+            <p style={{ marginTop: 0, marginBottom: 12, color: 'var(--muted)', fontSize: '0.9rem' }}>
+              No private loans. Track student and other private loans here. All values are manual and for estimates only.
+            </p>
+          ) : null}
+          {loansWithDerived.map((l) => (
+            <LoanCard
+              key={l.id}
+              loan={l}
+              onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
+              onDelete={() => {
+                if (!confirm('Delete this loan?')) return;
+                persist({ loans: state.loans.filter((x) => x.id !== l.id) });
+              }}
+              onPayoffAge={() => setPayoffLoan(l)}
+              onRefinance={() => setRefiLoan(l)}
+              onToggleExcludeFromPayment={(exclude) =>
+                persist({ loans: (state.loans || []).map((x) => (x.id === l.id ? { ...x, excludeFromCurrentPayment: exclude } : x)) })
+              }
+            />
+          ))}
+          <div style={{ marginTop: 12, marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+                onClick={() => setShowRecomputeConfirm(true)}
+              >
+                Recompute your Payment(now)
+              </button>
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                Re-run current balances, rates, and ranges to refresh the Payment(now) total.
               </p>
-              <button
-                type="button"
-                className="btn btn-add"
-                onClick={() =>
-                  setEditor({
-                    mode: 'add',
-                    value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
-                  })
-                }
-              >
-                + Add Private Loan
-              </button>
             </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                    onClick={() => setShowRecomputeConfirm(true)}
-                  >
-                    Recompute your Payment(now)
-                  </button>
-                  <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
-                    Re-run current balances, rates, and ranges to refresh the Payment(now) total.
-                  </p>
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.85rem', padding: '6px 12px' }}
-                    onClick={() => {
-                      const current = summary.totalMonthlyNow;
-                      const addCents = summary.derivedPrivatePaymentNowBase ?? 0;
-                      const newValue = current + addCents;
-                      savePaymentNowManualOverride(newValue);
-                      setPaymentNowOverride(newValue);
-                    }}
-                  >
-                    Add current private loan payments to Payment(now)
-                  </button>
-                  <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
-                    Add the sum of each private loan&apos;s current Payment(now) into the general Payment(now) field. Does not change balances or loan data.
-                  </p>
-                </div>
-              </div>
-              {loansWithDerived.map((l) => (
-                <LoanCard
-                  key={l.id}
-                  loan={l}
-                  onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
-                  onDelete={() => {
-                    if (!confirm('Delete this loan?')) return;
-                    persist({ loans: state.loans.filter((x) => x.id !== l.id) });
-                  }}
-                  onPayoffAge={() => setPayoffLoan(l)}
-                  onRefinance={() => setRefiLoan(l)}
-                  onToggleExcludeFromPayment={(exclude) =>
-                    persist({ loans: (state.loans || []).map((x) => (x.id === l.id ? { ...x, excludeFromCurrentPayment: exclude } : x)) })
-                  }
-                />
-              ))}
+            <div>
               <button
                 type="button"
-                className="btn btn-add"
-                style={{ width: '100%', marginTop: 8 }}
-                onClick={() =>
-                  setEditor({
-                    mode: 'add',
-                    value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
-                  })
-                }
+                className="btn btn-secondary"
+                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+                onClick={() => {
+                  const current = summary.totalMonthlyNow;
+                  const addCents = summary.derivedPrivatePaymentNowBase ?? 0;
+                  const newValue = current + addCents;
+                  savePaymentNowManualOverride(newValue);
+                  setPaymentNowOverride(newValue);
+                }}
               >
-                + Add Private Loan
+                Add current private loan payments to Payment(now)
               </button>
-            </>
-          )}
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                Add the sum of each private loan&apos;s current Payment(now) into the general Payment(now) field. Does not change balances or loan data.
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+                onClick={() => setShowConsolidationModal(true)}
+              >
+                See consolidated loan
+              </button>
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                Simulate one consolidated private loan (rate and term). Does not change any real loan data.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-add"
+            style={{ width: '100%', marginTop: 8 }}
+            onClick={() =>
+              setEditor({
+                mode: 'add',
+                value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
+              })
+            }
+          >
+            + Add Private Loan
+          </button>
         </>
-      )}
+      ) : null}
+
+      {showConsolidationModal ? (
+        <ConsolidatedLoanSimulatorModal
+          totalPrivateBalanceCents={summary.privateBalanceCents}
+          currentTotalAfterGraceCents={afterGraceBreakdown.privateAfterGraceCents}
+          onClose={() => setShowConsolidationModal(false)}
+        />
+      ) : null}
 
       {/* Loan editor modal */}
       <Modal

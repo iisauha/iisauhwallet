@@ -47,6 +47,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   const [notesInput, setNotesInput] = useState('');
   const [balanceInput, setBalanceInput] = useState('');
   const [rateInput, setRateInput] = useState('');
+  const [showPaymentActions, setShowPaymentActions] = useState(true);
 
   useEffect(() => {
     const s = loadPublicLoanSummary();
@@ -161,36 +162,46 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
       </div>
 
       <div style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleAddToPaymentNow}
-            disabled={publicEstimateCents <= 0}
-          >
-            Add to Payment(now)
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleUseAsCurrentPayment}
-          >
-            Use as current payment
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              setShowFirstPaymentDetails((v) => !v);
-              if (!showFirstPaymentDetails) {
-                persist({ ...summary, paymentMode: 'first_payment_date' });
-              }
-            }}
-          >
-            {showFirstPaymentDetails ? 'Hide first payment date' : 'Use first payment date'}
-          </button>
-        </div>
-        {showFirstPaymentDetails && (
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ marginBottom: showPaymentActions ? 8 : 0, fontSize: '0.85rem', padding: '4px 10px' }}
+          onClick={() => setShowPaymentActions((v) => !v)}
+        >
+          {showPaymentActions ? 'Hide payment actions' : 'Show payment actions'}
+        </button>
+        {showPaymentActions ? (
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleAddToPaymentNow}
+                disabled={publicEstimateCents <= 0}
+              >
+                Add to Payment(now)
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleUseAsCurrentPayment}
+              >
+                Use as current payment
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowFirstPaymentDetails((v) => !v);
+                  if (!showFirstPaymentDetails) {
+                    persist({ ...summary, paymentMode: 'first_payment_date' });
+                  }
+                }}
+              >
+                {showFirstPaymentDetails ? 'Hide first payment date' : 'Use first payment date'}
+              </button>
+            </div>
+            {showFirstPaymentDetails && (
           <div style={{ marginTop: 12, padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
             <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
               First payment date
@@ -228,6 +239,8 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
           <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
             Current payment (now): {formatCents(currentCents)}/mo
           </p>
+        ) : null}
+          </>
         ) : null}
       </div>
 
