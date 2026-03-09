@@ -46,5 +46,11 @@ export const PAYMENT_NOW_MANUAL_OVERRIDE_KEY = 'iisauhwallet_payment_now_manual_
 // Detected activity inbox (optional backend when configured).
 export const DETECTED_ACTIVITY_KEY = 'iisauhwallet_detected_activity_v1';
 
-// UI-only: selected theme (e.g. blue, green, light).
+// UI-only: selected theme (e.g. blue, green, light, custom).
 export const APP_THEME_KEY = 'iisauhwallet_app_theme_v1';
+// UI-only: custom accent hex when theme is custom (e.g. #0ea5e9).
+export const APP_ACCENT_CUSTOM_KEY = 'iisauhwallet_app_accent_custom_v1';
+// UI-only: font family preference (e.g. system, Inter, Georgia).
+export const APP_FONT_FAMILY_KEY = 'iisauhwallet_app_font_family_v1';
+// UI-only: font scale (e.g. 0.94, 1, 1.06).
+export const APP_FONT_SCALE_KEY = 'iisauhwallet_app_font_scale_v1';

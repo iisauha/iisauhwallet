@@ -26,7 +26,10 @@ import {
   PRIVATE_PAYMENT_NOW_BASE_KEY,
   LAST_RECOMPUTE_DATE_KEY,
   PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
-  APP_THEME_KEY
+  APP_THEME_KEY,
+  APP_ACCENT_CUSTOM_KEY,
+  APP_FONT_FAMILY_KEY,
+  APP_FONT_SCALE_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -816,7 +819,10 @@ export function savePaymentNowManualOverride(cents: number | null) {
   } catch (_) {}
 }
 
-const VALID_THEMES = new Set(['blue', 'green', 'light', 'purple', 'amber', 'rose', 'teal']);
+const VALID_THEMES = new Set([
+  'blue', 'green', 'light', 'purple', 'amber', 'rose', 'teal',
+  'red', 'indigo', 'cyan', 'emerald', 'orange', 'slate', 'custom'
+]);
 
 export function loadAppTheme(): string {
   try {
@@ -829,6 +835,59 @@ export function loadAppTheme(): string {
 export function saveAppTheme(themeId: string) {
   try {
     if (VALID_THEMES.has(themeId)) localStorage.setItem(APP_THEME_KEY, themeId);
+  } catch (_) {}
+}
+
+const DEFAULT_CUSTOM_ACCENT = '#0ea5e9';
+
+export function loadAppAccentCustom(): string {
+  try {
+    const raw = localStorage.getItem(APP_ACCENT_CUSTOM_KEY);
+    if (raw && /^#[0-9A-Fa-f]{6}$/.test(raw)) return raw;
+  } catch (_) {}
+  return DEFAULT_CUSTOM_ACCENT;
+}
+
+export function saveAppAccentCustom(hex: string) {
+  try {
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) localStorage.setItem(APP_ACCENT_CUSTOM_KEY, hex);
+  } catch (_) {}
+}
+
+const VALID_FONT_FAMILIES = new Set([
+  'system', 'inter', 'arial', 'helvetica', 'calibri', 'times', 'georgia',
+  'verdana', 'trebuchet', 'garamond', 'courier', 'roboto', 'poppins'
+]);
+
+export function loadAppFontFamily(): string {
+  try {
+    const raw = localStorage.getItem(APP_FONT_FAMILY_KEY);
+    if (raw && VALID_FONT_FAMILIES.has(raw)) return raw;
+  } catch (_) {}
+  return 'system';
+}
+
+export function saveAppFontFamily(value: string) {
+  try {
+    if (VALID_FONT_FAMILIES.has(value)) localStorage.setItem(APP_FONT_FAMILY_KEY, value);
+  } catch (_) {}
+}
+
+const VALID_FONT_SCALES = new Set([0.92, 0.94, 0.97, 1, 1.04, 1.06, 1.08]);
+
+export function loadAppFontScale(): number {
+  try {
+    const raw = localStorage.getItem(APP_FONT_SCALE_KEY);
+    if (raw == null) return 1;
+    const n = parseFloat(raw);
+    if (Number.isFinite(n) && VALID_FONT_SCALES.has(n)) return n;
+  } catch (_) {}
+  return 1;
+}
+
+export function saveAppFontScale(value: number) {
+  try {
+    if (VALID_FONT_SCALES.has(value)) localStorage.setItem(APP_FONT_SCALE_KEY, String(value));
   } catch (_) {}
 }
 

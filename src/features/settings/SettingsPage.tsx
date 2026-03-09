@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerStore } from '../../state/store';
 import {
@@ -10,6 +10,7 @@ import {
   saveBirthdateISO
 } from '../../state/storage';
 import { useTheme } from '../../theme/ThemeContext';
+import { useAppearance } from '../../theme/AppearanceContext';
 import { THEME_OPTIONS } from '../../theme/themes';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 
@@ -28,31 +29,66 @@ function downloadJsonFile(filename: string, text: string) {
 const THEME_ACCENT_COLORS: Record<string, string> = {
   blue: '#0ea5e9',
   green: '#22c55e',
-  light: '#0369a1',
-  purple: '#a855f7',
-  amber: '#f59e0b',
-  rose: '#f43f5e',
   teal: '#14b8a6',
+  cyan: '#06b6d4',
+  emerald: '#10b981',
+  purple: '#a855f7',
+  indigo: '#6366f1',
+  amber: '#f59e0b',
+  orange: '#f97316',
+  rose: '#f43f5e',
+  red: '#ef4444',
+  slate: '#64748b',
+  light: '#0369a1',
+  custom: '#0ea5e9',
 };
+
+const FONT_FAMILY_OPTIONS = [
+  { key: 'system', label: 'System default' },
+  { key: 'inter', label: 'Inter' },
+  { key: 'arial', label: 'Arial' },
+  { key: 'helvetica', label: 'Helvetica' },
+  { key: 'calibri', label: 'Calibri' },
+  { key: 'times', label: 'Times New Roman' },
+  { key: 'georgia', label: 'Georgia' },
+  { key: 'verdana', label: 'Verdana' },
+  { key: 'trebuchet', label: 'Trebuchet MS' },
+  { key: 'garamond', label: 'Garamond' },
+  { key: 'courier', label: 'Courier New' },
+  { key: 'roboto', label: 'Roboto' },
+  { key: 'poppins', label: 'Poppins' },
+];
+
+const FONT_SCALE_OPTIONS = [
+  { value: 0.94, label: 'Small' },
+  { value: 1, label: 'Medium' },
+  { value: 1.06, label: 'Large' },
+];
 
 export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, customAccentHex, setCustomAccent } = useTheme();
+  const { fontFamily, fontScale, setFontFamily, setFontScale } = useAppearance();
   const [manageOpen, setManageOpen] = useState(false);
   const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
+  const [customAccentInput, setCustomAccentInput] = useState(customAccentHex);
+  useEffect(() => {
+    setCustomAccentInput(customAccentHex);
+  }, [theme, customAccentHex]);
 
   return (
     <div className="tab-panel active" id="settingsContent">
-      <p className="section-title">Theme</p>
-      <div className="settings-section">
-        <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
-          Choose an accent color. The selected theme is saved and applied across the app.
-        </p>
+      <p className="section-title">Appearance</p>
+
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
+        Theme / accent color
+      </p>
+      <div className="settings-section" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {THEME_OPTIONS.map((opt) => {
             const isSelected = theme === opt.id;
-            const accentColor = THEME_ACCENT_COLORS[opt.id] ?? 'var(--accent)';
+            const accentColor = opt.id === 'custom' ? customAccentHex : (THEME_ACCENT_COLORS[opt.id] ?? 'var(--accent)');
             return (
               <button
                 key={opt.id}
@@ -87,6 +123,98 @@ export function SettingsPage() {
             );
           })}
         </div>
+        {theme === 'custom' ? (
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 6 }}>
+              Custom accent color
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input
+                type="color"
+                value={customAccentHex}
+                onChange={(e) => setCustomAccent(e.target.value)}
+                style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
+              />
+              <input
+                type="text"
+                value={customAccentInput}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  setCustomAccentInput(v);
+                  if (/^#[0-9A-Fa-f]{6}$/.test(v)) setCustomAccent(v);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
+        Font family
+      </p>
+      <div className="settings-section" style={{ marginBottom: 20 }}>
+        <select
+          value={fontFamily}
+          onChange={(e) => setFontFamily(e.target.value)}
+          style={{
+            width: '100%',
+            maxWidth: 280,
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            color: 'var(--text)',
+            fontSize: '0.95rem',
+          }}
+        >
+          {FONT_FAMILY_OPTIONS.map((opt) => (
+            <option key={opt.key} value={opt.key}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
+        Font size
+      </p>
+      <div className="settings-section" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {FONT_SCALE_OPTIONS.map((opt) => {
+            const isSelected = fontScale === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFontScale(opt.value)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                  background: isSelected ? 'var(--surface-hover)' : 'var(--surface)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          Keeps layout safe on mobile. Income/expense colors stay green/red.
+        </p>
       </div>
 
       <p className="section-title" style={{ marginTop: 24 }}>Profile</p>
