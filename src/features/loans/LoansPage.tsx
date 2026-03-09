@@ -1251,27 +1251,33 @@ export function LoansPage() {
         </div>
         <div className="summary-kv" style={{ marginTop: 4, alignItems: 'center' }}>
           <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               aria-label="Edit Payment(now)"
               onClick={() => {
                 setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
                 setShowEditPaymentNow(true);
               }}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                font: 'inherit',
-                color: 'inherit',
-                cursor: 'pointer',
-                fontWeight: 700,
-                textAlign: 'left'
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
+                  setShowEditPaymentNow(true);
+                }
               }}
-              className="snapshot-label-clickable"
+              style={{
+                color: '#fff',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                WebkitTapHighlightColor: 'transparent'
+              }}
             >
               Payment (now)
-            </button>
+            </span>
             <button
               type="button"
               aria-label="Future payment breakdown"
