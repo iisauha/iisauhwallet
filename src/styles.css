@@ -159,11 +159,6 @@ body {
 .summary-kv.final-net-cash.negative { background: var(--red-light); }
 .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
 
-/* Snapshot summary: white descriptor labels and icons (used on dark summary strip) */
-.summary-compact.snapshot-descriptors-white .k { color: #fff; }
-.summary-compact.snapshot-descriptors-white .snapshot-label-clickable { color: #fff; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.summary-compact.snapshot-descriptors-white .snapshot-icon-btn-white { color: #fff !important; }
-
 .investing-section-header {
   color: var(--green);
 }

@@ -1230,7 +1230,7 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      <div className="summary-compact snapshot-descriptors-white" style={{ marginBottom: 12, padding: '10px 12px', background: '#1e293b', borderRadius: 10 }}>
+      <div className="summary-compact" style={{ marginBottom: 12, padding: '10px 12px' }}>
         <div className="summary-kv" style={{ marginTop: 0 }}>
           <span className="k">Total balance</span>
           <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
@@ -1267,7 +1267,7 @@ export function LoansPage() {
                 }
               }}
               style={{
-                color: '#fff',
+                color: 'var(--muted)',
                 fontWeight: 700,
                 cursor: 'pointer',
                 border: 'none',
@@ -1282,14 +1282,13 @@ export function LoansPage() {
               type="button"
               aria-label="Future payment breakdown"
               onClick={() => setShowAfterGraceBreakdown(true)}
-              className="snapshot-icon-btn-white"
               style={{
                 width: 22,
                 height: 22,
                 borderRadius: '50%',
-                border: '1px solid rgba(255,255,255,0.4)',
-                background: 'transparent',
-                color: '#fff',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--muted)',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',

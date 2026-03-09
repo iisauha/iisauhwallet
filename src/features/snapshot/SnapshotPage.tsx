@@ -321,7 +321,7 @@ export function SnapshotPage() {
       ) : null}
 
       <div className="summary" id="snapshotSummary">
-        <div className="summary-compact snapshot-descriptors-white" style={{ background: '#1e293b', borderRadius: 10, padding: '12px 14px' }}>
+        <div className="summary-compact">
           <div className="summary-kv">
             <span className="k">Net Cash (Cash Total)</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.bankTotalCents)}</span>
@@ -344,7 +344,8 @@ export function SnapshotPage() {
               marginTop: 2,
               marginBottom: 0,
               paddingTop: 0,
-              fontSize: '0.9rem'
+              fontSize: '0.9rem',
+              color: 'var(--muted)'
             }}
           >
             <span className="k" style={{ paddingLeft: 12 }}>
@@ -356,7 +357,8 @@ export function SnapshotPage() {
             className="summary-kv"
             style={{
               marginTop: 0,
-              fontSize: '0.9rem'
+              fontSize: '0.9rem',
+              color: 'var(--muted)'
             }}
           >
             <span className="k" style={{ paddingLeft: 12 }}>
