@@ -1,0 +1,90 @@
+/* Theme overrides. Root applies transition in styles.css. */
+[data-theme="blue"] {
+  --bg: #0f172a;
+  --bg-secondary: #1a2332;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #0ea5e9;
+  --accent-hover: #38bdf8;
+}
+[data-theme="green"] {
+  --bg: #0f172a;
+  --bg-secondary: #1a2332;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #22c55e;
+  --accent-hover: #4ade80;
+}
+[data-theme="teal"] {
+  --bg: #0f172a;
+  --bg-secondary: #1a2332;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #14b8a6;
+  --accent-hover: #2dd4bf;
+}
+[data-theme="purple"] {
+  --bg: #0f172a;
+  --bg-secondary: #1a2332;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #a855f7;
+  --accent-hover: #c084fc;
+}
+[data-theme="amber"] {
+  --bg: #0f172a;
+  --bg-secondary: #1a2332;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #f59e0b;
+  --accent-hover: #fbbf24;
+}
+[data-theme="rose"] {
+  --bg: #0f172a;
+  --bg-secondary: #1a2332;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #f43f5e;
+  --accent-hover: #fb7185;
+}
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+  --accent: #0369a1;
+  --accent-hover: #0284c7;
+}
+
+/* Smooth theme transition on the root element */
+html {
+  transition: background-color 0.22s ease, color 0.22s ease;
+}
+body {
+  transition: background-color 0.22s ease, color 0.22s ease;
+}
+.card,
+.summary,
+.tabs,
+.btn-primary,
+.tab.active,
+.ll-toggle.active,
+.ll-control:focus,
+.ll-select:focus,
+input[type="date"].ll-control:focus {
+  transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+}

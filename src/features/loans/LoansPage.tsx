@@ -27,6 +27,7 @@ import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimate
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
+import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { loadPublicLoanSummary, savePublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { PublicLoanSimpleCard } from '../federalLoans/PublicLoanSimpleCard';
 
@@ -1151,16 +1152,20 @@ export function LoansPage() {
         <div className="summary-kv" style={{ marginTop: 0 }}>
           <span className="k">Total balance</span>
           <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-            {formatCents(summary.totalBalance)}
+            <AnimatedNumber value={summary.totalBalance} format={formatCents} />
           </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
           <span className="k">Public</span>
-          <span className="v" style={{ color: 'var(--muted)' }}>{formatCents(summary.publicBalanceCents ?? 0)}</span>
+          <span className="v" style={{ color: 'var(--muted)' }}>
+            <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
+          </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           <span className="k">Private</span>
-          <span className="v" style={{ color: 'var(--muted)' }}>{formatCents(summary.privateBalanceCents ?? 0)}</span>
+          <span className="v" style={{ color: 'var(--muted)' }}>
+            <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
+          </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 4, alignItems: 'center' }}>
           <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1189,7 +1194,11 @@ export function LoansPage() {
             </button>
           </span>
           <span className="v" style={{ color: 'var(--red)' }}>
-            {summary.totalMonthlyNow > 0 ? formatCents(summary.totalMonthlyNow) : '—'}
+            {summary.totalMonthlyNow > 0 ? (
+              <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
+            ) : (
+              '—'
+            )}
           </span>
         </div>
         {summary.avgPrivateRate != null ? (

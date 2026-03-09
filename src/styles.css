@@ -2,11 +2,13 @@
 *, *::before, *::after { box-sizing: border-box; }
 :root {
   --bg: #0f172a;
+  --bg-secondary: #1a2332;
   --surface: #1e293b;
   --border: #334155;
   --text: #f1f5f9;
   --muted: #94a3b8;
   --accent: #0ea5e9;
+  --accent-hover: #38bdf8;
   --danger: #dc2626;
   --green: #16a34a;
   --green-light: rgba(22, 163, 74, 0.12);
@@ -105,7 +107,7 @@ body {
 }
 .ll-card-button:focus { outline: none; }
 .ll-card-button:focus-visible {
-  outline: 2px solid rgba(14, 165, 233, 0.8);
+  outline: 2px solid color-mix(in srgb, var(--accent) 80%, transparent);
   outline-offset: 3px;
   border-radius: 10px;
 }
@@ -211,7 +213,7 @@ body {
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .btn:active { transform: translateY(1px); }
 .btn:focus { outline: none; }
-.btn:focus-visible { outline: 2px solid rgba(14, 165, 233, 0.8); outline-offset: 2px; }
+.btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 80%, transparent); outline-offset: 2px; }
 .clear-btn { background: var(--red-light) !important; color: var(--red) !important; border: 1px solid var(--red) !important; }
 .btn-delete {
   min-width: 90px;
@@ -274,8 +276,8 @@ input[type="date"].ll-control {
 .ll-select:focus,
 input[type="date"].ll-control:focus {
   outline: none;
-  border-color: rgba(14, 165, 233, 0.7);
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+  border-color: color-mix(in srgb, var(--accent) 80%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 /* Hover styles are scoped to desktop pointers below to avoid sticky states on touch. */
@@ -310,7 +312,7 @@ input[type="date"].ll-control:focus {
 }
 .modal-overlay { animation: llFadeIn 180ms ease-out; }
 .modal:focus { outline: none; }
-.modal:focus-visible { outline: 2px solid rgba(14, 165, 233, 0.65); outline-offset: 2px; }
+.modal:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 2px; }
 
 @keyframes llFadeIn {
   from { opacity: 0; }
@@ -325,7 +327,7 @@ input[type="date"].ll-control:focus {
   .card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.22); transform: translateY(-1px); }
   .section-header:hover { background: rgba(148, 163, 184, 0.12); }
   .btn-secondary:hover { background: rgba(148, 163, 184, 0.10); color: var(--text); }
-  .btn-primary:hover { filter: brightness(1.03); }
+  .btn-primary:hover { background: var(--accent-hover); }
   .btn-danger:hover { background: rgba(220, 38, 38, 0.10); }
   .btn-add:hover { background: rgba(59, 130, 246, 0.3); }
   .btn-delete:hover { background: rgba(220, 38, 38, 0.25); }

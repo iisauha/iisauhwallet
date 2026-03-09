@@ -25,7 +25,8 @@ import {
   PUBLIC_PAYMENT_NOW_ADDED_KEY,
   PRIVATE_PAYMENT_NOW_BASE_KEY,
   LAST_RECOMPUTE_DATE_KEY,
-  PAYMENT_NOW_MANUAL_OVERRIDE_KEY
+  PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
+  APP_THEME_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -812,6 +813,22 @@ export function savePaymentNowManualOverride(cents: number | null) {
     }
     const value = Math.max(0, Math.round(cents));
     localStorage.setItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY, String(value));
+  } catch (_) {}
+}
+
+const VALID_THEMES = new Set(['blue', 'green', 'light', 'purple', 'amber', 'rose', 'teal']);
+
+export function loadAppTheme(): string {
+  try {
+    const raw = localStorage.getItem(APP_THEME_KEY);
+    if (raw && VALID_THEMES.has(raw)) return raw;
+  } catch (_) {}
+  return 'blue';
+}
+
+export function saveAppTheme(themeId: string) {
+  try {
+    if (VALID_THEMES.has(themeId)) localStorage.setItem(APP_THEME_KEY, themeId);
   } catch (_) {}
 }
 

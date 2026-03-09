@@ -11,6 +11,7 @@ import { SettingsPage } from './features/settings/SettingsPage';
 import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { DropdownStateProvider } from './state/DropdownStateContext';
 import { DetectedActivityProvider } from './state/DetectedActivityContext';
+import { ThemeProvider } from './theme/ThemeContext';
 
 type TabKey =
   | 'snapshot'
@@ -71,14 +72,16 @@ function MainApp() {
 
 export function App() {
   return (
-    <DropdownStateProvider>
-      <DetectedActivityProvider>
-        <Routes>
+    <ThemeProvider>
+      <DropdownStateProvider>
+        <DetectedActivityProvider>
+          <Routes>
           <Route path="/" element={<MainApp />} />
           <Route path="/privacy" element={<PrivacyPage />} />
-        </Routes>
-      </DetectedActivityProvider>
-    </DropdownStateProvider>
+          </Routes>
+        </DetectedActivityProvider>
+      </DropdownStateProvider>
+    </ThemeProvider>
   );
 }
 

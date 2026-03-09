@@ -45,3 +45,6 @@ export const PAYMENT_NOW_MANUAL_OVERRIDE_KEY = 'iisauhwallet_payment_now_manual_
 
 // Detected activity inbox (optional backend when configured).
 export const DETECTED_ACTIVITY_KEY = 'iisauhwallet_detected_activity_v1';
+
+// UI-only: selected theme (e.g. blue, green, light).
+export const APP_THEME_KEY = 'iisauhwallet_app_theme_v1';

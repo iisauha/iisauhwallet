@@ -9,6 +9,8 @@ import {
   loadBirthdateISO,
   saveBirthdateISO
 } from '../../state/storage';
+import { useTheme } from '../../theme/ThemeContext';
+import { THEME_OPTIONS } from '../../theme/themes';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 
 function downloadJsonFile(filename: string, text: string) {
@@ -23,15 +25,71 @@ function downloadJsonFile(filename: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const THEME_ACCENT_COLORS: Record<string, string> = {
+  blue: '#0ea5e9',
+  green: '#22c55e',
+  light: '#0369a1',
+  purple: '#a855f7',
+  amber: '#f59e0b',
+  rose: '#f43f5e',
+  teal: '#14b8a6',
+};
+
 export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
+  const { theme, setTheme } = useTheme();
   const [manageOpen, setManageOpen] = useState(false);
   const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
 
   return (
     <div className="tab-panel active" id="settingsContent">
-      <p className="section-title">Profile</p>
+      <p className="section-title">Theme</p>
+      <div className="settings-section">
+        <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
+          Choose an accent color. The selected theme is saved and applied across the app.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {THEME_OPTIONS.map((opt) => {
+            const isSelected = theme === opt.id;
+            const accentColor = THEME_ACCENT_COLORS[opt.id] ?? 'var(--accent)';
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setTheme(opt.id)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '10px 14px',
+                  borderRadius: 12,
+                  border: isSelected ? `2px solid ${accentColor}` : '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  minWidth: 72,
+                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                  boxShadow: isSelected ? `0 0 0 1px ${accentColor}` : undefined,
+                }}
+              >
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: accentColor,
+                  }}
+                />
+                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="section-title" style={{ marginTop: 24 }}>Profile</p>
       <div className="settings-section">
         <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
           Date of birth
