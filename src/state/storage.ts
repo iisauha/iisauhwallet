@@ -815,6 +815,19 @@ export function savePaymentNowManualOverride(cents: number | null) {
   } catch (_) {}
 }
 
+/**
+ * Returns the same visible Payment(now) value shown in the Loans tab.
+ * Use this for recurring "Use current loan payment" and anywhere the single general Payment(now) is the source of truth.
+ * @param derivedPrivatePaymentNowBase - sum of current per-loan private Payment(now) (e.g. from getPrivatePaymentNowTotal)
+ */
+export function getVisiblePaymentNowCents(derivedPrivatePaymentNowBase: number): number {
+  const override = loadPaymentNowManualOverride();
+  if (override !== null && override !== undefined) return override;
+  const privateBase = loadPrivatePaymentNowBase();
+  const p = privateBase !== null && privateBase !== undefined ? privateBase : derivedPrivatePaymentNowBase;
+  return p + loadPublicPaymentNowAdded();
+}
+
 function todayISO(): string {
   return nowIso().slice(0, 10);
 }

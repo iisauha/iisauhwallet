@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
-import { loadData, loadSubTracker, loadInvesting, loadLoans, saveLoans, loadPublicPaymentNowAdded, savePublicPaymentNowAdded, savePrivatePaymentNowBase, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
+import { loadData, loadSubTracker, loadInvesting, loadLoans, saveLoans, loadPublicPaymentNowAdded, savePublicPaymentNowAdded, savePrivatePaymentNowBase, getVisiblePaymentNowCents, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
 import { loadPublicLoanSummary, savePublicLoanSummary } from '../features/federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../features/loans/loanDerivation';
 import { PHYSICAL_CASH_ID } from './keys';
@@ -577,7 +577,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
                   const amt = loanPaymentMap[l.id];
                   if (amt != null && amt > 0) privateTotal += amt;
                 }
-                fullAmountCents = privateTotal + loadPublicPaymentNowAdded();
+                fullAmountCents = getVisiblePaymentNowCents(privateTotal);
               } else {
                 fullAmountCents =
                   r.expectedMinCents != null && r.expectedMaxCents != null

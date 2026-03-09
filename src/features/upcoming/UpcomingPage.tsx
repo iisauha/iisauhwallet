@@ -15,8 +15,8 @@ import {
 } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getRecurringIncomeOccurrencesInWindow, getRecurringOccurrencesInWindow } from '../../state/calc';
-import { loadLoans, loadPublicPaymentNowAdded } from '../../state/storage';
-import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../loans/loanDerivation';
+import { loadLoans, getVisiblePaymentNowCents, loadPublicPaymentNowAdded } from '../../state/storage';
+import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 
 function todayKey() {
   const d = new Date();
@@ -72,14 +72,10 @@ export function UpcomingPage() {
 
   const totalVisiblePaymentNowCents = useMemo(() => {
     const loansState = loadLoans();
-    const privateLoans = (loansState.loans || []).filter((l: any) => l.category === 'private' && !l.excludeFromCurrentPayment);
-    let privateTotal = 0;
-    for (const l of privateLoans) {
-      const amt = loanPaymentMap[l.id];
-      if (amt != null && amt > 0) privateTotal += amt;
-    }
-    return privateTotal + loadPublicPaymentNowAdded();
-  }, [loanPaymentMap]);
+    const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
+    const derivedPrivate = getPrivatePaymentNowTotal(loansState.loans || [], detectedIncome);
+    return getVisiblePaymentNowCents(derivedPrivate);
+  }, [loanPaymentMap, data.recurring]);
 
   const recurringCosts = useMemo(
     () => getRecurringOccurrencesInWindow(data, windowDays, loanPaymentMap, totalVisiblePaymentNowCents),

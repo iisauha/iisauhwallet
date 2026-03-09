@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatLongLocalDate, parseCents } from '../../state/calc';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
-import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans, loadPublicPaymentNowAdded } from '../../state/storage';
-import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../loans/loanDerivation';
+import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
+import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 import { useDropdownCollapsed, useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 
@@ -72,14 +72,10 @@ export function RecurringPage() {
     return getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
   }, [data.recurring, loansState.loans]);
   const totalVisiblePaymentNowCents = useMemo(() => {
-    const privateLoans = (loansState.loans || []).filter((l: any) => l.category === 'private' && !l.excludeFromCurrentPayment);
-    let total = 0;
-    for (const l of privateLoans) {
-      const amt = loanPaymentMap[l.id];
-      if (amt != null && amt > 0) total += amt;
-    }
-    return total + loadPublicPaymentNowAdded();
-  }, [loansState.loans, loanPaymentMap]);
+    const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
+    const derivedPrivate = getPrivatePaymentNowTotal(loansState.loans || [], detectedIncome);
+    return getVisiblePaymentNowCents(derivedPrivate);
+  }, [loansState.loans, data.recurring]);
   const loanList = loansState.loans || [];
   const showLoanLinkSection = type === 'expense' && (category === 'loan_payment' || useLoanEstimatedPayment);
 
@@ -302,7 +298,7 @@ export function RecurringPage() {
                     </div>
                     {r.useLoanEstimatedPayment ? (
                       <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>
-                        Amount source: Loans tab Payment(now) total
+                        Amount source: current visible Payment(now) from Loans tab
                       </div>
                     ) : null}
                     <div className="btn-row">
@@ -782,7 +778,7 @@ export function RecurringPage() {
                     </div>
                     {useLoanEstimatedPayment ? (
                       <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 6 }}>
-                        Uses the Loans tab Payment(now) total (private + public added). Amount: {totalVisiblePaymentNowCents > 0 ? `$${(totalVisiblePaymentNowCents / 100).toFixed(2)}` : '—'}
+                        Uses the current visible Payment(now) value from the Loans tab. Amount: {totalVisiblePaymentNowCents > 0 ? `$${(totalVisiblePaymentNowCents / 100).toFixed(2)}` : '—'}
                       </p>
                     ) : null}
                   </div>
