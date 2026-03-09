@@ -54,3 +54,7 @@ export const APP_ACCENT_COLOR_KEY = 'iisauhwallet_app_accent_color_v1';
 export const APP_FONT_FAMILY_KEY = 'iisauhwallet_app_font_family_v1';
 // UI-only: font scale (e.g. 0.94, 1, 1.06).
 export const APP_FONT_SCALE_KEY = 'iisauhwallet_app_font_scale_v1';
+
+// UI-only: loans page Public/Private section visibility.
+export const LOANS_SECTION_SHOW_PUBLIC_KEY = 'loansSectionShowPublic';
+export const LOANS_SECTION_SHOW_PRIVATE_KEY = 'loansSectionShowPrivate';

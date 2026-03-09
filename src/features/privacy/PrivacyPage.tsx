@@ -5,7 +5,7 @@ export function PrivacyPage() {
     <div className="tab-panel active" style={{ maxWidth: 720, margin: '0 auto', paddingBottom: 80 }}>
       <div className="card" style={{ padding: 20, marginBottom: 24 }}>
         <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>
-          Privacy Policy – IisauhWallet
+          Privacy Policy – iisauh wallet
         </h1>
         <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>Last updated: March 2026</p>
       </div>

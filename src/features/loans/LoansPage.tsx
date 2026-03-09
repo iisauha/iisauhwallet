@@ -12,6 +12,10 @@ import {
   applyRecomputeCycleToPrivateBalances,
   loadPaymentNowManualOverride,
   savePaymentNowManualOverride,
+  loadLoansSectionShowPublic,
+  saveLoansSectionShowPublic,
+  loadLoansSectionShowPrivate,
+  saveLoansSectionShowPrivate,
   type LoansState,
   type Loan,
   type FutureRepaymentPlan,
@@ -976,9 +980,8 @@ function ConsolidatedLoanSimulatorModal(props: {
         : totalPrivateBalanceCents > 0
           ? computeInterestOnlyMonthlyCents(totalPrivateBalanceCents, rate)
           : null;
-    const diffCents = newMonthly != null && currentTotalAfterGraceCents > 0 ? newMonthly - currentTotalAfterGraceCents : null;
-    return { newMonthly, diffCents };
-  }, [totalPrivateBalanceCents, currentTotalAfterGraceCents, rateInput, termYearsInput]);
+    return { newMonthly };
+  }, [totalPrivateBalanceCents, rateInput, termYearsInput]);
 
   return (
     <Modal open title="Consolidated loan (simulator)" onClose={onClose}>
@@ -991,7 +994,7 @@ function ConsolidatedLoanSimulatorModal(props: {
           <span className="v">{formatCents(totalPrivateBalanceCents)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Current total private after-grace payment</span>
+          <span className="k">Current after grace</span>
           <span className="v">{currentTotalAfterGraceCents > 0 ? formatCents(currentTotalAfterGraceCents) : '—'}</span>
         </div>
       </div>
@@ -1019,17 +1022,9 @@ function ConsolidatedLoanSimulatorModal(props: {
       </div>
       <div className="summary-compact" style={{ marginTop: 12 }}>
         <div className="summary-kv">
-          <span className="k">New consolidated monthly payment</span>
+          <span className="k">New consolidation amount</span>
           <span className="v">{derived.newMonthly != null ? formatCents(derived.newMonthly) : '—'}</span>
         </div>
-        {derived.diffCents != null && currentTotalAfterGraceCents > 0 ? (
-          <div className="summary-kv">
-            <span className="k">Difference vs current after-grace</span>
-            <span className={`v ${derived.diffCents > 0 ? 'neg' : 'pos'}`}>
-              {derived.diffCents > 0 ? '+' : ''}{formatCents(derived.diffCents)}
-            </span>
-          </div>
-        ) : null}
       </div>
       <div style={{ marginTop: 16 }}>
         <button type="button" className="btn btn-primary" onClick={onClose}>
@@ -1045,8 +1040,8 @@ export type LoanViewFilter = 'public' | 'private';
 export function LoansPage() {
   const data = useLedgerStore((s) => s.data);
   const [state, setState] = useState<LoansState>(() => loadLoans());
-  const [showPublic, setShowPublic] = useState(true);
-  const [showPrivate, setShowPrivate] = useState(false);
+  const [showPublic, setShowPublic] = useState(loadLoansSectionShowPublic);
+  const [showPrivate, setShowPrivate] = useState(loadLoansSectionShowPrivate);
   const [showConsolidationModal, setShowConsolidationModal] = useState(false);
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<LoanWithDerived | null>(null);
@@ -1355,7 +1350,13 @@ export function LoansPage() {
             color: showPublic ? 'var(--fg)' : 'var(--muted)',
             cursor: 'pointer'
           }}
-          onClick={() => setShowPublic((s) => !s)}
+          onClick={() => {
+            setShowPublic((s) => {
+              const next = !s;
+              saveLoansSectionShowPublic(next);
+              return next;
+            });
+          }}
         >
           Public
         </button>
@@ -1374,7 +1375,13 @@ export function LoansPage() {
             color: showPrivate ? 'var(--fg)' : 'var(--muted)',
             cursor: 'pointer'
           }}
-          onClick={() => setShowPrivate((s) => !s)}
+          onClick={() => {
+            setShowPrivate((s) => {
+              const next = !s;
+              saveLoansSectionShowPrivate(next);
+              return next;
+            });
+          }}
         >
           Private
         </button>

@@ -26,16 +26,6 @@ function addMonths(d: Date, months: number) {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
-function hexToRgba(hex: string, alpha: number) {
-  const clean = (hex || '').replace('#', '').trim();
-  const full =
-    clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean.length === 6 ? clean : '64748b';
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  return `rgba(${Number.isFinite(r) ? r : 100}, ${Number.isFinite(g) ? g : 116}, ${Number.isFinite(b) ? b : 139}, ${alpha})`;
-}
-
 export function SpendingPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -209,7 +199,7 @@ export function SpendingPage() {
         </button>
       </div>
 
-      <p className="section-title">Spending distribution</p>
+      <p className="section-title" style={{ marginTop: 10 }}>Spending distribution</p>
       <div className="card">
         {view === 'category' ? (
           <div className="spending-chart-wrap" style={{ position: 'relative', width: '100%', height: 220 }}>
@@ -239,7 +229,7 @@ export function SpendingPage() {
           <div
             className="card"
             key={c.categoryId}
-            style={{ background: hexToRgba(getCategoryColor(c.categoryId), 0.14), borderColor: 'var(--border)' }}
+            style={{ background: getCategoryColor(c.categoryId), borderColor: 'var(--border)' }}
           >
             <div className="row">
               <span className="name">{getCategoryName(cfg, c.categoryId)}</span>

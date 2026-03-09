@@ -29,7 +29,9 @@ import {
   APP_THEME_COLOR_KEY,
   APP_ACCENT_COLOR_KEY,
   APP_FONT_FAMILY_KEY,
-  APP_FONT_SCALE_KEY
+  APP_FONT_SCALE_KEY,
+  LOANS_SECTION_SHOW_PUBLIC_KEY,
+  LOANS_SECTION_SHOW_PRIVATE_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -816,6 +818,38 @@ export function savePaymentNowManualOverride(cents: number | null) {
     }
     const value = Math.max(0, Math.round(cents));
     localStorage.setItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY, String(value));
+  } catch (_) {}
+}
+
+export function loadLoansSectionShowPublic(): boolean {
+  try {
+    const raw = localStorage.getItem(LOANS_SECTION_SHOW_PUBLIC_KEY);
+    if (raw == null) return true;
+    return raw === 'true';
+  } catch (_) {
+    return true;
+  }
+}
+
+export function saveLoansSectionShowPublic(value: boolean) {
+  try {
+    localStorage.setItem(LOANS_SECTION_SHOW_PUBLIC_KEY, value ? 'true' : 'false');
+  } catch (_) {}
+}
+
+export function loadLoansSectionShowPrivate(): boolean {
+  try {
+    const raw = localStorage.getItem(LOANS_SECTION_SHOW_PRIVATE_KEY);
+    if (raw == null) return false;
+    return raw === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+export function saveLoansSectionShowPrivate(value: boolean) {
+  try {
+    localStorage.setItem(LOANS_SECTION_SHOW_PRIVATE_KEY, value ? 'true' : 'false');
   } catch (_) {}
 }
 
