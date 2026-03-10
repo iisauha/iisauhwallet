@@ -8,12 +8,19 @@ export type SavedOptimizerResult = {
   timestamp?: number;
 };
 
+/** Shape of the parsed JSON from localStorage (for type-safe guard). */
+type ParsedOptimizerLastResult = {
+  result?: unknown;
+  assumptions?: unknown;
+  timestamp?: number;
+};
+
 export function loadLastOptimizerResult(): SavedOptimizerResult | null {
   try {
     const raw = localStorage.getItem(OPTIMIZER_LAST_RESULT_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object' || !parsed.result) return null;
+    const parsed = JSON.parse(raw) as ParsedOptimizerLastResult;
+    if (!parsed || !parsed.result) return null;
     return parsed as SavedOptimizerResult;
   } catch {
     return null;
