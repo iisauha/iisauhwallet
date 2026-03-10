@@ -109,7 +109,8 @@ function calculate_model(
   fun_money_monthly: number,
   other_monthly: number,
   contrib_457b_yearly: number,
-  a: OptimizerAssumptions
+  a: OptimizerAssumptions,
+  extra_fixed_monthly: number = 0
 ): OptimizerResult {
   const rent_yearly = rent_monthly * 12.0;
   const utilities_yearly = utilities_monthly * 12.0;
@@ -118,6 +119,7 @@ function calculate_model(
   const groceries_yearly = groceries_monthly * 12.0;
   const fun_money_yearly = fun_money_monthly * 12.0;
   const other_yearly = other_monthly * 12.0;
+  const extra_fixed_yearly = extra_fixed_monthly * 12.0;
 
   const pension_yearly = gross_yearly * a.pensionRate;
   const hcfsa_yearly = a.hcfsaDeductionYearly;
@@ -144,7 +146,8 @@ function calculate_model(
     public_loans_yearly -
     groceries_yearly -
     fun_money_yearly -
-    other_yearly;
+    other_yearly -
+    extra_fixed_yearly;
 
   const result: Record<string, number> = {
     gross_yearly,
@@ -186,6 +189,7 @@ function calculate_model(
 /**
  * Optimize 457b contribution; same logic as Python optimize_457b().
  * Uses provided assumptions for all constants.
+ * extra_fixed_monthly: optional sum of additional fixed expenses (monthly); added to fixed-expense total only.
  */
 export function optimize_457b_with_assumptions(
   gross_yearly: number,
@@ -196,7 +200,8 @@ export function optimize_457b_with_assumptions(
   groceries_monthly: number,
   fun_money_monthly: number,
   other_monthly: number,
-  assumptions: OptimizerAssumptions
+  assumptions: OptimizerAssumptions,
+  extra_fixed_monthly: number = 0
 ): OptimizerResult {
   const a = assumptions;
   const at_min = calculate_model(
@@ -209,7 +214,8 @@ export function optimize_457b_with_assumptions(
     fun_money_monthly,
     other_monthly,
     a.min457b,
-    a
+    a,
+    extra_fixed_monthly
   );
   if (at_min.after_expenses_yearly < 0) {
     throw new Error(
@@ -228,7 +234,8 @@ export function optimize_457b_with_assumptions(
     fun_money_monthly,
     other_monthly,
     a.max457b,
-    a
+    a,
+    extra_fixed_monthly
   );
   if (at_max.after_expenses_yearly >= 0) {
     return at_max;
@@ -251,7 +258,8 @@ export function optimize_457b_with_assumptions(
       fun_money_monthly,
       other_monthly,
       trial_457b,
-      a
+      a,
+      extra_fixed_monthly
     );
     if (trial.after_expenses_yearly >= 0) {
       best = trial;

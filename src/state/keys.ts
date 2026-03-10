@@ -62,3 +62,6 @@ export const LOANS_SECTION_SHOW_PRIVATE_KEY = 'loansSectionShowPrivate';
 // Optimizer: editable assumptions and last result.
 export const OPTIMIZER_ASSUMPTIONS_KEY = 'iisauhwallet_optimizer_assumptions_v1';
 export const OPTIMIZER_LAST_RESULT_KEY = 'iisauhwallet_optimizer_last_result_v1';
+
+// UI: main app tab order (array of tab keys).
+export const TAB_ORDER_KEY = 'iisauhwallet_tab_order_v1';

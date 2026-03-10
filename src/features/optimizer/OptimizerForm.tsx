@@ -1,5 +1,7 @@
 import type { FormEvent } from 'react';
 
+export type ExtraFixedExpense = { id: string; label: string; amountMonthly: string };
+
 export type OptimizerFormValues = {
   gross_yearly: string;
   rent_monthly: string;
@@ -10,6 +12,7 @@ export type OptimizerFormValues = {
   fun_money_monthly: string;
   other_monthly: string;
   public_loans_monthly_override: string;
+  extraFixedExpenses: ExtraFixedExpense[];
 };
 
 const DEFAULT_VALUES: OptimizerFormValues = {
@@ -22,6 +25,7 @@ const DEFAULT_VALUES: OptimizerFormValues = {
   fun_money_monthly: '',
   other_monthly: '',
   public_loans_monthly_override: '',
+  extraFixedExpenses: [],
 };
 
 type OptimizerFormProps = {
@@ -134,6 +138,86 @@ export function OptimizerForm({ values, onChange, onSubmit, isRunning, error }: 
           placeholder="Leave blank to use calculated value"
         />
       </div>
+      <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', margin: 0 }}>
+        <legend style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted)' }}>
+          Additional fixed expenses (optional)
+        </legend>
+        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 10px 0' }}>
+          Add any other monthly fixed expenses to include in the optimization.
+        </p>
+        {values.extraFixedExpenses.map((row) => (
+          <div
+            key={row.id}
+            style={{
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              marginBottom: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Label (e.g. Parking)"
+              value={row.label}
+              onChange={(e) =>
+                onChange({
+                  ...values,
+                  extraFixedExpenses: values.extraFixedExpenses.map((r) =>
+                    r.id === row.id ? { ...r, label: e.target.value } : r
+                  ),
+                })
+              }
+              style={{ flex: '1 1 120px', minWidth: 100, padding: '6px 8px' }}
+            />
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Monthly $"
+              value={row.amountMonthly}
+              onChange={(e) =>
+                onChange({
+                  ...values,
+                  extraFixedExpenses: values.extraFixedExpenses.map((r) =>
+                    r.id === row.id ? { ...r, amountMonthly: e.target.value } : r
+                  ),
+                })
+              }
+              style={{ width: 90, padding: '6px 8px' }}
+            />
+            <button
+              type="button"
+              className="btn btn-danger"
+              style={{ padding: '6px 10px', flexShrink: 0 }}
+              onClick={() =>
+                onChange({
+                  ...values,
+                  extraFixedExpenses: values.extraFixedExpenses.filter((r) => r.id !== row.id),
+                })
+              }
+              aria-label="Remove"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ marginTop: 4 }}
+          onClick={() =>
+            onChange({
+              ...values,
+              extraFixedExpenses: [
+                ...values.extraFixedExpenses,
+                { id: Date.now().toString(36) + Math.random().toString(36).slice(2), label: '', amountMonthly: '' },
+              ],
+            })
+          }
+        >
+          Add fixed expense
+        </button>
+      </fieldset>
       {error ? (
         <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>{error}</p>
       ) : null}

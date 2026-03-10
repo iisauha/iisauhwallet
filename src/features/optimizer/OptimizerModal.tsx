@@ -54,6 +54,7 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
       rent_monthly: autofill.rent_monthly || prev.rent_monthly,
       other_monthly: autofill.other_monthly || prev.other_monthly,
       public_loans_monthly_override: prev.public_loans_monthly_override,
+      extraFixedExpenses: prev.extraFixedExpenses,
     }));
     setStep('form');
   }, [assumptions, recurring]);
@@ -70,6 +71,10 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
         return;
       }
       const a = assumptions ?? loadOptimizerAssumptions();
+      const extraFixedMonthly = (formValues.extraFixedExpenses || []).reduce(
+        (sum, row) => sum + parseMoney(row.amountMonthly),
+        0
+      );
       try {
         let r = optimize_457b_with_assumptions(
           gross_yearly,
@@ -80,7 +85,8 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
           parseMoney(formValues.groceries_monthly),
           parseMoney(formValues.fun_money_monthly),
           parseMoney(formValues.other_monthly),
-          a
+          a,
+          extraFixedMonthly
         );
         const override = parseMoney(formValues.public_loans_monthly_override);
         if (override > 0) {
