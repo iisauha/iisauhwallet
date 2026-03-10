@@ -21,7 +21,7 @@ type OptimizerResultsProps = {
   showExpandedByDefault?: boolean;
 };
 
-/** Summary card only (main view): compact order — Gross, AGI, Total Taxes, Pre-Tax Contributions, Fixed Bills Sum, After Expenses. */
+/** Summary card only (main view): ordered as Gross, Pre-Tax Contributions, AGI, Taxes, Fixed Bills, After Expenses. */
 export function OptimizerResultsSummary({ result }: { result: OptimizerResult }) {
   const totalTaxesMonthly =
     result.federal_tax_monthly +
@@ -44,7 +44,6 @@ export function OptimizerResultsSummary({ result }: { result: OptimizerResult })
     <div className="card" style={{ padding: 14 }}>
       <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 12, color: 'var(--muted)' }}>Summary</div>
       <Row label="Monthly Gross" value={result.gross_monthly} />
-      <Row label="Monthly Taxable Income (AGI)" value={result.agi_monthly} />
       <div style={{ marginTop: 8, marginBottom: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)' }}>
         Pre-Tax Contributions
       </div>
@@ -52,8 +51,9 @@ export function OptimizerResultsSummary({ result }: { result: OptimizerResult })
       <Row label="HCFSA" value={result.hcfsa_monthly} />
       <Row label="Commuter" value={result.commuter_monthly} />
       <Row label="457b" value={result.contrib_457b_monthly} />
-      <Row label="Total Taxes" value={totalTaxesMonthly} />
-      <Row label="Fixed Bills (total)" value={totalFixedBillsMonthly} />
+      <Row label="Monthly Taxable Income (AGI)" value={result.agi_monthly} />
+      <Row label="Taxes" value={totalTaxesMonthly} />
+      <Row label="Fixed Bills" value={totalFixedBillsMonthly} />
       <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
         <Row label="Monthly After Expenses" value={result.after_expenses_monthly} />
       </div>
