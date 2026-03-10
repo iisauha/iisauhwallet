@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
+import { loadLoans } from '../../state/storage';
+import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
@@ -67,7 +69,15 @@ export function SnapshotPage() {
     | { type: 'edit-balance'; kind: 'bank' | 'card'; id: string; amount: string; useSet: boolean }
     | { type: 'add-pending'; kind: 'in' | 'out'; label: string; amount: string; isRefund: boolean; depositTo: 'bank' | 'card'; targetCardId: string; outboundType: 'standard' | 'cc_payment'; sourceBankId: string; targetCardIdOut: string }
     | { type: 'post-inbound'; pendingId: string; isRefund: boolean; dest: string }
-    | { type: 'post-bank'; kind: 'out'; pendingId: string; bankId: string }
+    | { type: 'post-bank'; kind: 'out'; pendingId: string; bankId: string; loanAdjustments?: any }
+    | { type: 'loan-payment-confirm'; pendingId: string }
+    | {
+        type: 'loan-payment-preview';
+        pendingId: string;
+        privateRows: { loanId: string; name: string; currentBalanceCents: number; subCentsInput: string }[];
+        publicPortionCents: number;
+        publicCurrentBalanceCents: number | null;
+      }
     | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
   >({ type: 'none' });
 
@@ -92,7 +102,64 @@ export function SnapshotPage() {
     setModal({ type: 'confirm', title, message, onConfirm });
   }
 
+  function buildLoanPaymentPreview(pendingId: string) {
+    const pending = (data.pendingOut || []).find((p) => p.id === pendingId);
+    if (!pending || !pending.recurringId) return null;
+    const recurring = (data.recurring || []).find((r) => r.id === pending.recurringId);
+    if (!recurring || !recurring.useLoanEstimatedPayment) return null;
+    const amount = pending.amountCents || 0;
+    const meta: any = pending.meta || {};
+    const loansState = loadLoans();
+    const privateBreakdown: Record<string, number> =
+      meta.privateLoanBreakdownCents && typeof meta.privateLoanBreakdownCents === 'object'
+        ? { ...meta.privateLoanBreakdownCents }
+        : recurring.linkedLoanId
+          ? { [recurring.linkedLoanId]: amount }
+          : {};
+    const privateRows = Object.keys(privateBreakdown).map((loanId) => {
+      const loan = (loansState.loans || []).find((l: any) => l.id === loanId && l.category === 'private');
+      const currentBalanceCents = loan?.balanceCents ?? 0;
+      const subCents = privateBreakdown[loanId] ?? 0;
+      return {
+        loanId,
+        name: loan?.name || 'Private loan',
+        currentBalanceCents,
+        subCentsInput: ((subCents || 0) / 100).toFixed(2),
+      };
+    });
+    const publicPortionCents: number = typeof meta.publicPortionCents === 'number' && meta.publicPortionCents > 0 ? meta.publicPortionCents : 0;
+    const publicSummary = loadPublicLoanSummary();
+    const publicCurrentBalanceCents = publicSummary.totalBalanceCents ?? null;
+    return {
+      pendingId,
+      privateRows,
+      publicPortionCents,
+      publicCurrentBalanceCents,
+    };
+  }
+
+  function postLoanPayment(pendingId: string, loanAdjustments: any) {
+    const res = actions.markPendingPosted('out', pendingId, { loanAdjustments });
+    if (!res.needsBankSelection) {
+      setModal({ type: 'none' });
+      return;
+    }
+    const last = getLastPostedBankId('out');
+    const defaultId = data.banks.some((b) => b.id === last) ? last : data.banks[0]?.id || '';
+    setModal({ type: 'post-bank', kind: 'out', pendingId, bankId: `bank:${defaultId}`, loanAdjustments });
+  }
+
   function handlePendingPosted(kind: 'in' | 'out', id: string) {
+    if (kind === 'out') {
+      const pending = (data.pendingOut || []).find((p) => p.id === id);
+      if (pending && pending.recurringId) {
+        const recurring = (data.recurring || []).find((r) => r.id === pending.recurringId);
+        if (recurring?.useLoanEstimatedPayment) {
+          setModal({ type: 'loan-payment-confirm', pendingId: id });
+          return;
+        }
+      }
+    }
     const res = actions.markPendingPosted(kind, id);
     if (!res.needsBankSelection) return;
     if (kind === 'in') {
@@ -400,6 +467,142 @@ export function SnapshotPage() {
                     }}
                   >
                     Add
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {modal.type === 'loan-payment-confirm' ? (
+              <>
+                <h3>Apply this payment to loan balances?</h3>
+                <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+                  Do you want this posted loan payment to update the loan balances in the Loans tab?
+                </p>
+                <div className="btn-row">
+                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      postLoanPayment(modal.pendingId, { skipLoanAdjustments: true });
+                    }}
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-add"
+                    onClick={() => {
+                      const preview = buildLoanPaymentPreview(modal.pendingId);
+                      if (!preview) {
+                        postLoanPayment(modal.pendingId, {});
+                        return;
+                      }
+                      setModal({ type: 'loan-payment-preview', ...preview });
+                    }}
+                  >
+                    Yes
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {modal.type === 'loan-payment-preview' ? (
+              <>
+                <h3>Loan payment breakdown</h3>
+                <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+                  Review how this payment will update your loan balances. You can edit the private loan amounts for this
+                  posted payment only.
+                </p>
+                <div className="card" style={{ padding: 10, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 6 }}>Private loans</div>
+                  {modal.privateRows.length === 0 ? (
+                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>No private loans detected.</p>
+                  ) : (
+                    modal.privateRows.map((row, idx) => {
+                      const current = row.currentBalanceCents || 0;
+                      const subCents = Math.max(
+                        0,
+                        Math.round(parseFloat(row.subCentsInput.replace(/,/g, '')) * 100) || 0
+                      );
+                      const newBalance = Math.max(0, current - subCents);
+                      return (
+                        <div
+                          key={row.loanId}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)',
+                            gap: 8,
+                            alignItems: 'center',
+                            marginBottom: 6,
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '0.9rem' }}>{row.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                              Current balance: {formatCents(current)}
+                            </div>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Subtract ($)</label>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={row.subCentsInput}
+                              onChange={(e) => {
+                                const nextRows = modal.privateRows.slice();
+                                nextRows[idx] = { ...row, subCentsInput: e.target.value };
+                                setModal({ ...modal, privateRows: nextRows });
+                              }}
+                              style={{ width: '100%', padding: '4px 6px' }}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>New balance</div>
+                            <div style={{ fontSize: '0.9rem' }}>{formatCents(newBalance)}</div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="card" style={{ padding: 10, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 6 }}>Public loans</div>
+                  <div style={{ fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Subtract</span>
+                    <span>{formatCents(modal.publicPortionCents || 0)}</span>
+                  </div>
+                  <div style={{ fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span>New total balance</span>
+                    <span>
+                      {modal.publicCurrentBalanceCents != null
+                        ? formatCents(Math.max(0, modal.publicCurrentBalanceCents - (modal.publicPortionCents || 0)))
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+                <div className="btn-row">
+                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-add"
+                    onClick={() => {
+                      const overrides: Record<string, number> = {};
+                      for (const row of modal.privateRows) {
+                        const cents = Math.max(
+                          0,
+                          Math.round(parseFloat(row.subCentsInput.replace(/,/g, '')) * 100) || 0
+                        );
+                        overrides[row.loanId] = cents;
+                      }
+                      postLoanPayment(modal.pendingId, { privateBreakdownOverrides: overrides });
+                    }}
+                  >
+                    Confirm
                   </button>
                 </div>
               </>
@@ -738,9 +941,15 @@ export function SnapshotPage() {
                       const [kind, destId] = modal.bankId.split(':');
                       if (!destId) return;
                       if (kind === 'card') {
-                        actions.markPendingPosted('out', modal.pendingId, { targetCardId: destId });
+                        actions.markPendingPosted('out', modal.pendingId, {
+                          targetCardId: destId,
+                          loanAdjustments: modal.loanAdjustments,
+                        });
                       } else {
-                        actions.markPendingPosted('out', modal.pendingId, { bankId: destId });
+                        actions.markPendingPosted('out', modal.pendingId, {
+                          bankId: destId,
+                          loanAdjustments: modal.loanAdjustments,
+                        });
                       }
                       setModal({ type: 'none' });
                     }}

@@ -31,7 +31,15 @@ export interface LedgerState {
     markPendingPosted: (
       kind: 'in' | 'out',
       id: string,
-      opts?: { bankId?: string; isRefund?: boolean; targetCardId?: string }
+      opts?: {
+        bankId?: string;
+        isRefund?: boolean;
+        targetCardId?: string;
+        loanAdjustments?: {
+          skipLoanAdjustments?: boolean;
+          privateBreakdownOverrides?: Record<string, number>;
+        };
+      }
     ) => { needsBankSelection: boolean };
   };
 }
@@ -716,15 +724,23 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (idx === -1) return { needsBankSelection: false };
       const item: any = list[idx];
       const amount = item.amountCents || 0;
+      const resolved = opts || {};
+      const loanAdjustments = (resolved as any).loanAdjustments as
+        | { skipLoanAdjustments?: boolean; privateBreakdownOverrides?: Record<string, number> }
+        | undefined;
+
       // Apply posted loan payment: only private portion reduces private loan balances; public portion reduces visible Payment(now) only.
-      if (kind === 'out' && amount > 0 && item.recurringId) {
+      if (kind === 'out' && amount > 0 && item.recurringId && !loanAdjustments?.skipLoanAdjustments) {
         const recurring = next.recurring?.find((r: any) => r.id === item.recurringId);
         if (recurring?.useLoanEstimatedPayment) {
-          const breakdown: Record<string, number> = item.meta?.privateLoanBreakdownCents
+          let breakdown: Record<string, number> = item.meta?.privateLoanBreakdownCents
             ? { ...item.meta.privateLoanBreakdownCents }
             : recurring.linkedLoanId
               ? { [recurring.linkedLoanId]: amount }
               : {};
+          if (loanAdjustments?.privateBreakdownOverrides) {
+            breakdown = { ...breakdown, ...loanAdjustments.privateBreakdownOverrides };
+          }
           const todayKey = toLocalDateKey(new Date());
           if (Object.keys(breakdown).length > 0) {
             const loansState = loadLoans();
@@ -752,7 +768,6 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           }
         }
       }
-      const resolved = opts || {};
 
       const addSpendingFromPendingIfNeeded = (pending: any, paymentSource: 'card' | 'bank' | 'cash', paymentTargetId?: string) => {
         if (!pending || !pending.meta || pending.meta.source !== 'upcoming' || pending.meta.addToSpendingOnConfirm === false) return;
