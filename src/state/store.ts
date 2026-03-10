@@ -754,7 +754,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
             saveLoans({ ...loansState, loans });
           }
           savePrivatePaymentNowBase(0);
-          const publicPortionCents = item.meta?.publicPortionCents ?? 0;
+          const publicSummary = loadPublicLoanSummary();
+          const publicPortionCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
           if (publicPortionCents > 0) {
             const current = loadPublicPaymentNowAdded();
             savePublicPaymentNowAdded(Math.max(0, current - publicPortionCents));

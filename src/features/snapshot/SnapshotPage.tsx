@@ -127,8 +127,8 @@ export function SnapshotPage() {
         subCentsInput: ((subCents || 0) / 100).toFixed(2),
       };
     });
-    const publicPortionCents: number = typeof meta.publicPortionCents === 'number' && meta.publicPortionCents > 0 ? meta.publicPortionCents : 0;
     const publicSummary = loadPublicLoanSummary();
+    const publicPortionCents: number = publicSummary.estimatedMonthlyPaymentCents ?? 0;
     const publicCurrentBalanceCents = publicSummary.totalBalanceCents ?? null;
     return {
       pendingId,
