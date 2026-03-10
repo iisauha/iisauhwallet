@@ -9,6 +9,7 @@ export type OptimizerFormValues = {
   groceries_monthly: string;
   fun_money_monthly: string;
   other_monthly: string;
+  public_loans_monthly_override: string;
 };
 
 const DEFAULT_VALUES: OptimizerFormValues = {
@@ -20,6 +21,7 @@ const DEFAULT_VALUES: OptimizerFormValues = {
   groceries_monthly: '',
   fun_money_monthly: '',
   other_monthly: '',
+  public_loans_monthly_override: '',
 };
 
 type OptimizerFormProps = {
@@ -122,6 +124,16 @@ export function OptimizerForm({ values, onChange, onSubmit, isRunning, error }: 
           </div>
         </div>
       </fieldset>
+      <div className="field">
+        <label>Public Loans (monthly override) — optional</label>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={values.public_loans_monthly_override}
+          onChange={(e) => update('public_loans_monthly_override', e.target.value)}
+          placeholder="Leave blank to use calculated value"
+        />
+      </div>
       {error ? (
         <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>{error}</p>
       ) : null}

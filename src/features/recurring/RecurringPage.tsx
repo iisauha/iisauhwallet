@@ -7,6 +7,7 @@ import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurrin
 import { useDropdownCollapsed, useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { OptimizerModal } from '../optimizer/OptimizerModal';
+import { ViewLastOptimizerModal } from '../optimizer/ViewLastOptimizerModal';
 
 export function RecurringPage() {
   const data = useLedgerStore((s) => s.data);
@@ -65,6 +66,7 @@ export function RecurringPage() {
   const [useLoanEstimatedPayment, setUseLoanEstimatedPayment] = useState(false);
   const [linkedLoanId, setLinkedLoanId] = useState('');
   const [optimizerModalOpen, setOptimizerModalOpen] = useState(false);
+  const [viewLastOptimizerOpen, setViewLastOptimizerOpen] = useState(false);
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
@@ -458,7 +460,7 @@ export function RecurringPage() {
                 </div>
                 {isFullTimeJob ? (
                   <div className="card" style={{ marginTop: 8 }}>
-                    <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                       <button
                         type="button"
                         className="btn btn-secondary"
@@ -466,6 +468,14 @@ export function RecurringPage() {
                         onClick={() => setOptimizerModalOpen(true)}
                       >
                         Estimate Optimized Pre-Tax Deductions
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ width: '100%', justifyContent: 'center' }}
+                        onClick={() => setViewLastOptimizerOpen(true)}
+                      >
+                        View last computed values
                       </button>
                     </div>
                     <div className="row" style={{ marginBottom: 6 }}>
@@ -1124,7 +1134,12 @@ export function RecurringPage() {
         </div>
       ) : null}
 
-      <OptimizerModal open={optimizerModalOpen} onClose={() => setOptimizerModalOpen(false)} />
+      <OptimizerModal
+        open={optimizerModalOpen}
+        onClose={() => setOptimizerModalOpen(false)}
+        recurring={recurring}
+      />
+      <ViewLastOptimizerModal open={viewLastOptimizerOpen} onClose={() => setViewLastOptimizerOpen(false)} />
     </div>
   );
 }

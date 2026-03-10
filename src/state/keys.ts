@@ -58,3 +58,7 @@ export const APP_FONT_SCALE_KEY = 'iisauhwallet_app_font_scale_v1';
 // UI-only: loans page Public/Private section visibility.
 export const LOANS_SECTION_SHOW_PUBLIC_KEY = 'loansSectionShowPublic';
 export const LOANS_SECTION_SHOW_PRIVATE_KEY = 'loansSectionShowPrivate';
+
+// Optimizer: editable assumptions and last result.
+export const OPTIMIZER_ASSUMPTIONS_KEY = 'iisauhwallet_optimizer_assumptions_v1';
+export const OPTIMIZER_LAST_RESULT_KEY = 'iisauhwallet_optimizer_last_result_v1';
