@@ -6,6 +6,7 @@ import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInve
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 import { useDropdownCollapsed, useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
+import { OptimizerModal } from '../optimizer/OptimizerModal';
 
 export function RecurringPage() {
   const data = useLedgerStore((s) => s.data);
@@ -63,6 +64,7 @@ export function RecurringPage() {
   const [investingTargetType, setInvestingTargetType] = useState<'hysa' | 'general' | ''>('');
   const [useLoanEstimatedPayment, setUseLoanEstimatedPayment] = useState(false);
   const [linkedLoanId, setLinkedLoanId] = useState('');
+  const [optimizerModalOpen, setOptimizerModalOpen] = useState(false);
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
@@ -456,16 +458,15 @@ export function RecurringPage() {
                 </div>
                 {isFullTimeJob ? (
                   <div className="card" style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 10 }}>
-                      Need an estimate of your taxes? Use{' '}
-                      <a
-                        href="https://www.adp.com/resources/tools/calculators/salary-paycheck-calculator.aspx"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: 'var(--accent)', textDecoration: 'underline' }}
+                    <div style={{ marginBottom: 10 }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ width: '100%', justifyContent: 'center' }}
+                        onClick={() => setOptimizerModalOpen(true)}
                       >
-                        this website
-                      </a>
+                        Estimate Optimized Pre-Tax Deductions
+                      </button>
                     </div>
                     <div className="row" style={{ marginBottom: 6 }}>
                       <span className="name" style={{ fontSize: '0.95rem' }}>
@@ -1122,6 +1123,8 @@ export function RecurringPage() {
           </div>
         </div>
       ) : null}
+
+      <OptimizerModal open={optimizerModalOpen} onClose={() => setOptimizerModalOpen(false)} />
     </div>
   );
 }
