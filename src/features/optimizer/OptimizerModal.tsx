@@ -52,7 +52,9 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
     setFormValues((prev) => ({
       ...prev,
       rent_monthly: autofill.rent_monthly || prev.rent_monthly,
-      other_monthly: autofill.other_monthly || prev.other_monthly,
+      utilities_monthly: autofill.utilities_monthly || prev.utilities_monthly,
+      wifi_monthly: autofill.wifi_monthly || prev.wifi_monthly,
+      private_loans_monthly: autofill.private_loans_monthly || prev.private_loans_monthly,
       public_loans_monthly_override: prev.public_loans_monthly_override,
       extraFixedExpenses: prev.extraFixedExpenses,
     }));

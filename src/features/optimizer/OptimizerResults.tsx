@@ -45,7 +45,6 @@ export function OptimizerResultsSummary({ result }: { result: OptimizerResult })
       <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 12, color: 'var(--muted)' }}>Summary</div>
       <Row label="Monthly Gross" value={result.gross_monthly} />
       <Row label="Monthly Taxable Income (AGI)" value={result.agi_monthly} />
-      <Row label="Total Taxes" value={totalTaxesMonthly} />
       <div style={{ marginTop: 8, marginBottom: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)' }}>
         Pre-Tax Contributions
       </div>
@@ -53,6 +52,7 @@ export function OptimizerResultsSummary({ result }: { result: OptimizerResult })
       <Row label="HCFSA" value={result.hcfsa_monthly} />
       <Row label="Commuter" value={result.commuter_monthly} />
       <Row label="457b" value={result.contrib_457b_monthly} />
+      <Row label="Total Taxes" value={totalTaxesMonthly} />
       <Row label="Fixed Bills (total)" value={totalFixedBillsMonthly} />
       <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
         <Row label="Monthly After Expenses" value={result.after_expenses_monthly} />
@@ -85,9 +85,16 @@ export function OptimizerResults({ result, showExpandedByDefault = false }: Opti
           </div>
           <div style={{ padding: 12, maxHeight: 360, overflowY: 'auto' }}>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Income</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Gross</div>
               <Row label="Monthly Gross" value={result.gross_monthly} />
               <Row label="Monthly Taxable Income (AGI)" value={result.agi_monthly} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Pre-Tax Contributions</div>
+              <Row label="Pension" value={result.pension_monthly} />
+              <Row label="HCFSA" value={result.hcfsa_monthly} />
+              <Row label="Commuter" value={result.commuter_monthly} />
+              <Row label="457b" value={result.contrib_457b_monthly} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Taxes</div>
@@ -98,13 +105,6 @@ export function OptimizerResults({ result, showExpandedByDefault = false }: Opti
               <Row label="NYC Tax" value={result.nyc_tax_monthly} />
               <Row label="NY SDI" value={result.ny_sdi_monthly} />
               <Row label="NY FLI" value={result.ny_fli_monthly} />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Retirement Contributions</div>
-              <Row label="Pension" value={result.pension_monthly} />
-              <Row label="HCFSA" value={result.hcfsa_monthly} />
-              <Row label="Commuter" value={result.commuter_monthly} />
-              <Row label="457b" value={result.contrib_457b_monthly} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Fixed Bills</div>
@@ -118,7 +118,7 @@ export function OptimizerResults({ result, showExpandedByDefault = false }: Opti
               <Row label="Other" value={result.other_monthly} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Final Result</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Monthly After Expenses</div>
               <Row label="Monthly After Expenses" value={result.after_expenses_monthly} />
             </div>
           </div>
