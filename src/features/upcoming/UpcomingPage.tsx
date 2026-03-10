@@ -15,7 +15,8 @@ import {
 } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getRecurringIncomeOccurrencesInWindow, getRecurringOccurrencesInWindow } from '../../state/calc';
-import { loadLoans, getVisiblePaymentNowCents, loadPublicPaymentNowAdded } from '../../state/storage';
+import { loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
+import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 
 function todayKey() {
@@ -704,8 +705,18 @@ export function UpcomingPage() {
                           }
                         }
                       }
+                      const publicSummary = loadPublicLoanSummary();
                       const publicPortionCents =
-                        rec?.useLoanEstimatedPayment && !rec.linkedLoanId ? loadPublicPaymentNowAdded() : 0;
+                        rec?.useLoanEstimatedPayment && !rec.linkedLoanId
+                          ? (() => {
+                              const estimated = publicSummary.estimatedMonthlyPaymentCents ?? 0;
+                              const current = publicSummary.currentPaymentCents ?? null;
+                              // Use the same monthly public payment concept as LoansPage summary:
+                              // prefer currentPaymentCents when set and > 0, otherwise fall back to estimatedMonthlyPaymentCents.
+                              if (current != null && current > 0) return current;
+                              return estimated > 0 ? estimated : 0;
+                            })()
+                          : 0;
                       const meta = {
                         ...(baseMeta || {}),
                         source: 'upcoming',
