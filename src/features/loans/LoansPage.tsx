@@ -244,6 +244,51 @@ function daysBetween(startISO: string, endISO: string): number {
   return Math.max(0, Math.round((b - a) / (24 * 60 * 60 * 1000)));
 }
 
+/** Private deferred only: daily interest in cents (balance × rate/365). Total interest = daily × daysInRange. */
+function computeDeferredDailyInterestCents(balanceCents: number, ratePercent: number): number {
+  if (!(balanceCents > 0)) return 0;
+  return (balanceCents * (ratePercent / 100)) / 365;
+}
+
+/** Private deferred: total interest over full range (truncated to whole cents). */
+function computeDeferredRangeInterestCents(
+  balanceCents: number,
+  ratePercent: number,
+  startISO: string,
+  endISO: string
+): number {
+  const daily = computeDeferredDailyInterestCents(balanceCents, ratePercent);
+  const days = daysBetween(startISO, endISO);
+  return Math.floor(daily * days);
+}
+
+/**
+ * If this private loan has any deferred range that has ended (endDate <= today) and we haven't applied
+ * interest for it yet, add the full deferred-range interest to balance and set the one-time guard.
+ * Applies all such ranges in one pass (chronological by end date). Returns updated loan or null if no change.
+ */
+function applyDeferredInterestToPrivateLoanIfNeeded(loan: Loan): Loan | null {
+  if (loan.category !== 'private') return null;
+  const ranges = getEffectivePrivateRanges(loan);
+  const todayISO = toDateKey(new Date());
+  const endedDeferred = ranges
+    .filter((r) => r.mode === 'deferred' && r.endDate <= todayISO && !loan.deferredInterestAppliedForRangeEndDates?.includes(r.endDate))
+    .sort((a, b) => a.endDate.localeCompare(b.endDate));
+  if (endedDeferred.length === 0) return null;
+  let balanceCents = loan.balanceCents ?? 0;
+  const applied = [...(loan.deferredInterestAppliedForRangeEndDates ?? [])];
+  for (const r of endedDeferred) {
+    const addCents = computeDeferredRangeInterestCents(balanceCents, loan.interestRatePercent, r.startDate, r.endDate);
+    balanceCents += addCents;
+    applied.push(r.endDate);
+  }
+  return {
+    ...loan,
+    balanceCents,
+    deferredInterestAppliedForRangeEndDates: applied
+  };
+}
+
 /** Lender-style unpaid interest: balance * (rate/100) / 365.25 * elapsedDays. */
 function computeUnpaidInterestFromAccrual(
   balanceCents: number,
@@ -330,6 +375,14 @@ type LoanWithDerived = Loan & {
   inSchoolAccruedCents?: number | null;
   /** For private in-school interest-only: principal + accrued (display). */
   inSchoolTotalOwedCents?: number | null;
+  /** Private deferred only: daily interest (cents, for display). */
+  deferredDailyInterestCents?: number;
+  /** Private deferred only: total days in the selected deferred range. */
+  deferredDaysInRange?: number;
+  /** Private deferred only: total interest accrued across the full deferred range (cents). */
+  deferredInterestTotalCents?: number;
+  /** Private deferred only: projected balance when deferment ends (current + deferred interest). */
+  deferredProjectedBalanceCents?: number;
 };
 
 function getActiveMonthlyPayment(loan: LoanWithDerived): number | null {
@@ -503,6 +556,21 @@ function deriveForLoan(
 
     const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForPrivate(loan, todayISO);
 
+    // Deferred/forbearance: compute full-range interest and projected balance for display
+    let deferredDailyInterestCents: number | undefined;
+    let deferredDaysInRange: number | undefined;
+    let deferredInterestTotalCents: number | undefined;
+    let deferredProjectedBalanceCents: number | undefined;
+    if (activeRange?.mode === 'deferred') {
+      const daysInRange = daysBetween(activeRange.startDate, activeRange.endDate);
+      const dailyCents = computeDeferredDailyInterestCents(balanceCents, interestRatePercent);
+      const totalCents = computeDeferredRangeInterestCents(balanceCents, interestRatePercent, activeRange.startDate, activeRange.endDate);
+      deferredDailyInterestCents = dailyCents;
+      deferredDaysInRange = daysInRange;
+      deferredInterestTotalCents = totalCents;
+      deferredProjectedBalanceCents = balanceCents + totalCents;
+    }
+
     return {
       ...loan,
       monthlyNowCents,
@@ -520,7 +588,11 @@ function deriveForLoan(
       activePrivateRangeMode: activeRange?.mode ?? null,
       latestRangeEndISO: latestRangeEndISO || undefined,
       unpaidInterestCents: unpaidInterestCents,
-      unpaidInterestSource: unpaidInterestSource
+      unpaidInterestSource: unpaidInterestSource,
+      deferredDailyInterestCents: deferredDailyInterestCents ?? undefined,
+      deferredDaysInRange: deferredDaysInRange ?? undefined,
+      deferredInterestTotalCents: deferredInterestTotalCents ?? undefined,
+      deferredProjectedBalanceCents: deferredProjectedBalanceCents ?? undefined
     };
   }
 
@@ -758,7 +830,8 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
               mode: r.mode,
               customPaymentCents: customVal != null && Number.isFinite(customVal) && customVal >= 0 ? customVal : undefined
             };
-          })
+          }),
+    deferredInterestAppliedForRangeEndDates: isPublic ? undefined : (prev?.deferredInterestAppliedForRangeEndDates ?? undefined)
   };
 }
 
@@ -837,9 +910,19 @@ function LoanCard(props: {
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             Current range: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '—'}
           </div>
-          <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-            Monthly interest: {formatCents(l.monthlyInterestCents)}
-          </div>
+          {l.activePrivateRangeMode === 'deferred' && l.deferredDailyInterestCents != null && l.deferredDaysInRange != null && l.deferredInterestTotalCents != null && l.deferredProjectedBalanceCents != null ? (
+            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+              <div style={{ marginBottom: 2 }}>Deferred / Forbearance</div>
+              <div style={{ color: 'var(--muted)', marginBottom: 2 }}>Daily interest: {formatCents(Math.floor(l.deferredDailyInterestCents))}</div>
+              <div style={{ color: 'var(--muted)', marginBottom: 2 }}>Days across deferred range: {l.deferredDaysInRange} days</div>
+              <div style={{ color: 'var(--muted)', marginBottom: 2 }}>Interest accrued across deferment: {formatCents(l.deferredInterestTotalCents)}</div>
+              <div style={{ color: 'var(--muted)' }}>Balance after deferment ends: {formatCents(l.deferredProjectedBalanceCents)}</div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+              Monthly interest: {formatCents(l.monthlyInterestCents)}
+            </div>
+          )}
           {(l.unpaidInterestCents != null && l.unpaidInterestCents > 0) || l.unpaidInterestSource === 'manual' || l.unpaidInterestSource === 'estimated' ? (
             <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
               Unpaid interest: {formatCents(l.unpaidInterestCents ?? 0)}
@@ -1058,6 +1141,16 @@ export function LoansPage() {
     setPublicSummary(loadPublicLoanSummary());
   }, [publicSummary]);
 
+  // When Loans page loads: if any private loan's deferred range has ended, add deferred interest to balance once
+  useEffect(() => {
+    const s = loadLoans();
+    const loans = s.loans || [];
+    const updated = loans.map((l) => applyDeferredInterestToPrivateLoanIfNeeded(l) ?? l);
+    if (updated.some((l, i) => l !== loans[i])) {
+      saveLoans({ ...s, loans: updated });
+      setState(loadLoans());
+    }
+  }, []);
 
   const detectedAgi = useMemo(
     () => getDetectedAgiFromRecurring((data.recurring || []) as any),

@@ -713,6 +713,8 @@ export type Loan = {
   accrualAnchorDate?: string | null;
   /** Private only: manual override for unpaid interest (cents). When set, overrides estimated accrual. */
   unpaidInterestOverrideCents?: number | null;
+  /** Private only: end dates (YYYY-MM-DD) of deferred ranges for which we already added accrued interest to balance. Prevents double-application. */
+  deferredInterestAppliedForRangeEndDates?: string[];
 };
 
 export type LoansState = {
