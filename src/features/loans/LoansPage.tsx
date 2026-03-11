@@ -27,7 +27,7 @@ import {
   uid,
   loadBirthdateISO,
 } from '../../state/storage';
-import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimatedPaymentNowMap } from './loanDerivation';
+import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimatedPaymentNowMap, computeMonthlyInterestCents } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -84,25 +84,7 @@ function recurringAnnualIncomeCents(r: RecurringItem): number {
   return Math.round((amt * 365) / days);
 }
 
-/** Days in the current month (last day of prev month → last day of current month). Handles leap years. */
-function getDaysInCurrentMonth(): number {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-}
-
-/** Private-loan monthly interest: (Principal × Rate/365) × Days in Cycle. Days in Cycle = days in current month. */
-function computeMonthlyInterestCents(
-  balanceCents: number,
-  ratePercent: number,
-  daysInCycle?: number
-): number {
-  if (!(balanceCents > 0)) return 0;
-  const days = daysInCycle ?? getDaysInCurrentMonth();
-  const rateDecimal = ratePercent / 100;
-  const interestCents = (balanceCents * rateDecimal / 365) * days;
-  return Math.round(interestCents);
-}
-
+/** Thin wrapper around shared private-loan monthly interest (loanDerivation). */
 function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
   return computeMonthlyInterestCents(balanceCents, ratePercent);
 }

@@ -35,10 +35,12 @@ function getDaysInCurrentMonth(): number {
 }
 
 /**
- * Private-loan monthly interest: (Principal × Rate/365) × Days in Cycle.
- * Days in Cycle = number of days in the current month (bill due last day of month).
+ * Single source of truth for private-loan monthly interest.
+ * Formula: (Principal Balance × Interest Rate / 365) × Days in Cycle.
+ * - Interest Rate = annual rate as decimal (ratePercent / 100).
+ * - Days in Cycle = days in the current month (defaults to getDaysInCurrentMonth(); bill due last day of month).
  */
-function computeMonthlyInterestCents(
+export function computeMonthlyInterestCents(
   balanceCents: number,
   ratePercent: number,
   daysInCycle?: number
