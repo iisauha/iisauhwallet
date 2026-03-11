@@ -858,11 +858,11 @@ function LoanCard(props: {
   loan: LoanWithDerived;
   onEdit: () => void;
   onDelete: () => void;
-  onPayoffAge: () => void;
+  onPayoffAge?: () => void;
   onRefinance?: () => void;
   onToggleExcludeFromPayment?: (exclude: boolean) => void;
 }) {
-  const { loan: l, onEdit, onDelete, onPayoffAge, onRefinance, onToggleExcludeFromPayment } = props;
+  const { loan: l, onEdit, onDelete, onToggleExcludeFromPayment } = props;
   const [plansOpen, setPlansOpen] = useState(false);
 
   return (
@@ -1023,8 +1023,6 @@ function LoanCard(props: {
       <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onEdit}>Edit</button>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
-        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onPayoffAge}>Payoff age</button>
-        {onRefinance ? <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onRefinance}>After-grace refinance</button> : null}
       </div>
     </div>
   );
@@ -1402,16 +1400,6 @@ export function LoansPage() {
             <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
           </div>
         ) : null}
-        <div className="summary-kv" style={{ marginTop: 2 }}>
-          <span className="k">Payoff age</span>
-          <span className="v">
-            {summary.payoffAge != null
-              ? `${summary.payoffAge} yrs`
-              : birthdateISO
-                ? '—'
-                : 'Set birthdate in Settings'}
-          </span>
-        </div>
       </div>
 
       <div
@@ -1504,8 +1492,6 @@ export function LoansPage() {
                 if (!confirm('Delete this loan?')) return;
                 persist({ loans: state.loans.filter((x) => x.id !== l.id) });
               }}
-              onPayoffAge={() => setPayoffLoan(l)}
-              onRefinance={() => setRefiLoan(l)}
               onToggleExcludeFromPayment={(exclude) =>
                 persist({ loans: (state.loans || []).map((x) => (x.id === l.id ? { ...x, excludeFromCurrentPayment: exclude } : x)) })
               }

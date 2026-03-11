@@ -279,33 +279,6 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <p className="section-title" style={{ marginTop: 24 }}>Profile</p>
-      <div className="settings-section">
-        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
-          Date of birth
-        </label>
-        <input
-          type="date"
-          value={birthdate}
-          onChange={(e) => {
-            const v = e.target.value;
-            setBirthdate(v);
-            saveBirthdateISO(v || null);
-          }}
-          style={{
-            padding: '6px 8px',
-            borderRadius: 4,
-            border: '1px solid var(--border)',
-            background: 'var(--bg)',
-            color: 'var(--text)',
-            fontSize: '0.9rem'
-          }}
-        />
-        <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--muted)' }}>
-          Used for age-aware projections (e.g. loans, FIRE). Stored only on this device.
-        </p>
-      </div>
-
       <p className="section-title" style={{ marginTop: 24 }}>Privacy</p>
       <div className="settings-section">
         <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>

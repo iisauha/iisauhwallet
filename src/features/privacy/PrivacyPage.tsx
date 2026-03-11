@@ -21,37 +21,10 @@ export function PrivacyPage() {
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          No automatic financial data collection
-        </h2>
-        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          The public version of this app does not automatically retrieve bank account data. You decide what information to record.
-        </p>
-      </section>
-
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
           Data storage
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
           Your financial entries are stored locally in your browser (e.g. on your device). The application does not transmit your financial records to external servers. The developer does not have access to your financial information.
-        </p>
-      </section>
-
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          No financial credential collection
-        </h2>
-        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          This app does not collect bank login credentials, account authentication information, or any other sensitive financial access data.
-        </p>
-      </section>
-
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Your responsibility
-        </h2>
-        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          You control what information you enter. You are responsible for keeping your device and browser secure so that your local data remains under your control.
         </p>
       </section>
 
