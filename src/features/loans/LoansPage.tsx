@@ -108,7 +108,7 @@ function computeAmortizedPaymentCents(
   return Math.round(paymentDollars * 100);
 }
 
-/** Full repayment = monthly interest + principal portion. Principal = max(0, amortized - monthlyInterest). */
+/** Full repayment Payment(now) = single rounded amortized payment (avoids 1-cent drift). Breakdown fields for display only. */
 function computeFullRepaymentBreakdown(
   balanceCents: number,
   ratePercent: number,
@@ -117,7 +117,8 @@ function computeFullRepaymentBreakdown(
   const monthlyInterestCents = computeMonthlyInterestCents(balanceCents, ratePercent);
   const amortizedCents = computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
   const principalPortionCents = Math.max(0, amortizedCents - monthlyInterestCents);
-  const fullRepaymentCents = monthlyInterestCents + principalPortionCents;
+  // Use single rounded amortized payment as full repayment to avoid 1-cent drift.
+  const fullRepaymentCents = amortizedCents;
   return { monthlyInterestCents, amortizedCents, principalPortionCents, fullRepaymentCents };
 }
 
