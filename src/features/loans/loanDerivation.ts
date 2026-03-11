@@ -39,6 +39,7 @@ function getDaysInCurrentMonth(): number {
  * Formula: (Principal Balance × Interest Rate / 365) × Days in Cycle.
  * - Interest Rate = annual rate as decimal (ratePercent / 100).
  * - Days in Cycle = days in the current month (defaults to getDaysInCurrentMonth(); bill due last day of month).
+ * - Result is truncated (Math.floor) to whole cents; no rounding up.
  */
 export function computeMonthlyInterestCents(
   balanceCents: number,
@@ -49,7 +50,7 @@ export function computeMonthlyInterestCents(
   const days = daysInCycle ?? getDaysInCurrentMonth();
   const rateDecimal = ratePercent / 100;
   const interestCents = (balanceCents * rateDecimal / 365) * days;
-  return Math.round(interestCents);
+  return Math.floor(interestCents);
 }
 
 function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
