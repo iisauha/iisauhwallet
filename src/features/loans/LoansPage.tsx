@@ -84,17 +84,23 @@ function recurringAnnualIncomeCents(r: RecurringItem): number {
   return Math.round((amt * 365) / days);
 }
 
-const BILLING_CYCLE_DAYS = 30.44;
+/** Days in the current month (last day of prev month → last day of current month). Handles leap years. */
+function getDaysInCurrentMonth(): number {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
 
-/** Monthly interest: (balance * rate/100 / 365.25) * billingCycleDays. Used for interest-only and full-repayment interest portion. */
+/** Private-loan monthly interest: (Principal × Rate/365) × Days in Cycle. Days in Cycle = days in current month. */
 function computeMonthlyInterestCents(
   balanceCents: number,
   ratePercent: number,
-  billingDays: number = BILLING_CYCLE_DAYS
+  daysInCycle?: number
 ): number {
   if (!(balanceCents > 0)) return 0;
-  const dollars = (balanceCents / 100) * (ratePercent / 100) / 365.25 * billingDays;
-  return Math.round(dollars * 100);
+  const days = daysInCycle ?? getDaysInCurrentMonth();
+  const rateDecimal = ratePercent / 100;
+  const interestCents = (balanceCents * rateDecimal / 365) * days;
+  return Math.round(interestCents);
 }
 
 function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
@@ -444,9 +450,8 @@ function deriveForLoan(
       ? paymentCentsFromPrivateRange(activeRange, balanceCents, interestRatePercent, derivedTermMonths)
       : 0;
     monthlyNowCents = paymentNow;
-    if (activeRange?.mode === 'interest_only') {
-      monthlyInterestCents = paymentNow;
-    }
+    // Private monthly interest uses (balance × rate/365) × days in cycle for display and breakdown.
+    monthlyInterestCents = computeMonthlyInterestCents(balanceCents, interestRatePercent);
 
     // Future/grace value: first future range (custom → full_repayment → interest_only). Custom overrides calculated.
     const fullRepaymentBreakdown =

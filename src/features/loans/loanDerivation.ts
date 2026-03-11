@@ -28,16 +28,26 @@ export function getActiveSchedulePaymentCents(
   return null;
 }
 
-const BILLING_CYCLE_DAYS = 30.44;
+/** Days in the current month (last day of prev month → last day of current month). Handles leap years. */
+function getDaysInCurrentMonth(): number {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
 
+/**
+ * Private-loan monthly interest: (Principal × Rate/365) × Days in Cycle.
+ * Days in Cycle = number of days in the current month (bill due last day of month).
+ */
 function computeMonthlyInterestCents(
   balanceCents: number,
   ratePercent: number,
-  billingDays: number = BILLING_CYCLE_DAYS
+  daysInCycle?: number
 ): number {
   if (!(balanceCents > 0)) return 0;
-  const dollars = (balanceCents / 100) * (ratePercent / 100) / 365.25 * billingDays;
-  return Math.round(dollars * 100);
+  const days = daysInCycle ?? getDaysInCurrentMonth();
+  const rateDecimal = ratePercent / 100;
+  const interestCents = (balanceCents * rateDecimal / 365) * days;
+  return Math.round(interestCents);
 }
 
 function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
