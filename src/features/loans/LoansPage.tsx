@@ -1631,17 +1631,6 @@ export function LoansPage() {
           >
             Save
           </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              savePaymentNowManualOverride(null);
-              setPaymentNowOverride(null);
-              setShowEditPaymentNow(false);
-            }}
-          >
-            Reset to computed
-          </button>
           <button type="button" className="btn btn-secondary" onClick={() => setShowEditPaymentNow(false)}>
             Cancel
           </button>
@@ -1979,18 +1968,6 @@ function LoanEditorForm(props: {
             >
               Add range
             </button>
-          </div>
-          <div className="field">
-            <label>Interest accrual anchor date (optional)</label>
-            <input
-              type="date"
-              value={state.accrualAnchorDate}
-              onChange={(e) => onChange({ ...state, accrualAnchorDate: e.target.value })}
-              style={{ maxWidth: 160 }}
-            />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
-              Start date for lender-style daily unpaid interest: balance × rate / 365.25 × days since this date.
-            </p>
           </div>
           <div className="field">
             <label>Unpaid interest override ($, optional)</label>
