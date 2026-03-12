@@ -15,6 +15,12 @@ export interface CreditCard {
   name: string;
   balanceCents: number; // positive = debt, negative = credit
   updatedAt: IsoDateTime;
+  /** Reward config (metadata only): best category for this card. */
+  rewardCategory?: string;
+  /** Reward config: best subcategory when applicable. */
+  rewardSubcategory?: string;
+  /** When true, use as fallback when no category match (only one catch-all at a time). */
+  isCatchAll?: boolean;
 }
 
 export type PendingDepositTo = 'bank' | 'card';

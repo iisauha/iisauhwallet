@@ -46,6 +46,7 @@ export function SpendingPage() {
   const [purchasesCollapsed, setPurchasesCollapsed] = useDropdownCollapsed('spending_purchases', true);
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
+  const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -139,12 +140,17 @@ export function SpendingPage() {
       .sort((a, b) => b.amountCents - a.amountCents);
   }, [filteredPurchases, data.banks, data.cards]);
 
+  const drilldownFilteredPurchases = useMemo(() => {
+    if (!drilldownCategoryId) return filteredPurchases;
+    return filteredPurchases.filter((p: any) => (p.category || 'uncategorized') === drilldownCategoryId);
+  }, [filteredPurchases, drilldownCategoryId]);
+
   const sortedPurchases = useMemo(
     () =>
-      filteredPurchases
+      drilldownFilteredPurchases
         .slice()
         .sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || '')),
-    [filteredPurchases]
+    [drilldownFilteredPurchases]
   );
   const hasMorePurchases = sortedPurchases.length > 5;
   const visiblePurchases = showAllPurchases ? sortedPurchases : sortedPurchases.slice(0, 5);
@@ -170,7 +176,9 @@ export function SpendingPage() {
   useEffect(() => {
     if (!canvasRef.current) return;
     if (view !== 'category') return;
-    renderSpendingPieChart(canvasRef.current, byCategory);
+    renderSpendingPieChart(canvasRef.current, byCategory, (categoryId) => {
+      setDrilldownCategoryId((prev) => (prev === categoryId ? null : categoryId));
+    });
   }, [byCategory, view]);
 
   return (
@@ -199,10 +207,16 @@ export function SpendingPage() {
         </button>
       </div>
 
-      <p className="section-title" style={{ marginTop: 10 }}>Spending distribution</p>
+      <p className="section-title">Spending distribution</p>
       <div className="card">
         {view === 'category' ? (
-          <div className="spending-chart-wrap" style={{ position: 'relative', width: '100%', height: 220 }}>
+          <div
+            className="spending-chart-wrap"
+            style={{ position: 'relative', width: '100%', height: 220 }}
+            onClick={(e) => {
+              if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
+            }}
+          >
             <canvas ref={canvasRef} />
           </div>
         ) : (
@@ -224,12 +238,36 @@ export function SpendingPage() {
       </div>
 
       <p className="section-title">By category</p>
+      {drilldownCategoryId ? (
+        <div style={{ marginBottom: 8 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setDrilldownCategoryId(null)}
+          >
+            Show all categories
+          </button>
+        </div>
+      ) : null}
       <div>
         {byCategory.map((c) => (
           <div
             className="card"
             key={c.categoryId}
-            style={{ background: getCategoryColor(c.categoryId), borderColor: 'var(--border)' }}
+            style={{
+              background: getCategoryColor(c.categoryId),
+              borderColor: 'var(--border)',
+              cursor: 'pointer'
+            }}
+            onClick={() => setDrilldownCategoryId((prev) => (prev === c.categoryId ? null : c.categoryId))}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setDrilldownCategoryId((prev) => (prev === c.categoryId ? null : c.categoryId));
+              }
+            }}
           >
             <div className="row">
               <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
@@ -246,6 +284,11 @@ export function SpendingPage() {
           onClick={() => setPurchasesCollapsed(!purchasesCollapsed)}
         >
           <span className="section-header-left">Purchases</span>
+          {drilldownCategoryId ? (
+            <span style={{ fontSize: '0.85rem', color: 'var(--muted)', marginLeft: 8 }}>
+              (showing: {getCategoryName(cfg, drilldownCategoryId)})
+            </span>
+          ) : null}
           <span className="chevron">{purchasesCollapsed ? '▸' : '▾'}</span>
         </div>
         <button

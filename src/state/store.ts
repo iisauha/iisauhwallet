@@ -16,6 +16,7 @@ export interface LedgerState {
     deleteCreditCard: (id: string) => void;
     updateBankBalance: (id: string, amountCents: number, mode: 'add' | 'set') => void;
     updateCardBalance: (id: string, amountCents: number, mode: 'add' | 'set') => void;
+    updateCardRewardConfig: (cardId: string, config: { rewardCategory?: string; rewardSubcategory?: string; isCatchAll?: boolean }) => void;
     addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
@@ -89,6 +90,23 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (!card) return;
       card.balanceCents = mode === 'set' ? amountCents : (card.balanceCents || 0) + amountCents;
       card.updatedAt = nowIso();
+      saveData(next);
+      set({ data: next });
+    },
+    updateCardRewardConfig: (cardId, config) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const card = next.cards.find((c) => c.id === cardId);
+      if (!card) return;
+      if (config.rewardCategory !== undefined) card.rewardCategory = config.rewardCategory || undefined;
+      if (config.rewardSubcategory !== undefined) card.rewardSubcategory = config.rewardSubcategory || undefined;
+      if (config.isCatchAll !== undefined) {
+        card.isCatchAll = config.isCatchAll;
+        if (config.isCatchAll) {
+          next.cards.forEach((c) => {
+            if (c.id !== cardId) c.isCatchAll = false;
+          });
+        }
+      }
       saveData(next);
       set({ data: next });
     },

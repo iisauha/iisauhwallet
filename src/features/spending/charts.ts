@@ -106,7 +106,11 @@ export function getCategoryColor(categoryId: string) {
   return color;
 }
 
-export function renderSpendingPieChart(canvas: HTMLCanvasElement, slices: SpendingSlice[]) {
+export function renderSpendingPieChart(
+  canvas: HTMLCanvasElement,
+  slices: SpendingSlice[],
+  onSliceClick?: (categoryId: string) => void
+) {
   const cfg = loadCategoryConfig();
   const labels = slices.map((s) => getCategoryName(cfg, s.categoryId));
   const data = slices.map((s) => Math.max(0, s.amountCents) / 100);
@@ -127,6 +131,12 @@ export function renderSpendingPieChart(canvas: HTMLCanvasElement, slices: Spendi
       animation: { duration: 420 },
       plugins: {
         legend: { display: false }
+      },
+      onClick: (_event, elements, chartInstance) => {
+        if (onSliceClick && elements.length > 0 && chartInstance.data.datasets[0]) {
+          const idx = elements[0].index;
+          if (idx >= 0 && idx < slices.length) onSliceClick(slices[idx].categoryId);
+        }
       }
     }
   });

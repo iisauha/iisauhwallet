@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
+import type { CreditCard } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, getCategorySubcategories, loadCategoryConfig } from '../../state/storage';
 import { Select } from '../../ui/Select';
@@ -11,6 +12,24 @@ function todayKey() {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
+}
+
+/** Suggests a credit card for a purchase by category/subcategory. Priority: exact match, category-only, catch-all. */
+function suggestCardForPurchase(category: string, subcategory: string, cards: CreditCard[]): CreditCard | null {
+  const list = cards || [];
+  if (list.length === 0) return null;
+  const sub = (subcategory || '').trim();
+  // 1. Exact match (category + subcategory)
+  if (sub) {
+    const exact = list.find((c) => c.rewardCategory === category && (c.rewardSubcategory || '') === sub);
+    if (exact) return exact;
+  }
+  // 2. Category-only match
+  const catOnly = list.find((c) => c.rewardCategory === category);
+  if (catOnly) return catOnly;
+  // 3. Catch-all
+  const catchAll = list.find((c) => c.isCatchAll);
+  return catchAll || null;
 }
 
 export type AddPurchasePrefill = { title?: string; amountCents?: number; dateISO?: string };
@@ -37,6 +56,9 @@ export function AddPurchaseModal(props: {
   const [applyToSnapshot, setApplyToSnapshot] = useState(false);
   const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | 'cash' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
+  const [suggestedCardId, setSuggestedCardId] = useState<string | null>(null);
+  const [showSuggestionPopup, setShowSuggestionPopup] = useState(false);
+  const [hasSelectedCategory, setHasSelectedCategory] = useState(false);
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
@@ -68,6 +90,16 @@ export function AddPurchaseModal(props: {
       if (p.dateISO) setDateISO(p.dateISO);
     }
   }, [props.open, props.prefill, currentPurchase]);
+
+  // After category/subcategory selection, suggest a reward card (new purchase only).
+  useEffect(() => {
+    if (!props.open || isEditing || !data.cards?.length || !hasSelectedCategory) return;
+    const card = suggestCardForPurchase(category, subcategory, data.cards);
+    if (card && (!showSuggestionPopup || suggestedCardId !== card.id)) {
+      setSuggestedCardId(card.id);
+      setShowSuggestionPopup(true);
+    }
+  }, [props.open, category, subcategory, isEditing, data.cards, hasSelectedCategory]);
 
   if (!props.open) return null;
 
@@ -111,8 +143,42 @@ export function AddPurchaseModal(props: {
     (!isSplit || !splitError) &&
     (!applyToSnapshot || (paymentSource !== '' && (paymentSource === 'cash' || paymentTargetId)));
 
+  const suggestedCardName = suggestedCardId ? (data.cards || []).find((c) => c.id === suggestedCardId)?.name : null;
+
   return (
     <div className="modal-overlay">
+      {showSuggestionPopup && suggestedCardId && suggestedCardName ? (
+        <div className="modal-overlay" style={{ zIndex: 10001 }}>
+          <div className="modal">
+            <h3>Wanna use {suggestedCardName}?</h3>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowSuggestionPopup(false);
+                  setSuggestedCardId(null);
+                }}
+              >
+                NO
+              </button>
+              <button
+                type="button"
+                className="btn btn-add"
+                onClick={() => {
+                  setApplyToSnapshot(true);
+                  setPaymentSource('card');
+                  setPaymentTargetId(suggestedCardId);
+                  setShowSuggestionPopup(false);
+                  setSuggestedCardId(null);
+                }}
+              >
+                YES
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="modal">
         <h3>{isEditing ? 'Edit Purchase' : 'Add Purchase'}</h3>
         <div className="field">
@@ -129,7 +195,13 @@ export function AddPurchaseModal(props: {
         </div>
         <div className="field">
           <label>Category</label>
-          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+          <Select
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setHasSelectedCategory(true);
+            }}
+          >
             {Object.keys(cfg).map((id) => (
               <option key={id} value={id}>
                 {getCategoryName(cfg, id)}
@@ -140,7 +212,13 @@ export function AddPurchaseModal(props: {
         {subs.length ? (
           <div className="field">
             <label>Subcategory</label>
-            <Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
+            <Select
+              value={subcategory}
+              onChange={(e) => {
+                setSubcategory(e.target.value);
+                setHasSelectedCategory(true);
+              }}
+            >
               <option value="">—</option>
               {subs.map((s) => (
                 <option key={s} value={s}>
@@ -245,7 +323,16 @@ export function AddPurchaseModal(props: {
         ) : null}
 
         <div className="btn-row">
-          <button type="button" className="btn btn-secondary" onClick={props.onClose}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setShowSuggestionPopup(false);
+              setSuggestedCardId(null);
+              setHasSelectedCategory(false);
+              props.onClose();
+            }}
+          >
             Cancel
           </button>
           <button
@@ -293,6 +380,9 @@ export function AddPurchaseModal(props: {
               setApplyToSnapshot(false);
               setPaymentSource('');
               setPaymentTargetId('');
+              setShowSuggestionPopup(false);
+              setSuggestedCardId(null);
+              setHasSelectedCategory(false);
             }}
           >
             Save

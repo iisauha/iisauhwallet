@@ -5,7 +5,7 @@ import { useLedgerStore } from '../../state/store';
 import { loadLoans } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
-import { getLastPostedBankId, loadBoolPref, saveBoolPref } from '../../state/storage';
+import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { BankAccountCard, CreditCardCard } from './AccountCard';
@@ -79,6 +79,7 @@ export function SnapshotPage() {
         publicCurrentBalanceCents: number | null;
       }
     | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
+    | { type: 'card-reward-config'; cardId: string; rewardCategory: string; rewardSubcategory: string; isCatchAll: boolean }
   >({ type: 'none' });
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
@@ -280,13 +281,29 @@ export function SnapshotPage() {
           <div>
             {visibleCards.map((c) => (
               <div className="card ll-account-card" key={c.id}>
-                <button
-                  type="button"
-                  className="ll-card-button"
-                  onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                >
-                  <CreditCardCard card={c} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="ll-card-button"
+                    style={{ flex: 1 }}
+                    onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
+                  >
+                    <CreditCardCard card={c} />
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setModal({ type: 'card-reward-config', cardId: c.id, rewardCategory: c.rewardCategory || '', rewardSubcategory: c.rewardSubcategory || '', isCatchAll: !!c.isCatchAll });
+                    }}
+                    title="Card reward categories"
+                    aria-label="Card reward categories"
+                    style={{ flexShrink: 0, padding: '4px 8px', fontSize: '0.9rem', minWidth: 'auto' }}
+                  >
+                    (i)
+                  </button>
+                </div>
                 <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                   <button
                     type="button"
@@ -632,6 +649,74 @@ export function SnapshotPage() {
                 </div>
               </>
             ) : null}
+
+            {modal.type === 'card-reward-config' ? (() => {
+              const cfg = loadCategoryConfig();
+              const rewardSubs = getCategorySubcategories(cfg, modal.rewardCategory);
+              return (
+                <>
+                  <h3>Card Reward Categories</h3>
+                  <div className="field">
+                    <label>Best reward category</label>
+                    <Select
+                      value={modal.rewardCategory}
+                      onChange={(e) => setModal({ ...modal, rewardCategory: e.target.value, rewardSubcategory: '' })}
+                    >
+                      <option value="">— None —</option>
+                      {Object.keys(cfg).map((id) => (
+                        <option key={id} value={id}>
+                          {getCategoryName(cfg, id)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  {rewardSubs.length > 0 ? (
+                    <div className="field">
+                      <label>Best reward subcategory</label>
+                      <Select
+                        value={modal.rewardSubcategory}
+                        onChange={(e) => setModal({ ...modal, rewardSubcategory: e.target.value })}
+                      >
+                        <option value="">— None —</option>
+                        {rewardSubs.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  ) : null}
+                  <div className="toggle-row">
+                    <input
+                      type="checkbox"
+                      id="catchAll"
+                      checked={modal.isCatchAll}
+                      onChange={(e) => setModal({ ...modal, isCatchAll: e.target.checked })}
+                    />
+                    <label htmlFor="catchAll">Use this as catch-all card</label>
+                  </div>
+                  <div className="btn-row">
+                    <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        actions.updateCardRewardConfig(modal.cardId, {
+                          rewardCategory: modal.rewardCategory || undefined,
+                          rewardSubcategory: modal.rewardSubcategory || undefined,
+                          isCatchAll: modal.isCatchAll
+                        });
+                        setModal({ type: 'none' });
+                      }}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </>
+              );
+            })() : null}
 
             {modal.type === 'edit-balance' ? (
               <>
