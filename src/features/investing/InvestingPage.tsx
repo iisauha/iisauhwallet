@@ -16,8 +16,11 @@ import {
   type InvestingState,
   type InvestingAccount,
   type HysaAccount,
-  type CoastFireAssumptions
+  type CoastFireAssumptions,
+  loadBoolPref,
+  saveBoolPref
 } from '../../state/storage';
+import { INVESTING_SHOW_ZERO_HYSA_KEY } from '../../state/keys';
 import { useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { loadCategoryConfig, getCategoryName } from '../../state/storage';
@@ -632,6 +635,10 @@ export function InvestingPage() {
   const setCollapsed = (key: 'hysa' | 'roth' | 'k401' | 'general', collapsed: boolean) =>
     dropdownState.setDropdownCollapsed(`investing_${key}`, collapsed);
 
+  const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
+    loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
+  );
+
   const detected = useDetectedActivityOptional();
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
@@ -1032,6 +1039,28 @@ export function InvestingPage() {
     persist({ ...investing, accounts });
   }
 
+  function setHysaReservedSavings(acc: HysaAccount) {
+    const current = typeof acc.reservedSavingsCents === 'number' && acc.reservedSavingsCents >= 0
+      ? acc.reservedSavingsCents
+      : 0;
+    const val = window.prompt('Reserved savings amount in this HYSA ($)', (current / 100).toFixed(2));
+    if (val == null) return;
+    const cents = parseCents(val);
+    if (cents < 0) return;
+    const now = Date.now();
+    const accounts = investing.accounts.map((a) => {
+      if (a.id !== acc.id || a.type !== 'hysa') return a;
+      const h = a as HysaAccount;
+      const clamped = Math.min(cents, Math.max(0, h.balanceCents || 0));
+      return {
+        ...h,
+        reservedSavingsCents: clamped,
+        lastAccruedAt: typeof h.lastAccruedAt === 'number' ? h.lastAccruedAt : now
+      };
+    });
+    persist({ ...investing, accounts });
+  }
+
   function getInvestingByKey(key: string | null): { type: 'hysa' | 'general'; acc: InvestingAccount } | null {
     if (!key) return null;
     const [kind, id] = key.split(':');
@@ -1078,6 +1107,60 @@ export function InvestingPage() {
     const fromInvest = getInvestingByKey(from);
     const toInvest = getInvestingByKey(to);
 
+    function normalizeTokens(name: string): string[] {
+      const lower = name
+        .normalize('NFKC')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim();
+      if (!lower) return [];
+      const stop = new Set([
+        'bank',
+        'checking',
+        'savings',
+        'account',
+        'hysa',
+        'ira',
+        'roth',
+        'brokerage',
+        'investment',
+        'investing',
+        'cash'
+      ]);
+      return lower
+        .split(/\s+/)
+        .filter((t) => t && !stop.has(t));
+    }
+
+    function getAccountName(kind: string, id: string): string | null {
+      if (!id) return null;
+      if (kind === 'bank') {
+        const bank = (data.banks || []).find((b) => b.id === id);
+        return bank ? bank.name : null;
+      }
+      if (kind === 'hysa' || kind === 'general') {
+        const acc = investing.accounts.find((a) => a.id === id && (a.type === 'hysa' || a.type === 'general'));
+        return acc ? acc.name : null;
+      }
+      return null;
+    }
+
+    const fromName = getAccountName(fromKind, fromId);
+    const toName = getAccountName(toKind, toId);
+    let useInstantSameBank = false;
+    if (fromName && toName) {
+      const fromTokens = normalizeTokens(fromName);
+      const toTokens = normalizeTokens(toName);
+      const hasCommon =
+        fromTokens.length > 0 &&
+        toTokens.length > 0 &&
+        fromTokens.some((t) => toTokens.includes(t));
+      if (hasCommon) {
+        const ok = window.confirm('This transfer will be instant. Continue?');
+        useInstantSameBank = !!ok;
+      }
+    }
+
     // Disallow Roth/401k as transfer sources.
     if (fromKind === 'roth' || fromKind === 'k401') {
       setTransferError('Cannot transfer out of Roth IRA or Employer-Based Retirement.');
@@ -1091,6 +1174,30 @@ export function InvestingPage() {
         setTransferError('Invalid investing target.');
         return;
       }
+
+      if (useInstantSameBank) {
+        if (inv.type === 'hysa') accrueNow();
+        actions.updateBankBalance(fromId, -amountCents, 'add');
+        const nowTs = Date.now();
+        const accounts = investing.accounts.map((a) => {
+          if (a.id !== inv.acc.id) return a;
+          if (a.type === 'hysa') {
+            const h = a as HysaAccount;
+            const newBalanceCents = (h.balanceCents || 0) + amountCents;
+            const updated = recordHysaBalanceEvent(h, nowTs, newBalanceCents);
+            return { ...updated, lastAccruedAt: nowTs };
+          }
+          return { ...a, balanceCents: (a.balanceCents || 0) + amountCents };
+        });
+        persist({ ...investing, accounts });
+        if (detected?.launchFlow?.flow === 'transfer') {
+          detected.markResolved(detected.launchFlow.detectedId, 'transfer');
+          detected.setLaunchFlow(null);
+        }
+        setTransferOpen(false);
+        return;
+      }
+
       const label = `Transfer to ${inv.type === 'hysa' ? 'HYSA' : 'Investing'}: ${inv.acc.name}`;
       actions.addPendingOutbound({
         label,
@@ -1117,6 +1224,30 @@ export function InvestingPage() {
         setTransferError('Invalid investing source.');
         return;
       }
+
+      if (useInstantSameBank) {
+        if (inv.type === 'hysa') accrueNow();
+        const nowTs = Date.now();
+        const accounts = investing.accounts.map((a) => {
+          if (a.id !== inv.acc.id) return a;
+          if (a.type === 'hysa') {
+            const h = a as HysaAccount;
+            const newBalanceCents = Math.max(0, (h.balanceCents || 0) - amountCents);
+            const updated = recordHysaBalanceEvent(h, nowTs, newBalanceCents);
+            return { ...updated, lastAccruedAt: nowTs };
+          }
+          return { ...a, balanceCents: Math.max(0, (a.balanceCents || 0) - amountCents) };
+        });
+        persist({ ...investing, accounts });
+        actions.updateBankBalance(toId, amountCents, 'add');
+        if (detected?.launchFlow?.flow === 'transfer') {
+          detected.markResolved(detected.launchFlow.detectedId, 'transfer');
+          detected.setLaunchFlow(null);
+        }
+        setTransferOpen(false);
+        return;
+      }
+
       const label = `Transfer from ${inv.type === 'hysa' ? 'HYSA' : 'Investing'}: ${inv.acc.name}`;
       actions.addPendingInbound({
         label,
@@ -1148,6 +1279,10 @@ export function InvestingPage() {
     collapsedKey: 'hysa' | 'roth' | 'k401' | 'general'
   ) {
     const isCollapsed = getCollapsed(collapsedKey);
+    const visibleAccounts =
+      type === 'hysa' && !showZeroHysa
+        ? accounts.filter((a) => (a.balanceCents || 0) !== 0)
+        : accounts;
     return (
       <>
         <div
@@ -1159,12 +1294,28 @@ export function InvestingPage() {
               : setCollapsed(collapsedKey, !isCollapsed)
           }
         >
-          <span className="section-header-left">{label}</span>
+          <span className="section-header-left">
+            {label}
+          </span>
+          {type === 'hysa' ? (
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                const next = !showZeroHysa;
+                setShowZeroHysa(next);
+                saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, next);
+              }}
+            >
+              {showZeroHysa ? 'Hide $0 HYSA' : 'Show $0 HYSA'}
+            </button>
+          ) : null}
           <span className="chevron">{isCollapsed ? '▸' : '▾'}</span>
         </div>
         {!isCollapsed ? (
           <>
-            {accounts.map((a) => {
+            {visibleAccounts.map((a) => {
               return (
                 <div className="card ll-account-card" key={a.id}>
                   <div className="row ll-account-row">
@@ -1184,11 +1335,53 @@ export function InvestingPage() {
                       const h = a as HysaAccount;
                       const { interestAccruedThisMonthCents, projectedInterestThisMonthCents } =
                         computeHysaMonthlyInterest(h, Date.now());
+                      const balance = typeof h.balanceCents === 'number' ? h.balanceCents : 0;
+                      const reservedRaw =
+                        typeof h.reservedSavingsCents === 'number' && h.reservedSavingsCents >= 0
+                          ? h.reservedSavingsCents
+                          : 0;
+                      const reservedCents = Math.min(reservedRaw, balance);
+                      const liquidCents = Math.max(0, balance - reservedCents);
                       return (
                         <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
                           <div>APY {h.interestRate.toFixed(2)}%</div>
-                          <div>Interest this month so far: {formatCents(interestAccruedThisMonthCents)}</div>
                           <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
+                          <div style={{ marginTop: 4 }}>
+                            <div>Total HYSA balance: {formatCents(balance)}</div>
+                            <div>Reserved savings: {formatCents(reservedCents)}</div>
+                            {h.linkedCheckingBankId ? (
+                              <div>Available to linked checking: {formatCents(liquidCents)}</div>
+                            ) : (
+                              <div>Available to linked checking: {formatCents(0)}</div>
+                            )}
+                          </div>
+                          <div style={{ marginTop: 4 }}>
+                            <label style={{ fontSize: '0.8rem', marginRight: 6 }}>Link to checking:</label>
+                            <Select
+                              value={h.linkedCheckingBankId || ''}
+                              onChange={(e) => {
+                                const bankId = e.target.value || undefined;
+                                const accounts = investing.accounts.map((acc) => {
+                                  if (acc.id !== h.id || acc.type !== 'hysa') return acc;
+                                  const next: HysaAccount = {
+                                    ...(acc as HysaAccount),
+                                    linkedCheckingBankId: bankId || undefined
+                                  };
+                                  return next;
+                                });
+                                persist({ ...investing, accounts });
+                              }}
+                            >
+                              <option value="">— None —</option>
+                              {(data.banks || [])
+                                .filter((b) => b.type === 'bank')
+                                .map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {b.name}
+                                  </option>
+                                ))}
+                            </Select>
+                          </div>
                         </div>
                       );
                     })()
@@ -1220,9 +1413,9 @@ export function InvestingPage() {
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          onClick={() => editHysaInterest(a as HysaAccount)}
+                          onClick={() => setHysaReservedSavings(a as HysaAccount)}
                         >
-                          Edit interest
+                          Reserved
                         </button>
                       </>
                     ) : null}

@@ -11,7 +11,9 @@ import {
   saveExpectedIncome,
   saveLastAdjustments,
   saveUpcomingWindowPreference,
-  uid
+  uid,
+  loadInvesting,
+  type HysaAccount
 } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getRecurringIncomeOccurrencesInWindow, getRecurringOccurrencesInWindow } from '../../state/calc';
@@ -110,8 +112,34 @@ export function UpcomingPage() {
     return incomeInWindow.reduce((s, i) => s + (i.amountCents || 0), 0) + recurringIncome.reduce((s, i) => s + (i.amountCents || 0), 0);
   }, [incomeInWindow, recurringIncome]);
 
-  const projectedBalanceCents = totals.finalNetCashCents - totalExpectedCostsCents + totalExpectedIncomeCents;
-  const statusOk = projectedBalanceCents >= 0;
+  const linkedHysaLiquidTotalCents = useMemo(() => {
+    try {
+      const inv = loadInvesting();
+      let total = 0;
+      (inv.accounts || []).forEach((acc: any) => {
+        if (!acc || acc.type !== 'hysa') return;
+        const h = acc as HysaAccount;
+        if (!h.linkedCheckingBankId) return;
+        const balance = typeof h.balanceCents === 'number' ? h.balanceCents : 0;
+        const reservedRaw =
+          typeof h.reservedSavingsCents === 'number' && h.reservedSavingsCents >= 0
+            ? h.reservedSavingsCents
+            : 0;
+        const reserved = Math.min(reservedRaw, balance);
+        const liquid = Math.max(0, balance - reserved);
+        if (liquid > 0) total += liquid;
+      });
+      return total;
+    } catch {
+      return 0;
+    }
+  }, []);
+
+  const projectedBalanceCents =
+    totals.finalNetCashCents - totalExpectedCostsCents + totalExpectedIncomeCents;
+  const projectedWithLinkedCents = projectedBalanceCents + linkedHysaLiquidTotalCents;
+  const statusOkBase = projectedBalanceCents >= 0;
+  const statusOkWithLinked = !statusOkBase && projectedWithLinkedCents >= 0;
   const [incomeCollapsed, setIncomeCollapsed] = useDropdownCollapsed('upcoming_expected_income', true);
   const [costsCollapsed, setCostsCollapsed] = useDropdownCollapsed('upcoming_expected_costs', true);
 
@@ -419,10 +447,22 @@ export function UpcomingPage() {
           <span className="k">Projected balance</span>
           <span className={projectedBalanceCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(projectedBalanceCents)}</span>
         </div>
+        {statusOkWithLinked ? (
+          <div className="summary-kv" style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+            <span className="k" style={{ paddingLeft: 12 }}>Includes linked HYSA coverage</span>
+            <span className="v">{formatCents(linkedHysaLiquidTotalCents)}</span>
+          </div>
+        ) : null}
         <div style={{ marginTop: 10 }}>
-          <span className={statusOk ? 'upcoming-status-ok' : 'upcoming-status-warn'}>
-            {statusOk ? 'OK to pay' : 'May require additional funds'}
-          </span>
+          {statusOkBase ? (
+            <span className="upcoming-status-ok">OK to pay</span>
+          ) : statusOkWithLinked ? (
+            <span className="upcoming-status-ok">
+              Covered using linked HYSA availability belonging to checking
+            </span>
+          ) : (
+            <span className="upcoming-status-warn">May require additional funds</span>
+          )}
         </div>
       </div>
 

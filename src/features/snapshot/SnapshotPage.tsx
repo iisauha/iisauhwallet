@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
-import { loadLoans } from '../../state/storage';
+import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
@@ -88,6 +88,31 @@ export function SnapshotPage() {
 
   const pendingCcPaymentCents = totals.pendingCcPaymentCents || 0;
   const pendingOutNonCcCents = totals.pendingOutNonCcCents ?? totals.pendingOutCents;
+
+  const linkedHysaLiquidByBankId = useMemo(() => {
+    try {
+      const inv = loadInvesting();
+      const map: Record<string, number> = {};
+      (inv.accounts || []).forEach((acc: any) => {
+        if (!acc || acc.type !== 'hysa') return;
+        const h = acc as HysaAccount;
+        const bankId = h.linkedCheckingBankId || null;
+        if (!bankId) return;
+        const balance = typeof h.balanceCents === 'number' ? h.balanceCents : 0;
+        const reservedRaw =
+          typeof h.reservedSavingsCents === 'number' && h.reservedSavingsCents >= 0
+            ? h.reservedSavingsCents
+            : 0;
+        const reserved = Math.min(reservedRaw, balance);
+        const liquid = Math.max(0, balance - reserved);
+        if (liquid <= 0) return;
+        map[bankId] = (map[bankId] || 0) + liquid;
+      });
+      return map;
+    } catch {
+      return {};
+    }
+  }, []);
 
   const visibleBanks = useMemo(() => {
     const list = data.banks || [];
@@ -202,50 +227,62 @@ export function SnapshotPage() {
       {!cashCollapsed ? (
         <>
           <div>
-            {visibleBanks.map((b) => (
-              <div className="card ll-account-card" key={b.id}>
-                <button
-                  type="button"
-                  className="ll-card-button"
-                  onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
-                >
-                  <BankAccountCard bank={b} />
-                </button>
-                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+            {visibleBanks.map((b) => {
+              const linkedLiquid = linkedHysaLiquidByBankId[b.id] || 0;
+              return (
+                <div className="card ll-account-card" key={b.id}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })}
+                    className="ll-card-button"
+                    onClick={() =>
+                      setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
+                    }
                   >
-                    Add / Set
+                    <BankAccountCard bank={b} />
                   </button>
-                  <button
-                    type="button"
-                    className="btn clear-btn"
-                    onClick={() => {
-                      actions.updateBankBalance(b.id, 0, 'set');
-                    }}
-                  >
-                    Clear
-                  </button>
-                  {b.type !== 'physical_cash' ? (
+                  {linkedLiquid > 0 ? (
+                    <div style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                      Includes {formatCents(linkedLiquid)} available instantly from linked HYSA
+                    </div>
+                  ) : null}
+                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                     <button
                       type="button"
-                      className="btn btn-danger"
+                      className="btn btn-secondary"
                       onClick={() =>
-                        openConfirm(
-                          'Are you sure you want to delete this?',
-                          'Are you sure you want to delete this?',
-                          () => actions.deleteBankAccount(b.id)
-                        )
+                        setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
                       }
                     >
-                      Delete
+                      Add / Set
                     </button>
-                  ) : null}
+                    <button
+                      type="button"
+                      className="btn clear-btn"
+                      onClick={() => {
+                        actions.updateBankBalance(b.id, 0, 'set');
+                      }}
+                    >
+                      Clear
+                    </button>
+                    {b.type !== 'physical_cash' ? (
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() =>
+                          openConfirm(
+                            'Are you sure you want to delete this?',
+                            'Are you sure you want to delete this?',
+                            () => actions.deleteBankAccount(b.id)
+                          )
+                        }
+                      >
+                        Delete
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })}>
             + Add Bank Account

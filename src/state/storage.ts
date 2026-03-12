@@ -578,6 +578,10 @@ export type HysaAccount = InvestingAccountBase & {
   manualProjectedInterestThisMonthCents?: number;
   /** Optional: month key when manualProjectedInterestThisMonthCents was set (YYYY-MM) */
   manualProjectedInterestMonthKey?: string;
+  /** Optional: linked checking bank account id whose balance can instantly draw from a liquid portion of this HYSA. */
+  linkedCheckingBankId?: string | null;
+  /** Optional: cents within this HYSA that are treated as reserved savings (not auto-used for linked checking). */
+  reservedSavingsCents?: number | null;
 };
 
 export type OtherInvestAccount = InvestingAccountBase & {

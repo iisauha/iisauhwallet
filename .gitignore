@@ -24,3 +24,6 @@ pnpm-debug.log*
 vite.config.timestamp-*.mjs
 .vite
 tsconfig.tsbuildinfo
+
+# Editor / AI tooling
+.cursor

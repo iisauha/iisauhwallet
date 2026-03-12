@@ -11,6 +11,9 @@ export const SHOW_ZERO_BALANCES_KEY = 'ledgerlite_showZeroBalances'; // legacy (
 export const SHOW_ZERO_CASH_KEY = 'ledgerlite_showZeroCashItems';
 export const SHOW_ZERO_CARDS_KEY = 'ledgerlite_showZeroCreditCards';
 
+// Investing: UI-only preference for showing $0 HYSA balances.
+export const INVESTING_SHOW_ZERO_HYSA_KEY = 'iisauhwallet_investing_showZeroHysa_v1';
+
 export const PENDING_IN_COLLAPSED_KEY = 'ledgerlite_pendingInboundCollapsed';
 export const PENDING_OUT_COLLAPSED_KEY = 'ledgerlite_pendingOutboundCollapsed';
 
