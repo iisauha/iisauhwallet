@@ -8,7 +8,7 @@ import { useDetectedActivityOptional } from '../../state/DetectedActivityContext
 import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
-import { BankAccountCard, CreditCardCard } from './AccountCard';
+import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 
 export function SnapshotPage() {
@@ -279,31 +279,48 @@ export function SnapshotPage() {
       {!cardsCollapsed ? (
         <>
           <div>
-            {visibleCards.map((c) => (
-              <div className="card ll-account-card" key={c.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    type="button"
+            {visibleCards.map((c) => {
+              const balanceCents = c.balanceCents ?? 0;
+              const amountClass =
+                balanceCents > 0 ? 'amount amount-neg' : balanceCents < 0 ? 'amount amount-pos' : 'amount amount-pos';
+              return (
+                <div className="card ll-account-card" key={c.id}>
+                  <div
                     className="ll-card-button"
-                    style={{ flex: 1 }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                  >
-                    <CreditCardCard card={c} />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setModal({ type: 'card-reward-config', cardId: c.id, rewardCategory: c.rewardCategory || '', rewardSubcategory: c.rewardSubcategory || '', isCatchAll: !!c.isCatchAll });
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false });
+                      }
                     }}
-                    title="Card reward categories"
-                    aria-label="Card reward categories"
-                    style={{ flexShrink: 0, padding: '4px 8px', fontSize: '0.9rem', minWidth: 'auto' }}
                   >
-                    (i)
-                  </button>
-                </div>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="name bank-card-name">{c.name}</span>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModal({
+                            type: 'card-reward-config',
+                            cardId: c.id,
+                            rewardCategory: c.rewardCategory || '',
+                            rewardSubcategory: c.rewardSubcategory || '',
+                            isCatchAll: !!c.isCatchAll
+                          });
+                        }}
+                        title="Card reward categories"
+                        aria-label="Card reward categories"
+                      >
+                        ⓘ
+                      </button>
+                    </span>
+                    <span className={amountClass}>{formatCents(balanceCents)}</span>
+                  </div>
                 <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                   <button
                     type="button"
@@ -336,7 +353,8 @@ export function SnapshotPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })}>
             + Add Credit Card
