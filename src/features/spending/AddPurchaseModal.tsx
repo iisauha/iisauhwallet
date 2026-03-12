@@ -29,19 +29,26 @@ function getActiveSubTrackerCardId(): string | null {
   return null;
 }
 
-/** Suggests a credit card for a purchase by category/subcategory. Priority: exact match, category-only, catch-all. */
+/** Suggests a credit card for a purchase by category/subcategory. Priority: exact cat+sub match, category-only (card has no sub), catch-all. */
 function suggestCardForPurchase(category: string, subcategory: string, cards: CreditCard[]): CreditCard | null {
   const list = cards || [];
   if (list.length === 0) return null;
   const sub = (subcategory || '').trim();
-  // 1. Exact match (category + subcategory)
+
+  // 1. Exact category + subcategory match: card must match both. If purchase has a subcategory, card must have same sub.
+  //    Card configured as Food → Restaurants does NOT match Food → Snacks.
   if (sub) {
-    const exact = list.find((c) => c.rewardCategory === category && (c.rewardSubcategory || '') === sub);
+    const exact = list.find(
+      (c) => c.rewardCategory === category && (c.rewardSubcategory || '').trim() === sub
+    );
     if (exact) return exact;
   }
-  // 2. Category-only match
-  const catOnly = list.find((c) => c.rewardCategory === category);
+
+  // 2. Category-only match: only when the card is configured with NO subcategory (card is category-only).
+  //    Cards configured with a subcategory (e.g. Food → Restaurants) must match exactly and are not used here.
+  const catOnly = list.find((c) => c.rewardCategory === category && !(c.rewardSubcategory || '').trim());
   if (catOnly) return catOnly;
+
   // 3. Catch-all
   const catchAll = list.find((c) => c.isCatchAll);
   return catchAll || null;
@@ -179,7 +186,7 @@ export function AddPurchaseModal(props: {
       {showSubTrackerPopup && suggestedSubTrackerCardId && suggestedSubTrackerCardName ? (
         <div className="modal-overlay" style={{ zIndex: 10001 }}>
           <div className="modal">
-            <h3>Wanna use {suggestedSubTrackerCardName} for your current SUB Tracker?</h3>
+            <h3>Wanna use your {suggestedSubTrackerCardName} card? You have a sign up bonus active.</h3>
             <div className="btn-row">
               <button
                 type="button"
