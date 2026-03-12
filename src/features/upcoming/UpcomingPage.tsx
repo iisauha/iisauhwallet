@@ -447,7 +447,7 @@ export function UpcomingPage() {
         {linkedHysaLiquidTotalCents > 0 ? (
           <div className="summary-kv" style={{ color: 'var(--green)' }}>
             <span className="k">Includes linked HYSA coverage</span>
-            <span className="v">+{formatCents(linkedHysaLiquidTotalCents)}</span>
+            <span className="v">{formatCents(linkedHysaLiquidTotalCents)}</span>
           </div>
         ) : null}
         <div className="summary-kv">

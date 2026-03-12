@@ -87,8 +87,6 @@ export function SnapshotPage() {
   >({ type: 'none' });
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
-  const finalNetCashClass =
-    totals.finalNetCashCents >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
 
   const pendingCcPaymentCents = totals.pendingCcPaymentCents || 0;
   const pendingOutNonCcCents = totals.pendingOutNonCcCents ?? totals.pendingOutCents;
@@ -122,6 +120,11 @@ export function SnapshotPage() {
     () => Object.values(linkedHysaLiquidByBankId).reduce((a, b) => a + b, 0),
     [linkedHysaLiquidByBankId]
   );
+
+  const displayedFinalNetCashCents =
+    totalLinkedHysaCents > 0 ? totals.finalNetCashCents + totalLinkedHysaCents : totals.finalNetCashCents;
+  const finalNetCashDisplayClass =
+    displayedFinalNetCashCents >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
 
   const visibleBanks = useMemo(() => {
     const list = data.banks || [];
@@ -476,8 +479,8 @@ export function SnapshotPage() {
           </div>
           {totalLinkedHysaCents > 0 ? (
             <div className="summary-kv" style={{ color: 'var(--green)' }}>
-              <span className="k">Cash from checking in linked HYSA</span>
-              <span className="v">+{formatCents(totalLinkedHysaCents)}</span>
+              <span className="k">Cash from Checking in HYSA</span>
+              <span className="v">{formatCents(totalLinkedHysaCents)}</span>
             </div>
           ) : null}
           <div className="summary-kv">
@@ -516,10 +519,10 @@ export function SnapshotPage() {
             <span className="k">Total Pending Inbound</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.pendingInCents)}</span>
           </div>
-          <div className={finalNetCashClass}>
+          <div className={finalNetCashDisplayClass}>
             <span className="k">Final Net Cash</span>
-            <span className="v" style={{ color: totals.finalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {formatCents(totals.finalNetCashCents)}
+            <span className="v" style={{ color: displayedFinalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              {formatCents(displayedFinalNetCashCents)}
             </span>
           </div>
         </div>
