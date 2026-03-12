@@ -61,6 +61,10 @@ export function SnapshotPage() {
   const [cardsCollapsed, setCardsCollapsed] = useDropdownCollapsed('snapshot_cards', true);
   const [pendingInCollapsed, setPendingInCollapsed] = useDropdownCollapsed('snapshot_pending_in', true);
   const [pendingOutCollapsed, setPendingOutCollapsed] = useDropdownCollapsed('snapshot_pending_out', true);
+  const [summaryPendingOutBreakdownCollapsed, setSummaryPendingOutBreakdownCollapsed] = useDropdownCollapsed(
+    'snapshot_summary_pending_out_breakdown',
+    true
+  );
 
   const [modal, setModal] = useState<
     | { type: 'none' }
@@ -467,67 +471,56 @@ export function SnapshotPage() {
       <div className="summary" id="snapshotSummary">
         <div className="summary-compact">
           <div className="summary-kv">
-            <span className="k">Net Cash (Cash Total)</span>
-            <span className="v" style={{ color: 'var(--green)' }}>
-              {formatCents(totals.bankTotalCents + totalLinkedHysaCents)}
-            </span>
+            <span className="k">Current Cash in Checking Accounts</span>
+            <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.bankTotalCents)}</span>
           </div>
           {totalLinkedHysaCents > 0 ? (
-            <div
-              className="summary-kv"
-              style={{ fontSize: '0.9rem', color: 'var(--green)', paddingLeft: 12, marginTop: 0 }}
-            >
-              <span className="k">Linked HYSA coverage</span>
+            <div className="summary-kv" style={{ color: 'var(--green)' }}>
+              <span className="k">Cash from checking in linked HYSA</span>
               <span className="v">+{formatCents(totalLinkedHysaCents)}</span>
             </div>
           ) : null}
           <div className="summary-kv">
-            <span className="k">Total Current Credit Card Balance</span>
+            <span className="k">Total Credit Card Balance</span>
             <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.ccDebtCents)}</span>
           </div>
           <div className="summary-kv">
             <span className="k">Credit Card Credit</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.ccCreditCents)}</span>
           </div>
-          <div className="summary-kv">
-            <span className="k">Pending Outbound</span>
+          <div
+            className="summary-kv"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setSummaryPendingOutBreakdownCollapsed(!summaryPendingOutBreakdownCollapsed)}
+            title={summaryPendingOutBreakdownCollapsed ? 'Show breakdown' : 'Hide breakdown'}
+          >
+            <span className="k">
+              Pending Outbound
+              <span style={{ marginLeft: 6, fontSize: '0.85rem', opacity: 0.8 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
+            </span>
             <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.pendingOutCents)}</span>
           </div>
-          <div
-            className="summary-kv"
-            style={{
-              marginTop: 2,
-              marginBottom: 0,
-              paddingTop: 0,
-              fontSize: '0.9rem',
-              color: 'var(--muted)'
-            }}
-          >
-            <span className="k" style={{ paddingLeft: 12 }}>
-              ↳ Credit card payments
-            </span>
-            <span className="v">{formatCents(pendingCcPaymentCents)}</span>
-          </div>
-          <div
-            className="summary-kv"
-            style={{
-              marginTop: 0,
-              fontSize: '0.9rem',
-              color: 'var(--muted)'
-            }}
-          >
-            <span className="k" style={{ paddingLeft: 12 }}>
-              ↳ Other pending outbound
-            </span>
-            <span className="v">{formatCents(pendingOutNonCcCents)}</span>
-          </div>
+          {!summaryPendingOutBreakdownCollapsed ? (
+            <>
+              <div className="summary-kv" style={{ fontSize: '0.9rem', color: 'var(--red)', paddingLeft: 12, marginTop: 0 }}>
+                <span className="k">↳ Credit card payments</span>
+                <span className="v">{formatCents(pendingCcPaymentCents)}</span>
+              </div>
+              <div className="summary-kv" style={{ fontSize: '0.9rem', color: 'var(--red)', marginTop: 0 }}>
+                <span className="k" style={{ paddingLeft: 12 }}>↳ Other pending outbound</span>
+                <span className="v">{formatCents(pendingOutNonCcCents)}</span>
+              </div>
+            </>
+          ) : null}
           <div className="summary-kv">
             <span className="k">Total Pending Inbound</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.pendingInCents)}</span>
           </div>
           <div className={finalNetCashClass}>
             <span className="k">Final Net Cash</span>
-            <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.finalNetCashCents)}</span>
+            <span className="v" style={{ color: totals.finalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              {formatCents(totals.finalNetCashCents)}
+            </span>
           </div>
         </div>
       </div>

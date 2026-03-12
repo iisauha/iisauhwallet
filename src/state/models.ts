@@ -67,6 +67,8 @@ export interface PendingTransferMeta {
   kind?: string;
   investingType?: 'hysa' | 'general';
   investingAccountId?: string;
+  /** When transfer involves HYSA with sub-buckets: 'liquid' = checking/liquid portion, 'reserved' = savings/reserved portion. */
+  hysaSubBucket?: 'liquid' | 'reserved';
   // Optional metadata for special-case flows (e.g. Upcoming -> Pending Outbound).
   source?: string;
   addToSpendingOnConfirm?: boolean;

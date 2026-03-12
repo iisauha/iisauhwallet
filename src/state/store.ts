@@ -833,7 +833,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
             const newBalanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
             if (acc.type === 'hysa') {
               const now = Date.now();
-              const updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+              let updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+              const subBucket = item.meta!.hysaSubBucket;
+              if (subBucket === 'reserved') {
+                updated = { ...updated, reservedSavingsCents: Math.max(0, (acc.reservedSavingsCents || 0) - amount) };
+              }
               inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
             } else {
               acc.balanceCents = newBalanceCents;
@@ -937,7 +941,11 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           const newBalanceCents = (acc.balanceCents || 0) + amount;
           if (acc.type === 'hysa') {
             const now = Date.now();
-            const updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+            let updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+            const subBucket = item.meta!.hysaSubBucket;
+            if (subBucket === 'reserved') {
+              updated = { ...updated, reservedSavingsCents: (acc.reservedSavingsCents || 0) + amount };
+            }
             inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
           } else {
             acc.balanceCents = newBalanceCents;

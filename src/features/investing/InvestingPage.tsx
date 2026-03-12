@@ -646,6 +646,17 @@ export function InvestingPage() {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
   const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferHysaStep, setTransferHysaStep] = useState<{
+    direction: 'in' | 'out';
+    accountName: string;
+    fromKind: string;
+    fromId: string;
+    toKind: string;
+    toId: string;
+    amountCents: number;
+    useInstantSameBank: boolean;
+    inv: { type: string; acc: InvestingAccount };
+  } | null>(null);
 
   useEffect(() => {
     if (detected?.launchFlow?.flow === 'transfer') {
@@ -1175,18 +1186,26 @@ export function InvestingPage() {
         return;
       }
 
+      if (inv.type === 'hysa') {
+        setTransferHysaStep({
+          direction: 'in',
+          accountName: inv.acc.name,
+          fromKind,
+          fromId,
+          toKind,
+          toId,
+          amountCents,
+          useInstantSameBank,
+          inv
+        });
+        return;
+      }
+
       if (useInstantSameBank) {
-        if (inv.type === 'hysa') accrueNow();
         actions.updateBankBalance(fromId, -amountCents, 'add');
         const nowTs = Date.now();
         const accounts = investing.accounts.map((a) => {
           if (a.id !== inv.acc.id) return a;
-          if (a.type === 'hysa') {
-            const h = a as HysaAccount;
-            const newBalanceCents = (h.balanceCents || 0) + amountCents;
-            const updated = recordHysaBalanceEvent(h, nowTs, newBalanceCents);
-            return { ...updated, lastAccruedAt: nowTs };
-          }
           return { ...a, balanceCents: (a.balanceCents || 0) + amountCents };
         });
         persist({ ...investing, accounts });
@@ -1198,7 +1217,7 @@ export function InvestingPage() {
         return;
       }
 
-      const label = `Transfer to ${inv.type === 'hysa' ? 'HYSA' : 'Investing'}: ${inv.acc.name}`;
+      const label = `Transfer to Investing: ${inv.acc.name}`;
       actions.addPendingOutbound({
         label,
         amountCents,
@@ -1225,17 +1244,25 @@ export function InvestingPage() {
         return;
       }
 
+      if (inv.type === 'hysa') {
+        setTransferHysaStep({
+          direction: 'out',
+          accountName: inv.acc.name,
+          fromKind,
+          fromId,
+          toKind,
+          toId,
+          amountCents,
+          useInstantSameBank,
+          inv
+        });
+        return;
+      }
+
       if (useInstantSameBank) {
-        if (inv.type === 'hysa') accrueNow();
         const nowTs = Date.now();
         const accounts = investing.accounts.map((a) => {
           if (a.id !== inv.acc.id) return a;
-          if (a.type === 'hysa') {
-            const h = a as HysaAccount;
-            const newBalanceCents = Math.max(0, (h.balanceCents || 0) - amountCents);
-            const updated = recordHysaBalanceEvent(h, nowTs, newBalanceCents);
-            return { ...updated, lastAccruedAt: nowTs };
-          }
           return { ...a, balanceCents: Math.max(0, (a.balanceCents || 0) - amountCents) };
         });
         persist({ ...investing, accounts });
@@ -1248,7 +1275,7 @@ export function InvestingPage() {
         return;
       }
 
-      const label = `Transfer from ${inv.type === 'hysa' ? 'HYSA' : 'Investing'}: ${inv.acc.name}`;
+      const label = `Transfer from Investing: ${inv.acc.name}`;
       actions.addPendingInbound({
         label,
         amountCents,
@@ -1270,6 +1297,87 @@ export function InvestingPage() {
     }
 
     setTransferError('That transfer path is not allowed.');
+  }
+
+  function commitHysaSubBucketChoice(subBucket: 'liquid' | 'reserved') {
+    const step = transferHysaStep;
+    if (!step) return;
+    const { direction, accountName, fromId, toId, amountCents, useInstantSameBank, inv } = step;
+    let invState = accrueHysaAccounts(loadInvesting());
+
+    if (direction === 'in') {
+      if (useInstantSameBank) {
+        actions.updateBankBalance(fromId, -amountCents, 'add');
+        const nowTs = Date.now();
+        const accounts = invState.accounts.map((a) => {
+          if (a.id !== inv.acc.id) return a;
+          if (a.type === 'hysa') {
+            const h = a as HysaAccount;
+            const newBalanceCents = (h.balanceCents || 0) + amountCents;
+            let updated = recordHysaBalanceEvent(h, nowTs, newBalanceCents);
+            if (subBucket === 'reserved') {
+              updated = { ...updated, reservedSavingsCents: (h.reservedSavingsCents || 0) + amountCents };
+            }
+            return { ...updated, lastAccruedAt: nowTs };
+          }
+          return { ...a, balanceCents: (a.balanceCents || 0) + amountCents };
+        });
+        persist({ ...invState, accounts });
+        setInvesting({ ...invState, accounts });
+      } else {
+        actions.addPendingOutbound({
+          label: `Transfer to HYSA: ${accountName}`,
+          amountCents,
+          outboundType: 'standard',
+          meta: {
+            kind: 'transfer',
+            investingType: inv.type as 'hysa',
+            investingAccountId: inv.acc.id,
+            hysaSubBucket: subBucket
+          }
+        } as any);
+      }
+    } else {
+      if (useInstantSameBank) {
+        const nowTs = Date.now();
+        const accounts = invState.accounts.map((a) => {
+          if (a.id !== inv.acc.id) return a;
+          if (a.type === 'hysa') {
+            const h = a as HysaAccount;
+            const newBalanceCents = Math.max(0, (h.balanceCents || 0) - amountCents);
+            let updated = recordHysaBalanceEvent(h, nowTs, newBalanceCents);
+            if (subBucket === 'reserved') {
+              updated = { ...updated, reservedSavingsCents: Math.max(0, (h.reservedSavingsCents || 0) - amountCents) };
+            }
+            return { ...updated, lastAccruedAt: nowTs };
+          }
+          return { ...a, balanceCents: Math.max(0, (a.balanceCents || 0) - amountCents) };
+        });
+        persist({ ...invState, accounts });
+        setInvesting({ ...invState, accounts });
+        actions.updateBankBalance(toId, amountCents, 'add');
+      } else {
+        actions.addPendingInbound({
+          label: `Transfer from HYSA: ${accountName}`,
+          amountCents,
+          targetBankId: toId,
+          isRefund: false,
+          depositTo: 'bank',
+          meta: {
+            kind: 'transfer',
+            investingType: inv.type as 'hysa',
+            investingAccountId: inv.acc.id,
+            hysaSubBucket: subBucket
+          }
+        } as any);
+      }
+    }
+    setTransferHysaStep(null);
+    setTransferOpen(false);
+    if (detected?.launchFlow?.flow === 'transfer') {
+      detected.markResolved(detected.launchFlow.detectedId, 'transfer');
+      detected.setLaunchFlow(null);
+    }
   }
 
   function renderSection(
@@ -1810,95 +1918,138 @@ export function InvestingPage() {
       {transferOpen ? (
         <div className="modal-overlay">
           <div className="modal">
-            {detected?.launchFlow?.flow === 'transfer' && detected.launchFlow.item ? (
-              <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--muted)', border: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
-                <div>Merchant: {detected.launchFlow.item.title}</div>
-                <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
-                <div>Account: {detected.launchFlow.item.accountName}</div>
-                <div>Date: {detected.launchFlow.item.dateISO}</div>
-                <div>Status: {detected.launchFlow.item.pending ? 'Pending' : 'Posted'}</div>
-              </div>
-            ) : null}
-            <h3>Transfer between accounts</h3>
-            <div className="field">
-              <label>From</label>
-              <Select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
-                <option value="">— Select —</option>
-                {(data.banks || []).map((b) => (
-                  <option key={b.id} value={`bank:${b.id}`}>
-                    Bank — {b.name}
-                  </option>
-                ))}
-                {hysaAccounts.map((a) => (
-                  <option key={a.id} value={`hysa:${a.id}`}>
-                    HYSA — {a.name}
-                  </option>
-                ))}
-                {generalAccounts.map((a) => (
-                  <option key={a.id} value={`general:${a.id}`}>
-                    Investing — {a.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="field">
-              <label>To</label>
-              <Select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>
-                <option value="">— Select —</option>
-                {(data.banks || []).map((b) => (
-                  <option key={b.id} value={`bank:${b.id}`}>
-                    Bank — {b.name}
-                  </option>
-                ))}
-                {hysaAccounts.map((a) => (
-                  <option key={a.id} value={`hysa:${a.id}`}>
-                    HYSA — {a.name}
-                  </option>
-                ))}
-                {generalAccounts.map((a) => (
-                  <option key={a.id} value={`general:${a.id}`}>
-                    Investing — {a.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="field">
-              <label>Amount ($)</label>
-              <input
-                className="ll-control"
-                value={transferAmount}
-                onChange={(e) => setTransferAmount(e.target.value)}
-                inputMode="decimal"
-                placeholder="0.00"
-              />
-            </div>
-            <div className="field">
-              <label>Note (optional)</label>
-              <input
-                className="ll-control"
-                value={transferNote}
-                onChange={(e) => setTransferNote(e.target.value)}
-              />
-            </div>
-            {transferError ? (
-              <div style={{ color: 'var(--red)', fontSize: '0.85rem', marginTop: 4 }}>{transferError}</div>
-            ) : null}
-            <div className="btn-row" style={{ marginTop: 10 }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setTransferOpen(false);
-                  if (detected?.launchFlow?.flow === 'transfer') detected?.setLaunchFlow(null);
-                }}
-              >
-                Cancel
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={createTransfer}>
-                Create transfer
-              </button>
-            </div>
+            {transferHysaStep ? (
+              <>
+                <h3>
+                  {transferHysaStep.direction === 'in'
+                    ? `Where should this transfer go inside ${transferHysaStep.accountName}?`
+                    : `Which portion should this transfer come from?`}
+                </h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 16 }}>
+                  {transferHysaStep.direction === 'in'
+                    ? 'Choose which portion of the HYSA this transfer is going into.'
+                    : 'Choose which portion of the HYSA this transfer is being pulled from.'}
+                </p>
+                <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => commitHysaSubBucketChoice('liquid')}
+                  >
+                    Checking / liquid portion
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => commitHysaSubBucketChoice('reserved')}
+                  >
+                    Savings / reserved portion
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setTransferHysaStep(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {detected?.launchFlow?.flow === 'transfer' && detected.launchFlow.item ? (
+                  <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
+                    <div>Merchant: {detected.launchFlow.item.title}</div>
+                    <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
+                    <div>Account: {detected.launchFlow.item.accountName}</div>
+                    <div>Date: {detected.launchFlow.item.dateISO}</div>
+                    <div>Status: {detected.launchFlow.item.pending ? 'Pending' : 'Posted'}</div>
+                  </div>
+                ) : null}
+                <h3>Transfer between accounts</h3>
+                <div className="field">
+                  <label>From</label>
+                  <Select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
+                    <option value="">— Select —</option>
+                    {(data.banks || []).map((b) => (
+                      <option key={b.id} value={`bank:${b.id}`}>
+                        Bank — {b.name}
+                      </option>
+                    ))}
+                    {hysaAccounts.map((a) => (
+                      <option key={a.id} value={`hysa:${a.id}`}>
+                        HYSA — {a.name}
+                      </option>
+                    ))}
+                    {generalAccounts.map((a) => (
+                      <option key={a.id} value={`general:${a.id}`}>
+                        Investing — {a.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="field">
+                  <label>To</label>
+                  <Select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>
+                    <option value="">— Select —</option>
+                    {(data.banks || []).map((b) => (
+                      <option key={b.id} value={`bank:${b.id}`}>
+                        Bank — {b.name}
+                      </option>
+                    ))}
+                    {hysaAccounts.map((a) => (
+                      <option key={a.id} value={`hysa:${a.id}`}>
+                        HYSA — {a.name}
+                      </option>
+                    ))}
+                    {generalAccounts.map((a) => (
+                      <option key={a.id} value={`general:${a.id}`}>
+                        Investing — {a.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="field">
+                  <label>Amount ($)</label>
+                  <input
+                    className="ll-control"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="field">
+                  <label>Note (optional)</label>
+                  <input
+                    className="ll-control"
+                    value={transferNote}
+                    onChange={(e) => setTransferNote(e.target.value)}
+                  />
+                </div>
+                {transferError ? (
+                  <div style={{ color: 'var(--red)', fontSize: '0.85rem', marginTop: 4 }}>{transferError}</div>
+                ) : null}
+                <div className="btn-row" style={{ marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setTransferOpen(false);
+                      setTransferHysaStep(null);
+                      if (detected?.launchFlow?.flow === 'transfer') detected?.setLaunchFlow(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={createTransfer}>
+                    Create transfer
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : null}
