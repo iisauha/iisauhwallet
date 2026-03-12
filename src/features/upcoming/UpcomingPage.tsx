@@ -140,6 +140,7 @@ export function UpcomingPage() {
   const projectedWithLinkedCents = projectedBalanceCents + linkedHysaLiquidTotalCents;
   const statusOkBase = projectedBalanceCents >= 0;
   const statusOkWithLinked = !statusOkBase && projectedWithLinkedCents >= 0;
+  const displayedProjectedCents = statusOkWithLinked ? projectedWithLinkedCents : projectedBalanceCents;
   const [incomeCollapsed, setIncomeCollapsed] = useDropdownCollapsed('upcoming_expected_income', true);
   const [costsCollapsed, setCostsCollapsed] = useDropdownCollapsed('upcoming_expected_costs', true);
 
@@ -443,16 +444,16 @@ export function UpcomingPage() {
           <span className="k">Expected income in window</span>
           <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
         </div>
-        <div className="summary-kv">
-          <span className="k">Projected balance</span>
-          <span className={projectedBalanceCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(projectedBalanceCents)}</span>
-        </div>
-        {statusOkWithLinked ? (
-          <div className="summary-kv" style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
-            <span className="k" style={{ paddingLeft: 12 }}>Includes linked HYSA coverage</span>
-            <span className="v">{formatCents(linkedHysaLiquidTotalCents)}</span>
+        {linkedHysaLiquidTotalCents > 0 ? (
+          <div className="summary-kv" style={{ color: 'var(--green)' }}>
+            <span className="k">Includes linked HYSA coverage</span>
+            <span className="v">+{formatCents(linkedHysaLiquidTotalCents)}</span>
           </div>
         ) : null}
+        <div className="summary-kv">
+          <span className="k">Projected balance</span>
+          <span className={displayedProjectedCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(displayedProjectedCents)}</span>
+        </div>
         <div style={{ marginTop: 10 }}>
           {statusOkBase ? (
             <span className="upcoming-status-ok">OK to pay</span>

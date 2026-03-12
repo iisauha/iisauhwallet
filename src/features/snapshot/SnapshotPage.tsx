@@ -114,6 +114,11 @@ export function SnapshotPage() {
     }
   }, []);
 
+  const totalLinkedHysaCents = useMemo(
+    () => Object.values(linkedHysaLiquidByBankId).reduce((a, b) => a + b, 0),
+    [linkedHysaLiquidByBankId]
+  );
+
   const visibleBanks = useMemo(() => {
     const list = data.banks || [];
     return showZeroCashItems ? list : list.filter((b) => (b.balanceCents || 0) !== 0);
@@ -463,8 +468,19 @@ export function SnapshotPage() {
         <div className="summary-compact">
           <div className="summary-kv">
             <span className="k">Net Cash (Cash Total)</span>
-            <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.bankTotalCents)}</span>
+            <span className="v" style={{ color: 'var(--green)' }}>
+              {formatCents(totals.bankTotalCents + totalLinkedHysaCents)}
+            </span>
           </div>
+          {totalLinkedHysaCents > 0 ? (
+            <div
+              className="summary-kv"
+              style={{ fontSize: '0.9rem', color: 'var(--green)', paddingLeft: 12, marginTop: 0 }}
+            >
+              <span className="k">Linked HYSA coverage</span>
+              <span className="v">+{formatCents(totalLinkedHysaCents)}</span>
+            </div>
+          ) : null}
           <div className="summary-kv">
             <span className="k">Total Current Credit Card Balance</span>
             <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.ccDebtCents)}</span>
