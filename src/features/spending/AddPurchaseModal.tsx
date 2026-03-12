@@ -3,7 +3,8 @@ import { parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
 import type { CreditCard } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
-import { getCategoryName, getCategorySubcategories, loadCategoryConfig } from '../../state/storage';
+import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadSubTracker } from '../../state/storage';
+import type { SubTrackerEntry } from '../../state/storage';
 import { Select } from '../../ui/Select';
 
 function todayKey() {
@@ -12,6 +13,20 @@ function todayKey() {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
+}
+
+/** Returns the first active SUB Tracker entry's card (user is working toward that SUB). */
+function getActiveSubTrackerCardId(): string | null {
+  const tracker = loadSubTracker();
+  const entries = (tracker.entries || []) as SubTrackerEntry[];
+  for (const e of entries) {
+    if (e.cardRef.type !== 'card') continue;
+    const tiers = (e.tiers || []).slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0));
+    const maxTarget = tiers.length ? Math.max(...tiers.map((t) => t.spendTargetCents || 0)) : 0;
+    const spendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
+    if (maxTarget > 0 && spendCents < maxTarget) return e.cardRef.cardId;
+  }
+  return null;
 }
 
 /** Suggests a credit card for a purchase by category/subcategory. Priority: exact match, category-only, catch-all. */
@@ -59,6 +74,8 @@ export function AddPurchaseModal(props: {
   const [suggestedCardId, setSuggestedCardId] = useState<string | null>(null);
   const [showSuggestionPopup, setShowSuggestionPopup] = useState(false);
   const [hasSelectedCategory, setHasSelectedCategory] = useState(false);
+  const [showSubTrackerPopup, setShowSubTrackerPopup] = useState(false);
+  const [suggestedSubTrackerCardId, setSuggestedSubTrackerCardId] = useState<string | null>(null);
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
@@ -91,15 +108,25 @@ export function AddPurchaseModal(props: {
     }
   }, [props.open, props.prefill, currentPurchase]);
 
-  // After category/subcategory selection, suggest a reward card (new purchase only).
+  // SUB Tracker first: when opening Add Purchase, if there's an active SUB Tracker card, ask to use it first.
   useEffect(() => {
-    if (!props.open || isEditing || !data.cards?.length || !hasSelectedCategory) return;
+    if (!props.open || isEditing) return;
+    const cardId = getActiveSubTrackerCardId();
+    if (cardId && data.cards?.some((c) => c.id === cardId)) {
+      setSuggestedSubTrackerCardId(cardId);
+      setShowSubTrackerPopup(true);
+    }
+  }, [props.open, isEditing, data.cards]);
+
+  // After category/subcategory selection, suggest a reward card (new purchase only). Skip if SUB popup is showing.
+  useEffect(() => {
+    if (!props.open || isEditing || !data.cards?.length || !hasSelectedCategory || showSubTrackerPopup) return;
     const card = suggestCardForPurchase(category, subcategory, data.cards);
     if (card && (!showSuggestionPopup || suggestedCardId !== card.id)) {
       setSuggestedCardId(card.id);
       setShowSuggestionPopup(true);
     }
-  }, [props.open, category, subcategory, isEditing, data.cards, hasSelectedCategory]);
+  }, [props.open, category, subcategory, isEditing, data.cards, hasSelectedCategory, showSubTrackerPopup]);
 
   if (!props.open) return null;
 
@@ -144,9 +171,43 @@ export function AddPurchaseModal(props: {
     (!applyToSnapshot || (paymentSource !== '' && (paymentSource === 'cash' || paymentTargetId)));
 
   const suggestedCardName = suggestedCardId ? (data.cards || []).find((c) => c.id === suggestedCardId)?.name : null;
+  const suggestedSubTrackerCardName =
+    suggestedSubTrackerCardId ? (data.cards || []).find((c) => c.id === suggestedSubTrackerCardId)?.name : null;
 
   return (
     <div className="modal-overlay">
+      {showSubTrackerPopup && suggestedSubTrackerCardId && suggestedSubTrackerCardName ? (
+        <div className="modal-overlay" style={{ zIndex: 10001 }}>
+          <div className="modal">
+            <h3>Wanna use {suggestedSubTrackerCardName} for your current SUB Tracker?</h3>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowSubTrackerPopup(false);
+                  setSuggestedSubTrackerCardId(null);
+                }}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                className="btn btn-add"
+                onClick={() => {
+                  setApplyToSnapshot(true);
+                  setPaymentSource('card');
+                  setPaymentTargetId(suggestedSubTrackerCardId);
+                  setShowSubTrackerPopup(false);
+                  setSuggestedSubTrackerCardId(null);
+                }}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showSuggestionPopup && suggestedCardId && suggestedCardName ? (
         <div className="modal-overlay" style={{ zIndex: 10001 }}>
           <div className="modal">
@@ -329,6 +390,8 @@ export function AddPurchaseModal(props: {
             onClick={() => {
               setShowSuggestionPopup(false);
               setSuggestedCardId(null);
+              setShowSubTrackerPopup(false);
+              setSuggestedSubTrackerCardId(null);
               setHasSelectedCategory(false);
               props.onClose();
             }}
@@ -383,6 +446,8 @@ export function AddPurchaseModal(props: {
               setShowSuggestionPopup(false);
               setSuggestedCardId(null);
               setHasSelectedCategory(false);
+              setShowSubTrackerPopup(false);
+              setSuggestedSubTrackerCardId(null);
             }}
           >
             Save
