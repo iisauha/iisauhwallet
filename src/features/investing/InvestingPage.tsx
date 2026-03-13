@@ -703,6 +703,18 @@ export function InvestingPage() {
     () => investing.accounts.filter((a) => a.type === 'general'),
     [investing.accounts]
   );
+  const banksSortedByBalance = useMemo(
+    () => [...(data.banks || [])].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0)),
+    [data.banks]
+  );
+  const hysaAccountsSorted = useMemo(
+    () => [...hysaAccounts].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0)),
+    [hysaAccounts]
+  );
+  const generalAccountsSorted = useMemo(
+    () => [...generalAccounts].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0)),
+    [generalAccounts]
+  );
 
   const contribution = useMemo(() => {
     const recurring: any[] = (data as any).recurring || [];
@@ -1971,45 +1983,45 @@ export function InvestingPage() {
                 <h3>Transfer between accounts</h3>
                 <div className="field">
                   <label>From</label>
-                  <Select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
-                    <option value="">— Select —</option>
-                    {(data.banks || []).map((b) => (
-                      <option key={b.id} value={`bank:${b.id}`}>
-                        Bank — {b.name}
-                      </option>
-                    ))}
-                    {hysaAccounts.map((a) => (
-                      <option key={a.id} value={`hysa:${a.id}`}>
-                        HYSA — {a.name}
-                      </option>
-                    ))}
-                    {generalAccounts.map((a) => (
-                      <option key={a.id} value={`general:${a.id}`}>
-                        Investing — {a.name}
-                      </option>
-                    ))}
-                  </Select>
+                <Select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
+                <option value="">— Select —</option>
+                {banksSortedByBalance.map((b) => (
+                  <option key={b.id} value={`bank:${b.id}`}>
+                    Bank — {b.name}
+                  </option>
+                ))}
+                {hysaAccountsSorted.map((a) => (
+                  <option key={a.id} value={`hysa:${a.id}`}>
+                    HYSA — {a.name}
+                  </option>
+                ))}
+                {generalAccountsSorted.map((a) => (
+                  <option key={a.id} value={`general:${a.id}`}>
+                    Investing — {a.name}
+                  </option>
+                ))}
+              </Select>
                 </div>
                 <div className="field">
                   <label>To</label>
-                  <Select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>
-                    <option value="">— Select —</option>
-                    {(data.banks || []).map((b) => (
-                      <option key={b.id} value={`bank:${b.id}`}>
-                        Bank — {b.name}
-                      </option>
-                    ))}
-                    {hysaAccounts.map((a) => (
-                      <option key={a.id} value={`hysa:${a.id}`}>
-                        HYSA — {a.name}
-                      </option>
-                    ))}
-                    {generalAccounts.map((a) => (
-                      <option key={a.id} value={`general:${a.id}`}>
-                        Investing — {a.name}
-                      </option>
-                    ))}
-                  </Select>
+                <Select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>
+                <option value="">— Select —</option>
+                {banksSortedByBalance.map((b) => (
+                  <option key={b.id} value={`bank:${b.id}`}>
+                    Bank — {b.name}
+                  </option>
+                ))}
+                {hysaAccountsSorted.map((a) => (
+                  <option key={a.id} value={`hysa:${a.id}`}>
+                    HYSA — {a.name}
+                  </option>
+                ))}
+                {generalAccountsSorted.map((a) => (
+                  <option key={a.id} value={`general:${a.id}`}>
+                    Investing — {a.name}
+                  </option>
+                ))}
+              </Select>
                 </div>
                 <div className="field">
                   <label>Amount ($)</label>

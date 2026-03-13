@@ -23,7 +23,7 @@ export interface CreditCard {
   isCatchAll?: boolean;
 }
 
-export type PendingDepositTo = 'bank' | 'card';
+export type PendingDepositTo = 'bank' | 'card' | 'hysa';
 export type PendingOutboundType = 'standard' | 'cc_payment';
 
 export interface PendingInboundItem {
@@ -34,6 +34,8 @@ export interface PendingInboundItem {
   isRefund?: boolean;
   depositTo?: PendingDepositTo;
   targetCardId?: string;
+  /** When depositTo === 'hysa': which HYSA account to deposit to. */
+  targetInvestingAccountId?: string;
   linkedPurchaseId?: string;
   splitRecurringPurchaseId?: string;
   fromSplit?: boolean;
@@ -53,7 +55,7 @@ export interface PendingOutboundItem {
   createdAt?: IsoDateTime;
   recurringId?: string;
   recurringDateKey?: string;
-  paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card';
+  paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card' | 'hysa';
   paymentTargetId?: string;
   splitTotalCents?: number;
   myPortionCents?: number;

@@ -32,10 +32,15 @@ export function SnapshotPage() {
           isRefund: false,
           depositTo: 'bank',
           targetCardId: '',
+          targetBankId: firstBankId,
+          targetInvestingAccountId: '',
+          hysaSubBucket: '',
           outboundType: 'standard',
           sourceBankId: firstBankId,
           targetCardIdOut: '',
-          targetBankId: firstBankId
+          outboundSourceKind: 'bank',
+          outboundSourceHysaAccountId: '',
+          outboundHysaSubBucket: ''
         } as any;
       }
       return {
@@ -46,10 +51,15 @@ export function SnapshotPage() {
         isRefund: false,
         depositTo: 'bank',
         targetCardId: '',
+        targetBankId: firstBankId,
+        targetInvestingAccountId: '',
+        hysaSubBucket: '',
         outboundType: 'standard',
         sourceBankId: firstBankId,
         targetCardIdOut: '',
-        targetBankId: firstBankId
+        outboundSourceKind: 'bank',
+        outboundSourceHysaAccountId: '',
+        outboundHysaSubBucket: ''
       } as any;
     });
   }, [detected?.launchFlow?.flow, detected?.launchFlow?.detectedId, detected?.launchFlow?.item, data.banks]);
@@ -71,7 +81,24 @@ export function SnapshotPage() {
     | { type: 'add-bank'; name: string }
     | { type: 'add-card'; name: string }
     | { type: 'edit-balance'; kind: 'bank' | 'card'; id: string; amount: string; useSet: boolean }
-    | { type: 'add-pending'; kind: 'in' | 'out'; label: string; amount: string; isRefund: boolean; depositTo: 'bank' | 'card'; targetCardId: string; outboundType: 'standard' | 'cc_payment'; sourceBankId: string; targetCardIdOut: string }
+    | {
+        type: 'add-pending';
+        kind: 'in' | 'out';
+        label: string;
+        amount: string;
+        isRefund: boolean;
+        depositTo: 'bank' | 'card' | 'hysa';
+        targetCardId: string;
+        targetBankId: string;
+        targetInvestingAccountId: string;
+        hysaSubBucket: 'liquid' | 'reserved' | '';
+        outboundType: 'standard' | 'cc_payment';
+        sourceBankId: string;
+        targetCardIdOut: string;
+        outboundSourceKind: 'bank' | 'hysa';
+        outboundSourceHysaAccountId: string;
+        outboundHysaSubBucket: 'liquid' | 'reserved' | '';
+      }
     | { type: 'post-inbound'; pendingId: string; isRefund: boolean; dest: string }
     | { type: 'post-bank'; kind: 'out'; pendingId: string; bankId: string; loanAdjustments?: any }
     | { type: 'loan-payment-confirm'; pendingId: string }
@@ -87,6 +114,23 @@ export function SnapshotPage() {
   >({ type: 'none' });
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
+
+  const investingState = useMemo(() => loadInvesting(), []);
+  const banksSortedByBalance = useMemo(
+    () => [...(data.banks || [])].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0)),
+    [data.banks]
+  );
+  const cardsSortedByBalance = useMemo(
+    () => [...(data.cards || [])].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0)),
+    [data.cards]
+  );
+  const hysaAccountsSorted = useMemo(
+    () =>
+      (investingState.accounts || [])
+        .filter((a: any) => a.type === 'hysa')
+        .sort((a: any, b: any) => (b.balanceCents || 0) - (a.balanceCents || 0)),
+    [investingState.accounts]
+  );
 
   const pendingCcPaymentCents = totals.pendingCcPaymentCents || 0;
   const pendingOutNonCcCents = totals.pendingOutNonCcCents ?? totals.pendingOutCents;
@@ -431,7 +475,7 @@ export function SnapshotPage() {
             onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('in', id))}
           />
           <div className="btn-row">
-            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
+            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
               + Add item
             </button>
             <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending inbound items?', () => actions.clearPending('in'))}>
@@ -461,7 +505,7 @@ export function SnapshotPage() {
             onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('out', id))}
           />
           <div className="btn-row">
-            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '' })}>
+            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
               + Add item
             </button>
             <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending outbound items?', () => actions.clearPending('out'))}>
@@ -854,11 +898,15 @@ export function SnapshotPage() {
                       <label>Deposit To</label>
                       <Select
                         value={modal.isRefund ? 'card' : modal.depositTo}
-                        onChange={(e) => setModal({ ...modal, depositTo: e.target.value as any })}
+                        onChange={(e) => {
+                          const v = e.target.value as 'bank' | 'card' | 'hysa';
+                          setModal({ ...modal, depositTo: v, targetInvestingAccountId: v !== 'hysa' ? '' : modal.targetInvestingAccountId, hysaSubBucket: v !== 'hysa' ? '' : modal.hysaSubBucket });
+                        }}
                         disabled={modal.isRefund}
                       >
                         <option value="bank">Bank</option>
                         <option value="card">Credit Card</option>
+                        <option value="hysa">HYSA</option>
                       </Select>
                     </div>
                     {modal.isRefund || modal.depositTo === 'card' ? (
@@ -866,21 +914,43 @@ export function SnapshotPage() {
                         <label>Card</label>
                         <Select value={modal.targetCardId} onChange={(e) => setModal({ ...modal, targetCardId: e.target.value })}>
                           <option value="">— Select —</option>
-                          {(data.cards || []).map((c) => (
+                          {cardsSortedByBalance.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.name}
+                              {c.name} — {formatCents(c.balanceCents || 0)}
                             </option>
                           ))}
                         </Select>
                       </div>
+                    ) : modal.depositTo === 'hysa' ? (
+                      <>
+                        <div className="field">
+                          <label>HYSA Account</label>
+                          <Select value={modal.targetInvestingAccountId} onChange={(e) => setModal({ ...modal, targetInvestingAccountId: e.target.value })}>
+                            <option value="">— Select —</option>
+                            {hysaAccountsSorted.map((a: any) => (
+                              <option key={a.id} value={a.id}>
+                                {a.name} — {formatCents(a.balanceCents || 0)}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div className="field">
+                          <label>Use which HYSA portion?</label>
+                          <Select value={modal.hysaSubBucket} onChange={(e) => setModal({ ...modal, hysaSubBucket: e.target.value as any })}>
+                            <option value="">— Select —</option>
+                            <option value="liquid">Available to linked checking</option>
+                            <option value="reserved">Reserved savings</option>
+                          </Select>
+                        </div>
+                      </>
                     ) : (
                       <div className="field">
                         <label>Bank (optional)</label>
-                        <Select value={(modal as any).targetBankId || ''} onChange={(e) => setModal({ ...(modal as any), targetBankId: e.target.value })}>
+                        <Select value={modal.targetBankId || ''} onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}>
                           <option value="">— Select —</option>
-                          {(data.banks || []).map((b) => (
+                          {banksSortedByBalance.map((b) => (
                             <option key={b.id} value={b.id}>
-                              {b.name}
+                              {b.name} — {formatCents(b.balanceCents || 0)}
                             </option>
                           ))}
                         </Select>
@@ -902,9 +972,9 @@ export function SnapshotPage() {
                           <label>From Bank</label>
                           <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
                             <option value="">— Select —</option>
-                            {(data.banks || []).map((b) => (
+                            {banksSortedByBalance.map((b) => (
                               <option key={b.id} value={b.id}>
-                                {b.name}
+                                {b.name} — {formatCents(b.balanceCents || 0)}
                               </option>
                             ))}
                           </Select>
@@ -913,15 +983,63 @@ export function SnapshotPage() {
                           <label>To Credit Card</label>
                           <Select value={modal.targetCardIdOut} onChange={(e) => setModal({ ...modal, targetCardIdOut: e.target.value })}>
                             <option value="">— Select —</option>
-                            {(data.cards || []).map((c) => (
+                            {cardsSortedByBalance.map((c) => (
                               <option key={c.id} value={c.id}>
-                                {c.name}
+                                {c.name} — {formatCents(c.balanceCents || 0)}
                               </option>
                             ))}
                           </Select>
                         </div>
                       </>
-                    ) : null}
+                    ) : (
+                      <>
+                        <div className="field">
+                          <label>From</label>
+                          <Select
+                            value={modal.outboundSourceKind}
+                            onChange={(e) => setModal({ ...modal, outboundSourceKind: e.target.value as 'bank' | 'hysa', outboundSourceHysaAccountId: e.target.value === 'hysa' ? modal.outboundSourceHysaAccountId : '', outboundHysaSubBucket: e.target.value === 'hysa' ? modal.outboundHysaSubBucket : '' })}
+                          >
+                            <option value="bank">Bank</option>
+                            <option value="hysa">HYSA</option>
+                          </Select>
+                        </div>
+                        {modal.outboundSourceKind === 'bank' ? (
+                          <div className="field">
+                            <label>Bank</label>
+                            <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
+                              <option value="">— Select —</option>
+                              {banksSortedByBalance.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.name} — {formatCents(b.balanceCents || 0)}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="field">
+                              <label>HYSA Account</label>
+                              <Select value={modal.outboundSourceHysaAccountId} onChange={(e) => setModal({ ...modal, outboundSourceHysaAccountId: e.target.value })}>
+                                <option value="">— Select —</option>
+                                {hysaAccountsSorted.map((a: any) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.name} — {formatCents(a.balanceCents || 0)}
+                                  </option>
+                                ))}
+                              </Select>
+                            </div>
+                            <div className="field">
+                              <label>Use which HYSA portion?</label>
+                              <Select value={modal.outboundHysaSubBucket} onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}>
+                                <option value="">— Select —</option>
+                                <option value="liquid">Available to linked checking</option>
+                                <option value="reserved">Reserved savings</option>
+                              </Select>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
                   </>
                 )}
 
@@ -945,13 +1063,16 @@ export function SnapshotPage() {
                       if (modal.kind === 'in') {
                         const depositTo = modal.isRefund ? 'card' : modal.depositTo;
                         if (depositTo === 'card' && !modal.targetCardId) return;
+                        if (depositTo === 'hysa' && (!modal.targetInvestingAccountId || !modal.hysaSubBucket)) return;
                         actions.addPendingInbound({
                           label: modal.label.trim() || 'Pending',
                           amountCents,
                           depositTo,
                           isRefund: modal.isRefund || depositTo === 'card' ? true : undefined,
                           targetCardId: depositTo === 'card' ? modal.targetCardId : undefined,
-                          targetBankId: depositTo === 'bank' ? ((modal as any).targetBankId || undefined) : undefined
+                          targetBankId: depositTo === 'bank' ? (modal.targetBankId || undefined) : undefined,
+                          targetInvestingAccountId: depositTo === 'hysa' ? modal.targetInvestingAccountId : undefined,
+                          meta: depositTo === 'hysa' && (modal.hysaSubBucket === 'liquid' || modal.hysaSubBucket === 'reserved') ? { hysaSubBucket: modal.hysaSubBucket } : undefined
                         });
                       } else {
                         if (modal.outboundType === 'cc_payment') {
@@ -964,7 +1085,20 @@ export function SnapshotPage() {
                             targetCardId: modal.targetCardIdOut
                           });
                         } else {
-                          actions.addPendingOutbound({ label: modal.label.trim() || 'Pending', amountCents, outboundType: 'standard' });
+                          if (modal.outboundSourceKind === 'hysa') {
+                            if (!modal.outboundSourceHysaAccountId) return;
+                            const subBucket = modal.outboundHysaSubBucket === 'reserved' ? 'reserved' : 'liquid';
+                            actions.addPendingOutbound({
+                              label: modal.label.trim() || 'Pending',
+                              amountCents,
+                              outboundType: 'standard',
+                              paymentSource: 'hysa',
+                              paymentTargetId: modal.outboundSourceHysaAccountId,
+                              meta: { hysaSubBucket: subBucket }
+                            });
+                          } else {
+                            actions.addPendingOutbound({ label: modal.label.trim() || 'Pending', amountCents, outboundType: 'standard' });
+                          }
                         }
                       }
                       if (detected?.launchFlow && (detected.launchFlow.flow === 'pending_in' || detected.launchFlow.flow === 'pending_out')) {
@@ -1011,9 +1145,9 @@ export function SnapshotPage() {
                       setModal({ ...modal, dest: v });
                     }}
                   >
-                    {(data.banks || []).map((b) => (
+                    {banksSortedByBalance.map((b) => (
                       <option key={b.id} value={`bank:${b.id}`}>
-                        {b.name}
+                        {b.name} — {formatCents(b.balanceCents || 0)}
                       </option>
                     ))}
                     {modal.isRefund ? (
@@ -1021,9 +1155,9 @@ export function SnapshotPage() {
                         <option value="" disabled>
                           ──────────
                         </option>
-                        {(data.cards || []).map((c) => (
+                        {cardsSortedByBalance.map((c) => (
                           <option key={c.id} value={`card:${c.id}`}>
-                            {c.name}
+                            {c.name} — {formatCents(c.balanceCents || 0)}
                           </option>
                         ))}
                       </>
@@ -1062,19 +1196,19 @@ export function SnapshotPage() {
                 <div className="field">
                   <label>Account</label>
                   <Select value={modal.bankId} onChange={(e) => setModal({ ...modal, bankId: e.target.value })}>
-                    {(data.banks || []).map((b) => (
+                    {banksSortedByBalance.map((b) => (
                       <option key={b.id} value={`bank:${b.id}`}>
-                        {b.name}
+                        {b.name} — {formatCents(b.balanceCents || 0)}
                       </option>
                     ))}
-                    {(data.cards || []).length ? (
+                    {cardsSortedByBalance.length ? (
                       <>
                         <option value="" disabled>
                           ──────────
                         </option>
-                        {(data.cards || []).map((c) => (
+                        {cardsSortedByBalance.map((c) => (
                           <option key={c.id} value={`card:${c.id}`}>
-                            {c.name}
+                            {c.name} — {formatCents(c.balanceCents || 0)}
                           </option>
                         ))}
                       </>

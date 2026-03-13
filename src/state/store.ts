@@ -813,6 +813,30 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         (next as any).purchases.push(purchase);
       };
 
+      // Inbound deposit to HYSA (manual pending inbound with depositTo === 'hysa').
+      if (kind === 'in' && item.targetInvestingAccountId && amount > 0) {
+        let inv = loadInvesting();
+        inv = accrueHysaAccounts(inv);
+        const idx = inv.accounts.findIndex((a: any) => a.id === item.targetInvestingAccountId && a.type === 'hysa');
+        if (idx !== -1) {
+          const acc = inv.accounts[idx] as any;
+          const newBalanceCents = (acc.balanceCents || 0) + amount;
+          const subBucket = item.meta?.hysaSubBucket ?? 'liquid';
+          const now = Date.now();
+          let updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+          if (subBucket === 'reserved') {
+            updated = { ...updated, reservedSavingsCents: (acc.reservedSavingsCents || 0) + amount };
+          }
+          inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
+          saveInvesting(inv);
+          markRecurringInstanceHandledIfPresent(item);
+          next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
+          saveData(next);
+          set({ data: next });
+          return { needsBankSelection: false };
+        }
+      }
+
       if (kind === 'in' && item.targetBankId) {
         const bank = next.banks.find((b) => b.id === item.targetBankId);
         if (bank) {
@@ -903,7 +927,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         if (idx !== -1) {
           const acc = inv.accounts[idx] as any;
           const newBalanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
-          const subBucket = item.meta?.recurringHysaSource?.hysaSubBucket ?? 'liquid';
+          const subBucket = item.meta?.recurringHysaSource?.hysaSubBucket ?? item.meta?.hysaSubBucket ?? 'liquid';
           const now = Date.now();
           let updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
           if (subBucket === 'reserved') {
