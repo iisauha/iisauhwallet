@@ -37,8 +37,9 @@ export function RecurringPage() {
   const [active, setActive] = useState(true);
   const [isActiveIncome, setIsActiveIncome] = useState(true);
   const [autoPay, setAutoPay] = useState(false);
-  const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | ''>('');
+  const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | 'hysa' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
+  const [hysaSubBucket, setHysaSubBucket] = useState<'liquid' | 'reserved' | ''>('');
   const [category, setCategory] = useState('food');
   const [subcategory, setSubcategory] = useState('');
   const [notes, setNotes] = useState('');
@@ -186,6 +187,7 @@ export function RecurringPage() {
                     setAutoPay(!!r.autoPay);
                     setPaymentSource((r.paymentSource as any) || '');
                     setPaymentTargetId(r.paymentTargetId || '');
+                    setHysaSubBucket((r as any).hysaSubBucket || '');
                     setCategory(r.category || 'food');
                     setSubcategory(r.subcategory || '');
                     setNotes(r.notes || '');
@@ -332,6 +334,7 @@ export function RecurringPage() {
                           setAutoPay(!!r.autoPay);
                           setPaymentSource((r.paymentSource as any) || '');
                           setPaymentTargetId(r.paymentTargetId || '');
+                          setHysaSubBucket((r as any).hysaSubBucket || '');
                           setCategory(r.category || 'food');
                           setSubcategory(r.subcategory || '');
                           setNotes(r.notes || '');
@@ -388,6 +391,7 @@ export function RecurringPage() {
           setAutoPay(false);
           setPaymentSource('');
           setPaymentTargetId('');
+          setHysaSubBucket('');
           setCategory('food');
           setSubcategory('');
           setNotes('');
@@ -893,23 +897,73 @@ export function RecurringPage() {
               <>
                 <div className="field">
                   <label>Default payment source</label>
-                  <Select value={paymentSource} onChange={(e) => setPaymentSource(e.target.value as any)}>
+                  <Select
+                    value={paymentSource}
+                    onChange={(e) => {
+                      const v = e.target.value as 'card' | 'bank' | 'hysa' | '';
+                      setPaymentSource(v);
+                      if (v !== 'hysa') setHysaSubBucket('');
+                      if (v !== 'hysa') setPaymentTargetId('');
+                    }}
+                  >
                     <option value="">— Select source —</option>
                     <option value="card">Credit Card</option>
                     <option value="bank">Cash (Bank)</option>
+                    <option value="hysa">HYSA / Investing</option>
                   </Select>
                 </div>
                 <div className="field">
                   <label>Default payment target</label>
-                  <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                  <Select
+                    value={
+                      paymentSource === 'hysa' && paymentTargetId
+                        ? `hysa:${paymentTargetId}`
+                        : paymentTargetId
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (paymentSource === 'hysa' && v.startsWith('hysa:')) {
+                        setPaymentTargetId(v.slice(5));
+                        return;
+                      }
+                      setPaymentTargetId(v);
+                    }}
+                  >
                     <option value="">— Select —</option>
-                    {(paymentSource === 'card' ? data.cards : data.banks).map((x: any) => (
-                      <option key={x.id} value={x.id}>
-                        {x.name}
-                      </option>
-                    ))}
+                    {paymentSource === 'card'
+                      ? (data.cards || []).map((x: any) => (
+                          <option key={x.id} value={x.id}>
+                            {x.name}
+                          </option>
+                        ))
+                      : paymentSource === 'hysa'
+                        ? (investingState.accounts || [])
+                            .filter((a: any) => a.type === 'hysa')
+                            .map((a: any) => (
+                              <option key={a.id} value={`hysa:${a.id}`}>
+                                {a.name}
+                              </option>
+                            ))
+                        : (data.banks || []).map((x: any) => (
+                            <option key={x.id} value={x.id}>
+                              {x.name}
+                            </option>
+                          ))}
                   </Select>
                 </div>
+                {paymentSource === 'hysa' ? (
+                  <div className="field">
+                    <label>Use which HYSA portion?</label>
+                    <Select
+                      value={hysaSubBucket}
+                      onChange={(e) => setHysaSubBucket(e.target.value as 'liquid' | 'reserved' | '')}
+                    >
+                      <option value="">— Select —</option>
+                      <option value="liquid">Available to linked checking</option>
+                      <option value="reserved">Reserved savings</option>
+                    </Select>
+                  </div>
+                ) : null}
 
                 {getCategoryName(cfg, category) === 'Investing' ? (
                   <div className="card" style={{ marginTop: 8 }}>
@@ -1066,6 +1120,10 @@ export function RecurringPage() {
                     autoPay: autoPay || undefined,
                     paymentSource: type === 'income' ? undefined : (paymentSource || undefined),
                     paymentTargetId: paymentTargetId || undefined,
+                    hysaSubBucket:
+                      type !== 'income' && paymentSource === 'hysa' && (hysaSubBucket === 'liquid' || hysaSubBucket === 'reserved')
+                        ? hysaSubBucket
+                        : undefined,
                     useLastDayOfMonth: useLastDayOfMonth || undefined,
                     category: type === 'income' ? undefined : category,
                     subcategory: type === 'income' ? undefined : (subcategory || undefined),

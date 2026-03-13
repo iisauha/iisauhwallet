@@ -746,8 +746,16 @@ export function UpcomingPage() {
                               return estimated > 0 ? estimated : 0;
                             })()
                           : 0;
+                      const recurringHysaSource =
+                        rec?.paymentSource === 'hysa' && rec?.paymentTargetId
+                          ? {
+                              investingAccountId: rec.paymentTargetId,
+                              hysaSubBucket: (rec as any).hysaSubBucket === 'reserved' ? 'reserved' as const : 'liquid' as const
+                            }
+                          : undefined;
                       const meta = {
                         ...(baseMeta || {}),
+                        ...(recurringHysaSource ? { recurringHysaSource } : {}),
                         source: 'upcoming',
                         addToSpendingOnConfirm: true,
                         originalCategory: item.category,

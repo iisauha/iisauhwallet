@@ -83,6 +83,8 @@ export interface PendingTransferMeta {
   publicPortionCents?: number;
   /** Total visible Payment(now) at move-to-pending time (for deterministic posting). */
   totalVisiblePaymentNowCents?: number;
+  /** When pending outbound is from a recurring with HYSA payment source: which account and sub-bucket to deduct from. */
+  recurringHysaSource?: { investingAccountId: string; hysaSubBucket: 'liquid' | 'reserved' };
 }
 
 export interface PurchaseSplitSnapshot {
@@ -164,8 +166,10 @@ export interface RecurringItem {
   /** When false, recurring income is excluded from all calculations and projections (default true when missing). */
   isActive?: boolean;
   autoPay?: boolean;
-  paymentSource?: 'card' | 'bank';
+  paymentSource?: 'card' | 'bank' | 'hysa';
   paymentTargetId?: string;
+  /** When paymentSource === 'hysa': which HYSA sub-bucket to deduct from when posted. */
+  hysaSubBucket?: 'liquid' | 'reserved';
   applyToSnapshot?: boolean;
   // Investing-related, all optional and backward-compatible
   countsForInvestingPct?: boolean;

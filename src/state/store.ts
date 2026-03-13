@@ -891,6 +891,35 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         return { needsBankSelection: false };
       }
 
+      // Recurring outbound with HYSA as payment source: deduct from HYSA (and selected sub-bucket).
+      const hysaSourceAccountId =
+        item.paymentSource === 'hysa' && item.paymentTargetId
+          ? item.paymentTargetId
+          : item.meta?.recurringHysaSource?.investingAccountId;
+      if (kind === 'out' && hysaSourceAccountId && amount > 0) {
+        let inv = loadInvesting();
+        inv = accrueHysaAccounts(inv);
+        const idx = inv.accounts.findIndex((a: any) => a.id === hysaSourceAccountId && a.type === 'hysa');
+        if (idx !== -1) {
+          const acc = inv.accounts[idx] as any;
+          const newBalanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
+          const subBucket = item.meta?.recurringHysaSource?.hysaSubBucket ?? 'liquid';
+          const now = Date.now();
+          let updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+          if (subBucket === 'reserved') {
+            updated = { ...updated, reservedSavingsCents: Math.max(0, (acc.reservedSavingsCents || 0) - amount) };
+          }
+          inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
+          saveInvesting(inv);
+          markRecurringInstanceHandledIfPresent(item);
+          next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+          addSpendingFromPendingIfNeeded(item, 'bank', next.banks[0]?.id || '');
+          saveData(next);
+          set({ data: next });
+          return { needsBankSelection: false };
+        }
+      }
+
       // Standard in/out uses bank selection when multiple banks exist.
       if (!next.banks.length) {
         if (kind === 'in') next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
