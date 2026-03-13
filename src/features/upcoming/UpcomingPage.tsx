@@ -135,12 +135,10 @@ export function UpcomingPage() {
     }
   }, []);
 
-  const projectedBalanceCents =
-    totals.finalNetCashCents - totalExpectedCostsCents + totalExpectedIncomeCents;
-  const projectedWithLinkedCents = projectedBalanceCents + linkedHysaLiquidTotalCents;
-  const statusOkBase = projectedBalanceCents >= 0;
-  const statusOkWithLinked = !statusOkBase && projectedWithLinkedCents >= 0;
-  const displayedProjectedCents = statusOkWithLinked ? projectedWithLinkedCents : projectedBalanceCents;
+  const displayedFinalNetCashCents =
+    totals.finalNetCashCents + (linkedHysaLiquidTotalCents > 0 ? linkedHysaLiquidTotalCents : 0);
+  const amountRemainingCents =
+    displayedFinalNetCashCents + totalExpectedIncomeCents - totalExpectedCostsCents;
   const [incomeCollapsed, setIncomeCollapsed] = useDropdownCollapsed('upcoming_expected_income', true);
   const [costsCollapsed, setCostsCollapsed] = useDropdownCollapsed('upcoming_expected_costs', true);
 
@@ -433,34 +431,24 @@ export function UpcomingPage() {
 
       <div className="card" style={{ marginTop: 24 }}>
         <div className="summary-kv">
-          <span className="k">Current Net Cash</span>
-          <span className="v pos">{formatCents(totals.finalNetCashCents)}</span>
+          <span className="k">Final Net Cash</span>
+          <span className="v pos">{formatCents(displayedFinalNetCashCents)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k">Expected income in window</span>
+          <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
         </div>
         <div className="summary-kv">
           <span className="k">Expected costs in window</span>
           <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Expected income in window</span>
-          <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
-        </div>
-        {linkedHysaLiquidTotalCents > 0 ? (
-          <div className="summary-kv" style={{ color: 'var(--green)' }}>
-            <span className="k">Includes linked HYSA coverage</span>
-            <span className="v">{formatCents(linkedHysaLiquidTotalCents)}</span>
-          </div>
-        ) : null}
-        <div className="summary-kv">
-          <span className="k">Projected balance</span>
-          <span className={displayedProjectedCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(displayedProjectedCents)}</span>
+          <span className="k">Amount remaining</span>
+          <span className={amountRemainingCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(amountRemainingCents)}</span>
         </div>
         <div style={{ marginTop: 10 }}>
-          {statusOkBase ? (
-            <span className="upcoming-status-ok">OK to pay</span>
-          ) : statusOkWithLinked ? (
-            <span className="upcoming-status-ok">
-              Covered using linked HYSA availability belonging to checking
-            </span>
+          {amountRemainingCents > 0 ? (
+            <span className="upcoming-status-ok">All expenses covered</span>
           ) : (
             <span className="upcoming-status-warn">May require additional funds</span>
           )}
