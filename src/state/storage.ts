@@ -31,7 +31,8 @@ import {
   APP_FONT_FAMILY_KEY,
   APP_FONT_SCALE_KEY,
   LOANS_SECTION_SHOW_PUBLIC_KEY,
-  LOANS_SECTION_SHOW_PRIVATE_KEY
+  LOANS_SECTION_SHOW_PRIVATE_KEY,
+  UI_ADVANCED_COLORS_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -142,6 +143,35 @@ export function loadBoolPref(key: string, defaultValue: boolean): boolean {
 export function saveBoolPref(key: string, value: boolean) {
   try {
     localStorage.setItem(key, value ? '1' : '0');
+  } catch (_) {}
+}
+
+/** UI-only: advanced UI surface color overrides. All values optional hex strings. */
+export type AdvancedUIColors = Partial<{
+  cardBg: string;
+  surfaceSecondary: string;
+  sectionBg: string;
+  modalBg: string;
+  dropdownBg: string;
+  border: string;
+  muted: string;
+}>;
+
+export function loadAdvancedUIColors(): AdvancedUIColors {
+  try {
+    const raw = localStorage.getItem(UI_ADVANCED_COLORS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return parsed;
+    return {};
+  } catch (_) {
+    return {};
+  }
+}
+
+export function saveAdvancedUIColors(colors: AdvancedUIColors) {
+  try {
+    localStorage.setItem(UI_ADVANCED_COLORS_KEY, JSON.stringify(colors));
   } catch (_) {}
 }
 

@@ -11,7 +11,9 @@ import {
 } from '../../state/storage';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
+import { useAdvancedUIColors } from '../../theme/AdvancedUIColorsContext';
 import { normalizeHex } from '../../theme/themeUtils';
+import type { AdvancedUIColors } from '../../state/storage';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 
 /** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
@@ -60,6 +62,71 @@ const FONT_SCALE_OPTIONS = [
   { value: 1, label: 'Medium' },
   { value: 1.06, label: 'Large' },
 ];
+
+const ADVANCED_UI_COLOR_LABELS: Record<keyof AdvancedUIColors, string> = {
+  cardBg: 'Card background',
+  surfaceSecondary: 'Secondary surface / padding blocks',
+  sectionBg: 'Section background',
+  modalBg: 'Modal background',
+  dropdownBg: 'Dropdown background',
+  border: 'Border color',
+  muted: 'Muted text / secondary UI',
+};
+
+function AdvancedUIColorsSection() {
+  const ctx = useAdvancedUIColors();
+  if (!ctx) return null;
+  const { colors, setColor, clearColor } = ctx;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {(Object.keys(ADVANCED_UI_COLOR_LABELS) as (keyof AdvancedUIColors)[]).map((key) => {
+        const value = colors[key] ?? '';
+        return (
+          <div key={key}>
+            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', margin: '0 0 6px 0' }}>
+              {ADVANCED_UI_COLOR_LABELS[key]}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <input
+                type="color"
+                value={value || '#1e293b'}
+                onChange={(e) => setColor(key, e.target.value)}
+                style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
+              />
+              <input
+                type="text"
+                key={`${key}-${value}`}
+                defaultValue={value}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  const n = normalizeHex(v);
+                  if (n) setColor(key, n);
+                  else if (v === '') clearColor(key);
+                }}
+                placeholder="#000000"
+                style={{
+                  flex: 1,
+                  minWidth: 100,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                }}
+              />
+              {value ? (
+                <button type="button" className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => clearColor(key)}>
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ColorCustomize({
   value,
@@ -277,6 +344,14 @@ export function SettingsPage() {
         <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--muted)' }}>
           Keeps layout safe on mobile. Income/expense colors stay green/red.
         </p>
+      </div>
+
+      <p className="section-title" style={{ marginTop: 24 }}>Advanced UI Colors</p>
+      <div className="settings-section" style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
+          Override colors for specific UI surfaces. Leave empty to use theme defaults. Finance green/red are unchanged.
+        </p>
+        <AdvancedUIColorsSection />
       </div>
 
       <p className="section-title" style={{ marginTop: 24 }}>Privacy</p>

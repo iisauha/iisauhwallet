@@ -13,6 +13,7 @@ import { DropdownStateProvider } from './state/DropdownStateContext';
 import { DetectedActivityProvider } from './state/DetectedActivityContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AppearanceProvider } from './theme/AppearanceContext';
+import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
 import { TAB_ORDER_KEY } from './state/keys';
 
 export type TabKey =
@@ -138,14 +139,16 @@ export function App() {
   return (
     <ThemeProvider>
       <AppearanceProvider>
+        <AdvancedUIColorsProvider>
         <DropdownStateProvider>
           <DetectedActivityProvider>
-          <Routes>
-          <Route path="/" element={<MainApp />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
+            <Routes>
+              <Route path="/" element={<MainApp />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
             </Routes>
           </DetectedActivityProvider>
         </DropdownStateProvider>
+        </AdvancedUIColorsProvider>
       </AppearanceProvider>
     </ThemeProvider>
   );

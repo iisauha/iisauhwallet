@@ -68,3 +68,6 @@ export const OPTIMIZER_LAST_RESULT_KEY = 'iisauhwallet_optimizer_last_result_v1'
 
 // UI: main app tab order (array of tab keys).
 export const TAB_ORDER_KEY = 'iisauhwallet_tab_order_v1';
+
+// UI-only: advanced UI surface colors (card, section, modal, dropdown, border, muted).
+export const UI_ADVANCED_COLORS_KEY = 'iisauhwallet_ui_advanced_colors_v1';

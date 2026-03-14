@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
-import { loadAppThemeColor, loadAppAccentColor, loadAppFontFamily, loadAppFontScale } from './state/storage';
+import { loadAppThemeColor, loadAppAccentColor, loadAppFontFamily, loadAppFontScale, loadAdvancedUIColors } from './state/storage';
 import { getFontFamilyStack } from './theme/fontStacks';
 import { getThemeColorsFromHex, getAccentColorsFromHex } from './theme/themeUtils';
 import './styles.css';
@@ -29,6 +29,20 @@ root.setProperty('--accent', accentColors.accent);
 root.setProperty('--accent-hover', accentColors.accentHover);
 document.documentElement.style.setProperty('--app-font-family', getFontFamilyStack(loadAppFontFamily()));
 document.documentElement.style.setProperty('--app-font-scale', String(loadAppFontScale()));
+const uiColors = loadAdvancedUIColors();
+const uiVarMap: [key: string, varName: string][] = [
+  ['cardBg', '--ui-card-bg'],
+  ['surfaceSecondary', '--ui-surface-secondary'],
+  ['sectionBg', '--ui-section-bg'],
+  ['modalBg', '--ui-modal-bg'],
+  ['dropdownBg', '--ui-dropdown-bg'],
+  ['border', '--ui-border'],
+  ['muted', '--ui-muted'],
+];
+uiVarMap.forEach(([key, varName]) => {
+  const v = uiColors[key as keyof typeof uiColors];
+  if (v != null && String(v).trim() !== '') document.documentElement.style.setProperty(varName, String(v).trim());
+});
 
 if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((regs) => {

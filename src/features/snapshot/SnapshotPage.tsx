@@ -340,7 +340,7 @@ export function SnapshotPage() {
               );
             })}
           </div>
-          <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })}>
+          <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })} >
             + Add Bank Account
           </button>
         </>
@@ -449,7 +449,7 @@ export function SnapshotPage() {
               );
             })}
           </div>
-          <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })}>
+          <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })} >
             + Add Credit Card
           </button>
         </>
@@ -563,7 +563,7 @@ export function SnapshotPage() {
             <span className="k">Total Pending Inbound</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.pendingInCents)}</span>
           </div>
-          <div className={finalNetCashDisplayClass}>
+          <div className={finalNetCashDisplayClass} >
             <span className="k">Final Net Cash</span>
             <span className="v" style={{ color: displayedFinalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {formatCents(displayedFinalNetCashCents)}
