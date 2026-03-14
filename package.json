@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@plasmicapp/cli": "^0.1.359",
     "chart.js": "^4.5.0",
     "dotenv": "^17.3.1",
     "plaid": "^41.4.0",

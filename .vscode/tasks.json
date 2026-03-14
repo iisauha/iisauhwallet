@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Open Live Preview (iPhone frame)",
+      "type": "shell",
+      "command": "open",
+      "args": ["http://localhost:5173/preview.html"],
+      "options": { "env": {} },
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": [],
+      "group": { "kind": "none" }
+    },
+    {
+      "label": "Open Live Preview in Cursor (Simple Browser)",
+      "type": "shell",
+      "command": "echo 'Use Command Palette (Cmd+Shift+P) → \"Simple Browser: Show\" → paste: http://localhost:5173/preview.html\nThen drag the Simple Browser tab to the right side and dock it.'",
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": [],
+      "group": { "kind": "none" }
+    }
+  ]
+}

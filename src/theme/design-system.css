@@ -1,0 +1,52 @@
+/**
+ * Premium design system — UI/UX only. No logic changes.
+ * Apple / Robinhood-style: minimal, elegant, strong hierarchy.
+ * Semantic colors (--green, --red) and theme vars (--bg, --accent, etc.) are set elsewhere.
+ */
+
+:root {
+  /* ----- Spacing scale (4px base) ----- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* ----- Typography scale ----- */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+
+  /* ----- Motion ----- */
+  --motion-duration-fast: 180ms;
+  --motion-duration-normal: 280ms;
+  --motion-duration-slow: 380ms;
+  --motion-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ----- Radii (premium, slightly larger) ----- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* ----- Surfaces (optional overrides; theme still sets --surface, --border) ----- */
+  --surface-elevated: var(--surface);
+  --border-subtle: color-mix(in srgb, var(--border) 60%, transparent);
+}

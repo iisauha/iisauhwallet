@@ -5,6 +5,7 @@ import { App } from './App';
 import { loadAppThemeColor, loadAppAccentColor, loadAppFontFamily, loadAppFontScale } from './state/storage';
 import { getFontFamilyStack } from './theme/fontStacks';
 import { getThemeColorsFromHex, getAccentColorsFromHex } from './theme/themeUtils';
+import './theme/design-system.css';
 import './styles.css';
 import './theme/theme.css';
 
