@@ -889,7 +889,8 @@ export function saveLoansSectionShowPrivate(value: boolean) {
   } catch (_) {}
 }
 
-const DEFAULT_THEME_COLOR = '#1e293b';
+/** Default base for surface/border/muted when only app background is customized. Exported for theme init. */
+export const DEFAULT_THEME_COLOR = '#1e293b';
 const DEFAULT_ACCENT_COLOR = '#0ea5e9';
 
 function isValidHex(hex: string): boolean {

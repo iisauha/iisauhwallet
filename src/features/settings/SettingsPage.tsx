@@ -63,28 +63,31 @@ const FONT_SCALE_OPTIONS = [
   { value: 1.06, label: 'Large' },
 ];
 
-const ADVANCED_UI_COLOR_LABELS: Record<keyof AdvancedUIColors, string> = {
-  cardBg: 'Card background',
-  surfaceSecondary: 'Secondary surface / padding blocks',
-  sectionBg: 'Section background',
-  modalBg: 'Modal background',
-  dropdownBg: 'Dropdown background',
-  border: 'Border color',
-  muted: 'Muted text / secondary UI',
-};
+const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helper: string }[] = [
+  { key: 'cardBg', label: 'Card background', helper: 'Only changes cards.' },
+  { key: 'surfaceSecondary', label: 'Padding / secondary surface blocks', helper: 'Only changes summary and secondary blocks.' },
+  { key: 'sectionBg', label: 'Section background', helper: 'Only changes section headers.' },
+  { key: 'modalBg', label: 'Modal background', helper: 'Only changes modal surfaces.' },
+  { key: 'dropdownBg', label: 'Dropdown background', helper: 'Only changes dropdowns and selects.' },
+  { key: 'border', label: 'Border color', helper: 'Only changes borders.' },
+  { key: 'muted', label: 'Muted text / secondary text', helper: 'Only changes muted labels and secondary text.' },
+];
 
-function AdvancedUIColorsSection() {
+function SurfaceColorsSection() {
   const ctx = useAdvancedUIColors();
   if (!ctx) return null;
   const { colors, setColor, clearColor } = ctx;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {(Object.keys(ADVANCED_UI_COLOR_LABELS) as (keyof AdvancedUIColors)[]).map((key) => {
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {SURFACE_COLOR_OPTIONS.map(({ key, label, helper }) => {
         const value = colors[key] ?? '';
         return (
           <div key={key}>
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', margin: '0 0 6px 0' }}>
-              {ADVANCED_UI_COLOR_LABELS[key]}
+            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 2px 0' }}>
+              {label}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+              {helper}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <input
@@ -92,6 +95,7 @@ function AdvancedUIColorsSection() {
                 value={value || '#1e293b'}
                 onChange={(e) => setColor(key, e.target.value)}
                 style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
+                aria-label={label}
               />
               <input
                 type="text"
@@ -197,13 +201,14 @@ export function SettingsPage() {
     <div className="tab-panel active" id="settingsContent">
       <p className="section-title">Appearance</p>
 
-      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
-        Theme
+      {/* 1. App Background — only the main page background */}
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
+        App background
       </p>
-      <div className="settings-section" style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
-          Backgrounds, surfaces, cards, borders.
-        </p>
+      <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
+        Only changes the main page background.
+      </p>
+      <div className="settings-section" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span
             style={{
@@ -213,6 +218,7 @@ export function SettingsPage() {
               background: themeColor,
               border: '2px solid var(--border)',
             }}
+            aria-hidden
           />
           <button
             type="button"
@@ -242,13 +248,14 @@ export function SettingsPage() {
         ) : null}
       </div>
 
-      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
-        Accent
+      {/* 2. Accent color — buttons, tabs, highlights */}
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
+        Accent color
       </p>
-      <div className="settings-section" style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
-          Buttons, active tabs, highlights, icons.
-        </p>
+      <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
+        Buttons, active tabs, highlights, icons.
+      </p>
+      <div className="settings-section" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span
             style={{
@@ -258,6 +265,7 @@ export function SettingsPage() {
               background: accentColor,
               border: '2px solid var(--border)',
             }}
+            aria-hidden
           />
           <button
             type="button"
@@ -287,7 +295,9 @@ export function SettingsPage() {
         ) : null}
       </div>
 
-      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
+      {/* 3. Typography */}
+      <p className="section-title" style={{ marginTop: 8 }}>Typography</p>
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
         Font family
       </p>
       <div className="settings-section" style={{ marginBottom: 20 }}>
@@ -313,7 +323,7 @@ export function SettingsPage() {
         </select>
       </div>
 
-      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
         Font size
       </p>
       <div className="settings-section" style={{ marginBottom: 24 }}>
@@ -346,12 +356,13 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <p className="section-title" style={{ marginTop: 24 }}>Advanced UI Colors</p>
+      {/* 4. Surface colors — each control is independent; specific overrides general */}
+      <p className="section-title" style={{ marginTop: 24 }}>Surface colors</p>
+      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 14 }}>
+        Each control affects one UI surface only. Leave empty to use defaults. Specific surface colors override the app background.
+      </p>
       <div className="settings-section" style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
-          Override colors for specific UI surfaces. Leave empty to use theme defaults. Finance green/red are unchanged.
-        </p>
-        <AdvancedUIColorsSection />
+        <SurfaceColorsSection />
       </div>
 
       <p className="section-title" style={{ marginTop: 24 }}>Privacy</p>

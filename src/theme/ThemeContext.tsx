@@ -4,6 +4,7 @@ import {
   saveAppThemeColor,
   loadAppAccentColor,
   saveAppAccentColor,
+  DEFAULT_THEME_COLOR,
 } from '../state/storage';
 import { getThemeColorsFromHex, getAccentColorsFromHex } from './themeUtils';
 
@@ -16,19 +17,20 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function applyThemeColor(hex: string) {
-  const colors = getThemeColorsFromHex(hex);
+/** App background only: --bg from user choice. All other theme vars from fixed default so surface colors stay independent. */
+function applyThemeColor(appBackgroundHex: string) {
   const root = document.documentElement.style;
-  root.setProperty('--bg', colors.bg);
-  root.setProperty('--bg-secondary', colors.bgSecondary);
-  root.setProperty('--surface', colors.surface);
-  root.setProperty('--surface-hover', colors.surfaceHover);
-  root.setProperty('--border', colors.border);
-  root.setProperty('--border-subtle', colors.borderSubtle);
-  root.setProperty('--text', colors.text);
-  root.setProperty('--muted', colors.muted);
-  root.setProperty('--shadow', colors.shadow);
-  root.setProperty('--shadow-strong', colors.shadowStrong);
+  const defaults = getThemeColorsFromHex(DEFAULT_THEME_COLOR);
+  root.setProperty('--bg', appBackgroundHex);
+  root.setProperty('--bg-secondary', defaults.bgSecondary);
+  root.setProperty('--surface', defaults.surface);
+  root.setProperty('--surface-hover', defaults.surfaceHover);
+  root.setProperty('--border', defaults.border);
+  root.setProperty('--border-subtle', defaults.borderSubtle);
+  root.setProperty('--text', defaults.text);
+  root.setProperty('--muted', defaults.muted);
+  root.setProperty('--shadow', defaults.shadow);
+  root.setProperty('--shadow-strong', defaults.shadowStrong);
 }
 
 function applyAccentColor(hex: string) {
