@@ -19,6 +19,7 @@ const UI_VAR_KEYS: Record<keyof AdvancedUIColors, string> = {
   sectionBg: '--ui-section-bg',
   modalBg: '--ui-modal-bg',
   dropdownBg: '--ui-dropdown-bg',
+  tabBarBg: '--ui-tabbar-bg',
   border: '--ui-border',
   muted: '--ui-muted',
 };

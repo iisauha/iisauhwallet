@@ -36,6 +36,7 @@ const uiVarMap: [key: string, varName: string][] = [
   ['sectionBg', '--ui-section-bg'],
   ['modalBg', '--ui-modal-bg'],
   ['dropdownBg', '--ui-dropdown-bg'],
+  ['tabBarBg', '--ui-tabbar-bg'],
   ['border', '--ui-border'],
   ['muted', '--ui-muted'],
 ];

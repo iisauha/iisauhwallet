@@ -12,6 +12,7 @@ import {
   type CompletedBonusUnitType,
   type CompletedBonusBankAccountRef
 } from '../../state/storage';
+import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
 
@@ -311,6 +312,7 @@ export function SubTrackerPage() {
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
   const [spentInput, setSpentInput] = useState<string>('0.00');
   const [completedEditor, setCompletedEditor] = useState<null | { mode: 'add' } | { mode: 'edit'; id: string }>(null);
+  const [completedBonusesCollapsed, setCompletedBonusesCollapsed] = useDropdownCollapsed('sub_tracker_completed_bonuses', false);
 
   const cardNameById = useMemo(() => new Map(cards.map((c) => [c.id, c.name || 'Card'])), [cards]);
 
@@ -354,13 +356,10 @@ export function SubTrackerPage() {
 
   return (
     <div className="tab-panel active" id="subTrackerContent">
-      <p className="section-title">SUB Tracker</p>
+      <p className="section-title page-title">Sign Up Bonus Tracker</p>
 
       {subview === 'completed' ? (
         <>
-          <div className="section-header" style={{ marginBottom: 12 }}>
-            <span className="section-header-left">Completed Sign Up Bonuses</span>
-          </div>
           <button
             type="button"
             className="btn btn-secondary"
@@ -369,6 +368,16 @@ export function SubTrackerPage() {
           >
             Go back to main page
           </button>
+          <div
+            className="section-header"
+            style={{ marginBottom: 12 }}
+            onClick={() => setCompletedBonusesCollapsed(!completedBonusesCollapsed)}
+          >
+            <span className="section-header-left">Completed Sign Up Bonuses</span>
+            <span className="chevron">{completedBonusesCollapsed ? '▸' : '▾'}</span>
+          </div>
+          {!completedBonusesCollapsed ? (
+          <>
           {completedBonuses.map((b) => {
             const cashCents = completedBonusCashValueCents(b);
             const isPointsOrMiles = b.unitType === 'points' || b.unitType === 'miles';
@@ -425,8 +434,6 @@ export function SubTrackerPage() {
           <div
             className="card"
             style={{
-              background: 'var(--green-light)',
-              border: '1px solid var(--green)',
               padding: 14,
               marginTop: 8
             }}
@@ -443,6 +450,8 @@ export function SubTrackerPage() {
               </p>
             ) : null}
           </div>
+          </>
+          ) : null}
           {completedEditor ? (
             <CompletedBonusEditorModal
               mode={completedEditor.mode}
@@ -496,47 +505,26 @@ export function SubTrackerPage() {
 
         return (
           <div className="card" key={e.id}>
-            <div className="row" style={{ marginBottom: 6 }}>
+            <div className="row" style={{ marginBottom: 4 }}>
               <span className="name" style={{ fontSize: '1.05rem' }}>
                 {name}
               </span>
             </div>
             <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
-              <strong>Spent so far:</strong>{' '}
-              <span>
-                {formatCents(spendCents)}
-                {nextTarget ? ` / ${formatCents(nextTarget)}` : ''}
-              </span>
+              <span style={{ color: 'var(--ui-muted, var(--muted))' }}>Required spend: </span>
+              <span>{nextTarget ? formatCents(nextTarget) : '—'}</span>
             </div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 4 }}>
-              <div>
-                <strong>Required pace:</strong>{' '}
-                {requiredPace == null ? '—' : `${formatCents(Math.round(requiredPace))} / month`}
-              </div>
-              <div>
-                <strong>Current pace:</strong>{' '}
-                {currentPace == null ? '—' : `${formatCents(Math.round(currentPace))} / month`}
-                {currentPace != null && elapsedDays != null ? (
-                  <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 2 }}>
-                    (Avg {formatCents(spendCents / elapsedDays)} / day over {elapsedDays} {elapsedDays === 1 ? 'day' : 'days'})
-                  </div>
-                ) : null}
-              </div>
-              <div>
-                <strong>Remaining to target:</strong>{' '}
-                {nextTarget ? formatCents(remainingCents) : '—'}
-              </div>
-              <div>
-                <strong>Days left:</strong>{' '}
-                {daysRemaining != null ? `~${daysRemaining} days` : 'Unknown'}
-              </div>
+            <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
+              <span style={{ color: 'var(--ui-muted, var(--muted))' }}>Current spend: </span>
+              <span>{formatCents(spendCents)}{nextTarget ? ` / ${formatCents(nextTarget)}` : ''}</span>
             </div>
             {ratio != null ? (
-              <div style={{ marginTop: 6 }}>
+              <div style={{ marginTop: 10 }}>
                 <div
+                  className="sub-tracker-progress-track"
                   style={{
                     width: '100%',
-                    height: 4,
+                    height: 12,
                     borderRadius: 999,
                     background: 'rgba(148, 163, 184, 0.35)',
                     overflow: 'hidden'
@@ -546,7 +534,8 @@ export function SubTrackerPage() {
                     style={{
                       width: `${ratio * 100}%`,
                       height: '100%',
-                      background: 'var(--green)'
+                      background: 'var(--green)',
+                      borderRadius: 999
                     }}
                   />
                 </div>

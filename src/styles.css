@@ -49,7 +49,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--surface);
+  background: var(--ui-tabbar-bg, var(--surface));
   border-top: 1px solid var(--border);
   padding-bottom: var(--safe-bottom);
   z-index: 100;
@@ -156,13 +156,11 @@ body {
 .summary-kv .v.pos { color: var(--green); }
 .summary-kv .v.neg { color: var(--red); }
 .summary-kv.final-net-cash { border-radius: 8px; padding: 6px 8px; }
-.summary-kv.final-net-cash.positive { background: var(--green-light); }
-.summary-kv.final-net-cash.negative { background: var(--red-light); }
+.summary-kv.final-net-cash.positive { background: var(--ui-surface-secondary, var(--surface)); }
+.summary-kv.final-net-cash.negative { background: var(--ui-surface-secondary, var(--surface)); }
 .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
 
-.investing-section-header {
-  color: var(--green);
-}
+.section-title.page-title { font-size: 1.3rem; font-weight: 700; }
 .amount-credit { color: var(--green); font-weight: 600; }
 .amount-pos { color: var(--green); }
 .amount-neg { color: var(--red); }

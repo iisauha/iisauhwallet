@@ -7,10 +7,12 @@ import {
   loadCategoryConfig,
   saveCategoryConfig,
   loadBirthdateISO,
-  saveBirthdateISO
+  saveBirthdateISO,
+  getCategoryName
 } from '../../state/storage';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
+import { EditAccountNamesModal } from './EditAccountNamesModal';
 
 /** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
 function getExportFileName(): string {
@@ -37,15 +39,61 @@ function downloadJsonFile(filename: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function escapeCsvCell(s: string): string {
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function exportMonthlyPurchasesCsv() {
+  const data = useLedgerStore.getState().data;
+  const purchases = (data.purchases || []).filter((p: { dateISO?: string }) => {
+    const d = p.dateISO || '';
+    if (!d) return false;
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const monthStart = `${y}-${m}-01`;
+    const nextM = now.getMonth() + 2;
+    const nextY = nextM > 12 ? y + 1 : y;
+    const nextMonthStart = `${nextY}-${String(nextM > 12 ? 1 : nextM).padStart(2, '0')}-01`;
+    return d >= monthStart && d < nextMonthStart;
+  });
+  const cfg = loadCategoryConfig();
+  const rows = [
+    ['Title', 'Date', 'Amount', 'Category', 'Subcategory'],
+    ...purchases.map((p: { title?: string; dateISO?: string; amountCents?: number; category?: string; subcategory?: string }) => [
+      escapeCsvCell(String(p.title ?? '')),
+      escapeCsvCell(p.dateISO ?? ''),
+      String((p.amountCents ?? 0) / 100),
+      escapeCsvCell(getCategoryName(cfg, p.category ?? 'uncategorized')),
+      escapeCsvCell(String(p.subcategory ?? ''))
+    ])
+  ];
+  const csv = rows.map((r) => r.join(',')).join('\r\n');
+  const now = new Date();
+  const filename = `purchases_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.csv`;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const [manageOpen, setManageOpen] = useState(false);
   const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
+  const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
 
   return (
     <div className="tab-panel active" id="settingsContent">
+      <p className="section-title page-title">Settings</p>
       <p className="section-title">Appearance</p>
       <div className="settings-section" style={{ marginBottom: 24 }}>
         <button
@@ -62,6 +110,22 @@ export function SettingsPage() {
       </div>
       <AppCustomizationModal open={appCustomizationOpen} onClose={() => setAppCustomizationOpen(false)} />
 
+      <p className="section-title" style={{ marginTop: 24 }}>Accounts</p>
+      <div className="settings-section" style={{ marginBottom: 24 }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ padding: '12px 18px', fontSize: '1rem' }}
+          onClick={() => setEditAccountNamesOpen(true)}
+        >
+          Edit Account Names
+        </button>
+        <p style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--muted)' }}>
+          Rename banks, credit cards, and investing accounts.
+        </p>
+      </div>
+      <EditAccountNamesModal open={editAccountNamesOpen} onClose={() => setEditAccountNamesOpen(false)} />
+
       <p className="section-title" style={{ marginTop: 24 }}>Privacy</p>
       <div className="settings-section" style={{ marginTop: 12 }}>
         <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
@@ -71,6 +135,14 @@ export function SettingsPage() {
 
       <p className="section-title" style={{ marginTop: 24 }}>Backup</p>
       <div className="settings-section">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ marginBottom: 8 }}
+          onClick={() => exportMonthlyPurchasesCsv()}
+        >
+          Export Monthly Purchases CSV
+        </button>
         <button
           type="button"
           className="btn btn-secondary"

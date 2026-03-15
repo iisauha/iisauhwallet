@@ -111,7 +111,6 @@ export function SnapshotPage() {
       }
     | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
     | { type: 'card-reward-config'; cardId: string; rewardCategory: string; rewardSubcategory: string; isCatchAll: boolean }
-    | { type: 'edit-card-name'; cardId: string; name: string }
   >({ type: 'none' });
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
@@ -261,10 +260,9 @@ export function SnapshotPage() {
       <div
         className="section-header"
         id="bankHeader"
-        style={{ background: 'rgba(22, 163, 74, 0.12)' }}
         onClick={() => setCashCollapsed(!cashCollapsed)}
       >
-        <span className="section-header-left" style={{ color: 'var(--green)' }}>
+        <span className="section-header-left">
           Cash — <span>{formatCents(totals.bankTotalCents)}</span>
         </span>
         <button
@@ -350,10 +348,10 @@ export function SnapshotPage() {
       <div
         className="section-header"
         id="cardHeader"
-        style={{ marginTop: 24, background: 'rgba(220, 38, 38, 0.12)' }}
+        style={{ marginTop: 24 }}
         onClick={() => setCardsCollapsed(!cardsCollapsed)}
       >
-        <span className="section-header-left" style={{ color: 'var(--red)' }}>
+        <span className="section-header-left">
           Credit Cards — <span>{formatCents(totals.ccDebtCents - totals.ccCreditCents)}</span>
         </span>
         <button
@@ -425,13 +423,6 @@ export function SnapshotPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setModal({ type: 'edit-card-name', cardId: c.id, name: c.name || '' })}
-                  >
-                    Edit name
-                  </button>
-                  <button
-                    type="button"
                     className="btn clear-btn"
                     onClick={() => {
                       actions.updateCardBalance(c.id, 0, 'set');
@@ -466,10 +457,10 @@ export function SnapshotPage() {
       <div
         className="section-header"
         id="pendingInHeader"
-        style={{ marginTop: 24, background: 'rgba(22, 163, 74, 0.12)' }}
+        style={{ marginTop: 24 }}
         onClick={() => setPendingInCollapsed(!pendingInCollapsed)}
       >
-        <span className="section-header-left" style={{ color: 'var(--green)' }}>
+        <span className="section-header-left">
           Pending Inbound — <span>{formatCents(totals.pendingInCents)}</span>
         </span>
         <span className="chevron">{pendingInCollapsed ? '▸' : '▾'}</span>
@@ -496,10 +487,10 @@ export function SnapshotPage() {
       <div
         className="section-header"
         id="pendingOutHeader"
-        style={{ marginTop: 24, background: 'rgba(220, 38, 38, 0.12)' }}
+        style={{ marginTop: 24 }}
         onClick={() => setPendingOutCollapsed(!pendingOutCollapsed)}
       >
-        <span className="section-header-left" style={{ color: 'var(--red)' }}>
+        <span className="section-header-left">
           Pending Outbound — <span>{formatCents(totals.pendingOutCents)}</span>
         </span>
         <span className="chevron">{pendingOutCollapsed ? '▸' : '▾'}</span>
@@ -530,9 +521,9 @@ export function SnapshotPage() {
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.bankTotalCents)}</span>
           </div>
           {totalLinkedHysaCents > 0 ? (
-            <div className="summary-kv" style={{ color: 'var(--green)' }}>
-              <span className="k">Cash from Checking in HYSA</span>
-              <span className="v">{formatCents(totalLinkedHysaCents)}</span>
+            <div className="summary-kv">
+              <span className="k">Money in HYSA designated for bills</span>
+              <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totalLinkedHysaCents)}</span>
             </div>
           ) : null}
           <div className="summary-kv">
@@ -557,13 +548,13 @@ export function SnapshotPage() {
           </div>
           {!summaryPendingOutBreakdownCollapsed ? (
             <>
-              <div className="summary-kv" style={{ fontSize: '0.9rem', color: 'var(--red)', paddingLeft: 12, marginTop: 0 }}>
+              <div className="summary-kv" style={{ fontSize: '0.9rem', paddingLeft: 12, marginTop: 0 }}>
                 <span className="k">↳ Credit card payments</span>
-                <span className="v">{formatCents(pendingCcPaymentCents)}</span>
+                <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingCcPaymentCents)}</span>
               </div>
-              <div className="summary-kv" style={{ fontSize: '0.9rem', color: 'var(--red)', marginTop: 0 }}>
+              <div className="summary-kv" style={{ fontSize: '0.9rem', marginTop: 0 }}>
                 <span className="k" style={{ paddingLeft: 12 }}>↳ Other pending outbound</span>
-                <span className="v">{formatCents(pendingOutNonCcCents)}</span>
+                <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingOutNonCcCents)}</span>
               </div>
             </>
           ) : null}
@@ -837,35 +828,6 @@ export function SnapshotPage() {
               );
             })() : null}
 
-            {modal.type === 'edit-card-name' ? (
-              <>
-                <h3>Edit card name</h3>
-                <div className="field">
-                  <label>Card name</label>
-                  <input
-                    value={modal.name}
-                    onChange={(e) => setModal({ ...modal, name: e.target.value })}
-                    placeholder="e.g. Amex Gold"
-                  />
-                </div>
-                <div className="btn-row">
-                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      actions.updateCardName(modal.cardId, modal.name.trim() || 'Card');
-                      setModal({ type: 'none' });
-                    }}
-                  >
-                    Save
-                  </button>
-                </div>
-              </>
-            ) : null}
-
             {modal.type === 'edit-balance' ? (
               <>
                 <h3>Amount</h3>
@@ -975,7 +937,7 @@ export function SnapshotPage() {
                           <label>Use which HYSA portion?</label>
                           <Select value={modal.hysaSubBucket} onChange={(e) => setModal({ ...modal, hysaSubBucket: e.target.value as any })}>
                             <option value="">— Select —</option>
-                            <option value="liquid">Available to linked checking</option>
+                            <option value="liquid">Money in HYSA designated for bills</option>
                             <option value="reserved">Reserved savings</option>
                           </Select>
                         </div>
@@ -1069,7 +1031,7 @@ export function SnapshotPage() {
                               <label>Use which HYSA portion?</label>
                               <Select value={modal.outboundHysaSubBucket} onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}>
                                 <option value="">— Select —</option>
-                                <option value="liquid">Available to linked checking</option>
+                                <option value="liquid">Money in HYSA designated for bills</option>
                                 <option value="reserved">Reserved savings</option>
                               </Select>
                             </div>

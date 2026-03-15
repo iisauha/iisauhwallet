@@ -103,18 +103,17 @@ export function RecurringPage() {
 
   return (
     <div className="tab-panel active" id="recurringContent">
-      <p className="section-title">Recurring Items</p>
+      <p className="section-title page-title">Recurring Items</p>
       <div
         className="section-header"
         style={{
           marginTop: 16,
           fontSize: '1rem',
-          background: 'var(--green-light)',
           borderRadius: 10
         }}
         onClick={() => setIncomeCollapsed(!incomeCollapsed)}
       >
-        <span className="section-header-left" style={{ color: 'var(--green)' }}>
+        <span className="section-header-left">
           Recurring Income
         </span>
         <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
@@ -266,8 +265,6 @@ export function RecurringPage() {
         style={{
           marginTop: 24,
           fontSize: '1rem',
-          background: 'var(--red-light)',
-          color: 'var(--red)',
           padding: '8px 12px',
           borderRadius: 10
         }}
@@ -966,7 +963,7 @@ export function RecurringPage() {
                       onChange={(e) => setHysaSubBucket(e.target.value as 'liquid' | 'reserved' | '')}
                     >
                       <option value="">— Select —</option>
-                      <option value="liquid">Available to linked checking</option>
+                      <option value="liquid">Money in HYSA designated for bills</option>
                       <option value="reserved">Reserved savings</option>
                     </Select>
                   </div>

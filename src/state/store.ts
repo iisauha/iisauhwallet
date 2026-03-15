@@ -11,6 +11,7 @@ export interface LedgerState {
   actions: {
     reload: () => void;
     addBankAccount: (name: string) => void;
+    updateBankName: (id: string, name: string) => void;
     deleteBankAccount: (id: string) => void;
     addCreditCard: (name: string) => void;
     deleteCreditCard: (id: string) => void;
@@ -55,6 +56,15 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     addBankAccount: (name) => {
       const next = structuredClone(get().data) as LedgerData;
       next.banks.push({ id: uid(), name: name || 'Bank', type: 'bank', balanceCents: 0, updatedAt: nowIso() });
+      saveData(next);
+      set({ data: next });
+    },
+    updateBankName: (id, name) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const bank = next.banks.find((b) => b.id === id);
+      if (!bank) return;
+      bank.name = (name || 'Bank').trim() || 'Bank';
+      if ((bank as any).updatedAt) (bank as any).updatedAt = nowIso();
       saveData(next);
       set({ data: next });
     },

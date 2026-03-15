@@ -33,6 +33,7 @@ const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helpe
   { key: 'sectionBg', label: 'Section background', helper: 'Only changes section headers.' },
   { key: 'modalBg', label: 'Modal background', helper: 'Only changes modal surfaces.' },
   { key: 'dropdownBg', label: 'Dropdown background', helper: 'Only changes dropdowns and selects.' },
+  { key: 'tabBarBg', label: 'Bottom Tab Bar background', helper: 'The navigation bar at the bottom (Spending, Recurring, etc.).' },
   { key: 'border', label: 'Border color', helper: 'Only changes borders.' },
   { key: 'muted', label: 'Muted text / secondary text', helper: 'Only changes muted labels and secondary text.' },
 ];

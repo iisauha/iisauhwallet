@@ -1409,8 +1409,6 @@ export function InvestingPage() {
           className="section-header investing-section-header"
           style={{
             marginTop: 24,
-            background: 'var(--green-light)',
-            color: 'var(--green)',
             padding: '10px 14px',
             borderRadius: 10,
           }}
@@ -1476,9 +1474,9 @@ export function InvestingPage() {
                             <div>Total HYSA balance: {formatCents(balance)}</div>
                             <div>Reserved savings: {formatCents(reservedCents)}</div>
                             {h.linkedCheckingBankId ? (
-                              <div>Available to linked checking: {formatCents(liquidCents)}</div>
+                              <div>Money in HYSA designated for bills: {formatCents(liquidCents)}</div>
                             ) : (
-                              <div>Available to linked checking: {formatCents(0)}</div>
+                              <div>Money in HYSA designated for bills: {formatCents(0)}</div>
                             )}
                           </div>
                           <div style={{ marginTop: 4 }}>
@@ -1572,7 +1570,7 @@ export function InvestingPage() {
 
   return (
     <div className="tab-panel active" id="investingContent">
-      <p className="section-title">Investing</p>
+      <p className="section-title page-title">Investing</p>
 
       {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
       {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
@@ -1596,33 +1594,33 @@ export function InvestingPage() {
       </button>
 
       <div className="card" style={{ marginTop: 24 }}>
-        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
           Investing Summary
         </p>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total HYSA</span>
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total HYSA</span>
           <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total Roth IRA</span>
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Roth IRA</span>
           <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total Employer-Based Retirement</span>
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Employer-Based Retirement</span>
           <span className="v amount-pos">{formatCents(totals.total401k)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total General Investing</span>
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total General Investing</span>
           <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--green)' }}>Total Investing</span>
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Investing</span>
           <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
         </div>
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--green)' }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
           Investing Contribution
         </p>
         {contribution.incomeMarkedCount === 0 || contribution.grossIncomeCents <= 0 ? (

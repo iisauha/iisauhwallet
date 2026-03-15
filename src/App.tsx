@@ -45,7 +45,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   loans: 'Loans',
   investing: 'Investing',
   recurring: 'Recurring',
-  subtracker: 'SUB Tracker',
+  subtracker: 'Sign Up Bonus Tracker',
   settings: 'Settings',
 };
 

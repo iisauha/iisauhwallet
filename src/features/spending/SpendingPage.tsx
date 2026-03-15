@@ -208,7 +208,7 @@ export function SpendingPage() {
         </button>
       </div>
 
-      <p className="section-title" style={{ marginTop: 20 }}>Spending distribution</p>
+      <p className="section-title page-title" style={{ marginTop: 20 }}>Spending distribution</p>
       <div className="card">
         {view === 'category' ? (
           <div
@@ -289,7 +289,7 @@ export function SpendingPage() {
       </>
       ) : null}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '24px 0 12px 0' }}>
         <div
           className="section-header"
           style={{ margin: 0, padding: '4px 8px', flex: 1 }}

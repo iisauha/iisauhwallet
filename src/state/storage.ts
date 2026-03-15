@@ -154,6 +154,7 @@ export type AdvancedUIColors = Partial<{
   sectionBg: string;
   modalBg: string;
   dropdownBg: string;
+  tabBarBg: string;
   border: string;
   muted: string;
 }>;
