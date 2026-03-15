@@ -8,12 +8,14 @@ import {
   saveCategoryConfig,
   loadBirthdateISO,
   saveBirthdateISO,
-  getCategoryName
+  getCategoryName,
+  loadPasscodeHash,
 } from '../../state/storage';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
 import { FAQModal } from './FAQModal';
+import { ResetPasscodeModal } from './ResetPasscodeModal';
 import { useSync } from '../../sync/SyncContext';
 
 /** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
@@ -214,6 +216,10 @@ export function SettingsPage() {
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
+  const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
+  const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
+
+  const hasPasscode = loadPasscodeHash() !== null;
 
   return (
     <div className="tab-panel active" id="settingsContent">
@@ -253,6 +259,26 @@ export function SettingsPage() {
       <p className="section-title" style={{ marginTop: 24 }}>Device Sync</p>
       <DeviceSyncSection />
 
+      {hasPasscode && (
+        <>
+          <p className="section-title" style={{ marginTop: 24 }}>Security</p>
+          <div className="settings-section" style={{ marginBottom: 24 }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '12px 18px', fontSize: '1rem' }}
+              onClick={() => setResetPasscodeOpen(true)}
+            >
+              Reset passcode
+            </button>
+            <p style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--muted)' }}>
+              Enter your current passcode, then set a new one. Recovery key and security questions are unchanged.
+            </p>
+          </div>
+          <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
+        </>
+      )}
+
       <p className="section-title" style={{ marginTop: 24 }}>Privacy &amp; help</p>
       <div className="settings-section" style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
@@ -266,10 +292,20 @@ export function SettingsPage() {
 
       <p className="section-title" style={{ marginTop: 24 }}>About the creator</p>
       <div className="settings-section" style={{ marginBottom: 24 }}>
-        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))' }}>
-          I built this app because I was frustrated with apps like Rocket Money that claim to help you save and budget while pushing subscriptions. I also wanted to track every dollar—including money in Venmo or moving between accounts—and I disliked how many auto-detected transaction apps get things wrong or keep asking you to re-authorize. So I made this over about three weeks. I hope you enjoy it. For security concerns, see the FAQ or Privacy Policy. Contact me at{' '}
-          <a href="mailto:iaa2137@columbia.edu" style={{ color: 'var(--accent)' }}>iaa2137@columbia.edu</a>.
-        </p>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ padding: '12px 18px', fontSize: '1rem' }}
+          onClick={() => setAboutCreatorOpen(!aboutCreatorOpen)}
+        >
+          {aboutCreatorOpen ? 'Hide' : 'About the creator'}
+        </button>
+        {aboutCreatorOpen && (
+          <p style={{ marginTop: 12, fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))' }}>
+            I built this app because I was frustrated with apps like Rocket Money that claim to help you save and budget while pushing subscriptions. I also wanted to track every dollar—including money in Venmo or moving between accounts—and I disliked how many auto-detected transaction apps get things wrong or keep asking you to re-authorize. So I made this over about three weeks. I hope you enjoy it. For security concerns, see the FAQ or Privacy Policy. Contact me at{' '}
+            <a href="mailto:iisauhaguilar@gmail.com" style={{ color: 'var(--accent)' }}>iisauhaguilar@gmail.com</a>.
+          </p>
+        )}
       </div>
 
       <p className="section-title" style={{ marginTop: 24 }}>Backup</p>

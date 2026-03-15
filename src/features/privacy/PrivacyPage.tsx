@@ -39,6 +39,15 @@ export function PrivacyPage() {
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
+          Passcode and recovery (local-only)
+        </h2>
+        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
+          Passcodes, password hints, security questions, security answers, and recovery keys are stored only on your device. The app has no backend access to these credentials. The creator cannot access your passcode, hint, security answers, or recovery key—they never leave your device. If you forget your passcode and cannot recover it using your recovery key or security questions, the app may need to wipe locally stored data on that device. Previously exported JSON backups can be re-imported after a wipe to restore your data.
+        </p>
+      </section>
+
+      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
+        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
           Transparency
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
@@ -52,7 +61,7 @@ export function PrivacyPage() {
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
           If you have any questions about this Privacy Policy, you may contact:<br />
-          <a href="mailto:iaa2137@columbia.edu" style={{ color: 'var(--accent)' }}>iaa2137@columbia.edu</a>
+          <a href="mailto:iisauhaguilar@gmail.com" style={{ color: 'var(--accent)' }}>iisauhaguilar@gmail.com</a>
         </p>
       </section>
 

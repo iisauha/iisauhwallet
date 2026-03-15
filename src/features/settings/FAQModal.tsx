@@ -20,11 +20,35 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'How do I back up my data?',
-    a: 'Use Settings → Export JSON to save a copy of your wallet data. You can also export monthly purchases as CSV. Keep the file somewhere safe. Import JSON restores from a backup (or merges ledger data if the format is legacy).',
+    a: 'Use Settings → Export JSON to save a copy of your wallet data. You can also export monthly purchases as CSV. Keep the file somewhere safe. Import JSON restores from a backup. If you ever wipe the app after too many failed passcode attempts, you can re-import a previous JSON backup to restore your data.',
+  },
+  {
+    q: 'How does passcode setup work?',
+    a: 'When you first set a passcode, you can optionally add a password hint, two security questions (with answers), and the app generates a recovery key. Save the recovery key somewhere safe; it is shown only once. All of this is stored locally on your device. The creator cannot access your passcode, hint, answers, or recovery key.',
+  },
+  {
+    q: 'What is the recovery key?',
+    a: 'The recovery key is a random code generated during passcode setup. It is the best way to recover your passcode if you forget it. Save it when it is shown; the app does not show it again in full. You can regenerate it in Settings (Security) after entering your passcode. Only a hash of the key is stored locally; the creator cannot see it.',
+  },
+  {
+    q: 'What do security questions do?',
+    a: 'If you set two security questions during setup, you can answer them on the "Forgot passcode?" flow to reset your passcode. Answers are stored in hashed form on your device only. The creator cannot access them.',
+  },
+  {
+    q: 'What does the password hint do?',
+    a: 'The hint is a reminder you choose (e.g. "Last 4 of my phone"). It is shown when you tap "Forgot passcode?" and choose "View password hint." The hint alone does not allow passcode reset—you still need your recovery key or security answers to reset.',
+  },
+  {
+    q: 'What happens after too many wrong passcode attempts?',
+    a: 'After 10 failed attempts (passcode or recovery), the app offers two options: (1) Confirm wipe—clears all local app data on the device so you can start fresh; you can re-import a previous JSON backup if you have one. (2) Don\'t wipe—recovery attempts are locked for 24 hours. No data is sent to any server; the creator cannot access your credentials.',
+  },
+  {
+    q: 'Can the creator access my passcode or recovery key?',
+    a: 'No. Passcodes, hints, security answers, and recovery keys are stored only on your device. They are hashed or stored locally; the app has no backend that receives them. The creator cannot access this information.',
   },
   {
     q: 'How do I reset my passcode?',
-    a: 'On the passcode screen, tap "Forgot passcode?" and confirm reset. This only removes the passcode on this device; your financial data is not deleted. You will then set a new 4-digit passcode.',
+    a: 'From the lock screen: tap "Forgot passcode?" then use your recovery key or security questions to reset. From inside the app: Settings → Security → Reset passcode. You must enter your current passcode, then set and confirm a new one.',
   },
   {
     q: 'Does the app connect to my real bank automatically?',

@@ -71,6 +71,13 @@ export const TAB_ORDER_KEY = 'iisauhwallet_tab_order_v1';
 
 // Passcode gate: stored hash of 4-digit passcode (local device only).
 export const PASSCODE_HASH_KEY = 'iisauhwallet_passcode_hash_v1';
+// Passcode recovery: hint (plain, user-provided), recovery key hash, security Q&A hashes, setup flag, lockout.
+export const PASSCODE_HINT_KEY = 'iisauhwallet_passcode_hint_v1';
+export const PASSCODE_RECOVERY_KEY_HASH_KEY = 'iisauhwallet_passcode_recovery_key_hash_v1';
+export const PASSCODE_SECURITY_QA_KEY = 'iisauhwallet_passcode_security_qa_v1';
+export const PASSCODE_RECOVERY_SETUP_DONE_KEY = 'iisauhwallet_passcode_recovery_setup_done_v1';
+export const PASSCODE_FAILED_ATTEMPTS_KEY = 'iisauhwallet_passcode_failed_attempts_v1';
+export const PASSCODE_LOCKOUT_UNTIL_KEY = 'iisauhwallet_passcode_lockout_until_v1';
 
 // UI-only: advanced UI surface colors (card, section, modal, dropdown, border, muted).
 export const UI_ADVANCED_COLORS_KEY = 'iisauhwallet_ui_advanced_colors_v1';

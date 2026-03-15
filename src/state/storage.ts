@@ -33,7 +33,13 @@ import {
   LOANS_SECTION_SHOW_PUBLIC_KEY,
   LOANS_SECTION_SHOW_PRIVATE_KEY,
   UI_ADVANCED_COLORS_KEY,
-  PASSCODE_HASH_KEY
+  PASSCODE_HASH_KEY,
+  PASSCODE_HINT_KEY,
+  PASSCODE_RECOVERY_KEY_HASH_KEY,
+  PASSCODE_SECURITY_QA_KEY,
+  PASSCODE_RECOVERY_SETUP_DONE_KEY,
+  PASSCODE_FAILED_ATTEMPTS_KEY,
+  PASSCODE_LOCKOUT_UNTIL_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 import { notifySyncPush } from '../sync/SyncContext';
@@ -1472,6 +1478,155 @@ export async function hashPasscode(passcode: string): Promise<string> {
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+/** Hash any string (recovery key, security answers) for local comparison. SHA-256 hex. */
+export async function hashForStorage(value: string): Promise<string> {
+  const msg = new TextEncoder().encode(value.trim().toLowerCase());
+  const buf = await crypto.subtle.digest('SHA-256', msg);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// --- Passcode recovery (local-only) ---
+
+export type SecurityQA = {
+  q1: string;
+  q2: string;
+  a1Hash: string;
+  a2Hash: string;
+};
+
+export function loadPasscodeHint(): string | null {
+  try {
+    const raw = localStorage.getItem(PASSCODE_HINT_KEY);
+    return typeof raw === 'string' && raw.length > 0 ? raw : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function savePasscodeHint(hint: string | null) {
+  try {
+    if (!hint || !hint.trim()) localStorage.removeItem(PASSCODE_HINT_KEY);
+    else localStorage.setItem(PASSCODE_HINT_KEY, hint.trim());
+    notifySyncPush();
+  } catch (_) {}
+}
+
+export function loadRecoveryKeyHash(): string | null {
+  try {
+    const raw = localStorage.getItem(PASSCODE_RECOVERY_KEY_HASH_KEY);
+    return typeof raw === 'string' && raw.length > 0 ? raw : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveRecoveryKeyHash(hash: string) {
+  try {
+    localStorage.setItem(PASSCODE_RECOVERY_KEY_HASH_KEY, hash);
+    notifySyncPush();
+  } catch (_) {}
+}
+
+export function loadSecurityQA(): SecurityQA | null {
+  try {
+    const raw = localStorage.getItem(PASSCODE_SECURITY_QA_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as SecurityQA;
+    if (p && p.q1 && p.q2 && p.a1Hash && p.a2Hash) return p;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveSecurityQA(qa: SecurityQA | null) {
+  try {
+    if (!qa) localStorage.removeItem(PASSCODE_SECURITY_QA_KEY);
+    else localStorage.setItem(PASSCODE_SECURITY_QA_KEY, JSON.stringify(qa));
+    notifySyncPush();
+  } catch (_) {}
+}
+
+export function loadRecoverySetupDone(): boolean {
+  try {
+    const raw = localStorage.getItem(PASSCODE_RECOVERY_SETUP_DONE_KEY);
+    return raw === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+export function saveRecoverySetupDone(done: boolean) {
+  try {
+    if (done) localStorage.setItem(PASSCODE_RECOVERY_SETUP_DONE_KEY, 'true');
+    else localStorage.removeItem(PASSCODE_RECOVERY_SETUP_DONE_KEY);
+    notifySyncPush();
+  } catch (_) {}
+}
+
+export function loadPasscodeFailedAttempts(): number {
+  try {
+    const raw = localStorage.getItem(PASSCODE_FAILED_ATTEMPTS_KEY);
+    if (raw == null) return 0;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+export function savePasscodeFailedAttempts(n: number) {
+  try {
+    localStorage.setItem(PASSCODE_FAILED_ATTEMPTS_KEY, String(Math.max(0, n)));
+  } catch (_) {}
+}
+
+export function loadPasscodeLockoutUntil(): string | null {
+  try {
+    const raw = localStorage.getItem(PASSCODE_LOCKOUT_UNTIL_KEY);
+    return typeof raw === 'string' && raw.length > 0 ? raw : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function savePasscodeLockoutUntil(iso: string | null) {
+  try {
+    if (!iso) localStorage.removeItem(PASSCODE_LOCKOUT_UNTIL_KEY);
+    else localStorage.setItem(PASSCODE_LOCKOUT_UNTIL_KEY, iso);
+  } catch (_) {}
+}
+
+/** Generate a random recovery key (e.g. 12 alphanumeric). Shown once; only hash is stored. */
+export function generateRecoveryKey(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const arr = new Uint8Array(12);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(arr);
+  } else {
+    for (let i = 0; i < 12; i++) arr[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(arr)
+    .map((b) => chars[b % chars.length])
+    .join('');
+}
+
+/** Wipe all app data from localStorage (passcode, recovery, and wallet keys). */
+export function wipeAllAppData(): void {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('ledgerlite') || k.startsWith('iisauhwallet') || k.startsWith('snapshot_') || k.startsWith('category') || k.startsWith('expected') || k.startsWith('loansSection'))) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (_) {}
 }
 
 export function saveBirthdateISO(iso: string | null) {
