@@ -41,6 +41,8 @@ import {
   PASSCODE_FAILED_ATTEMPTS_KEY,
   PASSCODE_LOCKOUT_UNTIL_KEY,
   SECURITY_QUIZ_COMPLETED_KEY,
+  PASSCODE_PAUSED_KEY,
+  PASSCODE_6DIGIT_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -1464,7 +1466,7 @@ export function clearPasscodeHash() {
   } catch (_) {}
 }
 
-/** Hash a 4-digit passcode for storage/comparison. Uses SHA-256 and returns hex string. */
+/** Hash passcode for storage/comparison. Uses SHA-256 and returns hex string. App requires 6-digit passcode. */
 export async function hashPasscode(passcode: string): Promise<string> {
   const msg = new TextEncoder().encode(passcode);
   const buf = await crypto.subtle.digest('SHA-256', msg);
@@ -1602,6 +1604,36 @@ export function saveSecurityQuizCompleted(completed: boolean) {
   try {
     if (completed) localStorage.setItem(SECURITY_QUIZ_COMPLETED_KEY, 'true');
     else localStorage.removeItem(SECURITY_QUIZ_COMPLETED_KEY);
+  } catch (_) {}
+}
+
+export function loadPasscodePaused(): boolean {
+  try {
+    return localStorage.getItem(PASSCODE_PAUSED_KEY) === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+export function savePasscodePaused(paused: boolean) {
+  try {
+    if (paused) localStorage.setItem(PASSCODE_PAUSED_KEY, 'true');
+    else localStorage.removeItem(PASSCODE_PAUSED_KEY);
+  } catch (_) {}
+}
+
+export function loadPasscode6Digit(): boolean {
+  try {
+    return localStorage.getItem(PASSCODE_6DIGIT_KEY) === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+export function savePasscode6Digit(six: boolean) {
+  try {
+    if (six) localStorage.setItem(PASSCODE_6DIGIT_KEY, 'true');
+    else localStorage.removeItem(PASSCODE_6DIGIT_KEY);
   } catch (_) {}
 }
 

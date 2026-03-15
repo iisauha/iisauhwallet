@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import type { LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem } from './models';
+import type { CreditCard, LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem, RewardRule } from './models';
 import { loadData, loadSubTracker, loadInvesting, loadLoans, saveLoans, loadPublicPaymentNowAdded, savePublicPaymentNowAdded, savePrivatePaymentNowBase, getVisiblePaymentNowCents, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
 import { loadPublicLoanSummary, savePublicLoanSummary } from '../features/federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../features/loans/loanDerivation';
+import { getEffectiveRules, matchRule, computeEstimatedReward } from '../features/rewards/rewardMatching';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
@@ -19,6 +20,8 @@ export interface LedgerState {
     updateCardBalance: (id: string, amountCents: number, mode: 'add' | 'set') => void;
     updateCardName: (id: string, name: string) => void;
     updateCardRewardConfig: (cardId: string, config: { rewardCategory?: string; rewardSubcategory?: string; isCatchAll?: boolean }) => void;
+    updateCardRewardRules: (cardId: string, rules: RewardRule[]) => void;
+    updateCardRewardTotals: (cardId: string, totals: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number }) => void;
     addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
@@ -130,6 +133,33 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       saveData(next);
       set({ data: next });
     },
+    updateCardRewardRules: (cardId, rules) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const card = next.cards.find((c) => c.id === cardId);
+      if (!card) return;
+      card.rewardRules = rules && rules.length > 0 ? rules : undefined;
+      if (rules?.some((r) => r.isCatchAll)) {
+        next.cards.forEach((c) => {
+          if (c.id !== cardId && c.rewardRules) {
+            c.rewardRules = c.rewardRules!.map((r) => ({ ...r, isCatchAll: false }));
+          }
+        });
+      }
+      card.updatedAt = nowIso();
+      saveData(next);
+      set({ data: next });
+    },
+    updateCardRewardTotals: (cardId, totals) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const card = next.cards.find((c) => c.id === cardId);
+      if (!card) return;
+      if (totals.rewardCashbackCents !== undefined) card.rewardCashbackCents = Math.max(0, Math.round(totals.rewardCashbackCents));
+      if (totals.rewardPoints !== undefined) card.rewardPoints = Math.max(0, Math.round(totals.rewardPoints));
+      if (totals.rewardMiles !== undefined) card.rewardMiles = Math.max(0, Math.round(totals.rewardMiles));
+      card.updatedAt = nowIso();
+      saveData(next);
+      set({ data: next });
+    },
     addPendingInbound: (item) => {
       const next = structuredClone(get().data) as LedgerData;
       next.pendingIn.push({ ...item, id: uid(), createdAt: nowIso() });
@@ -197,6 +227,50 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         saveData(next);
         set({ data: next });
         return;
+      }
+
+      const applyRewardDelta = (targetId: string, cashbackDelta: number, pointsDelta: number, milesDelta: number) => {
+        const card = next.cards.find((c) => c.id === targetId);
+        if (!card) return;
+        if (cashbackDelta) card.rewardCashbackCents = Math.max(0, (card.rewardCashbackCents || 0) + cashbackDelta);
+        if (pointsDelta) card.rewardPoints = Math.max(0, (card.rewardPoints || 0) + pointsDelta);
+        if (milesDelta) card.rewardMiles = Math.max(0, (card.rewardMiles || 0) + milesDelta);
+        card.updatedAt = nowIso();
+      };
+      const oldCardId = (oldApply && (oldSrc === 'card' || oldSrc === 'credit_card') && oldTargetId) ? oldTargetId : null;
+      const newCardId = (newApply && (newSrc === 'card' || newSrc === 'credit_card') && newTargetId) ? newTargetId : null;
+      const oldCashback = typeof oldP.estimatedRewardCashbackCents === 'number' ? oldP.estimatedRewardCashbackCents : 0;
+      const oldPoints = typeof oldP.estimatedRewardPoints === 'number' ? oldP.estimatedRewardPoints : 0;
+      const oldMiles = typeof oldP.estimatedRewardMiles === 'number' ? oldP.estimatedRewardMiles : 0;
+      if (oldCardId && (oldCashback !== 0 || oldPoints !== 0 || oldMiles !== 0)) {
+        applyRewardDelta(oldCardId, -oldCashback, -oldPoints, -oldMiles);
+      }
+      if (newCardId && newApply && p.category) {
+        const newCard = next.cards.find((c) => c.id === newCardId);
+        const amountForReward = newSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number'
+          ? p.splitSnapshot.amountCents
+          : (typeof p.amountCents === 'number' ? p.amountCents : 0);
+        if (newCard && amountForReward > 0) {
+          const rules = getEffectiveRules(newCard);
+          const rule = matchRule(rules, p.category || '', p.subcategory || '');
+          if (rule) {
+            const est = computeEstimatedReward(rule, amountForReward);
+            let addC = 0, addP = 0, addM = 0;
+            if (est.cashbackCents !== undefined) {
+              p.estimatedRewardCashbackCents = est.cashbackCents;
+              addC = est.cashbackCents;
+            }
+            if (est.points !== undefined) {
+              p.estimatedRewardPoints = est.points;
+              addP = est.points;
+            }
+            if (est.miles !== undefined) {
+              p.estimatedRewardMiles = est.miles;
+              addM = est.miles;
+            }
+            if (addC || addP || addM) applyRewardDelta(newCardId, addC, addP, addM);
+          }
+        }
       }
 
       const messages: string[] = [];
@@ -443,6 +517,32 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         }
       } catch (_) {}
 
+      if (applied && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId) {
+        const isSplitAppliedReward = !!p.isSplit && p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
+        const card = next.cards.find((c) => c.id === p.paymentTargetId);
+        const amountForReward = isSplitAppliedReward ? (p.splitSnapshot?.amountCents ?? 0) : (typeof p.amountCents === 'number' ? p.amountCents : 0);
+        if (card && amountForReward > 0 && p.category) {
+          const rules = getEffectiveRules(card);
+          const rule = matchRule(rules, p.category, p.subcategory || '');
+          if (rule) {
+            const est = computeEstimatedReward(rule, amountForReward);
+            if (est.cashbackCents !== undefined) {
+              p.estimatedRewardCashbackCents = est.cashbackCents;
+              card.rewardCashbackCents = (card.rewardCashbackCents || 0) + est.cashbackCents;
+            }
+            if (est.points !== undefined) {
+              p.estimatedRewardPoints = est.points;
+              card.rewardPoints = (card.rewardPoints || 0) + est.points;
+            }
+            if (est.miles !== undefined) {
+              p.estimatedRewardMiles = est.miles;
+              card.rewardMiles = (card.rewardMiles || 0) + est.miles;
+            }
+            card.updatedAt = nowIso();
+          }
+        }
+      }
+
       next.purchases.push(p);
       saveData(next);
       set({ data: next });
@@ -522,6 +622,22 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           if (changed) saveSubTracker({ version: 1, entries });
         }
       } catch (_) {}
+
+      const wasCardPurchase = !!p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
+      if (wasCardPurchase && p.paymentTargetId) {
+        const card = next.cards.find((c) => c.id === p.paymentTargetId);
+        if (card) {
+          const c = typeof p.estimatedRewardCashbackCents === 'number' ? p.estimatedRewardCashbackCents : 0;
+          const pt = typeof p.estimatedRewardPoints === 'number' ? p.estimatedRewardPoints : 0;
+          const m = typeof p.estimatedRewardMiles === 'number' ? p.estimatedRewardMiles : 0;
+          if (c || pt || m) {
+            card.rewardCashbackCents = Math.max(0, (card.rewardCashbackCents || 0) - c);
+            card.rewardPoints = Math.max(0, (card.rewardPoints || 0) - pt);
+            card.rewardMiles = Math.max(0, (card.rewardMiles || 0) - m);
+            card.updatedAt = nowIso();
+          }
+        }
+      }
 
       next.purchases = next.purchases.filter((x: any) => x.id !== id);
       saveData(next);

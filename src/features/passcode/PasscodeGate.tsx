@@ -17,6 +17,9 @@ import {
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
   loadSecurityQuizCompleted,
+  loadPasscodePaused,
+  loadPasscode6Digit,
+  savePasscode6Digit,
   generateRecoveryKey,
   wipeAllAppData,
   type SecurityQA,
@@ -39,6 +42,8 @@ type Step =
   | 'security-answers-enter'
   | 'hint-show'
   | 'reset-new-passcode'
+  | 'update-to-6digit'
+  | 'update-to-6digit-confirm'
   | 'wipe-confirm'
   | 'lockout'
   | 'migration-prompt';
@@ -53,8 +58,9 @@ const SECURITY_QUESTION_OPTIONS = [
   'What street did you grow up on?',
 ];
 
-function isValidFourDigits(value: string): boolean {
-  return /^\d{4}$/.test(value);
+const PASSCODE_LENGTH = 6;
+function isValidSixDigits(value: string): boolean {
+  return new RegExp(`^\\d{${PASSCODE_LENGTH}}$`).test(value);
 }
 
 function getLockoutEnd(): Date | null {
@@ -75,7 +81,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [step, setStep] = useState<Step>(() => {
     if (!loadSecurityQuizCompleted()) return 'security-onboarding';
-    if (loadPasscodeHash() !== null) {
+    const hash = loadPasscodeHash();
+    if (hash !== null) {
+      if (!loadPasscode6Digit()) return 'update-to-6digit';
       if (isLockedOut()) return 'lockout';
       if (!loadRecoverySetupDone()) return 'migration-prompt';
       return 'enter';
@@ -124,6 +132,13 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setError('');
       return;
     }
+    if (!loadPasscode6Digit()) {
+      setStep('update-to-6digit');
+      setInput('');
+      setConfirmInput('');
+      setError('');
+      return;
+    }
     if (isLockedOut()) {
       setStep('lockout');
       return;
@@ -141,8 +156,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   const handleCreate = useCallback(() => {
     setError('');
-    if (!isValidFourDigits(input)) {
-      setError('Enter 4 digits');
+    if (!isValidSixDigits(input)) {
+      setError(`Enter ${PASSCODE_LENGTH} digits`);
       return;
     }
     setStep('confirm');
@@ -151,8 +166,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   const handleConfirmCreate = useCallback(async () => {
     setError('');
-    if (!isValidFourDigits(confirmInput)) {
-      setError('Enter 4 digits');
+    if (!isValidSixDigits(confirmInput)) {
+      setError(`Enter ${PASSCODE_LENGTH} digits`);
       return;
     }
     if (input !== confirmInput) {
@@ -161,6 +176,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
     const hash = await hashPasscode(input);
     savePasscodeHash(hash);
+    savePasscode6Digit(true);
     setStoredHash(hash);
     setStep('hint');
     setHintInput('');
@@ -199,8 +215,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   const handleEnter = useCallback(async () => {
     setError('');
-    if (!isValidFourDigits(input)) {
-      setError('Enter 4 digits');
+    if (!isValidSixDigits(input)) {
+      setError(`Enter ${PASSCODE_LENGTH} digits`);
       return;
     }
     const hash = await hashPasscode(input);
@@ -273,10 +289,28 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     setSecurityA2('');
   }, [securityA1, securityA2, recordFailedAttempt, resetFailedAttempts]);
 
-  const handleResetNewPasscode = useCallback(async () => {
+  const handleUpdateTo6DigitVerify = useCallback(async () => {
     setError('');
-    if (!isValidFourDigits(input)) {
-      setError('Enter 4 digits');
+    if (!input.trim()) {
+      setError('Enter your current passcode');
+      return;
+    }
+    const hash = await hashPasscode(input);
+    if (hash !== storedHash) {
+      setError('Incorrect passcode');
+      setInput('');
+      return;
+    }
+    setStep('update-to-6digit-confirm');
+    setInput('');
+    setConfirmInput('');
+    setError('');
+  }, [input, storedHash]);
+
+  const handleUpdateTo6DigitConfirm = useCallback(async () => {
+    setError('');
+    if (!isValidSixDigits(input)) {
+      setError(`Enter ${PASSCODE_LENGTH} digits`);
       return;
     }
     if (input !== confirmInput) {
@@ -285,6 +319,27 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
     const hash = await hashPasscode(input);
     savePasscodeHash(hash);
+    savePasscode6Digit(true);
+    setStoredHash(hash);
+    setAuthenticated(true);
+    setInput('');
+    setConfirmInput('');
+    setError('');
+  }, [input, confirmInput]);
+
+  const handleResetNewPasscode = useCallback(async () => {
+    setError('');
+    if (!isValidSixDigits(input)) {
+      setError(`Enter ${PASSCODE_LENGTH} digits`);
+      return;
+    }
+    if (input !== confirmInput) {
+      setError('Passcodes do not match');
+      return;
+    }
+    const hash = await hashPasscode(input);
+    savePasscodeHash(hash);
+    savePasscode6Digit(true);
     setStoredHash(hash);
     setAuthenticated(true);
     setInput('');
@@ -342,7 +397,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     fontSize: '0.95rem',
   };
 
-  if (authenticated) {
+  if (loadPasscodePaused() || authenticated) {
     return <>{children}</>;
   }
 
@@ -438,16 +493,16 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>Create passcode</h1>
           <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
-            Choose a 4-digit passcode to protect access on this device.
+            Choose a {PASSCODE_LENGTH}-digit passcode to protect access on this device.
           </p>
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PASSCODE_LENGTH}
             autoComplete="off"
             value={input}
-            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
-            placeholder="••••"
+            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
             aria-label="Passcode"
             style={inputStyle}
           />
@@ -459,15 +514,15 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'confirm' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>Confirm passcode</h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Re-enter your 4-digit passcode.</p>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Re-enter your {PASSCODE_LENGTH}-digit passcode.</p>
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PASSCODE_LENGTH}
             autoComplete="off"
             value={confirmInput}
-            onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
-            placeholder="••••"
+            onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
             aria-label="Confirm passcode"
             style={inputStyle}
           />
@@ -563,16 +618,16 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>Enter Passcode</h1>
           <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
-            Enter your 4-digit passcode to continue.
+            Enter your {PASSCODE_LENGTH}-digit passcode to continue.
           </p>
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PASSCODE_LENGTH}
             autoComplete="off"
             value={input}
-            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
-            placeholder="••••"
+            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
             aria-label="Passcode"
             style={inputStyle}
           />
@@ -581,6 +636,58 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <button type="button" className="btn clear-btn" style={{ width: '100%', padding: '10px 16px', fontSize: '0.9rem', marginTop: 18 }} onClick={handleForgotOptions}>
             Forgot passcode?
           </button>
+        </>
+      )}
+
+      {step === 'update-to-6digit' && (
+        <>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Update to 6-digit passcode</h1>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+            This app now requires a 6-digit passcode. Enter your current passcode to continue, then set a new 6-digit one.
+          </p>
+          <input
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            value={input}
+            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '')); setError(''); }}
+            placeholder="Current passcode"
+            aria-label="Current passcode"
+            style={inputStyle}
+          />
+          {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
+          <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={handleUpdateTo6DigitVerify}>Continue</button>
+        </>
+      )}
+
+      {step === 'update-to-6digit-confirm' && (
+        <>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Set new 6-digit passcode</h1>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new 6-digit passcode.</p>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={PASSCODE_LENGTH}
+            autoComplete="off"
+            value={input}
+            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
+            aria-label="New passcode"
+            style={inputStyle}
+          />
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={PASSCODE_LENGTH}
+            autoComplete="off"
+            value={confirmInput}
+            onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
+            aria-label="Confirm new passcode"
+            style={inputStyle}
+          />
+          {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
+          <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={handleUpdateTo6DigitConfirm}>Save new passcode</button>
         </>
       )}
 
@@ -662,24 +769,24 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'reset-new-passcode' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Set new passcode</h1>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new 4-digit passcode.</p>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new {PASSCODE_LENGTH}-digit passcode.</p>
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PASSCODE_LENGTH}
             autoComplete="off"
             value={input}
-            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
+            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder="New passcode"
             style={inputStyle}
           />
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PASSCODE_LENGTH}
             autoComplete="off"
             value={confirmInput}
-            onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
+            onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder="Confirm new passcode"
             style={inputStyle}
           />

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
-import type { CreditCard } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadSubTracker } from '../../state/storage';
 import type { SubTrackerEntry } from '../../state/storage';
+import { suggestCardForPurchase } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 
 function todayKey() {
@@ -27,31 +27,6 @@ function getActiveSubTrackerCardId(): string | null {
     if (maxTarget > 0 && spendCents < maxTarget) return e.cardRef.cardId;
   }
   return null;
-}
-
-/** Suggests a credit card for a purchase by category/subcategory. Priority: exact cat+sub match, category-only (card has no sub), catch-all. */
-function suggestCardForPurchase(category: string, subcategory: string, cards: CreditCard[]): CreditCard | null {
-  const list = cards || [];
-  if (list.length === 0) return null;
-  const sub = (subcategory || '').trim();
-
-  // 1. Exact category + subcategory match: card must match both. If purchase has a subcategory, card must have same sub.
-  //    Card configured as Food → Restaurants does NOT match Food → Snacks.
-  if (sub) {
-    const exact = list.find(
-      (c) => c.rewardCategory === category && (c.rewardSubcategory || '').trim() === sub
-    );
-    if (exact) return exact;
-  }
-
-  // 2. Category-only match: only when the card is configured with NO subcategory (card is category-only).
-  //    Cards configured with a subcategory (e.g. Food → Restaurants) must match exactly and are not used here.
-  const catOnly = list.find((c) => c.rewardCategory === category && !(c.rewardSubcategory || '').trim());
-  if (catOnly) return catOnly;
-
-  // 3. Catch-all
-  const catchAll = list.find((c) => c.isCatchAll);
-  return catchAll || null;
 }
 
 export type AddPurchasePrefill = { title?: string; amountCents?: number; dateISO?: string };
@@ -125,12 +100,13 @@ export function AddPurchaseModal(props: {
     }
   }, [props.open, isEditing, data.cards]);
 
-  // After category/subcategory selection, suggest a reward card (new purchase only). Skip if SUB popup is showing.
+  // After category/subcategory selection, suggest a reward card (new purchase only). SUB card wins if active; else best matching rule.
   useEffect(() => {
     if (!props.open || isEditing || !data.cards?.length || !hasSelectedCategory || showSubTrackerPopup) return;
-    const card = suggestCardForPurchase(category, subcategory, data.cards);
-    if (card && (!showSuggestionPopup || suggestedCardId !== card.id)) {
-      setSuggestedCardId(card.id);
+    const activeSubId = getActiveSubTrackerCardId();
+    const result = suggestCardForPurchase(category, subcategory, data.cards, activeSubId);
+    if (result && (!showSuggestionPopup || suggestedCardId !== result.card.id)) {
+      setSuggestedCardId(result.card.id);
       setShowSuggestionPopup(true);
     }
   }, [props.open, category, subcategory, isEditing, data.cards, hasSelectedCategory, showSubTrackerPopup]);

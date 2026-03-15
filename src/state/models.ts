@@ -10,17 +10,38 @@ export interface BankAccount {
   updatedAt: IsoDateTime;
 }
 
+/** Reward unit: cashback %, points multiplier, or miles multiplier. */
+export type RewardUnitType = 'cashback_percent' | 'points_multiplier' | 'miles_multiplier';
+
+export interface RewardRule {
+  id: string;
+  category: string;
+  /** Omit or empty = category-only rule (matches any subcategory under category). */
+  subcategory?: string;
+  /** Numeric value: % for cashback, multiplier for points/miles (e.g. 4 = 4%, 3 = 3x). */
+  value: number;
+  unit: RewardUnitType;
+  /** When true, this rule is the card's catch-all (only one per card). */
+  isCatchAll?: boolean;
+}
+
 export interface CreditCard {
   id: string;
   name: string;
   balanceCents: number; // positive = debt, negative = credit
   updatedAt: IsoDateTime;
-  /** Reward config (metadata only): best category for this card. */
+  /** @deprecated Use rewardRules instead. Kept for migration. */
   rewardCategory?: string;
-  /** Reward config: best subcategory when applicable. */
+  /** @deprecated Use rewardRules instead. Kept for migration. */
   rewardSubcategory?: string;
-  /** When true, use as fallback when no category match (only one catch-all at a time). */
+  /** @deprecated Use rewardRules instead. Kept for migration. */
   isCatchAll?: boolean;
+  /** Multiple reward rules per card. Takes precedence over legacy single-rule fields. */
+  rewardRules?: RewardRule[];
+  /** Manual/accumulated reward totals (display only; do not count toward net cash). */
+  rewardCashbackCents?: number;
+  rewardPoints?: number;
+  rewardMiles?: number;
 }
 
 export type PendingDepositTo = 'bank' | 'card' | 'hysa';
@@ -115,6 +136,11 @@ export interface Purchase {
   applyToSnapshot?: boolean;
   paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card';
   paymentTargetId?: string;
+
+  /** Estimated reward from matched card rule (informational; not counted as cash). */
+  estimatedRewardCashbackCents?: number;
+  estimatedRewardPoints?: number;
+  estimatedRewardMiles?: number;
 
   recurringId?: string;
   recurringDateKey?: string;

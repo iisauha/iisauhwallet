@@ -10,6 +10,8 @@ import {
   saveBirthdateISO,
   getCategoryName,
   loadPasscodeHash,
+  loadPasscodePaused,
+  savePasscodePaused,
 } from '../../state/storage';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
@@ -98,9 +100,11 @@ export function SettingsPage() {
   const [faqOpen, setFaqOpen] = useState(false);
   const [appGuideOpen, setAppGuideOpen] = useState(false);
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
+  const [pausePasscodeStep, setPausePasscodeStep] = useState<0 | 1 | 2>(0);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
 
   const hasPasscode = loadPasscodeHash() !== null;
+  const passcodePaused = loadPasscodePaused();
 
   return (
     <div className="tab-panel active" id="settingsContent">
@@ -141,10 +145,39 @@ export function SettingsPage() {
         <>
           <p className="section-title" style={{ marginTop: 24 }}>Security</p>
           <div className="settings-section" style={{ marginBottom: 24 }}>
+            {passcodePaused ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '12px 18px', fontSize: '1rem' }}
+                  onClick={() => savePasscodePaused(false)}
+                >
+                  Resume passcode protection
+                </button>
+                <p style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Passcode requirement is currently paused. Tap to require your passcode again when opening the app.
+                </p>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '12px 18px', fontSize: '1rem' }}
+                  onClick={() => setPausePasscodeStep(1)}
+                >
+                  Pause passcode protection
+                </button>
+                <p style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Temporarily stop requiring your passcode when opening the app. You can resume anytime.
+                </p>
+              </>
+            )}
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ padding: '12px 18px', fontSize: '1rem' }}
+              style={{ padding: '12px 18px', fontSize: '1rem', marginTop: 12 }}
               onClick={() => setResetPasscodeOpen(true)}
             >
               Reset passcode
@@ -153,6 +186,36 @@ export function SettingsPage() {
               Enter your current passcode, then set a new one. Recovery key and security questions are unchanged.
             </p>
           </div>
+          {pausePasscodeStep === 1 ? (
+            <Modal open={true} title="Pause passcode?" onClose={() => setPausePasscodeStep(0)}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--muted)' }}>
+                This reduces app security. Anyone with access to this device could open the app without a passcode. Your data will still be stored locally on this device.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
+                <button type="button" className="btn btn-primary" onClick={() => setPausePasscodeStep(2)}>Continue</button>
+              </div>
+            </Modal>
+          ) : pausePasscodeStep === 2 ? (
+            <Modal open={true} title="Confirm pause" onClose={() => setPausePasscodeStep(0)}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--muted)' }}>
+                Confirm again: the passcode will not be required when opening the app until you tap &quot;Resume passcode protection&quot; in Settings.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    savePasscodePaused(true);
+                    setPausePasscodeStep(0);
+                  }}
+                >
+                  Pause passcode
+                </button>
+              </div>
+            </Modal>
+          ) : null}
           <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
         </>
       )}

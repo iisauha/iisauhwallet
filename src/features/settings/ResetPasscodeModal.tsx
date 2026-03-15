@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Modal } from '../../ui/Modal';
-import { loadPasscodeHash, savePasscodeHash, hashPasscode } from '../../state/storage';
+import { loadPasscodeHash, savePasscodeHash, hashPasscode, savePasscode6Digit } from '../../state/storage';
 
-function isValidFourDigits(value: string): boolean {
-  return /^\d{4}$/.test(value);
+const PASSCODE_LENGTH = 6;
+function isValidSixDigits(value: string): boolean {
+  return new RegExp(`^\\d{${PASSCODE_LENGTH}}$`).test(value);
 }
 
 export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -15,8 +16,8 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
 
   const handleVerifyCurrent = async () => {
     setError('');
-    if (!isValidFourDigits(currentPasscode)) {
-      setError('Enter 4 digits');
+    if (!currentPasscode.trim()) {
+      setError('Enter your current passcode');
       return;
     }
     const stored = loadPasscodeHash();
@@ -38,8 +39,8 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
 
   const handleSaveNew = async () => {
     setError('');
-    if (!isValidFourDigits(newPasscode)) {
-      setError('Enter 4 digits');
+    if (!isValidSixDigits(newPasscode)) {
+      setError(`Enter ${PASSCODE_LENGTH} digits`);
       return;
     }
     if (newPasscode !== confirmPasscode) {
@@ -48,6 +49,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
     }
     const hash = await hashPasscode(newPasscode);
     savePasscodeHash(hash);
+    savePasscode6Digit(true);
     onClose();
     setStep('current');
     setCurrentPasscode('');
@@ -76,11 +78,10 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
             autoComplete="off"
             value={currentPasscode}
-            onChange={(e) => { setCurrentPasscode(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
-            placeholder="••••"
+            onChange={(e) => { setCurrentPasscode(e.target.value.replace(/\D/g, '')); setError(''); }}
+            placeholder="Current passcode"
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -104,15 +105,15 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
       {step === 'new' && (
         <>
           <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--muted)' }}>
-            Enter and confirm your new 4-digit passcode.
+            Enter and confirm your new {PASSCODE_LENGTH}-digit passcode.
           </p>
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PASSCODE_LENGTH}
             autoComplete="off"
             value={newPasscode}
-            onChange={(e) => { setNewPasscode(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
+            onChange={(e) => { setNewPasscode(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder="New passcode"
             style={{
               width: '100%',
@@ -130,10 +131,10 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
           <input
             type="password"
             inputMode="numeric"
-            maxLength={4}
+            maxLength={PASSCODE_LENGTH}
             autoComplete="off"
             value={confirmPasscode}
-            onChange={(e) => { setConfirmPasscode(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
+            onChange={(e) => { setConfirmPasscode(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder="Confirm new passcode"
             style={{
               width: '100%',

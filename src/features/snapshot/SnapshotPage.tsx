@@ -5,8 +5,10 @@ import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
-import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories } from '../../state/storage';
+import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
+import type { RewardRule } from '../../state/models';
+import { getEffectiveRules } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
@@ -75,6 +77,10 @@ export function SnapshotPage() {
     'snapshot_summary_pending_out_breakdown',
     true
   );
+  const [summaryCcDetailsCollapsed, setSummaryCcDetailsCollapsed] = useDropdownCollapsed(
+    'snapshot_summary_cc_balance_details',
+    true
+  );
 
   const [modal, setModal] = useState<
     | { type: 'none' }
@@ -110,7 +116,14 @@ export function SnapshotPage() {
         publicCurrentBalanceCents: number | null;
       }
     | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
-    | { type: 'card-reward-config'; cardId: string; rewardCategory: string; rewardSubcategory: string; isCatchAll: boolean }
+    | {
+        type: 'card-reward-config';
+        cardId: string;
+        rules: RewardRule[];
+        rewardCashbackCents: string;
+        rewardPoints: string;
+        rewardMiles: string;
+      }
   >({ type: 'none' });
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
@@ -397,12 +410,14 @@ export function SnapshotPage() {
                         className="icon-btn"
                         onClick={(e) => {
                           e.stopPropagation();
+                          const rules = getEffectiveRules(c);
                           setModal({
                             type: 'card-reward-config',
                             cardId: c.id,
-                            rewardCategory: c.rewardCategory || '',
-                            rewardSubcategory: c.rewardSubcategory || '',
-                            isCatchAll: !!c.isCatchAll
+                            rules: rules.length > 0 ? rules : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent', isCatchAll: false }],
+                            rewardCashbackCents: typeof c.rewardCashbackCents === 'number' ? String(c.rewardCashbackCents) : '',
+                            rewardPoints: typeof c.rewardPoints === 'number' ? String(c.rewardPoints) : '',
+                            rewardMiles: typeof c.rewardMiles === 'number' ? String(c.rewardMiles) : ''
                           });
                         }}
                         title="Card reward categories"
@@ -526,38 +541,67 @@ export function SnapshotPage() {
               <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totalLinkedHysaCents)}</span>
             </div>
           ) : null}
-          <div className="summary-kv">
-            <span className="k">Total Credit Card Balance</span>
+          <div
+            className="summary-kv"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setSummaryCcDetailsCollapsed(!summaryCcDetailsCollapsed)}
+            title={summaryCcDetailsCollapsed ? 'Show details' : 'Hide details'}
+          >
+            <span className="k">
+              Total Credit Card Balance
+              <span style={{ marginLeft: 6, fontSize: '0.85rem', opacity: 0.8 }}>{summaryCcDetailsCollapsed ? '▸' : '▾'}</span>
+            </span>
             <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.ccDebtCents)}</span>
           </div>
+          {!summaryCcDetailsCollapsed ? (
+            <>
+              <div className="summary-kv" style={{ fontSize: '0.9rem', paddingLeft: 12, marginTop: 0 }}>
+                <span className="k">Estimated Card Rewards</span>
+                <span className="v" style={{ color: 'var(--muted)' }}>—</span>
+              </div>
+              {(data.cards || []).map((c) => {
+                const parts: string[] = [];
+                if (typeof c.rewardCashbackCents === 'number' && c.rewardCashbackCents > 0) parts.push(formatCents(c.rewardCashbackCents) + ' cashback');
+                if (typeof c.rewardPoints === 'number' && c.rewardPoints > 0) parts.push((c.rewardPoints).toLocaleString() + ' pts');
+                if (typeof c.rewardMiles === 'number' && c.rewardMiles > 0) parts.push((c.rewardMiles).toLocaleString() + ' mi');
+                if (parts.length === 0) return null;
+                return (
+                  <div key={c.id} className="summary-kv" style={{ fontSize: '0.85rem', paddingLeft: 20, marginTop: 0 }}>
+                    <span className="k">↳ {c.name}</span>
+                    <span className="v" style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{parts.join(' · ')}</span>
+                  </div>
+                );
+              })}
+              <div
+                className="summary-kv"
+                style={{ fontSize: '0.9rem', paddingLeft: 12, marginTop: 6, cursor: 'pointer' }}
+                onClick={() => setSummaryPendingOutBreakdownCollapsed(!summaryPendingOutBreakdownCollapsed)}
+                title={summaryPendingOutBreakdownCollapsed ? 'Show breakdown' : 'Hide breakdown'}
+              >
+                <span className="k">
+                  Pending Outbound
+                  <span style={{ marginLeft: 6, fontSize: '0.85rem', opacity: 0.8 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
+                </span>
+                <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.pendingOutCents)}</span>
+              </div>
+              {!summaryPendingOutBreakdownCollapsed ? (
+                <>
+                  <div className="summary-kv" style={{ fontSize: '0.9rem', paddingLeft: 20, marginTop: 0 }}>
+                    <span className="k">↳ Credit card payments</span>
+                    <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingCcPaymentCents)}</span>
+                  </div>
+                  <div className="summary-kv" style={{ fontSize: '0.9rem', marginTop: 0 }}>
+                    <span className="k" style={{ paddingLeft: 20 }}>↳ Other pending outbound</span>
+                    <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingOutNonCcCents)}</span>
+                  </div>
+                </>
+              ) : null}
+            </>
+          ) : null}
           <div className="summary-kv">
             <span className="k">Credit Card Credit</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.ccCreditCents)}</span>
           </div>
-          <div
-            className="summary-kv"
-            style={{ cursor: 'pointer' }}
-            onClick={() => setSummaryPendingOutBreakdownCollapsed(!summaryPendingOutBreakdownCollapsed)}
-            title={summaryPendingOutBreakdownCollapsed ? 'Show breakdown' : 'Hide breakdown'}
-          >
-            <span className="k">
-              Pending Outbound
-              <span style={{ marginLeft: 6, fontSize: '0.85rem', opacity: 0.8 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
-            </span>
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.pendingOutCents)}</span>
-          </div>
-          {!summaryPendingOutBreakdownCollapsed ? (
-            <>
-              <div className="summary-kv" style={{ fontSize: '0.9rem', paddingLeft: 12, marginTop: 0 }}>
-                <span className="k">↳ Credit card payments</span>
-                <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingCcPaymentCents)}</span>
-              </div>
-              <div className="summary-kv" style={{ fontSize: '0.9rem', marginTop: 0 }}>
-                <span className="k" style={{ paddingLeft: 12 }}>↳ Other pending outbound</span>
-                <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingOutNonCcCents)}</span>
-              </div>
-            </>
-          ) : null}
           <div className="summary-kv">
             <span className="k">Total Pending Inbound</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.pendingInCents)}</span>
@@ -762,62 +806,162 @@ export function SnapshotPage() {
 
             {modal.type === 'card-reward-config' ? (() => {
               const cfg = loadCategoryConfig();
-              const rewardSubs = getCategorySubcategories(cfg, modal.rewardCategory);
+              const updateRule = (idx: number, patch: Partial<RewardRule>) => {
+                const next = modal.rules.slice();
+                next[idx] = { ...next[idx], ...patch };
+                setModal({ ...modal, rules: next });
+              };
+              const addRule = () => {
+                setModal({
+                  ...modal,
+                  rules: [...modal.rules, { id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent', isCatchAll: false }]
+                });
+              };
+              const removeRule = (idx: number) => {
+                const next = modal.rules.filter((_, i) => i !== idx);
+                setModal({ ...modal, rules: next.length > 0 ? next : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent', isCatchAll: false }] });
+              };
+              const setCatchAll = (idx: number, isCatchAll: boolean) => {
+                const next = modal.rules.map((r, i) => ({ ...r, isCatchAll: i === idx ? isCatchAll : false }));
+                setModal({ ...modal, rules: next });
+              };
+              const validRules = modal.rules.filter((r) => r.category && r.category.trim());
               return (
                 <>
-                  <h3>Card Reward Categories</h3>
-                  <div className="field">
-                    <label>Best reward category</label>
-                    <Select
-                      value={modal.rewardCategory}
-                      onChange={(e) => setModal({ ...modal, rewardCategory: e.target.value, rewardSubcategory: '' })}
-                    >
-                      <option value="">— None —</option>
-                      {Object.keys(cfg).map((id) => (
-                        <option key={id} value={id}>
-                          {getCategoryName(cfg, id)}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  {rewardSubs.length > 0 ? (
-                    <div className="field">
-                      <label>Best reward subcategory</label>
-                      <Select
-                        value={modal.rewardSubcategory}
-                        onChange={(e) => setModal({ ...modal, rewardSubcategory: e.target.value })}
-                      >
-                        <option value="">— None —</option>
-                        {rewardSubs.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </Select>
+                  <h3>Card reward rules</h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: -4, marginBottom: 12 }}>
+                    Add rules for category/subcategory. Exact match wins; catch-all applies when no rule matches.
+                  </p>
+                  {modal.rules.map((rule, idx) => {
+                    const subs = getCategorySubcategories(cfg, rule.category);
+                    return (
+                      <div key={rule.id} className="card" style={{ padding: 10, marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Rule {idx + 1}</span>
+                          <button type="button" className="btn clear-btn" style={{ padding: '2px 8px', fontSize: '0.8rem' }} onClick={() => removeRule(idx)}>Remove</button>
+                        </div>
+                        <div className="field">
+                          <label>Category</label>
+                          <Select
+                            value={rule.category}
+                            onChange={(e) => updateRule(idx, { category: e.target.value, subcategory: '' })}
+                          >
+                            <option value="">— None —</option>
+                            {Object.keys(cfg).map((id) => (
+                              <option key={id} value={id}>{getCategoryName(cfg, id)}</option>
+                            ))}
+                          </Select>
+                        </div>
+                        {subs.length > 0 ? (
+                          <div className="field">
+                            <label>Subcategory (blank = whole category)</label>
+                            <Select
+                              value={rule.subcategory || ''}
+                              onChange={(e) => updateRule(idx, { subcategory: e.target.value })}
+                            >
+                              <option value="">— None —</option>
+                              {subs.map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </Select>
+                          </div>
+                        ) : null}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <div className="field" style={{ flex: '1 1 80px' }}>
+                            <label>Value</label>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.1}
+                              value={rule.value}
+                              onChange={(e) => updateRule(idx, { value: parseFloat(e.target.value) || 0 })}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                          <div className="field" style={{ flex: '1 1 120px' }}>
+                            <label>Type</label>
+                            <Select
+                              value={rule.unit}
+                              onChange={(e) => updateRule(idx, { unit: e.target.value as RewardRule['unit'] })}
+                            >
+                              <option value="cashback_percent">% cashback</option>
+                              <option value="points_multiplier">× points</option>
+                              <option value="miles_multiplier">× miles</option>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="toggle-row" style={{ marginTop: 6 }}>
+                          <input
+                            type="checkbox"
+                            id={`catchAll-${idx}`}
+                            checked={!!rule.isCatchAll}
+                            onChange={(e) => setCatchAll(idx, e.target.checked)}
+                          />
+                          <label htmlFor={`catchAll-${idx}`}>Catch-all (use when no other rule matches)</label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button type="button" className="btn btn-secondary" style={{ marginBottom: 12 }} onClick={addRule}>+ Add rule</button>
+                  <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                    <label style={{ fontSize: '0.9rem' }}>Reward totals (manual override)</label>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+                      Edit to sync with reality or after redeeming. Leave blank to use auto total from purchases.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 100px' }}>
+                        <label style={{ fontSize: '0.75rem' }}>Cashback ($)</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          value={modal.rewardCashbackCents}
+                          onChange={(e) => setModal({ ...modal, rewardCashbackCents: e.target.value })}
+                          style={{ width: '100%', padding: '6px 8px' }}
+                        />
+                      </div>
+                      <div style={{ flex: '1 1 80px' }}>
+                        <label style={{ fontSize: '0.75rem' }}>Points</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="0"
+                          value={modal.rewardPoints}
+                          onChange={(e) => setModal({ ...modal, rewardPoints: e.target.value })}
+                          style={{ width: '100%', padding: '6px 8px' }}
+                        />
+                      </div>
+                      <div style={{ flex: '1 1 80px' }}>
+                        <label style={{ fontSize: '0.75rem' }}>Miles</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="0"
+                          value={modal.rewardMiles}
+                          onChange={(e) => setModal({ ...modal, rewardMiles: e.target.value })}
+                          style={{ width: '100%', padding: '6px 8px' }}
+                        />
+                      </div>
                     </div>
-                  ) : null}
-                  <div className="toggle-row">
-                    <input
-                      type="checkbox"
-                      id="catchAll"
-                      checked={modal.isCatchAll}
-                      onChange={(e) => setModal({ ...modal, isCatchAll: e.target.checked })}
-                    />
-                    <label htmlFor="catchAll">Use this as catch-all card</label>
                   </div>
                   <div className="btn-row">
-                    <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
-                      Cancel
-                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>Cancel</button>
                     <button
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => {
-                        actions.updateCardRewardConfig(modal.cardId, {
-                          rewardCategory: modal.rewardCategory || undefined,
-                          rewardSubcategory: modal.rewardSubcategory || undefined,
-                          isCatchAll: modal.isCatchAll
-                        });
+                        actions.updateCardRewardRules(modal.cardId, validRules);
+                        const cashbackStr = modal.rewardCashbackCents.trim().replace(/,/g, '');
+                        const pointsStr = modal.rewardPoints.trim().replace(/,/g, '');
+                        const milesStr = modal.rewardMiles.trim().replace(/,/g, '');
+                        const cashbackCents = cashbackStr ? Math.round(parseFloat(cashbackStr) * 100) : undefined;
+                        const points = pointsStr ? Math.round(parseFloat(pointsStr)) : undefined;
+                        const miles = milesStr ? Math.round(parseFloat(milesStr)) : undefined;
+                        const totalsPayload: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number } = {};
+                        if (typeof cashbackCents === 'number' && !Number.isNaN(cashbackCents)) totalsPayload.rewardCashbackCents = cashbackCents;
+                        if (typeof points === 'number' && !Number.isNaN(points)) totalsPayload.rewardPoints = points;
+                        if (typeof miles === 'number' && !Number.isNaN(miles)) totalsPayload.rewardMiles = miles;
+                        if (Object.keys(totalsPayload).length > 0) actions.updateCardRewardTotals(modal.cardId, totalsPayload);
                         setModal({ type: 'none' });
                       }}
                     >
