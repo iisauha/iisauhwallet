@@ -31,7 +31,10 @@ export function matchRule(
 ): RewardRule | null {
   const sub = (subcategory || '').trim();
   const cat = (category || '').trim();
-  if (!cat) return null;
+  if (!cat) {
+    const catchAll = rules.find((r) => r.isCatchAll);
+    return catchAll || null;
+  }
 
   const exact = rules.find(
     (r) => !r.isCatchAll && r.category === cat && (r.subcategory || '').trim() === sub

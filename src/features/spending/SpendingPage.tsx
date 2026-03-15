@@ -36,6 +36,7 @@ export function SpendingPage() {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [openAdd, setOpenAdd] = useState(false);
+  const [reimbursementMode, setReimbursementMode] = useState(false);
 
   useEffect(() => {
     if (detected?.launchFlow?.flow === 'add_purchase') setOpenAdd(true);
@@ -482,6 +483,7 @@ export function SpendingPage() {
                   className="btn btn-secondary"
                   onClick={() => {
                     setEditingPurchaseKey(uiId);
+                    setReimbursementMode(false);
                     setOpenAdd(true);
                   }}
                 >
@@ -511,17 +513,32 @@ export function SpendingPage() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className="btn btn-add"
-        style={{ marginTop: 16, width: '100%' }}
-        onClick={() => {
-          setEditingPurchaseKey(null);
-          setOpenAdd(true);
-        }}
-      >
-        + Add Purchase
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+        <button
+          type="button"
+          className="btn btn-add"
+          style={{ width: '100%' }}
+          onClick={() => {
+            setEditingPurchaseKey(null);
+            setReimbursementMode(false);
+            setOpenAdd(true);
+          }}
+        >
+          + Add Purchase
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ width: '100%' }}
+          onClick={() => {
+            setEditingPurchaseKey(null);
+            setReimbursementMode(true);
+            setOpenAdd(true);
+          }}
+        >
+          Add Card Purchase (Reimbursement Expected)
+        </button>
+      </div>
 
       {openAdd && detected?.launchFlow?.flow === 'add_purchase' && detected.launchFlow.item ? (
         <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--muted)', border: '1px solid var(--border)' }}>
@@ -537,11 +554,13 @@ export function SpendingPage() {
         open={openAdd}
         onClose={() => {
           setOpenAdd(false);
+          setReimbursementMode(false);
           if (detected?.launchFlow?.flow === 'add_purchase') detected.setLaunchFlow(null);
         }}
         purchaseKey={editingPurchase ? getPurchaseUiId(editingPurchase) : null}
         prefill={detected?.launchFlow?.flow === 'add_purchase' && detected.launchFlow.item ? { title: detected.launchFlow.item.title, amountCents: Math.abs(detected.launchFlow.item.amountCents), dateISO: detected.launchFlow.item.dateISO } : null}
         onSave={detected?.launchFlow?.flow === 'add_purchase' ? () => { detected.markResolved(detected.launchFlow!.detectedId, 'add_purchase'); detected.setLaunchFlow(null); setOpenAdd(false); } : undefined}
+        reimbursementExpected={reimbursementMode}
       />
 
       {confirmDelete ? (

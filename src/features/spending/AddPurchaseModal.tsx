@@ -37,6 +37,8 @@ export function AddPurchaseModal(props: {
   purchaseKey?: string | null;
   prefill?: AddPurchasePrefill | null;
   onSave?: () => void;
+  /** When true, form is for a card purchase with reimbursement expected; prefill card and create pending inbound on save. */
+  reimbursementExpected?: boolean;
 }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -89,6 +91,13 @@ export function AddPurchaseModal(props: {
       if (p.dateISO) setDateISO(p.dateISO);
     }
   }, [props.open, props.prefill, currentPurchase]);
+
+  useEffect(() => {
+    if (props.open && props.reimbursementExpected && !currentPurchase) {
+      setApplyToSnapshot(true);
+      setPaymentSource('card');
+    }
+  }, [props.open, props.reimbursementExpected, currentPurchase]);
 
   // SUB Tracker first: when opening Add Purchase, if there's an active SUB Tracker card, ask to use it first.
   useEffect(() => {
@@ -224,7 +233,12 @@ export function AddPurchaseModal(props: {
         </div>
       ) : null}
       <div className="modal">
-        <h3>{isEditing ? 'Edit Purchase' : 'Add Purchase'}</h3>
+        <h3>{isEditing ? 'Edit Purchase' : props.reimbursementExpected ? 'Add Card Purchase (Reimbursement Expected)' : 'Add Purchase'}</h3>
+        {props.reimbursementExpected && !isEditing ? (
+          <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: -4, marginBottom: 12 }}>
+            A pending inbound entry will be created for this amount. When you receive reimbursement, post it from Pending Inbound and choose which bank to deposit into.
+          </p>
+        ) : null}
         <div className="field">
           <label>Title / Merchant</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Coffee shop" />
@@ -415,6 +429,18 @@ export function AddPurchaseModal(props: {
                 actions.updatePurchase(currentPurchase.id, purchase);
               } else {
                 actions.addPurchase(purchase);
+                if (props.reimbursementExpected && applyToSnapshot && paymentSource === 'card' && paymentTargetId) {
+                  const reimbursementCents = isSplit && purchase.splitSnapshot && typeof purchase.splitSnapshot.amountCents === 'number'
+                    ? purchase.splitSnapshot.amountCents
+                    : myPortionCents;
+                  if (reimbursementCents > 0) {
+                    actions.addPendingInbound({
+                      label: `Reimbursement: ${title.trim() || 'Purchase'}`,
+                      amountCents: reimbursementCents,
+                      depositTo: 'bank'
+                    });
+                  }
+                }
               }
               props.onSave?.();
               props.onClose();

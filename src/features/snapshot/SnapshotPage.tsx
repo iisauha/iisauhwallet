@@ -820,7 +820,7 @@ export function SnapshotPage() {
                 setModal({ ...modal, rules: next });
               };
               const validRules = modal.rules
-                .filter((r) => r.category && r.category.trim())
+                .filter((r) => r.isCatchAll || (r.category && r.category.trim()))
                 .map((r) => ({
                   ...r,
                   value: (() => { const n = parseFloat(modal.valueInputs[r.id] ?? String(r.value)); return Number.isNaN(n) ? 0 : n; })()
