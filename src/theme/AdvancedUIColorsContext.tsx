@@ -22,6 +22,9 @@ const UI_VAR_KEYS: Record<keyof AdvancedUIColors, string> = {
   tabBarBg: '--ui-tabbar-bg',
   border: '--ui-border',
   muted: '--ui-muted',
+  titleText: '--ui-title-text',
+  primaryText: '--ui-primary-text',
+  mutedText: '--ui-muted-text',
 };
 
 type AdvancedUIColorsContextValue = {

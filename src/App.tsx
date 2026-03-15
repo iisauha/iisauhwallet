@@ -12,6 +12,8 @@ import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { PasscodeGate } from './features/passcode/PasscodeGate';
 import { DropdownStateProvider } from './state/DropdownStateContext';
 import { DetectedActivityProvider } from './state/DetectedActivityContext';
+import { useLedgerStore } from './state/store';
+import { SyncProvider } from './sync/SyncContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AppearanceProvider } from './theme/AppearanceContext';
 import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
@@ -136,6 +138,11 @@ function MainApp() {
   );
 }
 
+function SyncProviderWithReload({ children }: { children: React.ReactNode }) {
+  const reload = useLedgerStore((s) => s.actions.reload);
+  return <SyncProvider onReloadLedger={reload}>{children}</SyncProvider>;
+}
+
 export function App() {
   return (
     <ThemeProvider>
@@ -143,12 +150,14 @@ export function App() {
         <AdvancedUIColorsProvider>
         <DropdownStateProvider>
           <DetectedActivityProvider>
+            <SyncProviderWithReload>
             <PasscodeGate>
               <Routes>
                 <Route path="/" element={<MainApp />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
               </Routes>
             </PasscodeGate>
+            </SyncProviderWithReload>
           </DetectedActivityProvider>
         </DropdownStateProvider>
         </AdvancedUIColorsProvider>

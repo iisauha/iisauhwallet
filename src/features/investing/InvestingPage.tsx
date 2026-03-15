@@ -23,8 +23,64 @@ import {
 import { INVESTING_SHOW_ZERO_HYSA_KEY } from '../../state/keys';
 import { useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
+import { Modal } from '../../ui/Modal';
 import { loadCategoryConfig, getCategoryName } from '../../state/storage';
 import Chart from 'chart.js/auto';
+
+function HysaMoveRow({
+  totalCents,
+  reservedCents,
+  onReservedChange,
+  parseCents,
+  formatCents
+}: {
+  totalCents: number;
+  reservedCents: number;
+  onReservedChange: (cents: number) => void;
+  parseCents: (s: string) => number;
+  formatCents: (c: number) => string;
+}) {
+  const [moveAmount, setMoveAmount] = useState('');
+  const billsCents = totalCents - reservedCents;
+  const applyMove = (direction: 'reservedToBills' | 'billsToReserved') => {
+    const cents = parseCents(moveAmount);
+    if (!Number.isFinite(cents) || cents <= 0) return;
+    if (direction === 'reservedToBills') {
+      onReservedChange(Math.max(0, reservedCents - cents));
+    } else {
+      onReservedChange(Math.min(totalCents, reservedCents + cents));
+    }
+    setMoveAmount('');
+  };
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+      <input
+        type="text"
+        inputMode="decimal"
+        placeholder="Amount"
+        value={moveAmount}
+        onChange={(e) => setMoveAmount(e.target.value)}
+        style={{ width: 80, padding: '6px 8px', fontSize: '0.9rem' }}
+      />
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => applyMove('reservedToBills')}
+        disabled={reservedCents <= 0 || !moveAmount.trim()}
+      >
+        Reserved → Bills
+      </button>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => applyMove('billsToReserved')}
+        disabled={billsCents <= 0 || !moveAmount.trim()}
+      >
+        Bills → Reserved
+      </button>
+    </div>
+  );
+}
 
 function CoastFireInfoIcon({
   id,
@@ -646,6 +702,19 @@ export function InvestingPage() {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
   const [transferError, setTransferError] = useState<string | null>(null);
+  const [hysaAllocationAccount, setHysaAllocationAccount] = useState<HysaAccount | null>(null);
+  const [allocationReservedCents, setAllocationReservedCents] = useState(0);
+  useEffect(() => {
+    if (hysaAllocationAccount) {
+      const h = hysaAllocationAccount;
+      const total = Math.max(0, h.balanceCents || 0);
+      const cur =
+        typeof h.reservedSavingsCents === 'number' && h.reservedSavingsCents >= 0
+          ? Math.min(h.reservedSavingsCents, total)
+          : 0;
+      setAllocationReservedCents(cur);
+    }
+  }, [hysaAllocationAccount]);
   const [transferHysaStep, setTransferHysaStep] = useState<{
     direction: 'in' | 'out';
     accountName: string;
@@ -1062,19 +1131,19 @@ export function InvestingPage() {
     persist({ ...investing, accounts });
   }
 
-  function setHysaReservedSavings(acc: HysaAccount) {
-    const current = typeof acc.reservedSavingsCents === 'number' && acc.reservedSavingsCents >= 0
-      ? acc.reservedSavingsCents
-      : 0;
-    const val = window.prompt('Reserved savings amount in this HYSA ($)', (current / 100).toFixed(2));
-    if (val == null) return;
-    const cents = parseCents(val);
-    if (cents < 0) return;
+  function openHysaAllocationModal(acc: HysaAccount) {
+    setHysaAllocationAccount(acc);
+  }
+
+  function saveHysaAllocation(reservedCents: number) {
+    if (!hysaAllocationAccount) return;
+    const acc = hysaAllocationAccount;
+    const total = Math.max(0, acc.balanceCents || 0);
+    const clamped = Math.max(0, Math.min(reservedCents, total));
     const now = Date.now();
     const accounts = investing.accounts.map((a) => {
       if (a.id !== acc.id || a.type !== 'hysa') return a;
       const h = a as HysaAccount;
-      const clamped = Math.min(cents, Math.max(0, h.balanceCents || 0));
       return {
         ...h,
         reservedSavingsCents: clamped,
@@ -1082,6 +1151,7 @@ export function InvestingPage() {
       };
     });
     persist({ ...investing, accounts });
+    setHysaAllocationAccount(null);
   }
 
   function getInvestingByKey(key: string | null): { type: 'hysa' | 'general'; acc: InvestingAccount } | null {
@@ -1537,9 +1607,9 @@ export function InvestingPage() {
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          onClick={() => setHysaReservedSavings(a as HysaAccount)}
+                          onClick={() => openHysaAllocationModal(a as HysaAccount)}
                         >
-                          Reserved
+                          Adjust HYSA Allocation
                         </button>
                       </>
                     ) : null}
@@ -2069,6 +2139,84 @@ export function InvestingPage() {
           </div>
         </div>
       ) : null}
+
+      <Modal
+        open={!!hysaAllocationAccount}
+        title="Adjust HYSA Allocation"
+        onClose={() => setHysaAllocationAccount(null)}
+      >
+        {hysaAllocationAccount ? (
+          (() => {
+            const h = hysaAllocationAccount;
+            const totalCents = Math.max(0, h.balanceCents || 0);
+            const reservedCents = Math.max(0, Math.min(allocationReservedCents, totalCents));
+            const billsCents = totalCents - reservedCents;
+            const reservedDollars = (reservedCents / 100).toFixed(2);
+            const billsDollars = (billsCents / 100).toFixed(2);
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
+                  Move money between reserved savings and money designated for bills. Total HYSA balance stays the same.
+                </p>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Total HYSA balance</label>
+                  <div style={{ fontWeight: 600 }}>{formatCents(totalCents)}</div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Reserved savings</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={reservedDollars}
+                    onChange={(e) => {
+                      const cents = parseCents(e.target.value);
+                      const next = Number.isFinite(cents) ? Math.max(0, Math.min(cents, totalCents)) : allocationReservedCents;
+                      setAllocationReservedCents(next);
+                    }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '1rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Money in HYSA designated for bills</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={billsDollars}
+                    onChange={(e) => {
+                      const cents = parseCents(e.target.value);
+                      const bills = Number.isFinite(cents) ? Math.max(0, Math.min(cents, totalCents)) : billsCents;
+                      setAllocationReservedCents(Math.max(0, totalCents - bills));
+                    }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '1rem' }}
+                  />
+                </div>
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.85rem' }}>Move amount between portions</p>
+                  <HysaMoveRow
+                    totalCents={totalCents}
+                    reservedCents={reservedCents}
+                    onReservedChange={setAllocationReservedCents}
+                    parseCents={parseCents}
+                    formatCents={formatCents}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setHysaAllocationAccount(null)}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => saveHysaAllocation(allocationReservedCents)}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            );
+          })()
+        ) : null}
+      </Modal>
     </div>
   );
 }

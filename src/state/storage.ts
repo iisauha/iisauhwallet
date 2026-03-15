@@ -36,6 +36,7 @@ import {
   PASSCODE_HASH_KEY
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
+import { notifySyncPush } from '../sync/SyncContext';
 
 function now(): string {
   return new Date().toISOString();
@@ -157,6 +158,12 @@ export type AdvancedUIColors = Partial<{
   tabBarBg: string;
   border: string;
   muted: string;
+  /** Title text = page titles / strong headings */
+  titleText: string;
+  /** Primary text = regular text in cards/rows */
+  primaryText: string;
+  /** Muted text = descriptors, subheaders, helper text (overrides muted surface label when used for text) */
+  mutedText: string;
 }>;
 
 export function loadAdvancedUIColors(): AdvancedUIColors {
@@ -174,6 +181,7 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
 export function saveAdvancedUIColors(colors: AdvancedUIColors) {
   try {
     localStorage.setItem(UI_ADVANCED_COLORS_KEY, JSON.stringify(colors));
+    notifySyncPush();
   } catch (_) {}
 }
 
@@ -280,6 +288,7 @@ export function loadData(): LedgerData {
 export function saveData(data: LedgerData) {
   // Save uses the same main storage key as legacy.
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  notifySyncPush();
 }
 
 function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {
@@ -395,6 +404,7 @@ export function loadCategoryConfig(): CategoryConfig {
 export function saveCategoryConfig(cfg: CategoryConfig) {
   try {
     localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(cfg));
+    notifySyncPush();
   } catch (_) {}
 }
 
@@ -546,6 +556,7 @@ export function saveSubTracker(next: Partial<SubTrackerData> & { version: 1 }) {
       completedBonuses: next.completedBonuses !== undefined ? next.completedBonuses : (current.completedBonuses ?? [])
     };
     localStorage.setItem(SUB_TRACKER_KEY, JSON.stringify(merged));
+    notifySyncPush();
   } catch (_) {}
 }
 
@@ -647,6 +658,7 @@ export function loadInvesting(): InvestingState {
 export function saveInvesting(state: InvestingState) {
   try {
     localStorage.setItem(INVESTING_KEY, JSON.stringify(state));
+    notifySyncPush();
   } catch (_) {}
 }
 
@@ -778,6 +790,7 @@ export function loadLoans(): LoansState {
 export function saveLoans(state: LoansState) {
   try {
     localStorage.setItem(LOANS_KEY, JSON.stringify(state));
+    notifySyncPush();
   } catch (_) {}
 }
 
@@ -1442,6 +1455,7 @@ export function loadPasscodeHash(): string | null {
 export function savePasscodeHash(hash: string) {
   try {
     localStorage.setItem(PASSCODE_HASH_KEY, hash);
+    notifySyncPush();
   } catch (_) {}
 }
 

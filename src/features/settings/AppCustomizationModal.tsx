@@ -27,6 +27,12 @@ const FONT_SCALE_OPTIONS = [
   { value: 1.06, label: 'Large' },
 ];
 
+const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helper: string }[] = [
+  { key: 'titleText', label: 'Title text', helper: 'Page titles and strong headings. Do not use green/red here.' },
+  { key: 'primaryText', label: 'Primary text', helper: 'Regular text inside cards and rows.' },
+  { key: 'mutedText', label: 'Muted / secondary text', helper: 'Descriptors, subheaders, and helper text.' },
+];
+
 const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helper: string }[] = [
   { key: 'cardBg', label: 'Card background', helper: 'Only changes cards.' },
   { key: 'surfaceSecondary', label: 'Padding / secondary surface blocks', helper: 'Only changes summary and secondary blocks.' },
@@ -35,7 +41,7 @@ const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helpe
   { key: 'dropdownBg', label: 'Dropdown background', helper: 'Only changes dropdowns and selects.' },
   { key: 'tabBarBg', label: 'Bottom Tab Bar background', helper: 'The navigation bar at the bottom (Spending, Recurring, etc.).' },
   { key: 'border', label: 'Border color', helper: 'Only changes borders.' },
-  { key: 'muted', label: 'Muted text / secondary text', helper: 'Only changes muted labels and secondary text.' },
+  { key: 'muted', label: 'Muted surface / secondary', helper: 'Muted backgrounds and secondary surfaces.' },
 ];
 
 function ColorCustomize({
@@ -81,6 +87,65 @@ function ColorCustomize({
           fontSize: '0.9rem',
         }}
       />
+    </div>
+  );
+}
+
+function TextColorsSection() {
+  const ctx = useAdvancedUIColors();
+  if (!ctx) return null;
+  const { colors, setColor, clearColor } = ctx;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {TEXT_COLOR_OPTIONS.map(({ key, label, helper }) => {
+        const value = colors[key] ?? '';
+        return (
+          <div key={key}>
+            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 2px 0' }}>
+              {label}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+              {helper}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <input
+                type="color"
+                value={value || '#f1f5f9'}
+                onChange={(e) => setColor(key, e.target.value)}
+                style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
+                aria-label={label}
+              />
+              <input
+                type="text"
+                key={`${key}-${value}`}
+                defaultValue={value}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  const n = normalizeHex(v);
+                  if (n) setColor(key, n);
+                  else if (v === '') clearColor(key);
+                }}
+                placeholder="#f1f5f9"
+                style={{
+                  flex: 1,
+                  minWidth: 100,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
+                }}
+              />
+              {value ? (
+                <button type="button" className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => clearColor(key)}>
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -208,6 +273,14 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
               if (n) setAccentColor(n);
             }}
           />
+        </div>
+
+        <p className="section-title" style={{ marginTop: 16, marginBottom: 8 }}>Text colors</p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
+          Title = page headings; Primary = regular text; Muted = descriptors. Leave empty for defaults. Green/red stay for amounts only.
+        </p>
+        <div style={{ marginBottom: 24 }}>
+          <TextColorsSection />
         </div>
 
         <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 4 }}>

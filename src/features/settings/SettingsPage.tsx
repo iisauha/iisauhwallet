@@ -13,6 +13,8 @@ import {
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
+import { FAQModal } from './FAQModal';
+import { useSync } from '../../sync/SyncContext';
 
 /** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
 function getExportFileName(): string {
@@ -83,6 +85,127 @@ function exportMonthlyPurchasesCsv() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function DeviceSyncSection() {
+  const sync = useSync();
+  const [joinCode, setJoinCode] = useState('');
+  const [createResult, setCreateResult] = useState<{ pairingCode: string; walletId: string } | null>(null);
+  const [joinConfirm, setJoinConfirm] = useState(false);
+
+  if (!sync) return null;
+
+  const { syncState, isCreatingCode, isJoining, isPushing, error, createSyncCode, joinWithCode, pauseSync, resumeSync, disconnectSync, clearError } = sync;
+  const connected = !!syncState.walletId;
+
+  const handleCreateCode = async () => {
+    setCreateResult(null);
+    clearError();
+    try {
+      const result = await createSyncCode();
+      setCreateResult(result);
+    } catch (_) {}
+  };
+
+  const handleJoin = async () => {
+    if (!joinConfirm || !joinCode.trim()) return;
+    clearError();
+    try {
+      await joinWithCode(joinCode.trim());
+      setJoinCode('');
+      setJoinConfirm(false);
+    } catch (_) {}
+  };
+
+  return (
+    <div className="settings-section" style={{ marginBottom: 24 }}>
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 16 }}>
+        Syncing across devices is optional. You can keep using the app locally only. If you enable sync, wallet data is stored remotely so your phone and other devices can share the same wallet. If you have privacy or security concerns, you can skip sync and stay local-only. See the Privacy Policy or FAQ for more.
+      </p>
+      {error && (
+        <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.9rem', marginBottom: 12 }}>{error}</p>
+      )}
+      {!connected ? (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginRight: 8, marginBottom: 8 }}
+              onClick={handleCreateCode}
+              disabled={isCreatingCode}
+            >
+              {isCreatingCode ? 'Creating…' : 'Create Sync Code'}
+            </button>
+            <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 6 }}>
+              Use this device as the source wallet. A 6-digit code will be generated; enter it on the other device to join.
+            </p>
+          </div>
+          {createResult && (
+            <div style={{ padding: '12px 16px', background: 'var(--surface)', borderRadius: 8, marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, marginBottom: 4 }}>This device is the source wallet</p>
+              <p style={{ fontSize: '1.25rem', letterSpacing: 4, fontVariantNumeric: 'tabular-nums' }}>{createResult.pairingCode}</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8 }}>Enter this code on the device you want to link. Code expires in 15 minutes.</p>
+            </div>
+          )}
+          <div>
+            <p style={{ fontWeight: 600, marginBottom: 8 }}>Join existing wallet</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--danger, #b91c1c)', marginBottom: 8 }}>
+              This will replace local data on this device with the synced wallet.
+            </p>
+            {!joinConfirm ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setJoinConfirm(true)}
+              >
+                Join Existing Wallet
+              </button>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="6-digit code"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, ''))}
+                  style={{ width: '120px', padding: '10px 12px', fontSize: '1rem', marginRight: 8, marginBottom: 8 }}
+                />
+                <button type="button" className="btn btn-primary" style={{ marginRight: 8 }} onClick={handleJoin} disabled={isJoining || joinCode.length !== 6}>
+                  {isJoining ? 'Joining…' : 'Join'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setJoinConfirm(false); setJoinCode(''); clearError(); }}>
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      ) : (
+        <div>
+          <p style={{ marginBottom: 8 }}><strong>Sync status:</strong> {syncState.syncPaused ? 'Paused' : 'Active'}{isPushing && ' (pushing…)'}</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 8 }}>
+            Wallet: {syncState.walletId?.slice(0, 12)}… · Last synced: {syncState.lastSyncedAt ? new Date(syncState.lastSyncedAt).toLocaleString() : '—'}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {syncState.syncPaused ? (
+              <button type="button" className="btn btn-secondary" onClick={resumeSync}>Resume Sync</button>
+            ) : (
+              <button type="button" className="btn btn-secondary" onClick={pauseSync}>Pause Sync</button>
+            )}
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => { if (confirm('Disconnect this device from the synced wallet? Your local data will stay as-is.')) disconnectSync(); }}
+            >
+              Disconnect This Device
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
@@ -90,6 +213,7 @@ export function SettingsPage() {
   const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
 
   return (
     <div className="tab-panel active" id="settingsContent">
@@ -126,11 +250,26 @@ export function SettingsPage() {
       </div>
       <EditAccountNamesModal open={editAccountNamesOpen} onClose={() => setEditAccountNamesOpen(false)} />
 
-      <p className="section-title" style={{ marginTop: 24 }}>Privacy</p>
-      <div className="settings-section" style={{ marginTop: 12 }}>
+      <p className="section-title" style={{ marginTop: 24 }}>Device Sync</p>
+      <DeviceSyncSection />
+
+      <p className="section-title" style={{ marginTop: 24 }}>Privacy &amp; help</p>
+      <div className="settings-section" style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
           Privacy Policy
         </Link>
+        <button type="button" className="btn btn-secondary" onClick={() => setFaqOpen(true)}>
+          FAQ
+        </button>
+      </div>
+      <FAQModal open={faqOpen} onClose={() => setFaqOpen(false)} />
+
+      <p className="section-title" style={{ marginTop: 24 }}>About the creator</p>
+      <div className="settings-section" style={{ marginBottom: 24 }}>
+        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))' }}>
+          I built this app because I was frustrated with apps like Rocket Money that claim to help you save and budget while pushing subscriptions. I also wanted to track every dollar—including money in Venmo or moving between accounts—and I disliked how many auto-detected transaction apps get things wrong or keep asking you to re-authorize. So I made this over about three weeks. I hope you enjoy it. For security concerns, see the FAQ or Privacy Policy. Contact me at{' '}
+          <a href="mailto:iaa2137@columbia.edu" style={{ color: 'var(--accent)' }}>iaa2137@columbia.edu</a>.
+        </p>
       </div>
 
       <p className="section-title" style={{ marginTop: 24 }}>Backup</p>
@@ -223,9 +362,7 @@ export function SettingsPage() {
         save={(cfg) => saveCategoryConfig(cfg)}
       />
 
-      <p className="section-title" style={{ marginTop: 24 }}>
-        Danger zone
-      </p>
+      <p className="section-title" style={{ marginTop: 24 }}>Danger zone</p>
       <div className="settings-section">
         <button
           type="button"

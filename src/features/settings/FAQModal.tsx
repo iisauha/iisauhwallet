@@ -1,0 +1,95 @@
+import { useState } from 'react';
+import { Modal } from '../../ui/Modal';
+
+const FAQ_ITEMS: { q: string; a: string }[] = [
+  {
+    q: 'What does this app track?',
+    a: 'You track your own accounts (banks, credit cards, cash), balances, pending money moving between accounts, purchases, recurring bills, loans, and investing/HYSA. Everything is entered by you; the app does not connect to your real bank to pull data automatically.',
+  },
+  {
+    q: 'How does pending inbound/outbound work?',
+    a: 'Pending inbound is money you expect to receive (e.g. a paycheck or transfer) that you have not yet posted to an account. Pending outbound is money you plan to move out (e.g. paying a card from checking). You post them when the money actually lands or leaves so your balances stay accurate.',
+  },
+  {
+    q: 'What does "Money in HYSA designated for bills" mean?',
+    a: 'It is the part of your HYSA balance that you treat as available for bills and checking-linked spending. The rest can be "reserved savings." You can move money between these two portions using Adjust HYSA Allocation in the Investing section.',
+  },
+  {
+    q: 'How does device sync work?',
+    a: 'In Settings → Device Sync you can create a 6-digit code on one device (e.g. your phone) and enter it on another (e.g. your laptop). The joining device replaces its local data with the synced wallet. After that, changes on either device sync to the other. You can pause or disconnect sync anytime.',
+  },
+  {
+    q: 'How do I back up my data?',
+    a: 'Use Settings → Export JSON to save a copy of your wallet data. You can also export monthly purchases as CSV. Keep the file somewhere safe. Import JSON restores from a backup (or merges ledger data if the format is legacy).',
+  },
+  {
+    q: 'How do I reset my passcode?',
+    a: 'On the passcode screen, tap "Forgot passcode?" and confirm reset. This only removes the passcode on this device; your financial data is not deleted. You will then set a new 4-digit passcode.',
+  },
+  {
+    q: 'Does the app connect to my real bank automatically?',
+    a: 'No. All account names, balances, and transactions are entered by you. The app does not log into your bank or pull transactions. Optional Plaid-based features (if you enable them and have a backend configured) can fetch transactions for linking, but the app works fully without any bank connection.',
+  },
+  {
+    q: 'How do I edit account names or categories?',
+    a: 'Account names: Settings → Edit Account Names. Categories: Settings → Manage Categories. You can rename banks, cards, and investing accounts, and add or edit spending categories and subcategories.',
+  },
+];
+
+export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
+  if (!open) return null;
+
+  return (
+    <Modal open={open} title="FAQ" onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {FAQ_ITEMS.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              overflow: 'hidden',
+              background: 'var(--surface)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                textAlign: 'left',
+                background: 'none',
+                border: 'none',
+                color: 'var(--ui-primary-text, var(--text))',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              {item.q}
+              <span style={{ fontSize: '1.2rem', color: 'var(--muted)' }}>{expandedIndex === i ? '−' : '+'}</span>
+            </button>
+            {expandedIndex === i && (
+              <div
+                style={{
+                  padding: '0 16px 14px',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.55,
+                  color: 'var(--ui-muted-text, var(--muted))',
+                }}
+              >
+                {item.a}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Modal>
+  );
+}

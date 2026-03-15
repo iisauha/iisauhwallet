@@ -24,7 +24,16 @@ export function PrivacyPage() {
           Data storage
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          Your financial entries are stored locally in your browser (e.g. on your device). The application does not transmit your financial records to external servers. The developer does not have access to your financial information.
+          Your financial entries are stored locally in your browser (e.g. on your device). The application does not transmit your financial records to external servers unless you use optional device sync. The developer does not have access to your financial information.
+        </p>
+      </section>
+
+      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
+        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
+          Optional device sync
+        </h2>
+        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
+          Device sync is optional. If you enable it, wallet data may be stored on a server you configure so that multiple devices can share the same wallet. If you do not use device sync, all data stays local and nothing is sent to any server. You can stay local-only if you prefer.
         </p>
       </section>
 
@@ -43,7 +52,7 @@ export function PrivacyPage() {
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
           If you have any questions about this Privacy Policy, you may contact:<br />
-          <a href="mailto:isaiahaaguilar1@gmail.com" style={{ color: 'var(--accent)' }}>isaiahaaguilar1@gmail.com</a>
+          <a href="mailto:iaa2137@columbia.edu" style={{ color: 'var(--accent)' }}>iaa2137@columbia.edu</a>
         </p>
       </section>
 

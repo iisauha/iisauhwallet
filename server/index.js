@@ -11,6 +11,7 @@ import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { registerWalletSyncRoutes } from './walletSync.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -559,6 +560,8 @@ function getPlaidClient() {
 const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
+
+registerWalletSyncRoutes(app);
 
 // POST /api/plaid/create_link_token — backend only; no secrets sent to client.
 app.post('/api/plaid/create_link_token', async (req, res) => {

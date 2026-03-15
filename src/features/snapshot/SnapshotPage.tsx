@@ -263,7 +263,7 @@ export function SnapshotPage() {
         onClick={() => setCashCollapsed(!cashCollapsed)}
       >
         <span className="section-header-left">
-          Cash — <span>{formatCents(totals.bankTotalCents)}</span>
+          Cash
         </span>
         <button
           type="button"
@@ -352,7 +352,7 @@ export function SnapshotPage() {
         onClick={() => setCardsCollapsed(!cardsCollapsed)}
       >
         <span className="section-header-left">
-          Credit Cards — <span>{formatCents(totals.ccDebtCents - totals.ccCreditCents)}</span>
+          Credit Cards
         </span>
         <button
           type="button"
@@ -461,7 +461,7 @@ export function SnapshotPage() {
         onClick={() => setPendingInCollapsed(!pendingInCollapsed)}
       >
         <span className="section-header-left">
-          Pending Inbound — <span>{formatCents(totals.pendingInCents)}</span>
+          Pending Inbound
         </span>
         <span className="chevron">{pendingInCollapsed ? '▸' : '▾'}</span>
       </div>
@@ -491,7 +491,7 @@ export function SnapshotPage() {
         onClick={() => setPendingOutCollapsed(!pendingOutCollapsed)}
       >
         <span className="section-header-left">
-          Pending Outbound — <span>{formatCents(totals.pendingOutCents)}</span>
+          Pending Outbound
         </span>
         <span className="chevron">{pendingOutCollapsed ? '▸' : '▾'}</span>
       </div>

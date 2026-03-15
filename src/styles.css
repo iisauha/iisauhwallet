@@ -38,7 +38,7 @@ body {
   margin: 0;
   min-height: 100dvh;
   background: var(--bg);
-  color: var(--text);
+  color: var(--ui-primary-text, var(--text));
   font-family: var(--app-font-family);
   padding-top: var(--safe-top);
   padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
@@ -160,7 +160,7 @@ body {
 .summary-kv.final-net-cash.negative { background: var(--ui-surface-secondary, var(--surface)); }
 .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
 
-.section-title.page-title { font-size: 1.3rem; font-weight: 700; }
+.section-title.page-title { font-size: 1.3rem; font-weight: 700; color: var(--ui-title-text, var(--text)); }
 .amount-credit { color: var(--green); font-weight: 600; }
 .amount-pos { color: var(--green); }
 .amount-neg { color: var(--red); }
@@ -392,7 +392,7 @@ input[type="date"].ll-control:focus {
   to { opacity: 1; }
 }
 
-.section-title { font-size: 1.125rem; font-weight: 600; color: var(--ui-muted, var(--muted)); margin: 0 0 12px 0; }
+.section-title { font-size: 1.125rem; font-weight: 600; color: var(--ui-muted-text, var(--ui-muted, var(--muted))); margin: 0 0 12px 0; }
 .settings-section { margin-bottom: 24px; }
 .toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
 .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }

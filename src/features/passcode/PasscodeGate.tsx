@@ -91,6 +91,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       className="passcode-gate"
       style={{
         minHeight: '100dvh',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -98,27 +99,26 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         padding: 24,
         background: 'var(--bg)',
         color: 'var(--text)',
+        boxSizing: 'border-box',
       }}
     >
       <div
-        className="passcode-gate-card"
+        className="passcode-gate-content"
         style={{
           width: '100%',
-          maxWidth: 320,
-          padding: 28,
-          borderRadius: 16,
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          boxShadow: 'var(--shadow-strong)',
+          maxWidth: 340,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
           animation: 'passcodeFadeIn 0.3s ease-out',
         }}
       >
         {showForgotConfirm ? (
           <>
-            <h2 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', fontWeight: 600 }}>
+            <h1 style={{ margin: '0 0 12px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>
               Reset passcode?
-            </h2>
-            <p style={{ margin: '0 0 20px 0', fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.45 }}>
+            </h1>
+            <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', lineHeight: 1.5, textAlign: 'center' }}>
               This only affects this device. Your financial data will not be deleted. You will need to create a new 4-digit passcode to open the app again.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -142,14 +142,14 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           </>
         ) : (
           <>
-            <h2 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600 }}>
+            <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>
               {step === 'enter'
-                ? 'Enter passcode'
+                ? 'Enter Passcode'
                 : step === 'confirm'
                   ? 'Confirm passcode'
                   : 'Create passcode'}
-            </h2>
-            <p style={{ margin: '0 0 20px 0', fontSize: '0.9rem', color: 'var(--muted)' }}>
+            </h1>
+            <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
               {step === 'enter'
                 ? 'Enter your 4-digit passcode to continue.'
                 : step === 'confirm'
@@ -263,8 +263,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         )}
       </div>
       <style>{`
+        .passcode-gate {
+          background: var(--bg);
+        }
         @keyframes passcodeFadeIn {
-          from { opacity: 0; transform: translateY(8px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
