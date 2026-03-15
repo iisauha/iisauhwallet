@@ -79,5 +79,8 @@ export const PASSCODE_RECOVERY_SETUP_DONE_KEY = 'iisauhwallet_passcode_recovery_
 export const PASSCODE_FAILED_ATTEMPTS_KEY = 'iisauhwallet_passcode_failed_attempts_v1';
 export const PASSCODE_LOCKOUT_UNTIL_KEY = 'iisauhwallet_passcode_lockout_until_v1';
 
+// First-run security onboarding: quiz must be passed before passcode can be set.
+export const SECURITY_QUIZ_COMPLETED_KEY = 'iisauhwallet_security_quiz_completed_v1';
+
 // UI-only: advanced UI surface colors (card, section, modal, dropdown, border, muted).
 export const UI_ADVANCED_COLORS_KEY = 'iisauhwallet_ui_advanced_colors_v1';

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   loadPasscodeHash,
   savePasscodeHash,
-  clearPasscodeHash,
   hashPasscode,
   hashForStorage,
   loadPasscodeHint,
@@ -17,15 +16,18 @@ import {
   savePasscodeFailedAttempts,
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
+  loadSecurityQuizCompleted,
   generateRecoveryKey,
   wipeAllAppData,
   type SecurityQA,
 } from '../../state/storage';
+import { SecurityOnboarding } from './SecurityOnboarding';
 
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCKOUT_HOURS = 24;
 
 type Step =
+  | 'security-onboarding'
   | 'enter'
   | 'create'
   | 'confirm'
@@ -72,10 +74,13 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
   const [step, setStep] = useState<Step>(() => {
-    if (loadPasscodeHash() === null) return 'create';
-    if (isLockedOut()) return 'lockout';
-    if (loadPasscodeHash() && !loadRecoverySetupDone()) return 'migration-prompt';
-    return 'enter';
+    if (loadPasscodeHash() !== null) {
+      if (isLockedOut()) return 'lockout';
+      if (!loadRecoverySetupDone()) return 'migration-prompt';
+      return 'enter';
+    }
+    if (!loadSecurityQuizCompleted()) return 'security-onboarding';
+    return 'create';
   });
   const [input, setInput] = useState('');
   const [confirmInput, setConfirmInput] = useState('');
@@ -106,7 +111,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!storedHash) {
-      setStep('create');
+      if (!loadSecurityQuizCompleted()) {
+        setStep('security-onboarding');
+      } else {
+        setStep('create');
+      }
       setInput('');
       setConfirmInput('');
       setError('');
@@ -338,6 +347,14 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const lockoutMessage = lockoutEnd
     ? `Recovery attempts are disabled for 24 hours until ${lockoutEnd.toLocaleString()}.`
     : 'Recovery attempts are disabled for 24 hours.';
+
+  if (step === 'security-onboarding') {
+    return (
+      <div className="passcode-gate">
+        <SecurityOnboarding onPass={() => setStep('create')} />
+      </div>
+    );
+  }
 
   const content = (
     <div

@@ -1,185 +1,218 @@
 # iisauh wallet
 
-A personal finance dashboard that helps you track **every dollar**—bank balances, credit cards, HYSA buckets, pending money, recurring expenses, loans, investing, and sign-up bonus progress—all in one place, under your control.
+A personal finance dashboard that helps you track **every dollar**: bank balances, credit cards, HYSA buckets, pending money, recurring expenses, loans, investing, and sign-up bonus progress. All in one place, under your control.
 
 ---
 
-## Project Overview
+## Overview
 
-**iisauh wallet** is a manual-entry finance app: you enter your own numbers. There are no required bank connections. The app gives you a single place to see where your money is and where it’s going.
+**iisauh wallet** is a **manual-entry, local-first** finance app. You enter your own numbers. There is no required connection to your bank. The app gives you a single place to see where your money is and where it's going.
 
 **What you can track:**
 
-- **Bank balances** — Checking, savings, and cash on hand  
-- **Credit cards** — Balances and what you owe  
-- **HYSA allocations** — How much is reserved savings vs. designated for bills  
+- **Bank balances** — Checking, savings, cash on hand  
+- **Credit cards** — Balances, what you owe, optional reward category/subcategory for spending suggestions  
+- **HYSA** — Balances, APY, reserved savings vs. money designated for bills; optional link to a checking account so “bills” portion counts as liquid  
 - **Pending inbound / outbound** — Money in motion (transfers, payments not yet settled)  
-- **Recurring expenses** — Rent, subscriptions, loan payments, etc.  
-- **Loans** — Federal and private student (or other) loans, with payment and payoff views  
-- **Investing balances** — HYSA, Roth IRA, employer retirement, and other accounts  
-- **Sign-up bonus tracking** — Credit card bonuses and progress toward spend targets  
+- **Recurring** — Income and expenses (salary, rent, subscriptions, loan payments); can feed into Upcoming and Snapshot  
+- **Loans** — Federal (with IDR/repayment estimates) and private student or other loans; payment and payoff views  
+- **Investing** — HYSA, Roth IRA, 401k, general investing; transfers between cash and investing  
+- **Sign-up bonus tracker** — Credit card bonuses and progress toward spend targets  
 
-**Philosophy:** The app focuses on **tracking every dollar**, including money moving between accounts, Venmo-style balances, and how you split HYSA between “reserved” and “bills.” You stay in control; the app doesn’t pull data from your bank unless you explicitly use an optional connection.
+**Philosophy:** Track every dollar, including money moving between accounts and money in apps like Venmo. You stay in control; the app does not pull data from your bank unless you explicitly use an optional backend/Plaid feature.
 
 ---
 
-## Key Features
+## Architecture and data storage
 
-### Snapshot Dashboard
+- **Local-first:** All wallet data is stored locally in your browser (e.g. localStorage). The creator does not have access to your financial data. Data is not stored on a central server by default.
+- **Manual input:** There is no direct connection to your bank by default. Users manually enter balances and transactions. Optional features (e.g. Plaid-based detected activity) require a separate backend you configure.
+- **Device sync (optional):** In Settings → Device Sync you can create a 6-digit sync code on one device and enter it on another so they share the same wallet. Sync is optional; if you don’t use it, everything stays local.
+- **Security:** Passcode protection, optional hint, security questions, and recovery key are stored only on your device. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
 
-Your main financial overview:
+---
+
+## Main tabs and features
+
+### Snapshot
+
+Your main financial overview.
 
 - **Cash** — Total across bank accounts and any cash you track  
 - **Credit cards** — Balances and total card debt  
 - **Pending inbound** — Money you’re expecting (e.g. a transfer not yet received)  
-- **Pending outbound** — Money on its way out (e.g. a payment you’ve sent but that hasn’t cleared)  
-- **Final net cash** — One number: cash minus card debt, plus/minus pending. “If everything settled right now, where would I stand?”
+- **Pending outbound** — Money on its way out (e.g. a payment sent but not yet cleared)  
+- **Final net cash** — Cash minus card debt, adjusted for pending. “If everything settled right now, where would I stand?”
 
-Snapshot is the only place that combines cash, credit, and pending in one view.
+You can add/edit bank accounts, credit cards, pending inbound/outbound, and post pending items (with optional bank/card target, refund handling, and loan adjustments for private loans). For pending outbound you can choose source: bank, card, or HYSA (and if HYSA, whether to use “money designated for bills” or “reserved savings”). Snapshot is the only place that combines cash, credit, and pending in one view.
 
----
+**Reward card config:** Per credit card you can set a reward category and subcategory (and “catch-all”). When adding a purchase in Spending, the app can suggest that category/subcategory for that card.
 
-### Spending Tracking
+### Spending
 
-Log purchases manually with amount, category, and subcategory. View:
+Log purchases manually with amount, category, subcategory, and optional notes. View spending by category, totals for this month, last month, or custom ranges. Export monthly purchases as CSV. Categories and subcategories are customizable in Settings → Manage Categories. Cards can have a reward category/subcategory so the app suggests categories when you log a purchase on that card.
 
-- Spending by category (e.g. food, rent, subscriptions)  
-- Totals for this month, last month, or custom ranges  
-- Optional export of monthly purchases as CSV  
+### Upcoming
 
-Categories and colors are customizable in Settings.
+Shows expected income and expenses in a time window, and “amount remaining” after expected costs. Uses recurring income and recurring expenses to build the timeline. **Linked HYSA liquidity:** If you have an HYSA with a linked checking account, the “money in HYSA designated for bills” portion is added to your effective cash for this view so you see how much you have including that liquid HYSA portion. You can move expected income or expected costs into **pending** (e.g. “Add to pending inbound” or “Add to pending outbound”); moving a cost to pending can optionally add a spending entry when you later post it.
 
----
+### Recurring
 
-### Recurring Expenses
+Track repeating income and expenses: salary, rent, subscriptions, loan payments. Recurring items feed into **Upcoming** (expected income/costs) and can be linked to loans so the planned expense uses the loan’s current estimated payment. You can set:
 
-Track repeating income and expenses: salary, rent, subscriptions, loan payments. Recurring items feed into upcoming cash flow and can be linked to your current loan payment so your planned expenses stay in sync with the Loans tab.
+- Frequency (monthly, weekly, biweekly, yearly, custom interval)  
+- Payment source/target (bank, card, or HYSA; if HYSA, which sub-bucket)  
+- Whether to “apply to snapshot” (when you run “Process recurring up to today,” income can update bank balances and expenses can create purchases and update snapshot)  
+- Optional link to a loan so the recurring amount uses that loan’s estimated payment  
 
----
+**Optimizer:** From Recurring you can open the **457(b) optimizer** (Run optimizer / View last result). It uses your recurring data for autofill and computes take-home, taxes, and expenses (including public/private loan amounts). You can override assumptions and public loan payment; results are saved so you can view “last result” without re-running.
 
-### HYSA Allocation
+### Loans
 
-For each High-Yield Savings Account you can split the balance into:
+- **Federal (public) loans:** Support for federal student loan parameters, IDR/repayment estimates, and payment modes (e.g. “current payment” vs “first payment date”). Summary cards show estimated payment and payoff info.  
+- **Private loans:** Track balances, interest, and payment schedules. You can set payment ranges and modes. When posting pending outbound that includes private loan adjustments, you can override how much applies to each private loan.  
+- **Recompute:** Private loan balances can be recomputed from payment history (e.g. after a batch post). Recompute cycle and last recompute date are stored.  
+- **Recurring link:** Recurring expenses can use “loan estimated payment” and link to a loan so the amount stays in sync with the Loans tab.
 
-- **Reserved savings** — Money you’re not treating as spendable  
-- **Money in HYSA designated for bills** — The portion you treat as available for bills and checking-linked spending  
+### Investing / HYSA
 
-**Adjust HYSA Allocation** lets you:
+- **HYSA:** Balance, APY, “reserved savings” vs “money in HYSA designated for bills.” You can link an HYSA to a checking account; only the “bills” portion is then treated as liquid in Upcoming (and when choosing HYSA source for pending outbound). **Adjust HYSA Allocation** moves money between reserved and bills without changing total balance.  
+- **Roth IRA, 401k, general investing:** Track balances and optionally transfers between bank and investing.  
+- **Coast FIRE / projections:** Investing page includes projection sections with info icons (e.g. Coast FIRE) that explain assumptions in a popup.  
+- All balances are entered by you; no automatic pull from brokers.
 
-- Move money between these two buckets (reserved ↔ bills)  
-- Set either portion directly; the other is computed so the total HYSA balance stays the same  
+### Sign-up bonus tracker (Sub Tracker)
 
-Total balance doesn’t change—only how it’s split between reserved and bills.
+Track credit card sign-up bonuses and progress toward spend targets. Add cards, set tiers and reward text (e.g. cash back, points), and mark progress. Useful for managing multiple cards and bonus deadlines.
 
----
+### Settings
 
-### Sign-Up Bonus Tracker
-
-Track credit card sign-up bonuses and progress toward spend targets. See how close you are to each bonus and manage multiple cards in one place.
-
----
-
-### Investing Overview
-
-Track:
-
-- **HYSA** — Balances, APY, reserved vs. bills split, and linking to a checking account  
-- **Roth IRA**  
-- **Employer-based retirement** (e.g. 401k)  
-- **General investing**  
-
-All balances are entered by you. Transfers between cash and investing are supported so you can model moving money between accounts.
+- **App Customization** — Colors, typography, surface styles (theme/accent, font stack, etc.).  
+- **Edit Account Names** — Rename banks, cards, and investing accounts.  
+- **Device Sync** — Create or join sync code to share wallet across devices (see “Device sync” above).  
+- **Security** — Reset passcode (if you have one); requires current passcode then set new one. Recovery key and security questions unchanged.  
+- **Security Policy** — Link to the in-app Security & Privacy Policy.  
+- **FAQ** — Common questions; many answers point to the Security Policy for passcode/recovery/data details.  
+- **Export JSON / Import JSON** — Full backup and restore of app data.  
+- **Export monthly purchases CSV** — Current month’s purchases as CSV.  
+- **App Guide** — Short in-app guide to tabs, data storage, and main features; link to full documentation on GitHub.  
 
 ---
 
-### Passcode lock and recovery (local-only)
+## Passcode and recovery (local-only)
 
-Set a 4-digit passcode to open the app. The passcode is stored in hashed form on your device only; the creator cannot access it. During setup you can optionally add:
+- Set a 4-digit passcode to open the app. Stored in hashed form on your device only; the creator cannot access it.  
+- **First-run security onboarding:** Before setting a passcode for the first time, users complete a short required security quiz (5 questions). Must score 5/5 to proceed to passcode setup. Completion is stored locally so existing users are unaffected.  
+- **Optional during setup:** Password hint, two security questions (hashed locally), and a one-time **recovery key** (save it when shown; only a hash is stored).  
+- **Reset passcode:** Settings → Security → Reset passcode (current passcode then new one).  
+- **Forgot passcode:** On the lock screen, “Forgot passcode?” then use recovery key or security questions to reset. The hint alone does not allow reset.  
+- **Too many failed attempts:** After 10 incorrect attempts you can (1) **Confirm wipe** — clear all local app data and start fresh (you can re-import a JSON backup), or (2) **Don’t wipe** — lock recovery for 24 hours. All local; no credentials sent to any server.
 
-- **Password hint** — A reminder shown if you forget your passcode (the hint alone does not allow reset).
-- **Security questions** — Two questions and answers; if you forget your passcode you can answer them to reset it. Answers are stored in hashed form locally.
-- **Recovery key** — A one-time random code generated by the app. Save it when shown; it is the best way to recover your passcode. Only a hash is stored; the creator cannot see the key.
-
-**Reset passcode:** Settings → Security → Reset passcode (requires your current passcode, then set and confirm a new one).
-
-**Forgot passcode:** On the lock screen, tap “Forgot passcode?” and use your recovery key or security questions to reset. If you have only the hint, it is shown but does not allow reset by itself.
-
-**Too many failed attempts:** After 10 incorrect attempts you can choose to (1) **Confirm wipe** — clear all local app data and start fresh; you can re-import a previous JSON backup to restore, or (2) **Don’t wipe** — lock recovery attempts for 24 hours. All of this is local; no credentials are sent to any server and the creator cannot access them.
+See the in-app **Security Policy** for exact wording and official site URL.
 
 ---
 
-### Device Sync (Optional)
+## Device sync (optional)
 
-Link multiple devices so they share the same wallet:
-
-- **Phone as source** — On your phone, create a 6-digit sync code in Settings → Device Sync.  
-- **Other devices join** — On another device (e.g. laptop), enter that code to replace its local data with the phone’s wallet.  
-- **Ongoing sync** — Changes on either device sync to the other (last-write-wins).  
-- **Controls** — You can **pause sync** (stop pushing/pulling but keep the link), **resume sync**, or **disconnect** a device (it keeps its current data and stops syncing).  
-- **Local-only** — You can ignore sync entirely and use the app only on one device with no data sent elsewhere.  
-
-Sync is optional. If you don’t use it, everything stays local.
+- **Create sync code:** Settings → Device Sync → Create Sync Code. This device becomes the “source”; a 6-digit code is generated (expires in 15 minutes).  
+- **Join:** On another device, enter the code to replace that device’s local data with the source wallet. After that, changes sync both ways (last-write-wins).  
+- **Pause / Resume / Disconnect** — Pause stops pushing/pulling but keeps the link; disconnect keeps local data and stops syncing.  
+- If you don’t use sync, everything stays local.
 
 ---
 
-## Privacy Philosophy
+## Pending inbound / outbound flows
 
-- The app **does not require** connecting to your bank. You control what you enter.  
-- All data is **stored locally** on the device you use (e.g. in the browser).  
-- **Device sync is optional.** If you enable it, wallet data may be stored on a server you or your setup use so devices can share it. If you don’t enable sync, nothing is sent.  
-- **Local-only usage is fully supported.** You can use the app without ever turning on sync.  
-- **Passcode, hint, security questions, and recovery key** are stored only on your device. The creator cannot access them; the app has no backend that receives these credentials. If you forget your passcode and cannot recover it, local data may need to be wiped; you can re-import a previous JSON backup after a wipe.
-- For more detail, see the in-app **Privacy Policy** (Settings → Privacy Policy).
+- **Pending inbound:** Money you expect to receive (e.g. transfer) that hasn’t hit an account yet. When it settles, you “post” it and can choose deposit target (bank, or card, or HYSA).  
+- **Pending outbound:** Money you’ve committed (e.g. payment or transfer) that hasn’t cleared. You can choose source: bank, card, or HYSA (and if HYSA, liquid vs reserved). When posting, you can apply to bank/card and optionally run loan adjustments (e.g. private loan breakdown). Moving an expected cost from Upcoming to pending outbound can optionally create a spending entry when posted.  
+- Posting or clearing pending items keeps Snapshot and balances accurate.
 
 ---
 
-## FAQ
+## Recurring → Upcoming / Snapshot flow
 
-**How does pending inbound/outbound work?**  
-Pending inbound is money you expect to receive (e.g. a transfer) that hasn’t hit an account yet. Pending outbound is money you’ve committed (e.g. a payment or transfer) that hasn’t cleared. You post or clear items when they settle so your Snapshot stays accurate.
-
-**What does “Money in HYSA designated for bills” mean?**  
-It’s the part of your HYSA balance you treat as available for bills and spending (often linked to a checking account). The rest can be “reserved savings.” You can move money between these two portions with **Adjust HYSA Allocation**.
-
-**Does the app automatically connect to my bank?**  
-No. Balances, transactions, and account data are entered by you. The app does not log into your bank or pull data unless you explicitly use an optional connection (e.g. a separate Plaid-based feature your setup provides).
-
-**Can I sync devices?**  
-Yes, optionally. In Settings → Device Sync you can create a sync code on one device (e.g. phone) and enter it on another (e.g. laptop). That device’s local data is replaced by the synced wallet, and then changes sync both ways. You can pause or disconnect at any time.
-
-**How do I back up my data?**  
-Use **Export JSON** in Settings to save a full copy of your wallet data. You can also export monthly purchases as CSV. Keep the file somewhere safe. Use **Import JSON** to restore from a backup (this replaces current data on that device). If you ever wipe the app after too many failed passcode attempts, you can re-import a previous JSON backup to restore your data.
-
-**How does passcode recovery work?**  
-When you set a passcode you can optionally add a hint, two security questions, and a recovery key (shown once). If you forget your passcode, use “Forgot passcode?” and then your recovery key or security answers to reset. The hint only reminds you; it does not allow reset by itself. All of this is stored locally; the creator cannot access your passcode, hint, answers, or recovery key.
+- Recurring income and expenses are projected into a time window and shown on **Upcoming** as expected income and expected costs.  
+- “Process recurring up to today” (and similar logic) can mark recurring items as “posted” and, when **apply to snapshot** is set, update bank balances (income) or create purchases and update snapshot (expenses).  
+- Recurring expenses can be linked to a loan and use that loan’s estimated payment so amounts stay in sync with the Loans tab.
 
 ---
 
-## Export / Backup
+## Loans: federal vs private, payment modes, recompute
 
-- **Export JSON** — Saves a complete copy of your app data (accounts, balances, pending, recurring, loans, investing, categories, settings, etc.) to a file. Use it to back up or move data to another device.  
-- **Import JSON** — Restores from a previously exported JSON file. This **replaces** the current data on the device you’re using, so only import when you intend to overwrite.  
-- **Export monthly purchases CSV** — Exports purchases for the current month as a CSV (e.g. for spreadsheets or records).  
-
-Backing up regularly is recommended so you don’t lose data if the browser or device is cleared.
+- **Federal (public):** Parameters (e.g. balance, interest, repayment plan), IDR estimates, and payment modes such as “current payment” vs “first payment date.” Summary cards show estimated payment and payoff. Public loan monthly amount can be overridden for the optimizer.  
+- **Private:** Balances, interest, payment schedules, and payment range modes. When posting pending outbound with loan adjustments, you can override how much goes to each private loan.  
+- **Recompute:** Private loan balances can be recomputed from payment history; last recompute date and cycle are stored. Useful after batch posting.
 
 ---
 
-## Creator
+## Optimizer (457(b))
 
-This app was built out of frustration with apps that claim to help you save and budget while pushing subscriptions, that don’t let you track every dollar (including money in Venmo or moving between accounts), and that get auto-detected transactions wrong or keep asking to re-authorize. It was built over about three weeks as a personal finance dashboard that puts you in control. For security and privacy details, see the FAQ and Privacy Policy in the app. Contact: [iisauhaguilar@gmail.com](mailto:iisauhaguilar@gmail.com).
+- Opened from **Recurring** (Run optimizer / View last result).  
+- Uses configurable assumptions (tax rates, deductions, etc.) and can autofill from recurring (rent, utilities, loans, etc.).  
+- Computes take-home, taxes, expenses (including public/private loans), and optional 457(b) contribution. You can override public loan monthly amount.  
+- Result is saved so you can view “View last result” without re-running. No financial data is sent to any server; all calculation is local.
 
 ---
 
-## Getting Started
+## Reward card suggestion (Spending)
 
-1. **Open the app** in your browser (phone or computer).  
-2. **Set a passcode** when prompted (4 digits). Optionally add a hint, security questions, and save the recovery key the app shows—they help you recover access if you forget the passcode. You’ll use the passcode to open the app from then on.  
-3. **Add accounts** — In the **Snapshot** tab, add bank accounts and credit cards and enter their current balances.  
-4. **Track balances** — Update balances as they change. Add pending items when money is in motion, and post them when it settles.  
-5. **Add recurring items** — In the **Recurring** tab, add salary, rent, subscriptions, and other repeating income or expenses.  
-6. **Optional: Loans, Investing, Spending** — Add loans in the Loans tab, investing accounts in Investing, and log purchases in Spending as you go.  
-7. **Optional: Device sync** — If you want the same wallet on multiple devices, go to Settings → Device Sync, create a code on one device (e.g. phone), and enter it on the other (e.g. laptop).  
-8. **Back up** — Use Settings → Export JSON periodically so you have a copy of your data.  
+- In Snapshot you can set per-card **reward category** and **reward subcategory** (and catch-all).  
+- In Spending, when adding a purchase and selecting that card, the app can suggest that category/subcategory.  
+- Purely a convenience; you can always change the category.
 
-From there you can explore Snapshot, Spending, Upcoming, Recurring, Loans, Investing, and Sign-Up Bonus Tracker at your own pace. The app works fully without connecting to your bank or enabling sync.
+---
+
+## Detected activity (optional, backend-dependent)
+
+- If your deployment has a backend that supports it, the app can show a “Detected activity” inbox: suggested transactions (e.g. from Plaid) to link to purchases or pending.  
+- This is optional and requires a configured API. Without it, the app works fully with manual entry only.  
+- Local ledger data and manual entry are not dependent on detected activity.
+
+---
+
+## Backup and export
+
+- **Export JSON** — Full copy of app data (accounts, balances, pending, recurring, loans, investing, categories, settings, etc.). Use for backup or moving to another device.  
+- **Import JSON** — Restores from a previously exported file. **Replaces** current data on the device.  
+- **Export monthly purchases CSV** — Current month’s purchases as CSV.  
+- Backing up regularly is recommended so you don’t lose data if the browser or device is cleared. After a wipe (e.g. too many failed passcode attempts), you can re-import a JSON backup.
+
+---
+
+## UI customization and hidden UI
+
+- **App Customization** (Settings): Theme, accent color, font stack, surface styles.  
+- **Tab order:** Tabs can be reordered by drag-and-drop; order is persisted.  
+- **Info icons:** Some sections (e.g. Investing Coast FIRE, Device Sync) have a small circular “i” icon that opens a short explanation or the Security Policy modal.  
+- **Security Policy** and **FAQ** in Settings; **App Guide** for a concise overview and link to full docs on GitHub.
+
+---
+
+## Limitations and assumptions
+
+- **Manual entry:** The app does not connect to your bank by default. All balances and transactions are entered by you. Optional Plaid/detected activity depends on a backend you configure.  
+- **Local-first:** Data lives in your browser (and optionally on a sync server if you enable Device Sync). The creator cannot access your data, passcode, or recovery key.  
+- **Single wallet per device:** One wallet per device; Device Sync links devices to the same logical wallet.  
+- **No financial advice:** The app is for tracking and planning only. Loan and tax numbers (e.g. optimizer, federal loan estimates) are illustrative and may not match your actual situation.  
+- **Official site:** The only official site for this app is **https://iisauha.github.io/iisauhwallet/** . The creator will never ask for your passcode, recovery key, or financial data, and will never send you a different link to log in.
+
+---
+
+## Getting started
+
+1. Open the app in your browser.  
+2. Complete the first-run **security quiz** if shown (5/5 required), then set a **passcode**. Optionally add a hint, security questions, and save the **recovery key**.  
+3. In **Snapshot**, add bank accounts and credit cards and enter current balances.  
+4. Add **pending** items when money is in motion; **post** them when it settles.  
+5. In **Recurring**, add salary, rent, subscriptions, and other repeating income or expenses.  
+6. Optionally add **Loans**, **Investing** accounts, **Spending** entries, and **Sign-up bonus tracker** cards.  
+7. Optionally enable **Device Sync** (Settings → Device Sync).  
+8. Back up regularly: **Settings → Export JSON**.
+
+---
+
+## Repository and contact
+
+- **Full documentation and source:** [https://github.com/iisauha/iisauhwallet](https://github.com/iisauha/iisauhwallet)  
+- **Contact:** [iisauhaguilar@gmail.com](mailto:iisauhaguilar@gmail.com)  
+- For security and privacy details, see the in-app **Security Policy** (Settings → Security Policy).

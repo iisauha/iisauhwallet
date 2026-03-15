@@ -104,13 +104,13 @@ function CoastFireInfoIcon({
           onToggle(open ? '' : id);
         }}
         style={{
-          width: 18,
-          height: 18,
+          width: 20,
+          height: 20,
           borderRadius: '50%',
           border: '1px solid var(--muted)',
           background: 'transparent',
           color: 'var(--muted)',
-          fontSize: '0.7rem',
+          fontSize: '0.75rem',
           fontWeight: 700,
           cursor: 'pointer',
           padding: 0,

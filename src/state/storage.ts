@@ -40,6 +40,7 @@ import {
   PASSCODE_RECOVERY_SETUP_DONE_KEY,
   PASSCODE_FAILED_ATTEMPTS_KEY,
   PASSCODE_LOCKOUT_UNTIL_KEY,
+  SECURITY_QUIZ_COMPLETED_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 import { notifySyncPush } from '../sync/SyncContext';
@@ -1598,6 +1599,21 @@ export function savePasscodeLockoutUntil(iso: string | null) {
   try {
     if (!iso) localStorage.removeItem(PASSCODE_LOCKOUT_UNTIL_KEY);
     else localStorage.setItem(PASSCODE_LOCKOUT_UNTIL_KEY, iso);
+  } catch (_) {}
+}
+
+export function loadSecurityQuizCompleted(): boolean {
+  try {
+    return localStorage.getItem(SECURITY_QUIZ_COMPLETED_KEY) === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+export function saveSecurityQuizCompleted(completed: boolean) {
+  try {
+    if (completed) localStorage.setItem(SECURITY_QUIZ_COMPLETED_KEY, 'true');
+    else localStorage.removeItem(SECURITY_QUIZ_COMPLETED_KEY);
   } catch (_) {}
 }
 

@@ -15,7 +15,9 @@ import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
 import { FAQModal } from './FAQModal';
+import { AppGuideModal } from './AppGuideModal';
 import { ResetPasscodeModal } from './ResetPasscodeModal';
+import { Modal } from '../../ui/Modal';
 import { useSync } from '../../sync/SyncContext';
 
 /** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
@@ -87,11 +89,23 @@ function exportMonthlyPurchasesCsv() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const SYNC_EXPLANATION = (
+  <>
+    <p style={{ margin: '0 0 12px 0', lineHeight: 1.55 }}>
+      Syncing across devices is optional. You can keep using the app locally only. If you enable sync, wallet data is stored remotely so your phone and other devices can share the same wallet. If you have privacy or security concerns, you can skip sync and stay local-only. See the Security Policy or FAQ for more.
+    </p>
+    <p style={{ margin: 0, lineHeight: 1.55 }}>
+      Use this device as the source wallet. A 6-digit code will be generated; enter it on the other device to join.
+    </p>
+  </>
+);
+
 function DeviceSyncSection() {
   const sync = useSync();
   const [joinCode, setJoinCode] = useState('');
   const [createResult, setCreateResult] = useState<{ pairingCode: string; walletId: string } | null>(null);
   const [joinConfirm, setJoinConfirm] = useState(false);
+  const [syncInfoOpen, setSyncInfoOpen] = useState(false);
 
   if (!sync) return null;
 
@@ -119,28 +133,48 @@ function DeviceSyncSection() {
 
   return (
     <div className="settings-section" style={{ marginBottom: 24 }}>
-      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 16 }}>
-        Syncing across devices is optional. You can keep using the app locally only. If you enable sync, wallet data is stored remotely so your phone and other devices can share the same wallet. If you have privacy or security concerns, you can skip sync and stay local-only. See the Privacy Policy or FAQ for more.
-      </p>
       {error && (
         <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.9rem', marginBottom: 12 }}>{error}</p>
       )}
       {!connected ? (
         <>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <button
               type="button"
               className="btn btn-primary"
-              style={{ marginRight: 8, marginBottom: 8 }}
+              style={{ marginBottom: 0 }}
               onClick={handleCreateCode}
               disabled={isCreatingCode}
             >
               {isCreatingCode ? 'Creating…' : 'Create Sync Code'}
             </button>
-            <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 6 }}>
-              Use this device as the source wallet. A 6-digit code will be generated; enter it on the other device to join.
-            </p>
+            <button
+              type="button"
+              aria-label="Sync explanation"
+              onClick={() => setSyncInfoOpen(true)}
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                border: '1px solid var(--muted)',
+                background: 'transparent',
+                color: 'var(--muted)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                padding: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              i
+            </button>
           </div>
+          <Modal open={syncInfoOpen} title="Device Sync" onClose={() => setSyncInfoOpen(false)}>
+            <div style={{ fontSize: '0.95rem', color: 'var(--text)' }}>{SYNC_EXPLANATION}</div>
+          </Modal>
           {createResult && (
             <div style={{ padding: '12px 16px', background: 'var(--surface)', borderRadius: 8, marginBottom: 16 }}>
               <p style={{ fontWeight: 600, marginBottom: 4 }}>This device is the source wallet</p>
@@ -216,6 +250,7 @@ export function SettingsPage() {
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
+  const [appGuideOpen, setAppGuideOpen] = useState(false);
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
 
@@ -279,15 +314,19 @@ export function SettingsPage() {
         </>
       )}
 
-      <p className="section-title" style={{ marginTop: 24 }}>Privacy &amp; help</p>
+      <p className="section-title" style={{ marginTop: 24 }}>Security &amp; help</p>
       <div className="settings-section" style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        <button type="button" className="btn btn-secondary" onClick={() => setAppGuideOpen(true)}>
+          How This App Works
+        </button>
         <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-          Privacy Policy
+          Security Policy
         </Link>
         <button type="button" className="btn btn-secondary" onClick={() => setFaqOpen(true)}>
           FAQ
         </button>
       </div>
+      <AppGuideModal open={appGuideOpen} onClose={() => setAppGuideOpen(false)} />
       <FAQModal open={faqOpen} onClose={() => setFaqOpen(false)} />
 
       <p className="section-title" style={{ marginTop: 24 }}>About the creator</p>
@@ -301,10 +340,22 @@ export function SettingsPage() {
           {aboutCreatorOpen ? 'Hide' : 'About the creator'}
         </button>
         {aboutCreatorOpen && (
-          <p style={{ marginTop: 12, fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))' }}>
-            I built this app because I was frustrated with apps like Rocket Money that claim to help you save and budget while pushing subscriptions. I also wanted to track every dollar—including money in Venmo or moving between accounts—and I disliked how many auto-detected transaction apps get things wrong or keep asking you to re-authorize. So I made this over about three weeks. I hope you enjoy it. For security concerns, see the FAQ or Privacy Policy. Contact me at{' '}
-            <a href="mailto:iisauhaguilar@gmail.com" style={{ color: 'var(--accent)' }}>iisauhaguilar@gmail.com</a>.
-          </p>
+          <div style={{ marginTop: 12, fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))' }}>
+            <p style={{ margin: '0 0 12px 0' }}>
+              I built this app because I wanted a simple way to track every dollar across my accounts. Many existing finance tools focus on subscriptions, automated categorization, or constantly reconnecting bank accounts, and I found that frustrating. I wanted something where I could manually track everything including transfers between accounts or money sitting in apps like Venmo.
+            </p>
+            <p style={{ margin: '0 0 12px 0' }}>
+              So I decided to build my own tool. I created this over the course of about three weeks as a personal project. My goal was to make something simple, transparent, and flexible for tracking finances.
+            </p>
+            <p style={{ margin: '0 0 12px 0' }}>
+              I hope you enjoy using it.
+            </p>
+            <p style={{ margin: 0 }}>
+              For security details, please see the Security Policy.<br />
+              If you have questions or feedback you can contact me at:<br />
+              <a href="mailto:iisauhaguilar@gmail.com" style={{ color: 'var(--accent)' }}>iisauhaguilar@gmail.com</a>
+            </p>
+          </div>
         )}
       </div>
 

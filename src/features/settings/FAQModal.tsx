@@ -20,39 +20,39 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'How do I back up my data?',
-    a: 'Use Settings → Export JSON to save a copy of your wallet data. You can also export monthly purchases as CSV. Keep the file somewhere safe. Import JSON restores from a backup. If you ever wipe the app after too many failed passcode attempts, you can re-import a previous JSON backup to restore your data.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy (Settings → Security Policy). You can use Settings → Export JSON to save a copy of your wallet data and Export Monthly Purchases CSV; Import JSON restores from a backup.',
   },
   {
     q: 'How does passcode setup work?',
-    a: 'When you first set a passcode, you can optionally add a password hint, two security questions (with answers), and the app generates a recovery key. Save the recovery key somewhere safe; it is shown only once. All of this is stored locally on your device. The creator cannot access your passcode, hint, answers, or recovery key.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
   },
   {
     q: 'What is the recovery key?',
-    a: 'The recovery key is a random code generated during passcode setup. It is the best way to recover your passcode if you forget it. Save it when it is shown; the app does not show it again in full. You can regenerate it in Settings (Security) after entering your passcode. Only a hash of the key is stored locally; the creator cannot see it.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
   },
   {
     q: 'What do security questions do?',
-    a: 'If you set two security questions during setup, you can answer them on the "Forgot passcode?" flow to reset your passcode. Answers are stored in hashed form on your device only. The creator cannot access them.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
   },
   {
     q: 'What does the password hint do?',
-    a: 'The hint is a reminder you choose (e.g. "Last 4 of my phone"). It is shown when you tap "Forgot passcode?" and choose "View password hint." The hint alone does not allow passcode reset—you still need your recovery key or security answers to reset.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
   },
   {
     q: 'What happens after too many wrong passcode attempts?',
-    a: 'After 10 failed attempts (passcode or recovery), the app offers two options: (1) Confirm wipe—clears all local app data on the device so you can start fresh; you can re-import a previous JSON backup if you have one. (2) Don\'t wipe—recovery attempts are locked for 24 hours. No data is sent to any server; the creator cannot access your credentials.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
   },
   {
     q: 'Can the creator access my passcode or recovery key?',
-    a: 'No. Passcodes, hints, security answers, and recovery keys are stored only on your device. They are hashed or stored locally; the app has no backend that receives them. The creator cannot access this information.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
   },
   {
     q: 'How do I reset my passcode?',
-    a: 'From the lock screen: tap "Forgot passcode?" then use your recovery key or security questions to reset. From inside the app: Settings → Security → Reset passcode. You must enter your current passcode, then set and confirm a new one.',
+    a: 'From the lock screen: tap "Forgot passcode?" then use your recovery key or security questions to reset. From inside the app: Settings → Security → Reset passcode. You must enter your current passcode, then set and confirm a new one. For full details on recovery and storage, see the Security Policy.',
   },
   {
     q: 'Does the app connect to my real bank automatically?',
-    a: 'No. All account names, balances, and transactions are entered by you. The app does not log into your bank or pull transactions. Optional Plaid-based features (if you enable them and have a backend configured) can fetch transactions for linking, but the app works fully without any bank connection.',
+    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
   },
   {
     q: 'How do I edit account names or categories?',
