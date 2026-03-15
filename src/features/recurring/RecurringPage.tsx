@@ -963,7 +963,7 @@ export function RecurringPage() {
                       onChange={(e) => setHysaSubBucket(e.target.value as 'liquid' | 'reserved' | '')}
                     >
                       <option value="">— Select —</option>
-                      <option value="liquid">Money in HYSA designated for bills</option>
+                      <option value="liquid">Money in HYSA Designated for Bills</option>
                       <option value="reserved">Reserved savings</option>
                     </Select>
                   </div>

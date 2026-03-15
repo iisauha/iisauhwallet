@@ -522,7 +522,7 @@ export function SnapshotPage() {
           </div>
           {totalLinkedHysaCents > 0 ? (
             <div className="summary-kv">
-              <span className="k">Money in HYSA designated for bills</span>
+              <span className="k">Money in HYSA Designated for Bills</span>
               <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totalLinkedHysaCents)}</span>
             </div>
           ) : null}
@@ -937,7 +937,7 @@ export function SnapshotPage() {
                           <label>Use which HYSA portion?</label>
                           <Select value={modal.hysaSubBucket} onChange={(e) => setModal({ ...modal, hysaSubBucket: e.target.value as any })}>
                             <option value="">— Select —</option>
-                            <option value="liquid">Money in HYSA designated for bills</option>
+                            <option value="liquid">Money in HYSA Designated for Bills</option>
                             <option value="reserved">Reserved savings</option>
                           </Select>
                         </div>
@@ -1031,7 +1031,7 @@ export function SnapshotPage() {
                               <label>Use which HYSA portion?</label>
                               <Select value={modal.outboundHysaSubBucket} onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}>
                                 <option value="">— Select —</option>
-                                <option value="liquid">Money in HYSA designated for bills</option>
+                                <option value="liquid">Money in HYSA Designated for Bills</option>
                                 <option value="reserved">Reserved savings</option>
                               </Select>
                             </div>

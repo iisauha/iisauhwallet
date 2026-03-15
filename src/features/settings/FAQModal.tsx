@@ -11,12 +11,8 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
     a: 'Pending inbound is money you expect to receive (e.g. a paycheck or transfer) that you have not yet posted to an account. Pending outbound is money you plan to move out (e.g. paying a card from checking). You post them when the money actually lands or leaves so your balances stay accurate.',
   },
   {
-    q: 'What does "Money in HYSA designated for bills" mean?',
+    q: 'What does "Money in HYSA Designated for Bills" mean?',
     a: 'It is the part of your HYSA balance that you treat as available for bills and checking-linked spending. The rest can be "reserved savings." You can move money between these two portions using Adjust HYSA Allocation in the Investing section.',
-  },
-  {
-    q: 'How does device sync work?',
-    a: 'In Settings → Device Sync you can create a 6-digit code on one device (e.g. your phone) and enter it on another (e.g. your laptop). The joining device replaces its local data with the synced wallet. After that, changes on either device sync to the other. You can pause or disconnect sync anytime.',
   },
   {
     q: 'How do I back up my data?',

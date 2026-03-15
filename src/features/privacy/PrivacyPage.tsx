@@ -32,15 +32,6 @@ export function PrivacyPage() {
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-          Optional device sync
-        </h2>
-        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>
-          Device sync is optional. If you enable it, wallet data may be stored on a server you configure so that multiple devices can share the same wallet. If you do not use device sync, all data stays local and nothing is sent to any server. You can stay local-only if you prefer.
-        </p>
-      </section>
-
-      <section className="card" style={{ padding: 20, marginBottom: 16 }}>
-        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
           Passcode and recovery system
         </h2>
         <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6 }}>

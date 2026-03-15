@@ -22,14 +22,14 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
             <li><strong>Loans</strong> — Federal (with IDR/repayment estimates) and private loans. Payment modes and recompute for private balances.</li>
             <li><strong>Investing</strong> — HYSA (reserved vs bills, link to checking), Roth IRA, 401k, general. Adjust HYSA Allocation to move between reserved and bills.</li>
             <li><strong>Sign-up bonus tracker</strong> — Track credit card bonuses and spend targets.</li>
-            <li><strong>Settings</strong> — Backup, sync, security, App Customization, FAQ, and this guide.</li>
+            <li><strong>Settings</strong> — Backup, security, App Customization, FAQ, and this guide.</li>
           </ul>
         </section>
 
         <section>
           <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>How data is stored</h4>
           <p style={{ margin: 0 }}>
-            All wallet data is stored <strong>locally in your browser</strong>. The creator does not have access to it. Device sync is optional: if you enable it (Settings → Device Sync), you can share one wallet across devices with a 6-digit code.
+            All wallet data is stored <strong>locally in your browser</strong>. The creator does not have access to it.
           </p>
         </section>
 

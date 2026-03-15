@@ -25,9 +25,8 @@ A personal finance dashboard that helps you track **every dollar**: bank balance
 
 ## Architecture and data storage
 
-- **Local-first:** All wallet data is stored locally in your browser (e.g. localStorage). The creator does not have access to your financial data. Data is not stored on a central server by default.
+- **Local-first:** All wallet data is stored locally in your browser (e.g. localStorage). The creator does not have access to your financial data. Data is not stored on a central server.
 - **Manual input:** There is no direct connection to your bank by default. Users manually enter balances and transactions. Optional features (e.g. Plaid-based detected activity) require a separate backend you configure.
-- **Device sync (optional):** In Settings → Device Sync you can create a 6-digit sync code on one device and enter it on another so they share the same wallet. Sync is optional; if you don’t use it, everything stays local.
 - **Security:** Passcode protection, optional hint, security questions, and recovery key are stored only on your device. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
 
 ---
@@ -89,7 +88,6 @@ Track credit card sign-up bonuses and progress toward spend targets. Add cards, 
 
 - **App Customization** — Colors, typography, surface styles (theme/accent, font stack, etc.).  
 - **Edit Account Names** — Rename banks, cards, and investing accounts.  
-- **Device Sync** — Create or join sync code to share wallet across devices (see “Device sync” above).  
 - **Security** — Reset passcode (if you have one); requires current passcode then set new one. Recovery key and security questions unchanged.  
 - **Security Policy** — Link to the in-app Security & Privacy Policy.  
 - **FAQ** — Common questions; many answers point to the Security Policy for passcode/recovery/data details.  
@@ -112,14 +110,6 @@ See the in-app **Security Policy** for exact wording and official site URL.
 
 ---
 
-## Device sync (optional)
-
-- **Create sync code:** Settings → Device Sync → Create Sync Code. This device becomes the “source”; a 6-digit code is generated (expires in 15 minutes).  
-- **Join:** On another device, enter the code to replace that device’s local data with the source wallet. After that, changes sync both ways (last-write-wins).  
-- **Pause / Resume / Disconnect** — Pause stops pushing/pulling but keeps the link; disconnect keeps local data and stops syncing.  
-- If you don’t use sync, everything stays local.
-
----
 
 ## Pending inbound / outbound flows
 
@@ -183,7 +173,7 @@ See the in-app **Security Policy** for exact wording and official site URL.
 
 - **App Customization** (Settings): Theme, accent color, font stack, surface styles.  
 - **Tab order:** Tabs can be reordered by drag-and-drop; order is persisted.  
-- **Info icons:** Some sections (e.g. Investing Coast FIRE, Device Sync) have a small circular “i” icon that opens a short explanation or the Security Policy modal.  
+- **Info icons:** Some sections (e.g. Investing Coast FIRE) have a small circular “i” icon that opens a short explanation or the Security Policy modal.  
 - **Security Policy** and **FAQ** in Settings; **App Guide** for a concise overview and link to full docs on GitHub.
 
 ---
@@ -191,8 +181,8 @@ See the in-app **Security Policy** for exact wording and official site URL.
 ## Limitations and assumptions
 
 - **Manual entry:** The app does not connect to your bank by default. All balances and transactions are entered by you. Optional Plaid/detected activity depends on a backend you configure.  
-- **Local-first:** Data lives in your browser (and optionally on a sync server if you enable Device Sync). The creator cannot access your data, passcode, or recovery key.  
-- **Single wallet per device:** One wallet per device; Device Sync links devices to the same logical wallet.  
+- **Local-first:** Data lives in your browser. The creator cannot access your data, passcode, or recovery key.  
+- **Single wallet per device:** One wallet per device.  
 - **No financial advice:** The app is for tracking and planning only. Loan and tax numbers (e.g. optimizer, federal loan estimates) are illustrative and may not match your actual situation.  
 - **Official site:** The only official site for this app is **https://iisauha.github.io/iisauhwallet/** . The creator will never ask for your passcode, recovery key, or financial data, and will never send you a different link to log in.
 
@@ -206,8 +196,7 @@ See the in-app **Security Policy** for exact wording and official site URL.
 4. Add **pending** items when money is in motion; **post** them when it settles.  
 5. In **Recurring**, add salary, rent, subscriptions, and other repeating income or expenses.  
 6. Optionally add **Loans**, **Investing** accounts, **Spending** entries, and **Sign-up bonus tracker** cards.  
-7. Optionally enable **Device Sync** (Settings → Device Sync).  
-8. Back up regularly: **Settings → Export JSON**.
+7. Back up regularly: **Settings → Export JSON**.
 
 ---
 

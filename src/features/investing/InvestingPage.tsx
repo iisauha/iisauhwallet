@@ -1544,9 +1544,9 @@ export function InvestingPage() {
                             <div>Total HYSA balance: {formatCents(balance)}</div>
                             <div>Reserved savings: {formatCents(reservedCents)}</div>
                             {h.linkedCheckingBankId ? (
-                              <div>Money in HYSA designated for bills: {formatCents(liquidCents)}</div>
+                              <div>Money in HYSA Designated for Bills: {formatCents(liquidCents)}</div>
                             ) : (
-                              <div>Money in HYSA designated for bills: {formatCents(0)}</div>
+                              <div>Money in HYSA Designated for Bills: {formatCents(0)}</div>
                             )}
                           </div>
                           <div style={{ marginTop: 4 }}>
@@ -2177,7 +2177,7 @@ export function InvestingPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Money in HYSA designated for bills</label>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Money in HYSA Designated for Bills</label>
                   <input
                     type="text"
                     inputMode="decimal"

@@ -74,12 +74,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
   const [step, setStep] = useState<Step>(() => {
+    if (!loadSecurityQuizCompleted()) return 'security-onboarding';
     if (loadPasscodeHash() !== null) {
       if (isLockedOut()) return 'lockout';
       if (!loadRecoverySetupDone()) return 'migration-prompt';
       return 'enter';
     }
-    if (!loadSecurityQuizCompleted()) return 'security-onboarding';
     return 'create';
   });
   const [input, setInput] = useState('');
@@ -110,12 +110,15 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   }, [failedAttempts]);
 
   useEffect(() => {
+    if (!loadSecurityQuizCompleted()) {
+      setStep('security-onboarding');
+      setInput('');
+      setConfirmInput('');
+      setError('');
+      return;
+    }
     if (!storedHash) {
-      if (!loadSecurityQuizCompleted()) {
-        setStep('security-onboarding');
-      } else {
-        setStep('create');
-      }
+      setStep('create');
       setInput('');
       setConfirmInput('');
       setError('');
@@ -351,7 +354,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   if (step === 'security-onboarding') {
     return (
       <div className="passcode-gate">
-        <SecurityOnboarding onPass={() => setStep('create')} />
+        <SecurityOnboarding onPass={() => setStep(storedHash ? 'enter' : 'create')} />
       </div>
     );
   }
@@ -575,7 +578,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           />
           {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
           <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={handleEnter}>Continue</button>
-          <button type="button" className="btn clear-btn" style={{ width: '100%', padding: '10px 16px', fontSize: '0.9rem' }} onClick={handleForgotOptions}>
+          <button type="button" className="btn clear-btn" style={{ width: '100%', padding: '10px 16px', fontSize: '0.9rem', marginTop: 18 }} onClick={handleForgotOptions}>
             Forgot passcode?
           </button>
         </>

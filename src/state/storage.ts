@@ -43,7 +43,6 @@ import {
   SECURITY_QUIZ_COMPLETED_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
-import { notifySyncPush } from '../sync/SyncContext';
 
 function now(): string {
   return new Date().toISOString();
@@ -188,7 +187,6 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
 export function saveAdvancedUIColors(colors: AdvancedUIColors) {
   try {
     localStorage.setItem(UI_ADVANCED_COLORS_KEY, JSON.stringify(colors));
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -295,7 +293,6 @@ export function loadData(): LedgerData {
 export function saveData(data: LedgerData) {
   // Save uses the same main storage key as legacy.
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  notifySyncPush();
 }
 
 function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {
@@ -411,7 +408,6 @@ export function loadCategoryConfig(): CategoryConfig {
 export function saveCategoryConfig(cfg: CategoryConfig) {
   try {
     localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(cfg));
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -563,7 +559,6 @@ export function saveSubTracker(next: Partial<SubTrackerData> & { version: 1 }) {
       completedBonuses: next.completedBonuses !== undefined ? next.completedBonuses : (current.completedBonuses ?? [])
     };
     localStorage.setItem(SUB_TRACKER_KEY, JSON.stringify(merged));
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -665,7 +660,6 @@ export function loadInvesting(): InvestingState {
 export function saveInvesting(state: InvestingState) {
   try {
     localStorage.setItem(INVESTING_KEY, JSON.stringify(state));
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -797,7 +791,6 @@ export function loadLoans(): LoansState {
 export function saveLoans(state: LoansState) {
   try {
     localStorage.setItem(LOANS_KEY, JSON.stringify(state));
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -1462,7 +1455,6 @@ export function loadPasscodeHash(): string | null {
 export function savePasscodeHash(hash: string) {
   try {
     localStorage.setItem(PASSCODE_HASH_KEY, hash);
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -1512,7 +1504,6 @@ export function savePasscodeHint(hint: string | null) {
   try {
     if (!hint || !hint.trim()) localStorage.removeItem(PASSCODE_HINT_KEY);
     else localStorage.setItem(PASSCODE_HINT_KEY, hint.trim());
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -1528,7 +1519,6 @@ export function loadRecoveryKeyHash(): string | null {
 export function saveRecoveryKeyHash(hash: string) {
   try {
     localStorage.setItem(PASSCODE_RECOVERY_KEY_HASH_KEY, hash);
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -1548,7 +1538,6 @@ export function saveSecurityQA(qa: SecurityQA | null) {
   try {
     if (!qa) localStorage.removeItem(PASSCODE_SECURITY_QA_KEY);
     else localStorage.setItem(PASSCODE_SECURITY_QA_KEY, JSON.stringify(qa));
-    notifySyncPush();
   } catch (_) {}
 }
 
@@ -1565,7 +1554,6 @@ export function saveRecoverySetupDone(done: boolean) {
   try {
     if (done) localStorage.setItem(PASSCODE_RECOVERY_SETUP_DONE_KEY, 'true');
     else localStorage.removeItem(PASSCODE_RECOVERY_SETUP_DONE_KEY);
-    notifySyncPush();
   } catch (_) {}
 }
 
