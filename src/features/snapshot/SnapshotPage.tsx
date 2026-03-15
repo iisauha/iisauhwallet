@@ -7,7 +7,7 @@ import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
-import type { RewardRule } from '../../state/models';
+import type { RewardRule, RewardUnitType } from '../../state/models';
 import { getEffectiveRules } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
@@ -120,6 +120,7 @@ export function SnapshotPage() {
         type: 'card-reward-config';
         cardId: string;
         rules: RewardRule[];
+        valueInputs: Record<string, string>;
         rewardCashbackCents: string;
         rewardPoints: string;
         rewardMiles: string;
@@ -411,10 +412,14 @@ export function SnapshotPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           const rules = getEffectiveRules(c);
+                          const initialRules: RewardRule[] = rules.length > 0 ? rules : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
+                          const valueInputs: Record<string, string> = {};
+                          initialRules.forEach((r) => { valueInputs[r.id] = r.value === 0 ? '' : String(r.value); });
                           setModal({
                             type: 'card-reward-config',
                             cardId: c.id,
-                            rules: rules.length > 0 ? rules : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent', isCatchAll: false }],
+                            rules: initialRules,
+                            valueInputs,
                             rewardCashbackCents: typeof c.rewardCashbackCents === 'number' ? String(c.rewardCashbackCents) : '',
                             rewardPoints: typeof c.rewardPoints === 'number' ? String(c.rewardPoints) : '',
                             rewardMiles: typeof c.rewardMiles === 'number' ? String(c.rewardMiles) : ''
@@ -555,23 +560,6 @@ export function SnapshotPage() {
           </div>
           {!summaryCcDetailsCollapsed ? (
             <>
-              <div className="summary-kv" style={{ fontSize: '0.9rem', paddingLeft: 12, marginTop: 0 }}>
-                <span className="k">Estimated Card Rewards</span>
-                <span className="v" style={{ color: 'var(--muted)' }}>—</span>
-              </div>
-              {(data.cards || []).map((c) => {
-                const parts: string[] = [];
-                if (typeof c.rewardCashbackCents === 'number' && c.rewardCashbackCents > 0) parts.push(formatCents(c.rewardCashbackCents) + ' cashback');
-                if (typeof c.rewardPoints === 'number' && c.rewardPoints > 0) parts.push((c.rewardPoints).toLocaleString() + ' pts');
-                if (typeof c.rewardMiles === 'number' && c.rewardMiles > 0) parts.push((c.rewardMiles).toLocaleString() + ' mi');
-                if (parts.length === 0) return null;
-                return (
-                  <div key={c.id} className="summary-kv" style={{ fontSize: '0.85rem', paddingLeft: 20, marginTop: 0 }}>
-                    <span className="k">↳ {c.name}</span>
-                    <span className="v" style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{parts.join(' · ')}</span>
-                  </div>
-                );
-              })}
               <div
                 className="summary-kv"
                 style={{ fontSize: '0.9rem', paddingLeft: 12, marginTop: 6, cursor: 'pointer' }}
@@ -812,20 +800,31 @@ export function SnapshotPage() {
                 setModal({ ...modal, rules: next });
               };
               const addRule = () => {
+                const newRule: RewardRule = { id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false };
                 setModal({
                   ...modal,
-                  rules: [...modal.rules, { id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent', isCatchAll: false }]
+                  rules: [...modal.rules, newRule],
+                  valueInputs: { ...modal.valueInputs, [newRule.id]: '' }
                 });
               };
               const removeRule = (idx: number) => {
                 const next = modal.rules.filter((_, i) => i !== idx);
-                setModal({ ...modal, rules: next.length > 0 ? next : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent', isCatchAll: false }] });
+                const newRules: RewardRule[] = next.length > 0 ? next : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
+                const nextInputs = { ...modal.valueInputs };
+                if (modal.rules[idx]) delete nextInputs[modal.rules[idx].id];
+                if (next.length === 0) nextInputs[newRules[0].id] = '';
+                setModal({ ...modal, rules: newRules, valueInputs: nextInputs });
               };
               const setCatchAll = (idx: number, isCatchAll: boolean) => {
                 const next = modal.rules.map((r, i) => ({ ...r, isCatchAll: i === idx ? isCatchAll : false }));
                 setModal({ ...modal, rules: next });
               };
-              const validRules = modal.rules.filter((r) => r.category && r.category.trim());
+              const validRules = modal.rules
+                .filter((r) => r.category && r.category.trim())
+                .map((r) => ({
+                  ...r,
+                  value: (() => { const n = parseFloat(modal.valueInputs[r.id] ?? String(r.value)); return Number.isNaN(n) ? 0 : n; })()
+                }));
               return (
                 <>
                   <h3>Card reward rules</h3>
@@ -870,11 +869,14 @@ export function SnapshotPage() {
                           <div className="field" style={{ flex: '1 1 80px' }}>
                             <label>Value</label>
                             <input
-                              type="number"
-                              min={0}
-                              step={0.1}
-                              value={rule.value}
-                              onChange={(e) => updateRule(idx, { value: parseFloat(e.target.value) || 0 })}
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="e.g. 4 or 1.5"
+                              value={modal.valueInputs[rule.id] ?? (rule.value === 0 ? '' : String(rule.value))}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setModal({ ...modal, valueInputs: { ...modal.valueInputs, [rule.id]: v } });
+                              }}
                               style={{ width: '100%' }}
                             />
                           </div>

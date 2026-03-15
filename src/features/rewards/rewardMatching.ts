@@ -47,20 +47,22 @@ export function matchRule(
   return catchAll || null;
 }
 
-/** Compute estimated reward for a purchase amount given a rule. */
+/** Compute estimated reward for a purchase amount given a rule. Strict: no reward if rule value invalid. */
 export function computeEstimatedReward(
   rule: RewardRule,
   amountCents: number
 ): { cashbackCents?: number; points?: number; miles?: number } {
   if (amountCents <= 0) return {};
+  const val = rule.value;
+  if (typeof val !== 'number' || Number.isNaN(val) || val < 0) return {};
   const dollars = amountCents / 100;
   switch (rule.unit) {
     case 'cashback_percent':
-      return { cashbackCents: Math.round((rule.value / 100) * amountCents) };
+      return { cashbackCents: Math.round((val / 100) * amountCents) };
     case 'points_multiplier':
-      return { points: Math.round(rule.value * dollars) };
+      return { points: Math.round(val * dollars) };
     case 'miles_multiplier':
-      return { miles: Math.round(rule.value * dollars) };
+      return { miles: Math.round(val * dollars) };
     default:
       return {};
   }
