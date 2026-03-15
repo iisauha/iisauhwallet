@@ -96,6 +96,8 @@ export function AddPurchaseModal(props: {
     if (props.open && props.reimbursementExpected && !currentPurchase) {
       setApplyToSnapshot(true);
       setPaymentSource('card');
+      setIsSplit(false);
+      setMyPortion('');
     }
   }, [props.open, props.reimbursementExpected, currentPurchase]);
 
@@ -152,7 +154,12 @@ export function AddPurchaseModal(props: {
   const myPortionCents = isSplit ? parseCents(myPortion) : totalCents;
   const inboundCents = Math.max(0, totalCents - myPortionCents);
   const splitError =
-    isSplit && (myPortionCents < 0 ? 'My portion cannot be negative.' : myPortionCents > totalCents ? 'My portion cannot exceed total amount.' : '');
+    isSplit && (
+      myPortionCents <= 0 ? 'My portion must be greater than 0. Use "Add Card Purchase (Full reimbursement expected)" for full reimbursement.'
+      : myPortionCents < 0 ? 'My portion cannot be negative.'
+      : myPortionCents > totalCents ? 'My portion cannot exceed total amount.'
+      : ''
+    );
 
   const canSave =
     (title.trim().length > 0 || true) &&
@@ -233,7 +240,7 @@ export function AddPurchaseModal(props: {
         </div>
       ) : null}
       <div className="modal">
-        <h3>{isEditing ? 'Edit Purchase' : props.reimbursementExpected ? 'Add Card Purchase (Reimbursement Expected)' : 'Add Purchase'}</h3>
+        <h3>{isEditing ? 'Edit Purchase' : props.reimbursementExpected ? 'Add Card Purchase (Full reimbursement expected)' : 'Add Purchase'}</h3>
         {props.reimbursementExpected && !isEditing ? (
           <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: -4, marginBottom: 12 }}>
             A pending inbound entry will be created for this amount. When you receive reimbursement, post it from Pending Inbound and choose which bank to deposit into.
@@ -291,36 +298,40 @@ export function AddPurchaseModal(props: {
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
         </div>
 
-        <div className="toggle-row">
-          <input
-            type="checkbox"
-            checked={isSplit}
-            onChange={(e) => {
-              const next = e.target.checked;
-              setIsSplit(next);
-              if (next) {
-                const totalCents = parseCents(amount);
-                if (totalCents > 0) {
-                  const half = Math.round(totalCents / 2);
-                  setMyPortion((half / 100).toFixed(2));
-                }
-              } else {
-                setMyPortion('');
-              }
-            }}
-            id="split"
-          />
-          <label htmlFor="split">Split</label>
-        </div>
-        {isSplit ? (
-          <div className="field">
-            <label>My Portion ($)</label>
-            <input value={myPortion} onChange={(e) => setMyPortion(e.target.value)} inputMode="decimal" placeholder="0.00" />
-            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-              Reimbursement (Inbound): {inboundCents > 0 ? `$${(inboundCents / 100).toFixed(2)}` : '$0.00'}
+        {!props.reimbursementExpected ? (
+          <>
+            <div className="toggle-row">
+              <input
+                type="checkbox"
+                checked={isSplit}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setIsSplit(next);
+                  if (next) {
+                    const totalCents = parseCents(amount);
+                    if (totalCents > 0) {
+                      const half = Math.round(totalCents / 2);
+                      setMyPortion((half / 100).toFixed(2));
+                    }
+                  } else {
+                    setMyPortion('');
+                  }
+                }}
+                id="split"
+              />
+              <label htmlFor="split">Split</label>
             </div>
-            {splitError ? <div style={{ color: 'var(--danger)', marginTop: 6 }}>{splitError}</div> : null}
-          </div>
+            {isSplit ? (
+              <div className="field">
+                <label>My Portion ($)</label>
+                <input value={myPortion} onChange={(e) => setMyPortion(e.target.value)} inputMode="decimal" placeholder="0.00" />
+                <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                  Reimbursement (Inbound): {inboundCents > 0 ? `$${(inboundCents / 100).toFixed(2)}` : '$0.00'}
+                </div>
+                {splitError ? <div style={{ color: 'var(--danger)', marginTop: 6 }}>{splitError}</div> : null}
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         <div className="toggle-row">

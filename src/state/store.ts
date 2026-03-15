@@ -21,7 +21,7 @@ export interface LedgerState {
     updateCardName: (id: string, name: string) => void;
     updateCardRewardConfig: (cardId: string, config: { rewardCategory?: string; rewardSubcategory?: string; isCatchAll?: boolean }) => void;
     updateCardRewardRules: (cardId: string, rules: RewardRule[]) => void;
-    updateCardRewardTotals: (cardId: string, totals: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number }) => void;
+    updateCardRewardTotals: (cardId: string, totals: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number; rewardBalanceCleared?: boolean }) => void;
     addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
@@ -156,6 +156,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (totals.rewardCashbackCents !== undefined) card.rewardCashbackCents = Math.max(0, Math.round(totals.rewardCashbackCents));
       if (totals.rewardPoints !== undefined) card.rewardPoints = Math.max(0, Math.round(totals.rewardPoints));
       if (totals.rewardMiles !== undefined) card.rewardMiles = Math.max(0, Math.round(totals.rewardMiles));
+      if (totals.rewardBalanceCleared !== undefined) card.rewardBalanceCleared = totals.rewardBalanceCleared;
       card.updatedAt = nowIso();
       saveData(next);
       set({ data: next });

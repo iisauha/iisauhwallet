@@ -42,6 +42,8 @@ export interface CreditCard {
   rewardCashbackCents?: number;
   rewardPoints?: number;
   rewardMiles?: number;
+  /** When true, balance was cleared by user; current balance only grows from new purchases added after clear. */
+  rewardBalanceCleared?: boolean;
 }
 
 export type PendingDepositTo = 'bank' | 'card' | 'hysa';

@@ -54,11 +54,7 @@ export function SpendingPage() {
   const [rewardAdjustModal, setRewardAdjustModal] = useState<{
     cardId: string;
     cardName: string;
-    categoryKey: string;
-    categoryLabel: string;
-    categoryId: string;
-    subcategory: string;
-    currentAmountCents: number;
+    byCategory: Array<{ categoryKey: string; categoryLabel: string; displayLabel: string; categoryId: string; subcategory: string; amountCents: number }>;
   } | null>(null);
   const [clearBalanceConfirm, setClearBalanceConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
   const [editBalanceModal, setEditBalanceModal] = useState<{
@@ -172,6 +168,8 @@ export function SpendingPage() {
       categoryId: string;
       subcategory: string;
       categoryLabel: string;
+      /** Display-only: subcategory if both category+subcategory, else category name. */
+      displayLabel: string;
       amountCents: number;
       rewardLabel: string;
       cashbackCents: number;
@@ -183,10 +181,13 @@ export function SpendingPage() {
       cardName: string;
       amountCents: number;
       byCategory: Map<string, CategoryRow>;
+      byCategoryMy: Map<string, CategoryRow>;
+      byCategoryOther: Map<string, CategoryRow>;
       cashbackCents: number;
       points: number;
       miles: number;
     }>();
+    const isMyPurchase = (p: any) => !!p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
     periodCardPurchases.forEach((p: any) => {
       const cardId = p.paymentTargetId as string;
       const card = cardById.get(cardId);
@@ -199,6 +200,7 @@ export function SpendingPage() {
       const categoryId = p.category || 'uncategorized';
       const subcategory = p.subcategory || '';
       const categoryLabel = getCategoryName(cfg, categoryId) + (subcategory ? ` → ${subcategory}` : '');
+      const displayLabel = subcategory ? subcategory : getCategoryName(cfg, categoryId);
       const cashbackCents = reward.cashbackCents ?? 0;
       const points = reward.points ?? 0;
       const miles = reward.miles ?? 0;
@@ -214,6 +216,8 @@ export function SpendingPage() {
           cardName: card.name || 'Card',
           amountCents: 0,
           byCategory: new Map(),
+          byCategoryMy: new Map(),
+          byCategoryOther: new Map(),
           cashbackCents: 0,
           points: 0,
           miles: 0
@@ -224,19 +228,25 @@ export function SpendingPage() {
       row.cashbackCents += cashbackCents;
       row.points += points;
       row.miles += miles;
-      const existing = row.byCategory.get(categoryKey);
-      if (existing) {
-        existing.amountCents += amountCents;
-        existing.cashbackCents += cashbackCents;
-        existing.points += points;
-        existing.miles += miles;
-      } else {
-        row.byCategory.set(categoryKey, { categoryKey, categoryId, subcategory, categoryLabel, amountCents, rewardLabel, cashbackCents, points, miles });
-      }
+      const addToMap = (map: Map<string, CategoryRow>, isMy: boolean) => {
+        const existing = map.get(categoryKey);
+        if (existing) {
+          existing.amountCents += amountCents;
+          existing.cashbackCents += cashbackCents;
+          existing.points += points;
+          existing.miles += miles;
+        } else {
+          map.set(categoryKey, { categoryKey, categoryId, subcategory, categoryLabel, displayLabel, amountCents, rewardLabel, cashbackCents, points, miles });
+        }
+      };
+      addToMap(row.byCategory, false);
+      if (isMyPurchase(p)) addToMap(row.byCategoryMy, true); else addToMap(row.byCategoryOther, true);
     });
     const result = Array.from(byCardId.values()).map((r) => ({
       ...r,
-      byCategory: Array.from(r.byCategory.values())
+      byCategory: Array.from(r.byCategory.values()),
+      byCategoryMy: Array.from(r.byCategoryMy.values()).sort((a, b) => b.amountCents - a.amountCents),
+      byCategoryOther: Array.from(r.byCategoryOther.values()).sort((a, b) => b.amountCents - a.amountCents)
     }));
     Object.keys(rewardAdjustments).forEach((cardId) => {
       const card = cardById.get(cardId);
@@ -248,7 +258,8 @@ export function SpendingPage() {
         if (byKey.has(categoryKey)) return;
         const [categoryId, subcategory] = categoryKey.split('\t');
         const categoryLabel = getCategoryName(cfg, categoryId || 'uncategorized') + (subcategory ? ` → ${subcategory}` : '');
-        byKey.set(categoryKey, { categoryKey, categoryId: categoryId || 'uncategorized', subcategory: subcategory || '', categoryLabel, amountCents: 0, rewardLabel: '', cashbackCents: 0, points: 0, miles: 0 });
+        const displayLabel = (subcategory || '') ? (subcategory || '') : getCategoryName(cfg, categoryId || 'uncategorized');
+        byKey.set(categoryKey, { categoryKey, categoryId: categoryId || 'uncategorized', subcategory: subcategory || '', categoryLabel, displayLabel, amountCents: 0, rewardLabel: '', cashbackCents: 0, points: 0, miles: 0 });
       });
       cardRow.byCategory = Array.from(byKey.values());
     });
@@ -300,7 +311,8 @@ export function SpendingPage() {
         cardName: r.cardName,
         currentCashbackCents: c?.rewardCashbackCents ?? 0,
         currentPoints: c?.rewardPoints ?? 0,
-        currentMiles: c?.rewardMiles ?? 0
+        currentMiles: c?.rewardMiles ?? 0,
+        rewardBalanceCleared: !!c?.rewardBalanceCleared
       };
     });
     return { cards: result, totalCashbackCents, totalMiles, pointsByCard, cardsWithBalance };
@@ -404,9 +416,13 @@ export function SpendingPage() {
           <div className="card" style={{ marginBottom: 0 }}>
             {cardSpendingAndRewards.cards.map((card) => {
               const balance = cardSpendingAndRewards.cardsWithBalance?.find((b) => b.cardId === card.cardId);
-              const currentCashback = balance?.currentCashbackCents ?? 0;
-              const currentPoints = balance?.currentPoints ?? 0;
-              const currentMiles = balance?.currentMiles ?? 0;
+              const storedCashback = balance?.currentCashbackCents ?? 0;
+              const storedPoints = balance?.currentPoints ?? 0;
+              const storedMiles = balance?.currentMiles ?? 0;
+              const wasCleared = balance?.rewardBalanceCleared ?? false;
+              const currentCashback = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.cashbackCents : storedCashback;
+              const currentPoints = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.points : storedPoints;
+              const currentMiles = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.miles : storedMiles;
               const hasCurrentBalance = currentCashback > 0 || currentPoints > 0 || currentMiles > 0;
               return (
                 <div key={card.cardId} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
@@ -448,6 +464,25 @@ export function SpendingPage() {
                         type="button"
                         className="btn btn-secondary"
                         style={{ fontSize: '0.8rem', padding: '2px 8px' }}
+                        onClick={() => setRewardAdjustModal({
+                          cardId: card.cardId,
+                          cardName: card.cardName,
+                          byCategory: card.byCategory.map((line) => ({
+                            categoryKey: line.categoryKey,
+                            categoryLabel: line.categoryLabel,
+                            displayLabel: line.displayLabel,
+                            categoryId: line.categoryId,
+                            subcategory: line.subcategory,
+                            amountCents: line.amountCents
+                          }))
+                        })}
+                      >
+                        Adjust category amounts
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.8rem', padding: '2px 8px' }}
                         onClick={() => setClearBalanceConfirm({ cardId: card.cardId, cardName: card.cardName })}
                       >
                         Clear rewards balance
@@ -456,35 +491,51 @@ export function SpendingPage() {
                   </div>
                   {card.byCategory.length > 0 ? (
                     <div style={{ paddingLeft: 12, marginBottom: 8 }}>
-                      {card.byCategory.map((line, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
-                          <span>{line.categoryLabel}: {formatCents(line.amountCents)}{line.rewardLabel ? ` × ${line.rewardLabel}` : ''}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {card.byCategoryMy && card.byCategoryMy.length > 0 ? (
+                        <>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>My purchases</div>
+                          {card.byCategoryMy.map((line, i) => (
+                            <div key={`my-${i}`} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
+                              <span>{line.displayLabel}: {formatCents(line.amountCents)}{line.rewardLabel ? ` × ${line.rewardLabel}` : ''}</span>
+                              <span style={{ color: 'var(--muted)' }}>
+                                {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
+                                {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
+                                {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
+                                {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 && line.rewardLabel ? '—' : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </>
+                      ) : null}
+                      {card.byCategoryOther && card.byCategoryOther.length > 0 ? (
+                        <>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>Other purchases on card</div>
+                          {card.byCategoryOther.map((line, i) => (
+                            <div key={`other-${i}`} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
+                              <span>{line.displayLabel}: {formatCents(line.amountCents)}{line.rewardLabel ? ` × ${line.rewardLabel}` : ''}</span>
+                              <span style={{ color: 'var(--muted)' }}>
+                                {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
+                                {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
+                                {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
+                                {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 && line.rewardLabel ? '—' : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </>
+                      ) : null}
+                      {(!card.byCategoryMy || card.byCategoryMy.length === 0) && (!card.byCategoryOther || card.byCategoryOther.length === 0) ? (
+                        card.byCategory.map((line, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
+                            <span>{line.displayLabel}: {formatCents(line.amountCents)}{line.rewardLabel ? ` × ${line.rewardLabel}` : ''}</span>
                             <span style={{ color: 'var(--muted)' }}>
                               {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
                               {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
                               {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
                               {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 && line.rewardLabel ? '—' : ''}
                             </span>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              style={{ fontSize: '0.75rem', padding: '2px 6px' }}
-                              onClick={() => setRewardAdjustModal({
-                                cardId: card.cardId,
-                                cardName: card.cardName,
-                                categoryKey: line.categoryKey,
-                                categoryLabel: line.categoryLabel,
-                                categoryId: line.categoryId,
-                                subcategory: line.subcategory,
-                                currentAmountCents: line.amountCents
-                              })}
-                            >
-                              Add
-                            </button>
-                          </span>
-                        </div>
-                      ))}
+                          </div>
+                        ))
+                      ) : null}
                     </div>
                   ) : null}
                   <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
@@ -693,7 +744,7 @@ export function SpendingPage() {
         </button>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn btn-add"
           style={{ width: '100%' }}
           onClick={() => {
             setEditingPurchaseKey(null);
@@ -701,7 +752,7 @@ export function SpendingPage() {
             setOpenAdd(true);
           }}
         >
-          Add Card Purchase (Reimbursement Expected)
+          Add Card Purchase (Full reimbursement expected)
         </button>
       </div>
 
@@ -732,11 +783,13 @@ export function SpendingPage() {
         <RewardAdjustModal
           modal={rewardAdjustModal}
           onClose={() => setRewardAdjustModal(null)}
-          onSave={(mode, amountCents) => {
-            const { cardId, categoryKey } = rewardAdjustModal;
+          onSave={(updates) => {
+            const { cardId } = rewardAdjustModal;
             const next: CardRewardAdjustmentsState = { ...rewardAdjustments };
             next[cardId] = { ...(next[cardId] || {}) };
-            next[cardId][categoryKey] = { amountCents, mode };
+            Object.entries(updates).forEach(([categoryKey, amountCents]) => {
+              next[cardId][categoryKey] = { amountCents, mode: 'set' as const };
+            });
             saveCardRewardAdjustments(next);
             setRewardAdjustments(next);
             setRewardAdjustModal(null);
@@ -759,7 +812,7 @@ export function SpendingPage() {
                 type="button"
                 className="btn btn-primary"
                 onClick={() => {
-                  actions.updateCardRewardTotals(clearBalanceConfirm.cardId, { rewardCashbackCents: 0, rewardPoints: 0, rewardMiles: 0 });
+                  actions.updateCardRewardTotals(clearBalanceConfirm.cardId, { rewardCashbackCents: 0, rewardPoints: 0, rewardMiles: 0, rewardBalanceCleared: true });
                   setClearBalanceConfirm(null);
                 }}
               >
@@ -813,52 +866,54 @@ function RewardAdjustModal({
   onClose,
   onSave
 }: {
-  modal: { cardName: string; categoryLabel: string; categoryKey: string; currentAmountCents: number };
+  modal: { cardName: string; byCategory: Array<{ categoryKey: string; displayLabel: string; amountCents: number }> };
   onClose: () => void;
-  onSave: (mode: 'add' | 'set', amountCents: number) => void;
+  onSave: (updates: Record<string, number>) => void;
 }) {
-  const [mode, setMode] = useState<'add' | 'set'>('add');
-  const [amountStr, setAmountStr] = useState('');
+  const [amounts, setAmounts] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    modal.byCategory.forEach((row) => {
+      init[row.categoryKey] = (row.amountCents / 100).toFixed(2);
+    });
+    return init;
+  });
   const handleSubmit = () => {
-    const parsed = parseFloat(amountStr);
-    if (Number.isNaN(parsed) || parsed < 0) return;
-    const amountCents = Math.round(parsed * 100);
-    onSave(mode, amountCents);
+    const updates: Record<string, number> = {};
+    modal.byCategory.forEach((row) => {
+      const str = amounts[row.categoryKey] ?? (row.amountCents / 100).toFixed(2);
+      const parsed = parseFloat(str);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
+        updates[row.categoryKey] = Math.round(parsed * 100);
+      }
+    });
+    onSave(updates);
   };
   return (
     <div className="modal-overlay">
-      <div className="modal">
-        <h3>Adjust category amount for rewards</h3>
-        <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-          Card: <strong>{modal.cardName}</strong> · Category: <strong>{modal.categoryLabel}</strong>
-        </p>
-        <p style={{ fontSize: '0.9rem', marginTop: 8 }}>Current amount: {formatCents(modal.currentAmountCents)}</p>
-        <div style={{ marginTop: 12 }}>
-          <label style={{ display: 'block', marginBottom: 4 }}>
-            <input type="radio" checked={mode === 'add'} onChange={() => setMode('add')} /> Add to current amount
-          </label>
-          <label style={{ display: 'block', marginBottom: 4 }}>
-            <input type="radio" checked={mode === 'set'} onChange={() => setMode('set')} /> Set amount to
-          </label>
-        </div>
-        <div style={{ marginTop: 8 }}>
-          <input
-            className="ll-control"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Amount (e.g. 50.00)"
-            value={amountStr}
-            onChange={(e) => setAmountStr(e.target.value)}
-          />
+      <div className="modal" style={{ maxWidth: 420 }}>
+        <h3>Adjust category amounts for rewards</h3>
+        <p style={{ color: 'var(--muted)', marginTop: 0 }}>Card: <strong>{modal.cardName}</strong></p>
+        <p style={{ fontSize: '0.9rem', marginTop: 4, marginBottom: 12 }}>Edit the spending amount used for rewards for each category.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {modal.byCategory.map((row) => (
+            <div key={row.categoryKey} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label style={{ flex: '1 1 120px', minWidth: 0, fontSize: '0.9rem' }}>{row.displayLabel}</label>
+              <input
+                className="ll-control"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                style={{ width: 100 }}
+                value={amounts[row.categoryKey] ?? ''}
+                onChange={(e) => setAmounts((prev) => ({ ...prev, [row.categoryKey]: e.target.value }))}
+              />
+            </div>
+          ))}
         </div>
         <div className="btn-row" style={{ marginTop: 16 }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={!amountStr.trim()}>
-            Save
-          </button>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn btn-primary" onClick={handleSubmit}>Save</button>
         </div>
       </div>
     </div>
