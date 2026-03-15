@@ -1,0 +1,47 @@
+/* Theme and accent colors are applied from Settings via JS (ThemeContext).
+   Semantic colors (--green, --red) are never overridden.
+   Smooth transitions when theme/accent change. */
+
+html {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+body {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+.card,
+.summary,
+.tabs,
+.btn,
+.btn-primary,
+.tab,
+.tab.active,
+.ll-toggle,
+.ll-toggle.active,
+.ll-control,
+.ll-select,
+input[type="date"].ll-control,
+.section-header,
+.modal {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+
+/* Modal open animation */
+.modal-overlay-animate {
+  animation: overlayFadeIn 0.2s ease-out;
+}
+.modal-animate {
+  animation: modalSlideIn 0.25s ease-out;
+}
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: scale(0.98) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Collapsible section content for smoother expand/collapse */
+.section-header + * {
+  transition: opacity 0.2s ease-out;
+}
