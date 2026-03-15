@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
-import { getCategoryName, loadCategoryConfig } from '../../state/storage';
+import { getCategoryName, loadCategoryConfig, loadCardRewardAdjustments, saveCardRewardAdjustments, type CardRewardAdjustmentsState } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getEffectiveRules, matchRule, computeEstimatedReward } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
@@ -50,6 +50,24 @@ export function SpendingPage() {
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
   const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
+  const [rewardAdjustments, setRewardAdjustments] = useState<CardRewardAdjustmentsState>(() => loadCardRewardAdjustments());
+  const [rewardAdjustModal, setRewardAdjustModal] = useState<{
+    cardId: string;
+    cardName: string;
+    categoryKey: string;
+    categoryLabel: string;
+    categoryId: string;
+    subcategory: string;
+    currentAmountCents: number;
+  } | null>(null);
+  const [clearBalanceConfirm, setClearBalanceConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
+  const [editBalanceModal, setEditBalanceModal] = useState<{
+    cardId: string;
+    cardName: string;
+    currentCashbackCents: number;
+    currentPoints: number;
+    currentMiles: number;
+  } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -149,8 +167,26 @@ export function SpendingPage() {
     const periodCardPurchases = periodPurchases.filter(
       (p: any) => (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId && cardById.has(p.paymentTargetId)
     );
-    type CategoryRow = { categoryLabel: string; amountCents: number; rewardLabel: string; cashbackCents: number; points: number; miles: number };
-    const byCardId = new Map<string, { cardId: string; cardName: string; amountCents: number; byCategory: Map<string, CategoryRow>; cashbackCents: number; points: number; miles: number }>();
+    type CategoryRow = {
+      categoryKey: string;
+      categoryId: string;
+      subcategory: string;
+      categoryLabel: string;
+      amountCents: number;
+      rewardLabel: string;
+      cashbackCents: number;
+      points: number;
+      miles: number;
+    };
+    const byCardId = new Map<string, {
+      cardId: string;
+      cardName: string;
+      amountCents: number;
+      byCategory: Map<string, CategoryRow>;
+      cashbackCents: number;
+      points: number;
+      miles: number;
+    }>();
     periodCardPurchases.forEach((p: any) => {
       const cardId = p.paymentTargetId as string;
       const card = cardById.get(cardId);
@@ -160,7 +196,9 @@ export function SpendingPage() {
       const rule = matchRule(rules, p.category || '', p.subcategory || '');
       const reward = rule ? computeEstimatedReward(rule, amountCents) : {};
       const categoryKey = `${p.category || 'uncategorized'}\t${p.subcategory || ''}`;
-      const categoryLabel = getCategoryName(cfg, p.category || 'uncategorized') + (p.subcategory ? ` → ${p.subcategory}` : '');
+      const categoryId = p.category || 'uncategorized';
+      const subcategory = p.subcategory || '';
+      const categoryLabel = getCategoryName(cfg, categoryId) + (subcategory ? ` → ${subcategory}` : '');
       const cashbackCents = reward.cashbackCents ?? 0;
       const points = reward.points ?? 0;
       const miles = reward.miles ?? 0;
@@ -193,18 +231,80 @@ export function SpendingPage() {
         existing.points += points;
         existing.miles += miles;
       } else {
-        row.byCategory.set(categoryKey, { categoryLabel, amountCents, rewardLabel, cashbackCents, points, miles });
+        row.byCategory.set(categoryKey, { categoryKey, categoryId, subcategory, categoryLabel, amountCents, rewardLabel, cashbackCents, points, miles });
       }
     });
     const result = Array.from(byCardId.values()).map((r) => ({
       ...r,
-      byCategory: Array.from(r.byCategory.values()).sort((a, b) => b.amountCents - a.amountCents)
-    })).sort((a, b) => b.amountCents - a.amountCents);
+      byCategory: Array.from(r.byCategory.values())
+    }));
+    Object.keys(rewardAdjustments).forEach((cardId) => {
+      const card = cardById.get(cardId);
+      if (!card) return;
+      const cardRow = result.find((r) => r.cardId === cardId);
+      if (!cardRow) return;
+      const byKey = new Map(cardRow.byCategory.map((row) => [row.categoryKey, row]));
+      Object.keys(rewardAdjustments[cardId] || {}).forEach((categoryKey) => {
+        if (byKey.has(categoryKey)) return;
+        const [categoryId, subcategory] = categoryKey.split('\t');
+        const categoryLabel = getCategoryName(cfg, categoryId || 'uncategorized') + (subcategory ? ` → ${subcategory}` : '');
+        byKey.set(categoryKey, { categoryKey, categoryId: categoryId || 'uncategorized', subcategory: subcategory || '', categoryLabel, amountCents: 0, rewardLabel: '', cashbackCents: 0, points: 0, miles: 0 });
+      });
+      cardRow.byCategory = Array.from(byKey.values());
+    });
+    result.forEach((cardRow) => {
+      const card = cardById.get(cardRow.cardId);
+      if (!card) return;
+      const rules = getEffectiveRules(card);
+      let cardCashback = 0;
+      let cardPoints = 0;
+      let cardMiles = 0;
+      cardRow.byCategory.forEach((row) => {
+        const adj = rewardAdjustments[cardRow.cardId]?.[row.categoryKey];
+        const baseAmount = row.amountCents;
+        const effectiveAmount = adj
+          ? (adj.mode === 'set' ? adj.amountCents : baseAmount + adj.amountCents)
+          : baseAmount;
+        const rule = matchRule(rules, row.categoryId, row.subcategory);
+        const reward = rule && effectiveAmount >= 0 ? computeEstimatedReward(rule, effectiveAmount) : {};
+        const cashbackCents = reward.cashbackCents ?? 0;
+        const points = reward.points ?? 0;
+        const miles = reward.miles ?? 0;
+        row.amountCents = effectiveAmount;
+        row.cashbackCents = cashbackCents;
+        row.points = points;
+        row.miles = miles;
+        row.rewardLabel = rule
+          ? (rule.unit === 'cashback_percent' ? `${rule.value}%` : rule.unit === 'points_multiplier' ? `${rule.value}× pts` : `${rule.value}× mi`)
+          : '';
+        cardCashback += cashbackCents;
+        cardPoints += points;
+        cardMiles += miles;
+      });
+      cardRow.cashbackCents = cardCashback;
+      cardRow.points = cardPoints;
+      cardRow.miles = cardMiles;
+      cardRow.amountCents = cardRow.byCategory.reduce((s, row) => s + row.amountCents, 0);
+    });
+    result.forEach((r) => {
+      r.byCategory.sort((a, b) => b.amountCents - a.amountCents);
+    });
+    result.sort((a, b) => b.amountCents - a.amountCents);
     const totalCashbackCents = result.reduce((s, r) => s + r.cashbackCents, 0);
     const totalMiles = result.reduce((s, r) => s + r.miles, 0);
     const pointsByCard = result.filter((r) => r.points > 0).map((r) => ({ cardName: r.cardName, points: r.points }));
-    return { cards: result, totalCashbackCents, totalMiles, pointsByCard };
-  }, [periodPurchases, data.cards, cfg]);
+    const cardsWithBalance = result.map((r) => {
+      const c = cardById.get(r.cardId);
+      return {
+        cardId: r.cardId,
+        cardName: r.cardName,
+        currentCashbackCents: c?.rewardCashbackCents ?? 0,
+        currentPoints: c?.rewardPoints ?? 0,
+        currentMiles: c?.rewardMiles ?? 0
+      };
+    });
+    return { cards: result, totalCashbackCents, totalMiles, pointsByCard, cardsWithBalance };
+  }, [periodPurchases, data.cards, cfg, rewardAdjustments]);
 
   const drilldownFilteredPurchases = useMemo(() => {
     if (!drilldownCategoryId) return filteredPurchases;
@@ -300,37 +400,102 @@ export function SpendingPage() {
 
       {view === 'card' && cardSpendingAndRewards.cards.length > 0 ? (
         <>
-          <p className="section-title" style={{ marginTop: 24 }}>Rewards earned (selected period)</p>
+          <p className="section-title" style={{ marginTop: 24 }}>Rewards by card</p>
           <div className="card" style={{ marginBottom: 0 }}>
-            {cardSpendingAndRewards.cards.map((card) => (
-              <div key={card.cardId} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>{card.cardName}</div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 8 }}>
-                  Total spending: {formatCents(card.amountCents)}
-                </div>
-                {card.byCategory.length > 0 ? (
-                  <div style={{ paddingLeft: 12, marginBottom: 8 }}>
-                    {card.byCategory.map((line, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
-                        <span>{line.categoryLabel}: {formatCents(line.amountCents)}{line.rewardLabel ? ` × ${line.rewardLabel}` : ''}</span>
-                        <span style={{ color: 'var(--muted)' }}>
-                          {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
-                          {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
-                          {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
-                          {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 && line.rewardLabel ? '—' : ''}
-                        </span>
-                      </div>
-                    ))}
+            {cardSpendingAndRewards.cards.map((card) => {
+              const balance = cardSpendingAndRewards.cardsWithBalance?.find((b) => b.cardId === card.cardId);
+              const currentCashback = balance?.currentCashbackCents ?? 0;
+              const currentPoints = balance?.currentPoints ?? 0;
+              const currentMiles = balance?.currentMiles ?? 0;
+              const hasCurrentBalance = currentCashback > 0 || currentPoints > 0 || currentMiles > 0;
+              return (
+                <div key={card.cardId} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>{card.cardName}</div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 6 }}>
+                    Total spending: {formatCents(card.amountCents)}
                   </div>
-                ) : null}
-                <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                  Card total: {card.cashbackCents > 0 ? formatCents(card.cashbackCents) : ''}
-                  {card.points > 0 ? (card.cashbackCents > 0 ? ' · ' : '') + `${card.points.toLocaleString()} pts` : ''}
-                  {card.miles > 0 ? (card.cashbackCents > 0 || card.points > 0 ? ' · ' : '') + `${card.miles.toLocaleString()} mi` : ''}
-                  {card.cashbackCents === 0 && card.points === 0 && card.miles === 0 ? '—' : ''}
+                  <div style={{ fontSize: '0.85rem', marginBottom: 8 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <span style={{ color: 'var(--muted)' }}>Earned this period: </span>
+                      {card.cashbackCents > 0 ? formatCents(card.cashbackCents) : ''}
+                      {card.points > 0 ? (card.cashbackCents > 0 ? ' · ' : '') + `${card.points.toLocaleString()} pts` : ''}
+                      {card.miles > 0 ? (card.cashbackCents > 0 || card.points > 0 ? ' · ' : '') + `${card.miles.toLocaleString()} mi` : ''}
+                      {card.cashbackCents === 0 && card.points === 0 && card.miles === 0 ? '—' : ''}
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--muted)' }}>Current rewards balance: </span>
+                      {currentCashback > 0 ? formatCents(currentCashback) : ''}
+                      {currentPoints > 0 ? (currentCashback > 0 ? ' · ' : '') + `${currentPoints.toLocaleString()} pts` : ''}
+                      {currentMiles > 0 ? (currentCashback > 0 || currentPoints > 0 ? ' · ' : '') + `${currentMiles.toLocaleString()} mi` : ''}
+                      {!hasCurrentBalance ? '—' : ''}
+                    </div>
+                    <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.8rem', padding: '2px 8px' }}
+                        onClick={() => setEditBalanceModal({
+                          cardId: card.cardId,
+                          cardName: card.cardName,
+                          currentCashbackCents: currentCashback,
+                          currentPoints: currentPoints,
+                          currentMiles: currentMiles
+                        })}
+                      >
+                        Edit balance
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.8rem', padding: '2px 8px' }}
+                        onClick={() => setClearBalanceConfirm({ cardId: card.cardId, cardName: card.cardName })}
+                      >
+                        Clear rewards balance
+                      </button>
+                    </div>
+                  </div>
+                  {card.byCategory.length > 0 ? (
+                    <div style={{ paddingLeft: 12, marginBottom: 8 }}>
+                      {card.byCategory.map((line, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
+                          <span>{line.categoryLabel}: {formatCents(line.amountCents)}{line.rewardLabel ? ` × ${line.rewardLabel}` : ''}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ color: 'var(--muted)' }}>
+                              {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
+                              {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
+                              {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
+                              {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 && line.rewardLabel ? '—' : ''}
+                            </span>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ fontSize: '0.75rem', padding: '2px 6px' }}
+                              onClick={() => setRewardAdjustModal({
+                                cardId: card.cardId,
+                                cardName: card.cardName,
+                                categoryKey: line.categoryKey,
+                                categoryLabel: line.categoryLabel,
+                                categoryId: line.categoryId,
+                                subcategory: line.subcategory,
+                                currentAmountCents: line.amountCents
+                              })}
+                            >
+                              Add
+                            </button>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                    Card total (period): {card.cashbackCents > 0 ? formatCents(card.cashbackCents) : ''}
+                    {card.points > 0 ? (card.cashbackCents > 0 ? ' · ' : '') + `${card.points.toLocaleString()} pts` : ''}
+                    {card.miles > 0 ? (card.cashbackCents > 0 || card.points > 0 ? ' · ' : '') + `${card.miles.toLocaleString()} mi` : ''}
+                    {card.cashbackCents === 0 && card.points === 0 && card.miles === 0 ? '—' : ''}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <p className="section-title" style={{ marginTop: 16 }}>Period reward totals</p>
           <div className="card">
@@ -563,6 +728,59 @@ export function SpendingPage() {
         reimbursementExpected={reimbursementMode}
       />
 
+      {rewardAdjustModal ? (
+        <RewardAdjustModal
+          modal={rewardAdjustModal}
+          onClose={() => setRewardAdjustModal(null)}
+          onSave={(mode, amountCents) => {
+            const { cardId, categoryKey } = rewardAdjustModal;
+            const next: CardRewardAdjustmentsState = { ...rewardAdjustments };
+            next[cardId] = { ...(next[cardId] || {}) };
+            next[cardId][categoryKey] = { amountCents, mode };
+            saveCardRewardAdjustments(next);
+            setRewardAdjustments(next);
+            setRewardAdjustModal(null);
+          }}
+        />
+      ) : null}
+
+      {clearBalanceConfirm ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Clear rewards balance</h3>
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+              Reset current rewards balance for <strong>{clearBalanceConfirm.cardName}</strong>? This will not delete any purchases.
+            </p>
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setClearBalanceConfirm(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  actions.updateCardRewardTotals(clearBalanceConfirm.cardId, { rewardCashbackCents: 0, rewardPoints: 0, rewardMiles: 0 });
+                  setClearBalanceConfirm(null);
+                }}
+              >
+                Reset current rewards balance
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editBalanceModal ? (
+        <EditBalanceModal
+          modal={editBalanceModal}
+          onClose={() => setEditBalanceModal(null)}
+          onSave={(rewardCashbackCents, rewardPoints, rewardMiles) => {
+            actions.updateCardRewardTotals(editBalanceModal.cardId, { rewardCashbackCents, rewardPoints, rewardMiles });
+            setEditBalanceModal(null);
+          }}
+        />
+      ) : null}
+
       {confirmDelete ? (
         <div className="modal-overlay">
           <div className="modal">
@@ -586,6 +804,106 @@ export function SpendingPage() {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function RewardAdjustModal({
+  modal,
+  onClose,
+  onSave
+}: {
+  modal: { cardName: string; categoryLabel: string; categoryKey: string; currentAmountCents: number };
+  onClose: () => void;
+  onSave: (mode: 'add' | 'set', amountCents: number) => void;
+}) {
+  const [mode, setMode] = useState<'add' | 'set'>('add');
+  const [amountStr, setAmountStr] = useState('');
+  const handleSubmit = () => {
+    const parsed = parseFloat(amountStr);
+    if (Number.isNaN(parsed) || parsed < 0) return;
+    const amountCents = Math.round(parsed * 100);
+    onSave(mode, amountCents);
+  };
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <h3>Adjust category amount for rewards</h3>
+        <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+          Card: <strong>{modal.cardName}</strong> · Category: <strong>{modal.categoryLabel}</strong>
+        </p>
+        <p style={{ fontSize: '0.9rem', marginTop: 8 }}>Current amount: {formatCents(modal.currentAmountCents)}</p>
+        <div style={{ marginTop: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4 }}>
+            <input type="radio" checked={mode === 'add'} onChange={() => setMode('add')} /> Add to current amount
+          </label>
+          <label style={{ display: 'block', marginBottom: 4 }}>
+            <input type="radio" checked={mode === 'set'} onChange={() => setMode('set')} /> Set amount to
+          </label>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <input
+            className="ll-control"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Amount (e.g. 50.00)"
+            value={amountStr}
+            onChange={(e) => setAmountStr(e.target.value)}
+          />
+        </div>
+        <div className="btn-row" style={{ marginTop: 16 }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={!amountStr.trim()}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditBalanceModal({
+  modal,
+  onClose,
+  onSave
+}: {
+  modal: { cardName: string; currentCashbackCents: number; currentPoints: number; currentMiles: number };
+  onClose: () => void;
+  onSave: (rewardCashbackCents: number, rewardPoints: number, rewardMiles: number) => void;
+}) {
+  const [cashbackStr, setCashbackStr] = useState(() => (modal.currentCashbackCents / 100).toFixed(2));
+  const [pointsStr, setPointsStr] = useState(() => String(modal.currentPoints));
+  const [milesStr, setMilesStr] = useState(() => String(modal.currentMiles));
+  const handleSubmit = () => {
+    const cashbackCents = Math.max(0, Math.round(parseFloat(cashbackStr || '0') * 100));
+    const points = Math.max(0, Math.round(parseFloat(pointsStr || '0')));
+    const miles = Math.max(0, Math.round(parseFloat(milesStr || '0')));
+    onSave(cashbackCents, points, miles);
+  };
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <h3>Edit current rewards balance</h3>
+        <p style={{ color: 'var(--muted)', marginTop: 0 }}>Card: <strong>{modal.cardName}</strong></p>
+        <div style={{ marginTop: 12 }}>
+          <label style={{ display: 'block', marginBottom: 6 }}>
+            Cashback ($): <input className="ll-control" type="number" min="0" step="0.01" value={cashbackStr} onChange={(e) => setCashbackStr(e.target.value)} />
+          </label>
+          <label style={{ display: 'block', marginBottom: 6 }}>
+            Points: <input className="ll-control" type="number" min="0" step="1" value={pointsStr} onChange={(e) => setPointsStr(e.target.value)} />
+          </label>
+          <label style={{ display: 'block', marginBottom: 6 }}>
+            Miles: <input className="ll-control" type="number" min="0" step="1" value={milesStr} onChange={(e) => setMilesStr(e.target.value)} />
+          </label>
+        </div>
+        <div className="btn-row" style={{ marginTop: 16 }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn btn-primary" onClick={handleSubmit}>Save</button>
+        </div>
+      </div>
     </div>
   );
 }

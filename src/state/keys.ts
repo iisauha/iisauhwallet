@@ -88,3 +88,6 @@ export const PASSCODE_6DIGIT_KEY = 'iisauhwallet_passcode_6digit_v1';
 
 // UI-only: advanced UI surface colors (card, section, modal, dropdown, border, muted).
 export const UI_ADVANCED_COLORS_KEY = 'iisauhwallet_ui_advanced_colors_v1';
+
+// Rewards: manual category amount adjustments for by-card rewards view (cardId -> categoryKey -> { amountCents, mode }).
+export const CARD_REWARD_ADJUSTMENTS_KEY = 'iisauhwallet_card_reward_adjustments_v1';

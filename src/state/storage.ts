@@ -43,6 +43,7 @@ import {
   SECURITY_QUIZ_COMPLETED_KEY,
   PASSCODE_PAUSED_KEY,
   PASSCODE_6DIGIT_KEY,
+  CARD_REWARD_ADJUSTMENTS_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -223,6 +224,26 @@ export function getDropdownCollapsed(id: string, defaultCollapsed: boolean): boo
 
 export function saveDropdownCollapsed(id: string, collapsed: boolean): void {
   saveDropdownState(id, !collapsed);
+}
+
+export type CardRewardAdjustment = { amountCents: number; mode: 'add' | 'set' };
+export type CardRewardAdjustmentsState = Record<string, Record<string, CardRewardAdjustment>>;
+
+export function loadCardRewardAdjustments(): CardRewardAdjustmentsState {
+  try {
+    const raw = localStorage.getItem(CARD_REWARD_ADJUSTMENTS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as CardRewardAdjustmentsState;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+export function saveCardRewardAdjustments(state: CardRewardAdjustmentsState): void {
+  try {
+    localStorage.setItem(CARD_REWARD_ADJUSTMENTS_KEY, JSON.stringify(state));
+  } catch (_) {}
 }
 
 export function getLastPostedBankId(kind: 'in' | 'out'): string {
