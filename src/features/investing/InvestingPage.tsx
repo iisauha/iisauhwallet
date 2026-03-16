@@ -103,23 +103,19 @@ function CoastFireInfoIcon({
           e.stopPropagation();
           onToggle(open ? '' : id);
         }}
+        className="icon-btn"
         style={{
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           borderRadius: '50%',
-          border: '1px solid var(--muted)',
-          background: 'transparent',
-          color: 'var(--muted)',
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          cursor: 'pointer',
           padding: 0,
           display: 'inline-flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          fontSize: '0.8rem',
         }}
       >
-        i
+        ⓘ
       </button>
       {open ? (
         <div
@@ -1644,8 +1640,8 @@ export function InvestingPage() {
 
       {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
       {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
-      {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, 'k401')}
       {renderSection('General Investing', 'general', generalAccounts, 'general')}
+      {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, 'k401')}
 
       <button
         type="button"
@@ -1663,7 +1659,14 @@ export function InvestingPage() {
         Transfer between Cash and Investing
       </button>
 
-      <div className="card" style={{ marginTop: 24 }}>
+      <div
+        className="card"
+        style={{
+          marginTop: 24,
+          background: 'var(--ui-surface-secondary, var(--surface))',
+          borderColor: 'var(--ui-border, var(--border))',
+        }}
+      >
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
           Investing Summary
         </p>
@@ -1689,7 +1692,14 @@ export function InvestingPage() {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
+      <div
+        className="card"
+        style={{
+          marginTop: 16,
+          background: 'var(--ui-surface-secondary, var(--surface))',
+          borderColor: 'var(--ui-border, var(--border))',
+        }}
+      >
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
           Investing Contribution
         </p>
