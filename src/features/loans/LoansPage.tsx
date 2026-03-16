@@ -1363,19 +1363,19 @@ export function LoansPage() {
               aria-label="Future payment breakdown"
               onClick={() => setShowAfterGraceBreakdown(true)}
               style={{
-                width: 22,
-                height: 22,
+                width: 18,
+                height: 18,
                 borderRadius: '50%',
                 border: '1px solid var(--border)',
                 background: 'transparent',
                 color: 'var(--muted)',
-                fontSize: '0.75rem',
-                fontWeight: 600,
+                fontSize: '0.7rem',
+                fontWeight: 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: 0
+                padding: 0,
               }}
             >
               i
@@ -1413,7 +1413,7 @@ export function LoansPage() {
           marginBottom: 12,
           borderRadius: 999,
           padding: 2,
-          background: 'var(--ui-surface-secondary, var(--surface))',
+          background: 'var(--ui-card-bg, var(--surface))',
           border: '1px solid var(--ui-border, var(--border))'
         }}
         role="tablist"

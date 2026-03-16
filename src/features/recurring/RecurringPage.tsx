@@ -108,8 +108,8 @@ export function RecurringPage() {
         className="section-header"
         style={{
           marginTop: 16,
-          fontSize: '1.08rem',
-          fontWeight: 650,
+          fontSize: '1.05rem',
+          fontWeight: 640,
           borderRadius: 10
         }}
         onClick={() => setIncomeCollapsed(!incomeCollapsed)}
@@ -265,8 +265,8 @@ export function RecurringPage() {
         className="section-header recurring-expenses-section-header"
         style={{
           marginTop: 24,
-          fontSize: '1.08rem',
-          fontWeight: 650,
+          fontSize: '1.05rem',
+          fontWeight: 640,
           padding: '8px 12px',
           borderRadius: 10
         }}
@@ -286,6 +286,7 @@ export function RecurringPage() {
             <div
               className="section-header"
               onClick={() => setDropdownCollapsed(id, !collapsed)}
+              style={{ fontSize: '0.98rem', fontWeight: 600 }}
             >
               <span className="section-header-left">
                 {headerLabel} — <span>{items.length} item{items.length === 1 ? '' : 's'}</span>

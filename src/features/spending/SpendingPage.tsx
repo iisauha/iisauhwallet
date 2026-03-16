@@ -250,52 +250,69 @@ export function SpendingPage() {
         className="filter-bar"
         style={{
           display: 'flex',
-          flexWrap: 'wrap',
           alignItems: 'center',
           gap: 8,
           paddingLeft: 14,
           paddingRight: 14,
+          overflow: 'hidden',
         }}
       >
-        <Select value={filter} onChange={(e) => setFilter(e.target.value as FilterKey)}>
+        <Select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as FilterKey)}
+          style={{ flexShrink: 0, minWidth: 130 }}
+        >
           <option value="this_month">This Month</option>
           <option value="last_month">Last Month</option>
           <option value="all_time">All Time</option>
           <option value="custom">Custom</option>
         </Select>
         {filter === 'custom' ? (
-          <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input className="ll-control" type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
-            <input className="ll-control" type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
+          <span
+            style={{
+              display: 'flex',
+              gap: 6,
+              flexShrink: 1,
+              minWidth: 0,
+              maxWidth: 180,
+            }}
+          >
+            <input
+              className="ll-control"
+              type="date"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              style={{ minWidth: 0, flex: 1 }}
+            />
+            <input
+              className="ll-control"
+              type="date"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              style={{ minWidth: 0, flex: 1 }}
+            />
           </span>
-        ) : null}
-        <span style={{ flex: 1 }} />
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-            marginRight: 2,
-            marginTop: -4,
-          }}
+        ) : (
+          <span style={{ flex: 1 }} />
+        )}
+        <button
+          type="button"
+          className={view === 'rewards' || view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+          onClick={() => setView((prev) => (prev === 'card' ? 'rewards' : 'card'))}
+          aria-pressed={view === 'rewards' || view === 'card'}
+          style={{ flexShrink: 0 }}
         >
-          <button
-            type="button"
-            className={view === 'category' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-            onClick={() => setView('category')}
-            aria-pressed={view === 'category'}
-          >
-            Categories
-          </button>
-          <button
-            type="button"
-            className={view === 'rewards' || view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-            onClick={() => setView((prev) => (prev === 'card' ? 'rewards' : 'card'))}
-            aria-pressed={view === 'rewards' || view === 'card'}
-          >
-            {view === 'card' ? 'By card' : 'Rewards'}
-          </button>
-        </div>
+          {view === 'card' ? 'By card' : 'Rewards'}
+        </button>
+        <button
+          type="button"
+          className={view === 'category' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+          onClick={() => setView('category')}
+          aria-pressed={view === 'category'}
+          style={{ flexShrink: 0 }}
+        >
+          Categories
+        </button>
       </div>
 
       <div
@@ -352,59 +369,6 @@ export function SpendingPage() {
             }}
           >
             <canvas ref={canvasRef} />
-            {byCategory.length > 0 && periodTotalCents > 0 ? (
-              <div
-                style={{
-                  marginTop: 12,
-                  paddingTop: 8,
-                  borderTop: '1px solid var(--border)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                  fontSize: '0.8rem',
-                }}
-              >
-                {byCategory.map((c) => {
-                  const pct = (c.amountCents / periodTotalCents) * 100;
-                  return (
-                    <div
-                      key={c.categoryId}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '2px 6px',
-                        borderRadius: 999,
-                        background: 'var(--ui-surface-secondary, var(--surface))',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: '50%',
-                          background: getCategoryColor(c.categoryId),
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span
-                        style={{
-                          maxWidth: 120,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {getCategoryName(cfg, c.categoryId)}
-                      </span>
-                      <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>
-                        {pct.toFixed(0)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
           </div>
         ) : view === 'card' ? (
           <div>

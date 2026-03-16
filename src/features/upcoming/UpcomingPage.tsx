@@ -325,7 +325,7 @@ export function UpcomingPage() {
         style={{ marginTop: 24 }}
         onClick={() => setCostsCollapsed(!costsCollapsed)}
       >
-        <span className="section-header-left" style={{ color: 'var(--red)' }}>
+        <span className="section-header-left" style={{ color: 'var(--ui-title-text, var(--red))' }}>
           Expected Costs
         </span>
         <span className="chevron">{costsCollapsed ? '▸' : '▾'}</span>
