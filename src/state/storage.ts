@@ -45,6 +45,7 @@ import {
   PASSCODE_6DIGIT_KEY,
   CARD_REWARD_ADJUSTMENTS_KEY,
   CARD_REWARD_ONLY_ENTRIES_KEY,
+  REWARDS_VISIBLE_CARD_IDS_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -272,6 +273,23 @@ export function loadCardRewardOnlyEntries(): CardRewardOnlyEntriesState {
 export function saveCardRewardOnlyEntries(state: CardRewardOnlyEntriesState): void {
   try {
     localStorage.setItem(CARD_REWARD_ONLY_ENTRIES_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
+export function loadRewardsVisibleCardIds(): string[] {
+  try {
+    const raw = localStorage.getItem(REWARDS_VISIBLE_CARD_IDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id: unknown) => typeof id === 'string') : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+export function saveRewardsVisibleCardIds(ids: string[]): void {
+  try {
+    localStorage.setItem(REWARDS_VISIBLE_CARD_IDS_KEY, JSON.stringify(ids));
   } catch (_) {}
 }
 
