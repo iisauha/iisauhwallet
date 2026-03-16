@@ -523,8 +523,9 @@ export function SubTrackerPage() {
                 <div
                   className="sub-tracker-progress-track"
                   style={{
+                    position: 'relative',
                     width: '100%',
-                    height: 12,
+                    height: 14,
                     borderRadius: 999,
                     background: 'rgba(148, 163, 184, 0.35)',
                     overflow: 'hidden'
@@ -535,9 +536,42 @@ export function SubTrackerPage() {
                       width: `${ratio * 100}%`,
                       height: '100%',
                       background: 'var(--green)',
-                      borderRadius: 999
+                      borderRadius: 999,
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0b1b33',
+                      fontSize: '0.75rem',
+                      fontWeight: 600
                     }}
-                  />
+                  >
+                    <span>{Math.round(ratio * 100)}%</span>
+                  </div>
+                  {/* subtle internal tick marks */}
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '0 4px',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          width: 1,
+                          height: '60%',
+                          alignSelf: 'center',
+                          background: 'rgba(15, 23, 42, 0.28)'
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : null}

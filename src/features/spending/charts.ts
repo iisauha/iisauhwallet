@@ -109,7 +109,8 @@ export function getCategoryColor(categoryId: string) {
 export function renderSpendingPieChart(
   canvas: HTMLCanvasElement,
   slices: SpendingSlice[],
-  onSliceClick?: (categoryId: string) => void
+  onSliceClick?: (categoryId: string) => void,
+  animate: boolean = true
 ) {
   const cfg = loadCategoryConfig();
   const labels = slices.map((s) => getCategoryName(cfg, s.categoryId));
@@ -128,7 +129,7 @@ export function renderSpendingPieChart(
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 420 },
+      animation: { duration: animate ? 420 : 0 },
       plugins: {
         legend: { display: false }
       },

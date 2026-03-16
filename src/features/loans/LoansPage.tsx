@@ -902,7 +902,7 @@ function LoanCard(props: {
           Next payment date: {l.nextPaymentDate}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
+      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--text)' }}>
         Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
       </div>
       {l.category === 'private' ? (
@@ -1408,7 +1408,7 @@ export function LoansPage() {
           display: 'flex',
           gap: 0,
           marginBottom: 12,
-          borderRadius: 8,
+          borderRadius: 999,
           padding: 2,
           background: 'var(--bg-secondary)',
           border: '1px solid var(--border)'
@@ -1422,14 +1422,15 @@ export function LoansPage() {
           aria-selected={showPublic}
           style={{
             flex: 1,
-            padding: '8px 12px',
+            padding: '10px 14px',
             fontSize: '0.9rem',
-            fontWeight: showPublic ? 600 : 400,
+            fontWeight: showPublic ? 600 : 500,
             border: 'none',
-            borderRadius: 6,
-            background: showPublic ? 'var(--bg)' : 'transparent',
-            color: showPublic ? 'var(--fg)' : 'var(--muted)',
-            cursor: 'pointer'
+            borderRadius: 999,
+            background: showPublic ? 'var(--accent)' : 'transparent',
+            color: showPublic ? '#ffffff' : 'var(--muted)',
+            cursor: 'pointer',
+            transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
             setShowPublic((s) => {
@@ -1447,14 +1448,15 @@ export function LoansPage() {
           aria-selected={showPrivate}
           style={{
             flex: 1,
-            padding: '8px 12px',
+            padding: '10px 14px',
             fontSize: '0.9rem',
-            fontWeight: showPrivate ? 600 : 400,
+            fontWeight: showPrivate ? 600 : 500,
             border: 'none',
-            borderRadius: 6,
-            background: showPrivate ? 'var(--bg)' : 'transparent',
-            color: showPrivate ? 'var(--fg)' : 'var(--muted)',
-            cursor: 'pointer'
+            borderRadius: 999,
+            background: showPrivate ? 'var(--accent)' : 'transparent',
+            color: showPrivate ? '#ffffff' : 'var(--muted)',
+            cursor: 'pointer',
+            transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
             setShowPrivate((s) => {

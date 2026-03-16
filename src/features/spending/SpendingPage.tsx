@@ -58,6 +58,7 @@ export function SpendingPage() {
   } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastSlicesKeyRef = useRef<string | null>(null);
 
   const { startKey, endKey } = useMemo(() => {
     const now = new Date();
@@ -191,9 +192,18 @@ export function SpendingPage() {
   useEffect(() => {
     if (!canvasRef.current) return;
     if (view !== 'category') return;
-    renderSpendingPieChart(canvasRef.current, byCategory, (categoryId) => {
-      setDrilldownCategoryId((prev) => (prev === categoryId ? null : categoryId));
-    });
+    const key = JSON.stringify(byCategory);
+    const prevKey = lastSlicesKeyRef.current;
+    const shouldAnimate = key !== prevKey;
+    lastSlicesKeyRef.current = key;
+    renderSpendingPieChart(
+      canvasRef.current,
+      byCategory,
+      (categoryId) => {
+        setDrilldownCategoryId((prev) => (prev === categoryId ? null : categoryId));
+      },
+      shouldAnimate
+    );
   }, [byCategory, view]);
 
   return (
@@ -214,11 +224,19 @@ export function SpendingPage() {
         <span style={{ flex: 1 }} />
         <button
           type="button"
+          className={view === 'category' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+          onClick={() => setView('category')}
+          aria-pressed={view === 'category'}
+        >
+          By category
+        </button>
+        <button
+          type="button"
           className={view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-          onClick={() => setView((v) => (v === 'category' ? 'card' : 'category'))}
+          onClick={() => setView('card')}
           aria-pressed={view === 'card'}
         >
-          By Card
+          By card & rewards
         </button>
       </div>
 
@@ -250,6 +268,9 @@ export function SpendingPage() {
       {view === 'card' ? (
         <>
           <p className="section-title" style={{ marginTop: 24 }}>Reward balances</p>
+          <p style={{ marginTop: 4, marginBottom: 8, fontSize: '0.8rem', color: 'var(--muted)', fontStyle: 'italic' }}>
+            Manual rewards balances. Not live bank data.
+          </p>
           <div className="card">
             {(data.cards || []).length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
