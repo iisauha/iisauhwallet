@@ -4,7 +4,7 @@ import { PHYSICAL_CASH_ID } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadSubTracker } from '../../state/storage';
 import type { SubTrackerEntry } from '../../state/storage';
-import { suggestCardForPurchase } from '../rewards/rewardMatching';
+import { suggestAllCardsForPurchase, type SuggestResult } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 
 function todayKey() {
@@ -55,8 +55,14 @@ export function AddPurchaseModal(props: {
   const [applyToSnapshot, setApplyToSnapshot] = useState(false);
   const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | 'cash' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
-  const [suggestedCardId, setSuggestedCardId] = useState<string | null>(null);
+  const [suggestedCardsOrder, setSuggestedCardsOrder] = useState<SuggestResult[]>([]);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [showSuggestionPopup, setShowSuggestionPopup] = useState(false);
+  const currentSuggestion = suggestedCardsOrder[suggestionIndex] ?? null;
+  const suggestedCardId = currentSuggestion?.card.id ?? null;
+  const suggestedCardName = currentSuggestion
+    ? (data.cards || []).find((c) => c.id === currentSuggestion.card.id)?.name ?? null
+    : null;
   const [hasSelectedCategory, setHasSelectedCategory] = useState(false);
   const [showSubTrackerPopup, setShowSubTrackerPopup] = useState(false);
   const [suggestedSubTrackerCardId, setSuggestedSubTrackerCardId] = useState<string | null>(null);
@@ -111,14 +117,18 @@ export function AddPurchaseModal(props: {
     }
   }, [props.open, isEditing, data.cards]);
 
-  // After category/subcategory selection, suggest a reward card (new purchase only). SUB card wins if active; else best matching rule.
+  // After category/subcategory selection, suggest cards in priority order (SUB first, then highest % category, then catch-all). User can decline to see next.
   useEffect(() => {
     if (!props.open || isEditing || !data.cards?.length || !hasSelectedCategory || showSubTrackerPopup) return;
     const activeSubId = getActiveSubTrackerCardId();
-    const result = suggestCardForPurchase(category, subcategory, data.cards, activeSubId);
-    if (result && (!showSuggestionPopup || suggestedCardId !== result.card.id)) {
-      setSuggestedCardId(result.card.id);
+    const order = suggestAllCardsForPurchase(category, subcategory, data.cards, activeSubId);
+    if (order.length > 0) {
+      setSuggestedCardsOrder(order);
+      setSuggestionIndex(0);
       setShowSuggestionPopup(true);
+    } else {
+      setSuggestedCardsOrder([]);
+      setShowSuggestionPopup(false);
     }
   }, [props.open, category, subcategory, isEditing, data.cards, hasSelectedCategory, showSubTrackerPopup]);
 
@@ -169,7 +179,6 @@ export function AddPurchaseModal(props: {
     (!isSplit || !splitError) &&
     (!applyToSnapshot || (paymentSource !== '' && (paymentSource === 'cash' || paymentTargetId)));
 
-  const suggestedCardName = suggestedCardId ? (data.cards || []).find((c) => c.id === suggestedCardId)?.name : null;
   const suggestedSubTrackerCardName =
     suggestedSubTrackerCardId ? (data.cards || []).find((c) => c.id === suggestedSubTrackerCardId)?.name : null;
 
@@ -207,20 +216,29 @@ export function AddPurchaseModal(props: {
           </div>
         </div>
       ) : null}
-      {showSuggestionPopup && suggestedCardId && suggestedCardName ? (
+      {showSuggestionPopup && currentSuggestion && suggestedCardName ? (
         <div className="modal-overlay" style={{ zIndex: 10001 }}>
           <div className="modal">
-            <h3>Wanna use {suggestedCardName}?</h3>
+            <h3>Use {suggestedCardName}?</h3>
+            {currentSuggestion.rule ? (
+              <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: -4, marginBottom: 12 }}>
+                {currentSuggestion.rule.isCatchAll ? 'Catch-all' : (currentSuggestion.rule.subcategory || currentSuggestion.rule.category)}: {currentSuggestion.rule.value}%
+              </p>
+            ) : null}
             <div className="btn-row">
               <button
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => {
-                  setShowSuggestionPopup(false);
-                  setSuggestedCardId(null);
+                  if (suggestionIndex + 1 >= suggestedCardsOrder.length) {
+                    setShowSuggestionPopup(false);
+                    setSuggestedCardsOrder([]);
+                  } else {
+                    setSuggestionIndex((i) => i + 1);
+                  }
                 }}
               >
-                NO
+                No
               </button>
               <button
                 type="button"
@@ -228,12 +246,12 @@ export function AddPurchaseModal(props: {
                 onClick={() => {
                   setApplyToSnapshot(true);
                   setPaymentSource('card');
-                  setPaymentTargetId(suggestedCardId);
+                  setPaymentTargetId(currentSuggestion.card.id);
                   setShowSuggestionPopup(false);
-                  setSuggestedCardId(null);
+                  setSuggestedCardsOrder([]);
                 }}
               >
-                YES
+                Yes
               </button>
             </div>
           </div>
@@ -397,7 +415,7 @@ export function AddPurchaseModal(props: {
             className="btn btn-secondary"
             onClick={() => {
               setShowSuggestionPopup(false);
-              setSuggestedCardId(null);
+              setSuggestedCardsOrder([]);
               setShowSubTrackerPopup(false);
               setSuggestedSubTrackerCardId(null);
               setHasSelectedCategory(false);
@@ -467,7 +485,7 @@ export function AddPurchaseModal(props: {
               setPaymentSource('');
               setPaymentTargetId('');
               setShowSuggestionPopup(false);
-              setSuggestedCardId(null);
+              setSuggestedCardsOrder([]);
               setHasSelectedCategory(false);
               setShowSubTrackerPopup(false);
               setSuggestedSubTrackerCardId(null);

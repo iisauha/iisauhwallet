@@ -36,19 +36,17 @@ export interface CreditCard {
   rewardSubcategory?: string;
   /** @deprecated Use rewardRules instead. Kept for migration. */
   isCatchAll?: boolean;
-  /** Multiple reward rules per card. Takes precedence over legacy single-rule fields. */
+  /** Multiple reward rules per card (category %). Used only for card recommendation. */
   rewardRules?: RewardRule[];
-  /** Manual/accumulated reward totals (display only; do not count toward net cash). */
+  /** Which reward balance this card tracks. Determines which balance field is shown. */
+  rewardType?: 'cashback' | 'miles' | 'points';
+  /** Manual reward balance: cents for cashback, raw count for points/miles. Display only; does not affect net cash. */
   rewardCashbackCents?: number;
   rewardPoints?: number;
   rewardMiles?: number;
-  /** When true, balance was cleared by user; current balance only grows from new purchases added after clear. */
-  rewardBalanceCleared?: boolean;
-  /** When true, user has manually set current rewards balance; it is the base and new purchase rewards accumulate on top. */
-  rewardManualOverride?: boolean;
-  /** Optional: average cents per point for approximate dollar value display (e.g. 1.2 = 1.2 cpp). */
+  /** Optional: cents per point for approximate dollar value (e.g. 1.2 = 1.2 cpp). Informational only. */
   avgCentsPerPoint?: number;
-  /** Optional: average cents per mile for approximate dollar value display (e.g. 1.3 = 1.3 cpm). */
+  /** Optional: cents per mile for approximate dollar value (e.g. 1.3 = 1.3 cpm). Informational only. */
   avgCentsPerMile?: number;
 }
 

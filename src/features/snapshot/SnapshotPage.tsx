@@ -121,11 +121,9 @@ export function SnapshotPage() {
         cardId: string;
         rules: RewardRule[];
         valueInputs: Record<string, string>;
-        rewardCashbackCents: string;
-        rewardPoints: string;
-        rewardMiles: string;
-        avgCentsPerPoint: string;
-        avgCentsPerMile: string;
+        rewardType: 'cashback' | 'miles' | 'points';
+        rewardBalanceStr: string;
+        rewardCppStr: string;
       }
   >({ type: 'none' });
 
@@ -422,11 +420,13 @@ export function SnapshotPage() {
                             cardId: c.id,
                             rules: initialRules,
                             valueInputs,
-                            rewardCashbackCents: typeof c.rewardCashbackCents === 'number' ? String(c.rewardCashbackCents) : '',
-                            rewardPoints: typeof c.rewardPoints === 'number' ? String(c.rewardPoints) : '',
-                            rewardMiles: typeof c.rewardMiles === 'number' ? String(c.rewardMiles) : '',
-                            avgCentsPerPoint: typeof c.avgCentsPerPoint === 'number' ? String(c.avgCentsPerPoint) : '',
-                            avgCentsPerMile: typeof c.avgCentsPerMile === 'number' ? String(c.avgCentsPerMile) : ''
+                            rewardType: c.rewardType ?? (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : (c.rewardPoints != null && c.rewardPoints > 0 ? 'points' : 'cashback')),
+                            rewardBalanceStr: c.rewardType === 'cashback' || (!c.rewardType && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0))
+                              ? (typeof c.rewardCashbackCents === 'number' ? (c.rewardCashbackCents / 100).toFixed(2) : '')
+                              : c.rewardType === 'miles' || (c.rewardMiles != null && c.rewardMiles > 0)
+                                ? String(c.rewardMiles ?? '')
+                                : String(c.rewardPoints ?? ''),
+                            rewardCppStr: c.rewardType === 'points' || (c.rewardPoints != null && c.rewardPoints > 0) ? (typeof c.avgCentsPerPoint === 'number' ? String(c.avgCentsPerPoint) : '') : (typeof c.avgCentsPerMile === 'number' ? String(c.avgCentsPerMile) : '')
                           });
                         }}
                         title="Card reward categories"
@@ -910,74 +910,43 @@ export function SnapshotPage() {
                   })}
                   <button type="button" className="btn btn-secondary" style={{ marginBottom: 12 }} onClick={addRule}>+ Add rule</button>
                   <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                    <label style={{ fontSize: '0.9rem' }}>Reward totals (manual override)</label>
+                    <label style={{ fontSize: '0.9rem' }}>Current reward balance</label>
                     <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
-                      Edit to sync with reality or after redeeming. Leave blank to use auto total from purchases.
+                      Manual balance for this card. Informational only; does not affect net worth.
                     </p>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <div style={{ flex: '1 1 100px' }}>
-                        <label style={{ fontSize: '0.75rem' }}>Cashback ($)</label>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          value={modal.rewardCashbackCents}
-                          onChange={(e) => setModal({ ...modal, rewardCashbackCents: e.target.value })}
-                          style={{ width: '100%', padding: '6px 8px' }}
-                        />
-                      </div>
-                      <div style={{ flex: '1 1 80px' }}>
-                        <label style={{ fontSize: '0.75rem' }}>Points</label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="0"
-                          value={modal.rewardPoints}
-                          onChange={(e) => setModal({ ...modal, rewardPoints: e.target.value })}
-                          style={{ width: '100%', padding: '6px 8px' }}
-                        />
-                      </div>
-                      <div style={{ flex: '1 1 80px' }}>
-                        <label style={{ fontSize: '0.75rem' }}>Miles</label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="0"
-                          value={modal.rewardMiles}
-                          onChange={(e) => setModal({ ...modal, rewardMiles: e.target.value })}
-                          style={{ width: '100%', padding: '6px 8px' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                    <label style={{ fontSize: '0.9rem' }}>Avg cents per point / mile (for approx. value display)</label>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
-                      Optional. Used only to show an approximate dollar value of points/miles in the rewards view. Not used in any financial calculations.
-                    </p>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <div style={{ flex: '1 1 100px' }}>
-                        <label style={{ fontSize: '0.75rem' }}>Cents per point (e.g. 1.2)</label>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder=""
-                          value={modal.avgCentsPerPoint}
-                          onChange={(e) => setModal({ ...modal, avgCentsPerPoint: e.target.value })}
-                          style={{ width: '100%', padding: '6px 8px' }}
-                        />
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <div style={{ flex: '1 1 120px' }}>
+                        <label style={{ fontSize: '0.75rem' }}>Type</label>
+                        <Select value={modal.rewardType} onChange={(e) => setModal({ ...modal, rewardType: e.target.value as 'cashback' | 'miles' | 'points' })} style={{ width: '100%' }}>
+                          <option value="cashback">Cashback ($)</option>
+                          <option value="points">Points</option>
+                          <option value="miles">Miles</option>
+                        </Select>
                       </div>
                       <div style={{ flex: '1 1 100px' }}>
-                        <label style={{ fontSize: '0.75rem' }}>Cents per mile (e.g. 1.3)</label>
+                        <label style={{ fontSize: '0.75rem' }}>{modal.rewardType === 'cashback' ? 'Balance ($)' : 'Balance'}</label>
                         <input
                           type="text"
-                          inputMode="decimal"
-                          placeholder=""
-                          value={modal.avgCentsPerMile}
-                          onChange={(e) => setModal({ ...modal, avgCentsPerMile: e.target.value })}
+                          inputMode={modal.rewardType === 'cashback' ? 'decimal' : 'numeric'}
+                          placeholder={modal.rewardType === 'cashback' ? '0.00' : '0'}
+                          value={modal.rewardBalanceStr}
+                          onChange={(e) => setModal({ ...modal, rewardBalanceStr: e.target.value })}
                           style={{ width: '100%', padding: '6px 8px' }}
                         />
                       </div>
+                      {(modal.rewardType === 'points' || modal.rewardType === 'miles') ? (
+                        <div style={{ flex: '1 1 80px' }}>
+                          <label style={{ fontSize: '0.75rem' }}>CPP</label>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="e.g. 1.2"
+                            value={modal.rewardCppStr}
+                            onChange={(e) => setModal({ ...modal, rewardCppStr: e.target.value })}
+                            style={{ width: '100%', padding: '6px 8px' }}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   <div className="btn-row">
@@ -987,28 +956,17 @@ export function SnapshotPage() {
                       className="btn btn-secondary"
                       onClick={() => {
                         actions.updateCardRewardRules(modal.cardId, validRules);
-                        const cashbackStr = modal.rewardCashbackCents.trim().replace(/,/g, '');
-                        const pointsStr = modal.rewardPoints.trim().replace(/,/g, '');
-                        const milesStr = modal.rewardMiles.trim().replace(/,/g, '');
-                        const cashbackCents = cashbackStr ? Math.round(parseFloat(cashbackStr) * 100) : undefined;
-                        const points = pointsStr ? Math.round(parseFloat(pointsStr)) : undefined;
-                        const miles = milesStr ? Math.round(parseFloat(milesStr)) : undefined;
-                        const totalsPayload: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number; rewardManualOverride?: boolean } = {};
-                        if (typeof cashbackCents === 'number' && !Number.isNaN(cashbackCents)) totalsPayload.rewardCashbackCents = cashbackCents;
-                        if (typeof points === 'number' && !Number.isNaN(points)) totalsPayload.rewardPoints = points;
-                        if (typeof miles === 'number' && !Number.isNaN(miles)) totalsPayload.rewardMiles = miles;
-                        if (Object.keys(totalsPayload).length > 0) {
-                          totalsPayload.rewardManualOverride = true;
-                          actions.updateCardRewardTotals(modal.cardId, totalsPayload);
+                        const balanceStr = modal.rewardBalanceStr.trim().replace(/,/g, '');
+                        const balance = balanceStr ? (modal.rewardType === 'cashback' ? Math.round(parseFloat(balanceStr) * 100) : Math.round(parseFloat(balanceStr))) : 0;
+                        const totals: { rewardType: 'cashback' | 'miles' | 'points'; rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number } = { rewardType: modal.rewardType };
+                        if (modal.rewardType === 'cashback') totals.rewardCashbackCents = Math.max(0, balance);
+                        else if (modal.rewardType === 'points') totals.rewardPoints = Math.max(0, balance);
+                        else totals.rewardMiles = Math.max(0, balance);
+                        actions.updateCardRewardTotals(modal.cardId, totals);
+                        const cpp = modal.rewardCppStr.trim() ? parseFloat(modal.rewardCppStr) : undefined;
+                        if ((modal.rewardType === 'points' || modal.rewardType === 'miles') && typeof cpp === 'number' && !Number.isNaN(cpp) && cpp >= 0) {
+                          actions.updateCardRewardCpp(modal.cardId, modal.rewardType === 'points' ? { avgCentsPerPoint: cpp } : { avgCentsPerMile: cpp });
                         }
-                        const cppPoint = modal.avgCentsPerPoint.trim().replace(/,/g, '');
-                        const cppMile = modal.avgCentsPerMile.trim().replace(/,/g, '');
-                        const avgCentsPerPoint = cppPoint ? parseFloat(cppPoint) : undefined;
-                        const avgCentsPerMile = cppMile ? parseFloat(cppMile) : undefined;
-                        actions.updateCardRewardCpp(modal.cardId, {
-                          avgCentsPerPoint: (typeof avgCentsPerPoint === 'number' && !Number.isNaN(avgCentsPerPoint) && avgCentsPerPoint >= 0) ? avgCentsPerPoint : undefined,
-                          avgCentsPerMile: (typeof avgCentsPerMile === 'number' && !Number.isNaN(avgCentsPerMile) && avgCentsPerMile >= 0) ? avgCentsPerMile : undefined
-                        });
                         setModal({ type: 'none' });
                       }}
                     >
