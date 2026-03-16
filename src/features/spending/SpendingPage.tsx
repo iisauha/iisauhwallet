@@ -231,7 +231,17 @@ export function SpendingPage() {
 
   return (
     <div className="tab-panel active" id="spendingContent">
-      <div className="filter-bar" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+      <div
+        className="filter-bar"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 8,
+          paddingLeft: 14,
+          paddingRight: 14,
+        }}
+      >
         <Select value={filter} onChange={(e) => setFilter(e.target.value as FilterKey)}>
           <option value="this_month">This Month</option>
           <option value="last_month">Last Month</option>
@@ -251,23 +261,15 @@ export function SpendingPage() {
           onClick={() => setView('category')}
           aria-pressed={view === 'category'}
         >
-          This Month
+          Categories
         </button>
         <button
           type="button"
-          className={view === 'rewards' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-          onClick={() => setView('rewards')}
-          aria-pressed={view === 'rewards'}
+          className={view === 'rewards' || view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+          onClick={() => setView((prev) => (prev === 'card' ? 'rewards' : 'card'))}
+          aria-pressed={view === 'rewards' || view === 'card'}
         >
-          Rewards
-        </button>
-        <button
-          type="button"
-          className={view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-          onClick={() => setView('card')}
-          aria-pressed={view === 'card'}
-        >
-          By Card
+          {view === 'card' ? 'By card' : 'Rewards'}
         </button>
       </div>
 
@@ -278,9 +280,6 @@ export function SpendingPage() {
           marginBottom: 16,
           padding: 16,
           borderRadius: 16,
-          background: 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,64,175,0.96))',
-          color: '#f9fafb',
-          boxShadow: '0 18px 45px rgba(15,23,42,0.55)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>

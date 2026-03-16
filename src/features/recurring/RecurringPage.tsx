@@ -108,7 +108,8 @@ export function RecurringPage() {
         className="section-header"
         style={{
           marginTop: 16,
-          fontSize: '1rem',
+          fontSize: '1.08rem',
+          fontWeight: 650,
           borderRadius: 10
         }}
         onClick={() => setIncomeCollapsed(!incomeCollapsed)}
@@ -264,7 +265,8 @@ export function RecurringPage() {
         className="section-header recurring-expenses-section-header"
         style={{
           marginTop: 24,
-          fontSize: '1rem',
+          fontSize: '1.08rem',
+          fontWeight: 650,
           padding: '8px 12px',
           borderRadius: 10
         }}
