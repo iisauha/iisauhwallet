@@ -58,6 +58,7 @@ export function AddPurchaseModal(props: {
   const [suggestedCardsOrder, setSuggestedCardsOrder] = useState<SuggestResult[]>([]);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [showSuggestionPopup, setShowSuggestionPopup] = useState(false);
+  const [suggestionAccepted, setSuggestionAccepted] = useState(false);
   const currentSuggestion = suggestedCardsOrder[suggestionIndex] ?? null;
   const suggestedCardId = currentSuggestion?.card.id ?? null;
   const suggestedCardName = currentSuggestion
@@ -66,6 +67,10 @@ export function AddPurchaseModal(props: {
   const [hasSelectedCategory, setHasSelectedCategory] = useState(false);
   const [showSubTrackerPopup, setShowSubTrackerPopup] = useState(false);
   const [suggestedSubTrackerCardId, setSuggestedSubTrackerCardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (props.open) setSuggestionAccepted(false);
+  }, [props.open]);
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
@@ -107,19 +112,19 @@ export function AddPurchaseModal(props: {
     }
   }, [props.open, props.reimbursementExpected, currentPurchase]);
 
-  // SUB Tracker first: when opening Add Purchase, if there's an active SUB Tracker card, ask to use it first.
+  // SUB Tracker first: when opening Add Purchase, if there's an active SUB Tracker card, ask to use it first. Stop once user accepted any suggestion.
   useEffect(() => {
-    if (!props.open || isEditing) return;
+    if (!props.open || isEditing || suggestionAccepted) return;
     const cardId = getActiveSubTrackerCardId();
     if (cardId && data.cards?.some((c) => c.id === cardId)) {
       setSuggestedSubTrackerCardId(cardId);
       setShowSubTrackerPopup(true);
     }
-  }, [props.open, isEditing, data.cards]);
+  }, [props.open, isEditing, data.cards, suggestionAccepted]);
 
-  // After category/subcategory selection, suggest cards in priority order (SUB first, then highest % category, then catch-all). User can decline to see next.
+  // After category/subcategory selection, suggest cards in priority order. Do not show if user already accepted a suggestion (SUB or card).
   useEffect(() => {
-    if (!props.open || isEditing || !data.cards?.length || !hasSelectedCategory || showSubTrackerPopup) return;
+    if (!props.open || isEditing || !data.cards?.length || !hasSelectedCategory || showSubTrackerPopup || suggestionAccepted) return;
     const activeSubId = getActiveSubTrackerCardId();
     const order = suggestAllCardsForPurchase(category, subcategory, data.cards, activeSubId);
     if (order.length > 0) {
@@ -130,7 +135,7 @@ export function AddPurchaseModal(props: {
       setSuggestedCardsOrder([]);
       setShowSuggestionPopup(false);
     }
-  }, [props.open, category, subcategory, isEditing, data.cards, hasSelectedCategory, showSubTrackerPopup]);
+  }, [props.open, category, subcategory, isEditing, data.cards, hasSelectedCategory, showSubTrackerPopup, suggestionAccepted]);
 
   if (!props.open) return null;
 
@@ -203,6 +208,7 @@ export function AddPurchaseModal(props: {
                 type="button"
                 className="btn btn-add"
                 onClick={() => {
+                  setSuggestionAccepted(true);
                   setApplyToSnapshot(true);
                   setPaymentSource('card');
                   setPaymentTargetId(suggestedSubTrackerCardId);
@@ -244,6 +250,7 @@ export function AddPurchaseModal(props: {
                 type="button"
                 className="btn btn-add"
                 onClick={() => {
+                  setSuggestionAccepted(true);
                   setApplyToSnapshot(true);
                   setPaymentSource('card');
                   setPaymentTargetId(currentSuggestion.card.id);

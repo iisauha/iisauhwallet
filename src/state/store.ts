@@ -22,8 +22,8 @@ export interface LedgerState {
     updateCardRewardRules: (cardId: string, rules: RewardRule[]) => void;
     updateCardRewardTotals: (cardId: string, totals: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number; rewardType?: 'cashback' | 'miles' | 'points' }) => void;
     updateCardRewardCpp: (cardId: string, cpp: { avgCentsPerPoint?: number; avgCentsPerMile?: number }) => void;
-    addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
-    addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
+    addPendingInbound: (item: Omit<PendingInboundItem, 'id'>) => void;
+    addPendingOutbound: (item: Omit<PendingOutboundItem, 'id'>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
     updatePurchase: (id: string, updated: Omit<Purchase, 'id'>) => void;
     deletePurchase: (id: string) => void;
@@ -171,13 +171,15 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     },
     addPendingInbound: (item) => {
       const next = structuredClone(get().data) as LedgerData;
-      next.pendingIn.push({ ...item, id: uid(), createdAt: nowIso() });
+      const createdAt = (item as PendingInboundItem).createdAt ?? nowIso();
+      next.pendingIn.push({ ...item, id: uid(), createdAt } as PendingInboundItem);
       saveData(next);
       set({ data: next });
     },
     addPendingOutbound: (item) => {
       const next = structuredClone(get().data) as LedgerData;
-      next.pendingOut.push({ ...item, id: uid(), createdAt: nowIso() });
+      const createdAt = (item as PendingOutboundItem).createdAt ?? nowIso();
+      next.pendingOut.push({ ...item, id: uid(), createdAt } as PendingOutboundItem);
       saveData(next);
       set({ data: next });
     },

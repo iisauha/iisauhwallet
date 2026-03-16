@@ -254,39 +254,75 @@ export function SpendingPage() {
             {(data.cards || []).length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
             ) : (
-              (data.cards || []).map((c) => {
-                const type = c.rewardType ?? (c.rewardCashbackCents != null && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0) ? 'cashback' : (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : 'points'));
-                const balance = type === 'cashback' ? (c.rewardCashbackCents ?? 0) : type === 'miles' ? (c.rewardMiles ?? 0) : (c.rewardPoints ?? 0);
-                const cpp = type === 'points' ? (c.avgCentsPerPoint ?? undefined) : type === 'miles' ? (c.avgCentsPerMile ?? undefined) : undefined;
-                const approxCents = (type === 'points' && cpp != null && cpp > 0) || (type === 'miles' && cpp != null && cpp > 0) ? Math.round(balance * cpp / 100) : null;
-                return (
-                  <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{c.name || 'Card'}</div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-                        {type === 'cashback' && formatCents(balance)}
-                        {type === 'points' && `${balance.toLocaleString()} pts`}
-                        {type === 'miles' && `${balance.toLocaleString()} mi`}
-                        {cpp != null && cpp > 0 && (type === 'points' || type === 'miles') && approxCents != null && ` · ~${formatCents(approxCents)}`}
+              <>
+                {(data.cards || []).map((c) => {
+                  const type = c.rewardType ?? (c.rewardCashbackCents != null && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0) ? 'cashback' : (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : 'points'));
+                  const balance = type === 'cashback' ? (c.rewardCashbackCents ?? 0) : type === 'miles' ? (c.rewardMiles ?? 0) : (c.rewardPoints ?? 0);
+                  const cpp = type === 'points' ? (c.avgCentsPerPoint ?? undefined) : type === 'miles' ? (c.avgCentsPerMile ?? undefined) : undefined;
+                  const approxCents = (type === 'points' && cpp != null && cpp > 0) || (type === 'miles' && cpp != null && cpp > 0) ? Math.round(balance * cpp / 100) : null;
+                  return (
+                    <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{c.name || 'Card'}</div>
+                        <div style={{ fontSize: '0.95rem', color: 'var(--fg, inherit)', fontWeight: 500 }}>
+                          {type === 'cashback' && formatCents(balance)}
+                          {type === 'points' && `${balance.toLocaleString()} pts`}
+                          {type === 'miles' && `${balance.toLocaleString()} mi`}
+                          {cpp != null && cpp > 0 && (type === 'points' || type === 'miles') && approxCents != null && (
+                            <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · ~{formatCents(approxCents)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.8rem', padding: '2px 8px' }}
+                        onClick={() => setEditBalanceModal({
+                          cardId: c.id,
+                          cardName: c.name || 'Card',
+                          rewardType: type,
+                          balance: type === 'cashback' ? balance : balance,
+                          cpp
+                        })}
+                      >
+                        Edit balance
+                      </button>
+                    </div>
+                  );
+                })}
+                {(() => {
+                  let totalCashback = 0, totalPoints = 0, totalMiles = 0, totalApproxCents = 0;
+                  (data.cards || []).forEach((c) => {
+                    const type = c.rewardType ?? (c.rewardCashbackCents != null && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0) ? 'cashback' : (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : 'points'));
+                    const balance = type === 'cashback' ? (c.rewardCashbackCents ?? 0) : type === 'miles' ? (c.rewardMiles ?? 0) : (c.rewardPoints ?? 0);
+                    if (type === 'cashback') totalCashback += balance;
+                    else if (type === 'points') {
+                      totalPoints += balance;
+                      if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) totalApproxCents += Math.round(balance * c.avgCentsPerPoint / 100);
+                    } else {
+                      totalMiles += balance;
+                      if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) totalApproxCents += Math.round(balance * c.avgCentsPerMile / 100);
+                    }
+                  });
+                  const hasTotals = totalCashback > 0 || totalPoints > 0 || totalMiles > 0;
+                  if (!hasTotals && totalApproxCents === 0) return null;
+                  return (
+                    <div style={{ paddingTop: 12, marginTop: 8, borderTop: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 6 }}>Total current</div>
+                      <div style={{ fontSize: '0.95rem', color: 'var(--fg, inherit)', fontWeight: 500 }}>
+                        {totalCashback > 0 && <span>{formatCents(totalCashback)} cashback</span>}
+                        {totalCashback > 0 && (totalPoints > 0 || totalMiles > 0) && ' · '}
+                        {totalPoints > 0 && <span>{totalPoints.toLocaleString()} pts</span>}
+                        {totalPoints > 0 && totalMiles > 0 && ' · '}
+                        {totalMiles > 0 && <span>{totalMiles.toLocaleString()} mi</span>}
+                        {totalApproxCents > 0 && (
+                          <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · ~{formatCents(totalApproxCents)} (approx)</span>
+                        )}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.8rem', padding: '2px 8px' }}
-                      onClick={() => setEditBalanceModal({
-                        cardId: c.id,
-                        cardName: c.name || 'Card',
-                        rewardType: type,
-                        balance: type === 'cashback' ? balance : balance,
-                        cpp
-                      })}
-                    >
-                      Edit balance
-                    </button>
-                  </div>
-                );
-              })
+                  );
+                })()}
+              </>
             )}
           </div>
         </>

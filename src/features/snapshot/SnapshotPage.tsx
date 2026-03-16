@@ -496,6 +496,11 @@ export function SnapshotPage() {
             items={data.pendingIn || []}
             onPosted={(id) => handlePendingPosted('in', id)}
             onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('in', id))}
+            onJoinInbound={(id1, id2, combined) => {
+              actions.deletePending('in', id1);
+              actions.deletePending('in', id2);
+              actions.addPendingInbound(combined);
+            }}
           />
           <div className="btn-row">
             <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
@@ -526,6 +531,11 @@ export function SnapshotPage() {
             items={data.pendingOut || []}
             onPosted={(id) => handlePendingPosted('out', id)}
             onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('out', id))}
+            onJoinOutbound={(id1, id2, combined) => {
+              actions.deletePending('out', id1);
+              actions.deletePending('out', id2);
+              actions.addPendingOutbound(combined);
+            }}
           />
           <div className="btn-row">
             <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
