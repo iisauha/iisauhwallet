@@ -91,3 +91,5 @@ export const UI_ADVANCED_COLORS_KEY = 'iisauhwallet_ui_advanced_colors_v1';
 
 // Rewards: manual category amount adjustments for by-card rewards view (cardId -> categoryKey -> { amountCents, mode }).
 export const CARD_REWARD_ADJUSTMENTS_KEY = 'iisauhwallet_card_reward_adjustments_v1';
+// Rewards: manual reward-only entries per card (not real purchases; rewards-view only; do not affect snapshot/net cash).
+export const CARD_REWARD_ONLY_ENTRIES_KEY = 'iisauhwallet_card_reward_only_entries_v1';

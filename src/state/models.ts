@@ -44,6 +44,10 @@ export interface CreditCard {
   rewardMiles?: number;
   /** When true, balance was cleared by user; current balance only grows from new purchases added after clear. */
   rewardBalanceCleared?: boolean;
+  /** Optional: average cents per point for approximate dollar value display (e.g. 1.2 = 1.2 cpp). */
+  avgCentsPerPoint?: number;
+  /** Optional: average cents per mile for approximate dollar value display (e.g. 1.3 = 1.3 cpm). */
+  avgCentsPerMile?: number;
 }
 
 export type PendingDepositTo = 'bank' | 'card' | 'hysa';

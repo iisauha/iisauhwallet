@@ -124,6 +124,8 @@ export function SnapshotPage() {
         rewardCashbackCents: string;
         rewardPoints: string;
         rewardMiles: string;
+        avgCentsPerPoint: string;
+        avgCentsPerMile: string;
       }
   >({ type: 'none' });
 
@@ -422,7 +424,9 @@ export function SnapshotPage() {
                             valueInputs,
                             rewardCashbackCents: typeof c.rewardCashbackCents === 'number' ? String(c.rewardCashbackCents) : '',
                             rewardPoints: typeof c.rewardPoints === 'number' ? String(c.rewardPoints) : '',
-                            rewardMiles: typeof c.rewardMiles === 'number' ? String(c.rewardMiles) : ''
+                            rewardMiles: typeof c.rewardMiles === 'number' ? String(c.rewardMiles) : '',
+                            avgCentsPerPoint: typeof c.avgCentsPerPoint === 'number' ? String(c.avgCentsPerPoint) : '',
+                            avgCentsPerMile: typeof c.avgCentsPerMile === 'number' ? String(c.avgCentsPerMile) : ''
                           });
                         }}
                         title="Card reward categories"
@@ -946,6 +950,36 @@ export function SnapshotPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                    <label style={{ fontSize: '0.9rem' }}>Avg cents per point / mile (for approx. value display)</label>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+                      Optional. Used only to show an approximate dollar value of points/miles in the rewards view. Not used in any financial calculations.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 100px' }}>
+                        <label style={{ fontSize: '0.75rem' }}>Cents per point (e.g. 1.2)</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder=""
+                          value={modal.avgCentsPerPoint}
+                          onChange={(e) => setModal({ ...modal, avgCentsPerPoint: e.target.value })}
+                          style={{ width: '100%', padding: '6px 8px' }}
+                        />
+                      </div>
+                      <div style={{ flex: '1 1 100px' }}>
+                        <label style={{ fontSize: '0.75rem' }}>Cents per mile (e.g. 1.3)</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder=""
+                          value={modal.avgCentsPerMile}
+                          onChange={(e) => setModal({ ...modal, avgCentsPerMile: e.target.value })}
+                          style={{ width: '100%', padding: '6px 8px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <div className="btn-row">
                     <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>Cancel</button>
                     <button
@@ -964,6 +998,14 @@ export function SnapshotPage() {
                         if (typeof points === 'number' && !Number.isNaN(points)) totalsPayload.rewardPoints = points;
                         if (typeof miles === 'number' && !Number.isNaN(miles)) totalsPayload.rewardMiles = miles;
                         if (Object.keys(totalsPayload).length > 0) actions.updateCardRewardTotals(modal.cardId, totalsPayload);
+                        const cppPoint = modal.avgCentsPerPoint.trim().replace(/,/g, '');
+                        const cppMile = modal.avgCentsPerMile.trim().replace(/,/g, '');
+                        const avgCentsPerPoint = cppPoint ? parseFloat(cppPoint) : undefined;
+                        const avgCentsPerMile = cppMile ? parseFloat(cppMile) : undefined;
+                        actions.updateCardRewardCpp(modal.cardId, {
+                          avgCentsPerPoint: (typeof avgCentsPerPoint === 'number' && !Number.isNaN(avgCentsPerPoint) && avgCentsPerPoint >= 0) ? avgCentsPerPoint : undefined,
+                          avgCentsPerMile: (typeof avgCentsPerMile === 'number' && !Number.isNaN(avgCentsPerMile) && avgCentsPerMile >= 0) ? avgCentsPerMile : undefined
+                        });
                         setModal({ type: 'none' });
                       }}
                     >

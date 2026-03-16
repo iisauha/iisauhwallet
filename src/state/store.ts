@@ -22,6 +22,7 @@ export interface LedgerState {
     updateCardRewardConfig: (cardId: string, config: { rewardCategory?: string; rewardSubcategory?: string; isCatchAll?: boolean }) => void;
     updateCardRewardRules: (cardId: string, rules: RewardRule[]) => void;
     updateCardRewardTotals: (cardId: string, totals: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number; rewardBalanceCleared?: boolean }) => void;
+    updateCardRewardCpp: (cardId: string, cpp: { avgCentsPerPoint?: number; avgCentsPerMile?: number }) => void;
     addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
@@ -157,6 +158,16 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (totals.rewardPoints !== undefined) card.rewardPoints = Math.max(0, Math.round(totals.rewardPoints));
       if (totals.rewardMiles !== undefined) card.rewardMiles = Math.max(0, Math.round(totals.rewardMiles));
       if (totals.rewardBalanceCleared !== undefined) card.rewardBalanceCleared = totals.rewardBalanceCleared;
+      card.updatedAt = nowIso();
+      saveData(next);
+      set({ data: next });
+    },
+    updateCardRewardCpp: (cardId, cpp) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const card = next.cards.find((c) => c.id === cardId);
+      if (!card) return;
+      if ('avgCentsPerPoint' in cpp) card.avgCentsPerPoint = (typeof cpp.avgCentsPerPoint === 'number' && cpp.avgCentsPerPoint >= 0) ? cpp.avgCentsPerPoint : undefined;
+      if ('avgCentsPerMile' in cpp) card.avgCentsPerMile = (typeof cpp.avgCentsPerMile === 'number' && cpp.avgCentsPerMile >= 0) ? cpp.avgCentsPerMile : undefined;
       card.updatedAt = nowIso();
       saveData(next);
       set({ data: next });

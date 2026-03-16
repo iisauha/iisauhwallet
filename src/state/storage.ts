@@ -44,6 +44,7 @@ import {
   PASSCODE_PAUSED_KEY,
   PASSCODE_6DIGIT_KEY,
   CARD_REWARD_ADJUSTMENTS_KEY,
+  CARD_REWARD_ONLY_ENTRIES_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -243,6 +244,34 @@ export function loadCardRewardAdjustments(): CardRewardAdjustmentsState {
 export function saveCardRewardAdjustments(state: CardRewardAdjustmentsState): void {
   try {
     localStorage.setItem(CARD_REWARD_ADJUSTMENTS_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
+export type CardRewardOnlyEntry = {
+  id: string;
+  title?: string;
+  amountCents: number;
+  category: string;
+  subcategory: string;
+  /** When true, counts under "Other purchases on card". */
+  isOther: boolean;
+};
+export type CardRewardOnlyEntriesState = Record<string, CardRewardOnlyEntry[]>;
+
+export function loadCardRewardOnlyEntries(): CardRewardOnlyEntriesState {
+  try {
+    const raw = localStorage.getItem(CARD_REWARD_ONLY_ENTRIES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as CardRewardOnlyEntriesState;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+export function saveCardRewardOnlyEntries(state: CardRewardOnlyEntriesState): void {
+  try {
+    localStorage.setItem(CARD_REWARD_ONLY_ENTRIES_KEY, JSON.stringify(state));
   } catch (_) {}
 }
 

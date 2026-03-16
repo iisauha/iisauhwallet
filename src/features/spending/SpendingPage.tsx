@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
-import { getCategoryName, loadCategoryConfig, loadCardRewardAdjustments, saveCardRewardAdjustments, type CardRewardAdjustmentsState } from '../../state/storage';
+import type { CategoryConfig } from '../../state/models';
+import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadCardRewardAdjustments, saveCardRewardAdjustments, loadCardRewardOnlyEntries, saveCardRewardOnlyEntries, uid, type CardRewardAdjustmentsState, type CardRewardOnlyEntriesState, type CardRewardOnlyEntry } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { getEffectiveRules, matchRule, computeEstimatedReward } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
@@ -51,10 +52,12 @@ export function SpendingPage() {
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
   const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
   const [rewardAdjustments, setRewardAdjustments] = useState<CardRewardAdjustmentsState>(() => loadCardRewardAdjustments());
+  const [rewardOnlyEntries, setRewardOnlyEntries] = useState<CardRewardOnlyEntriesState>(() => loadCardRewardOnlyEntries());
   const [rewardAdjustModal, setRewardAdjustModal] = useState<{
     cardId: string;
     cardName: string;
     byCategory: Array<{ categoryKey: string; categoryLabel: string; displayLabel: string; categoryId: string; subcategory: string; amountCents: number }>;
+    rewardOnlyEntries: CardRewardOnlyEntry[];
   } | null>(null);
   const [clearBalanceConfirm, setClearBalanceConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
   const [editBalanceModal, setEditBalanceModal] = useState<{
@@ -242,6 +245,62 @@ export function SpendingPage() {
       addToMap(row.byCategory, false);
       if (isMyPurchase(p)) addToMap(row.byCategoryMy, true); else addToMap(row.byCategoryOther, true);
     });
+    Object.keys(rewardOnlyEntries || {}).forEach((cardId) => {
+      const card = cardById.get(cardId);
+      if (!card) return;
+      const entries = rewardOnlyEntries[cardId] || [];
+      entries.forEach((entry: CardRewardOnlyEntry) => {
+        const amountCents = entry.amountCents || 0;
+        const rules = getEffectiveRules(card);
+        const rule = matchRule(rules, entry.category || '', entry.subcategory || '');
+        const reward = rule ? computeEstimatedReward(rule, amountCents) : {};
+        const categoryKey = `${entry.category || 'uncategorized'}\t${entry.subcategory || ''}`;
+        const categoryId = entry.category || 'uncategorized';
+        const subcategory = entry.subcategory || '';
+        const categoryLabel = getCategoryName(cfg, categoryId) + (subcategory ? ` → ${subcategory}` : '');
+        const displayLabel = subcategory ? subcategory : getCategoryName(cfg, categoryId);
+        const cashbackCents = reward.cashbackCents ?? 0;
+        const points = reward.points ?? 0;
+        const miles = reward.miles ?? 0;
+        let rewardLabel = '';
+        if (rule) {
+          if (rule.unit === 'cashback_percent') rewardLabel = `${rule.value}%`;
+          else if (rule.unit === 'points_multiplier') rewardLabel = `${rule.value}× pts`;
+          else if (rule.unit === 'miles_multiplier') rewardLabel = `${rule.value}× mi`;
+        }
+        if (!byCardId.has(cardId)) {
+          byCardId.set(cardId, {
+            cardId,
+            cardName: card.name || 'Card',
+            amountCents: 0,
+            byCategory: new Map(),
+            byCategoryMy: new Map(),
+            byCategoryOther: new Map(),
+            cashbackCents: 0,
+            points: 0,
+            miles: 0
+          });
+        }
+        const row = byCardId.get(cardId)!;
+        row.amountCents += amountCents;
+        row.cashbackCents += cashbackCents;
+        row.points += points;
+        row.miles += miles;
+        const addToMap = (map: Map<string, CategoryRow>) => {
+          const existing = map.get(categoryKey);
+          if (existing) {
+            existing.amountCents += amountCents;
+            existing.cashbackCents += cashbackCents;
+            existing.points += points;
+            existing.miles += miles;
+          } else {
+            map.set(categoryKey, { categoryKey, categoryId, subcategory, categoryLabel, displayLabel, amountCents, rewardLabel, cashbackCents, points, miles });
+          }
+        };
+        addToMap(row.byCategory);
+        if (entry.isOther) addToMap(row.byCategoryOther); else addToMap(row.byCategoryMy);
+      });
+    });
     const result = Array.from(byCardId.values()).map((r) => ({
       ...r,
       byCategory: Array.from(r.byCategory.values()),
@@ -312,11 +371,13 @@ export function SpendingPage() {
         currentCashbackCents: c?.rewardCashbackCents ?? 0,
         currentPoints: c?.rewardPoints ?? 0,
         currentMiles: c?.rewardMiles ?? 0,
-        rewardBalanceCleared: !!c?.rewardBalanceCleared
+        rewardBalanceCleared: !!c?.rewardBalanceCleared,
+        avgCentsPerPoint: c?.avgCentsPerPoint,
+        avgCentsPerMile: c?.avgCentsPerMile
       };
     });
     return { cards: result, totalCashbackCents, totalMiles, pointsByCard, cardsWithBalance };
-  }, [periodPurchases, data.cards, cfg, rewardAdjustments]);
+  }, [periodPurchases, data.cards, cfg, rewardAdjustments, rewardOnlyEntries]);
 
   const drilldownFilteredPurchases = useMemo(() => {
     if (!drilldownCategoryId) return filteredPurchases;
@@ -445,6 +506,13 @@ export function SpendingPage() {
                       {currentMiles > 0 ? (currentCashback > 0 || currentPoints > 0 ? ' · ' : '') + `${currentMiles.toLocaleString()} mi` : ''}
                       {!hasCurrentBalance ? '—' : ''}
                     </div>
+                    {(balance?.avgCentsPerPoint != null && balance.avgCentsPerPoint > 0 && currentPoints > 0) || (balance?.avgCentsPerMile != null && balance.avgCentsPerMile > 0 && currentMiles > 0) ? (
+                      <div style={{ marginTop: 4, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                        Approx. value: ~{formatCents(
+                          Math.round((currentPoints * (balance?.avgCentsPerPoint ?? 0) + currentMiles * (balance?.avgCentsPerMile ?? 0)))
+                        )}
+                      </div>
+                    ) : null}
                     <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button
                         type="button"
@@ -474,7 +542,8 @@ export function SpendingPage() {
                             categoryId: line.categoryId,
                             subcategory: line.subcategory,
                             amountCents: line.amountCents
-                          }))
+                          })),
+                          rewardOnlyEntries: rewardOnlyEntries[card.cardId] || []
                         })}
                       >
                         Adjust category amounts
@@ -782,16 +851,42 @@ export function SpendingPage() {
       {rewardAdjustModal ? (
         <RewardAdjustModal
           modal={rewardAdjustModal}
+          cfg={cfg}
           onClose={() => setRewardAdjustModal(null)}
-          onSave={(updates) => {
+          onSave={(updates, newRewardOnlyEntries) => {
             const { cardId } = rewardAdjustModal;
-            const next: CardRewardAdjustmentsState = { ...rewardAdjustments };
-            next[cardId] = { ...(next[cardId] || {}) };
+            const nextAdj: CardRewardAdjustmentsState = { ...rewardAdjustments };
+            nextAdj[cardId] = { ...(nextAdj[cardId] || {}) };
             Object.entries(updates).forEach(([categoryKey, amountCents]) => {
-              next[cardId][categoryKey] = { amountCents, mode: 'set' as const };
+              nextAdj[cardId][categoryKey] = { amountCents, mode: 'set' as const };
             });
-            saveCardRewardAdjustments(next);
-            setRewardAdjustments(next);
+            saveCardRewardAdjustments(nextAdj);
+            setRewardAdjustments(nextAdj);
+            if (newRewardOnlyEntries && newRewardOnlyEntries.length > 0) {
+              const nextEntries: CardRewardOnlyEntriesState = { ...rewardOnlyEntries };
+              nextEntries[cardId] = [...(nextEntries[cardId] || []), ...newRewardOnlyEntries];
+              saveCardRewardOnlyEntries(nextEntries);
+              setRewardOnlyEntries(nextEntries);
+              const card = (data.cards || []).find((c) => c.id === cardId);
+              if (card) {
+                const rules = getEffectiveRules(card);
+                let dCash = 0; let dPoints = 0; let dMiles = 0;
+                newRewardOnlyEntries.forEach((e) => {
+                  const rule = matchRule(rules, e.category || '', e.subcategory || '');
+                  const reward = rule ? computeEstimatedReward(rule, e.amountCents) : {};
+                  dCash += reward.cashbackCents ?? 0;
+                  dPoints += reward.points ?? 0;
+                  dMiles += reward.miles ?? 0;
+                });
+                if (dCash || dPoints || dMiles) {
+                  actions.updateCardRewardTotals(cardId, {
+                    rewardCashbackCents: (card.rewardCashbackCents ?? 0) + dCash,
+                    rewardPoints: (card.rewardPoints ?? 0) + dPoints,
+                    rewardMiles: (card.rewardMiles ?? 0) + dMiles
+                  });
+                }
+              }
+            }
             setRewardAdjustModal(null);
           }}
         />
@@ -861,14 +956,18 @@ export function SpendingPage() {
   );
 }
 
+type NewRewardOnlyDraft = { title: string; amountStr: string; category: string; subcategory: string; isOther: boolean };
+
 function RewardAdjustModal({
   modal,
+  cfg,
   onClose,
   onSave
 }: {
-  modal: { cardName: string; byCategory: Array<{ categoryKey: string; displayLabel: string; amountCents: number }> };
+  modal: { cardName: string; byCategory: Array<{ categoryKey: string; displayLabel: string; amountCents: number }>; rewardOnlyEntries: CardRewardOnlyEntry[] };
+  cfg: CategoryConfig;
   onClose: () => void;
-  onSave: (updates: Record<string, number>) => void;
+  onSave: (updates: Record<string, number>, newRewardOnlyEntries?: CardRewardOnlyEntry[]) => void;
 }) {
   const [amounts, setAmounts] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -877,6 +976,10 @@ function RewardAdjustModal({
     });
     return init;
   });
+  const [newDraft, setNewDraft] = useState<NewRewardOnlyDraft>({ title: '', amountStr: '', category: 'food', subcategory: '', isOther: true });
+  const [newEntries, setNewEntries] = useState<NewRewardOnlyDraft[]>([]);
+  const subs = useMemo(() => getCategorySubcategories(cfg, newDraft.category), [cfg, newDraft.category]);
+
   const handleSubmit = () => {
     const updates: Record<string, number> = {};
     modal.byCategory.forEach((row) => {
@@ -886,14 +989,31 @@ function RewardAdjustModal({
         updates[row.categoryKey] = Math.round(parsed * 100);
       }
     });
-    onSave(updates);
+    const toAdd: CardRewardOnlyEntry[] = newEntries
+      .filter((e) => e.amountStr.trim() && parseFloat(e.amountStr) > 0)
+      .map((e) => ({
+        id: uid(),
+        title: e.title.trim() || undefined,
+        amountCents: Math.round(parseFloat(e.amountStr) * 100),
+        category: e.category || 'uncategorized',
+        subcategory: e.subcategory || '',
+        isOther: e.isOther
+      }));
+    onSave(updates, toAdd.length > 0 ? toAdd : undefined);
   };
+
+  const addDraftToList = () => {
+    if (!newDraft.amountStr.trim() || parseFloat(newDraft.amountStr) <= 0) return;
+    setNewEntries((prev) => [...prev, { ...newDraft }]);
+    setNewDraft({ title: '', amountStr: '', category: 'food', subcategory: '', isOther: true });
+  };
+
   return (
     <div className="modal-overlay">
-      <div className="modal" style={{ maxWidth: 420 }}>
+      <div className="modal" style={{ maxWidth: 460 }}>
         <h3>Adjust category amounts for rewards</h3>
         <p style={{ color: 'var(--muted)', marginTop: 0 }}>Card: <strong>{modal.cardName}</strong></p>
-        <p style={{ fontSize: '0.9rem', marginTop: 4, marginBottom: 12 }}>Edit the spending amount used for rewards for each category.</p>
+        <p style={{ fontSize: '0.9rem', marginTop: 4, marginBottom: 12 }}>Edit the spending amount used for rewards for each category. You can also add reward-only entries (e.g. other people&apos;s spending on the card) that count only toward rewards, not Snapshot or net cash.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {modal.byCategory.map((row) => (
             <div key={row.categoryKey} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -911,6 +1031,61 @@ function RewardAdjustModal({
             </div>
           ))}
         </div>
+
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>Add reward-only purchase</div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>These count toward card rewards and spending in this view only. They do not affect Snapshot or Final Net Cash.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="field">
+              <label>Label (optional)</label>
+              <input className="ll-control" value={newDraft.title} onChange={(e) => setNewDraft((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Family purchase" />
+            </div>
+            <div className="field">
+              <label>Amount ($)</label>
+              <input className="ll-control" type="number" min="0" step="0.01" value={newDraft.amountStr} onChange={(e) => setNewDraft((p) => ({ ...p, amountStr: e.target.value }))} placeholder="0.00" />
+            </div>
+            <div className="field">
+              <label>Category</label>
+              <Select value={newDraft.category} onChange={(e) => setNewDraft((p) => ({ ...p, category: e.target.value, subcategory: '' }))}>
+                {Object.keys(cfg).map((id) => (
+                  <option key={id} value={id}>{getCategoryName(cfg, id)}</option>
+                ))}
+              </Select>
+            </div>
+            {subs.length > 0 ? (
+              <div className="field">
+                <label>Subcategory</label>
+                <Select value={newDraft.subcategory} onChange={(e) => setNewDraft((p) => ({ ...p, subcategory: e.target.value }))}>
+                  <option value="">— None —</option>
+                  {subs.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
+            <div className="toggle-row">
+              <input type="checkbox" id="rewardOnlyIsOther" checked={newDraft.isOther} onChange={(e) => setNewDraft((p) => ({ ...p, isOther: e.target.checked }))} />
+              <label htmlFor="rewardOnlyIsOther">Other purchases on card</label>
+            </div>
+            <button type="button" className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={addDraftToList}>
+              Add to list
+            </button>
+          </div>
+          {newEntries.length > 0 ? (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 4 }}>Will add: {newEntries.length} item(s)</div>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem' }}>
+                {newEntries.map((e, i) => (
+                  <li key={i} style={{ marginBottom: 4 }}>
+                    {e.title || 'No label'} — {formatCents(Math.round(parseFloat(e.amountStr || '0') * 100))} · {getCategoryName(cfg, e.category)}{e.subcategory ? ` → ${e.subcategory}` : ''} {e.isOther ? '(other)' : '(my)'}
+                    <button type="button" className="btn clear-btn" style={{ marginLeft: 8, padding: '0 4px', fontSize: '0.75rem' }} onClick={() => setNewEntries((prev) => prev.filter((_, j) => j !== i))}>Remove</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+
         <div className="btn-row" style={{ marginTop: 16 }}>
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button type="button" className="btn btn-primary" onClick={handleSubmit}>Save</button>
