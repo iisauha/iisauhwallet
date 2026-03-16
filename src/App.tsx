@@ -15,6 +15,7 @@ import { DetectedActivityProvider } from './state/DetectedActivityContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AppearanceProvider } from './theme/AppearanceContext';
 import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
+import { ReminderProvider } from './state/ReminderContext';
 import { TAB_ORDER_KEY } from './state/keys';
 
 export type TabKey =
@@ -141,16 +142,18 @@ export function App() {
     <ThemeProvider>
       <AppearanceProvider>
         <AdvancedUIColorsProvider>
-        <DropdownStateProvider>
-          <DetectedActivityProvider>
-            <PasscodeGate>
-              <Routes>
-                <Route path="/" element={<MainApp />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-              </Routes>
-            </PasscodeGate>
-          </DetectedActivityProvider>
-        </DropdownStateProvider>
+          <ReminderProvider>
+            <DropdownStateProvider>
+              <DetectedActivityProvider>
+                <PasscodeGate>
+                  <Routes>
+                    <Route path="/" element={<MainApp />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                  </Routes>
+                </PasscodeGate>
+              </DetectedActivityProvider>
+            </DropdownStateProvider>
+          </ReminderProvider>
         </AdvancedUIColorsProvider>
       </AppearanceProvider>
     </ThemeProvider>

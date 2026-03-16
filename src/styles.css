@@ -63,18 +63,29 @@ body {
 .tab {
   flex: 0 0 auto;
   min-width: max-content;
-  padding: 12px 10px;
+  padding: 10px 14px;
+  margin: 6px 6px 10px 6px;
   font-size: 0.9rem;
   font-weight: 500;
-  background: none;
-  border: none;
+  background: transparent;
+  border-radius: 999px;
+  border: 1px solid transparent;
   color: var(--muted);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   scroll-snap-align: start;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.18s ease;
 }
-.tab.active { color: var(--accent); }
+.tab.active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
 .tab-panel {
   padding: 18px 16px;
   padding-bottom: 28px;
