@@ -143,6 +143,9 @@ export interface Purchase {
   paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card';
   paymentTargetId?: string;
 
+  /** When true, added via "Add Card Purchase (Full reimbursement expected)"; counts only in Reimbursed/other, not My purchases. */
+  fullReimbursementExpected?: boolean;
+
   /** Estimated reward from matched card rule (informational; not counted as cash). */
   estimatedRewardCashbackCents?: number;
   estimatedRewardPoints?: number;

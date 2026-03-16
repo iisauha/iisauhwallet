@@ -436,6 +436,9 @@ export function AddPurchaseModal(props: {
                   purchase.splitSnapshot = { amountCents: appliedAmount, paymentSource: purchase.paymentSource, paymentTargetId: purchase.paymentTargetId };
                 }
               }
+              if (props.reimbursementExpected && !isEditing) {
+                purchase.fullReimbursementExpected = true;
+              }
               if (isEditing && currentPurchase && currentPurchase.id) {
                 actions.updatePurchase(currentPurchase.id, purchase);
               } else {

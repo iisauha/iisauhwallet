@@ -207,9 +207,17 @@ export function SpendingPage() {
       if (!card) return;
       const fullChargeCents = typeof p.splitTotalCents === 'number' ? p.splitTotalCents : typeof p.originalTotal === 'number' ? p.originalTotal : (p.amountCents || 0);
       const isSplit = !!p.isSplit && (typeof p.splitTotalCents === 'number' || typeof p.originalTotal === 'number');
+      const fullReimbursement = !!p.fullReimbursementExpected;
       const applied = !!(p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
-      const myPortionCents = applied ? (isSplit ? (typeof p.splitMyPortionCents === 'number' ? p.splitMyPortionCents : p.amountCents || 0) : fullChargeCents) : 0;
-      const otherPortionCents = Math.max(0, fullChargeCents - myPortionCents);
+      let myPortionCents: number;
+      let otherPortionCents: number;
+      if (fullReimbursement) {
+        myPortionCents = 0;
+        otherPortionCents = fullChargeCents;
+      } else {
+        myPortionCents = applied ? (isSplit ? (typeof p.splitMyPortionCents === 'number' ? p.splitMyPortionCents : p.amountCents || 0) : fullChargeCents) : 0;
+        otherPortionCents = Math.max(0, fullChargeCents - myPortionCents);
+      }
       const rules = getEffectiveRules(card);
       const rule = matchRule(rules, p.category || '', p.subcategory || '');
       const rewardFull = rule && fullChargeCents > 0 ? computeEstimatedReward(rule, fullChargeCents) : {};
@@ -788,12 +796,12 @@ export function SpendingPage() {
                 const storedPoints = balance?.currentPoints ?? 0;
                 const storedMiles = balance?.currentMiles ?? 0;
                 const wasCleared = balance?.rewardBalanceCleared ?? false;
-                const cb = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.cashbackCents : storedCashback;
-                const pt = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.points : storedPoints;
-                const mi = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.miles : storedMiles;
-                sumCashback += cb; sumPoints += pt; sumMiles += mi;
-                if (balance?.avgCentsPerPoint != null && balance.avgCentsPerPoint > 0) sumApproxCents += Math.round(pt * balance.avgCentsPerPoint);
-                if (balance?.avgCentsPerMile != null && balance.avgCentsPerMile > 0) sumApproxCents += Math.round(mi * balance.avgCentsPerMile);
+                const currentCashback = wasCleared ? storedCashback : card.cashbackCents;
+                const currentPoints = wasCleared ? storedPoints : card.points;
+                const currentMiles = wasCleared ? storedMiles : card.miles;
+                sumCashback += currentCashback; sumPoints += currentPoints; sumMiles += currentMiles;
+                if (balance?.avgCentsPerPoint != null && balance.avgCentsPerPoint > 0) sumApproxCents += Math.round(currentPoints * balance.avgCentsPerPoint);
+                if (balance?.avgCentsPerMile != null && balance.avgCentsPerMile > 0) sumApproxCents += Math.round(currentMiles * balance.avgCentsPerMile);
               });
               const hasAny = sumCashback > 0 || sumPoints > 0 || sumMiles > 0;
               return (
