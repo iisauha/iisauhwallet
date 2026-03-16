@@ -9,7 +9,7 @@ import { AddPurchaseModal } from './AddPurchaseModal';
 import { getCategoryColor, renderSpendingPieChart } from './charts';
 
 type FilterKey = 'this_month' | 'last_month' | 'all_time' | 'custom';
-type BreakdownView = 'category' | 'card';
+type BreakdownView = 'category' | 'rewards' | 'card';
 
 function toLocalDateKey(date: Date) {
   const y = date.getFullYear();
@@ -124,6 +124,29 @@ export function SpendingPage() {
     return filteredPurchases.reduce((s, p) => s + (p.amountCents || 0), 0);
   }, [filteredPurchases]);
 
+  const totalRewardsApproxCents = useMemo(() => {
+    let total = 0;
+    (data.cards || []).forEach((c: any) => {
+      const type =
+        c.rewardType ??
+        (c.rewardCashbackCents != null &&
+        (c.rewardPoints == null || c.rewardPoints === 0) &&
+        (c.rewardMiles == null || c.rewardMiles === 0)
+          ? 'cashback'
+          : c.rewardMiles != null && c.rewardMiles > 0
+            ? 'miles'
+            : 'points');
+      if (type === 'cashback') {
+        total += c.rewardCashbackCents ?? 0;
+      } else if (type === 'points' && c.rewardPoints && c.avgCentsPerPoint) {
+        total += Math.round((c.rewardPoints * c.avgCentsPerPoint) / 100);
+      } else if (type === 'miles' && c.rewardMiles && c.avgCentsPerMile) {
+        total += Math.round((c.rewardMiles * c.avgCentsPerMile) / 100);
+      }
+    });
+    return total;
+  }, [data.cards]);
+
   const byCategory = useMemo(() => {
     const map = new Map<string, number>();
     filteredPurchases.forEach((p) => {
@@ -228,7 +251,15 @@ export function SpendingPage() {
           onClick={() => setView('category')}
           aria-pressed={view === 'category'}
         >
-          By category
+          This Month
+        </button>
+        <button
+          type="button"
+          className={view === 'rewards' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+          onClick={() => setView('rewards')}
+          aria-pressed={view === 'rewards'}
+        >
+          Rewards
         </button>
         <button
           type="button"
@@ -236,11 +267,51 @@ export function SpendingPage() {
           onClick={() => setView('card')}
           aria-pressed={view === 'card'}
         >
-          By card & rewards
+          By Card
         </button>
       </div>
 
-      <p className="section-title page-title" style={{ marginTop: 20 }}>Spending distribution</p>
+      <div
+        className="card spending-summary-card"
+        style={{
+          marginTop: 16,
+          marginBottom: 16,
+          padding: 16,
+          borderRadius: 16,
+          background: 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,64,175,0.96))',
+          color: '#f9fafb',
+          boxShadow: '0 18px 45px rgba(15,23,42,0.55)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Total spend this period</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 650, marginTop: 4 }}>
+              {formatCents(periodTotalCents)}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Rewards preview</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 4 }}>
+              {totalRewardsApproxCents > 0 ? formatCents(totalRewardsApproxCents) : '—'}
+            </div>
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: '0.75rem',
+                opacity: 0.9,
+                fontStyle: 'italic',
+              }}
+            >
+              Manual balances only. Informational.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p className="section-title page-title" style={{ marginTop: 4 }}>
+        {view === 'category' ? 'Spending distribution' : view === 'card' ? 'Spending by card' : 'Rewards overview'}
+      </p>
       <div className="card">
         {view === 'category' ? (
           <div
@@ -252,7 +323,7 @@ export function SpendingPage() {
           >
             <canvas ref={canvasRef} />
           </div>
-        ) : (
+        ) : view === 'card' ? (
           <div>
             {byCard.map((c) => (
               <div className="row" key={c.paymentTargetName} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
@@ -262,27 +333,52 @@ export function SpendingPage() {
             ))}
             {!byCard.length ? <div style={{ color: 'var(--muted)' }}>No purchases in this period.</div> : null}
           </div>
-        )}
-      </div>
-
-      {view === 'card' ? (
-        <>
-          <p className="section-title" style={{ marginTop: 24 }}>Reward balances</p>
-          <p style={{ marginTop: 4, marginBottom: 8, fontSize: '0.8rem', color: 'var(--muted)', fontStyle: 'italic' }}>
-            Manual rewards balances. Not live bank data.
-          </p>
-          <div className="card">
+        ) : (
+          <div>
             {(data.cards || []).length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
             ) : (
               <>
-                {(data.cards || []).map((c) => {
-                  const type = c.rewardType ?? (c.rewardCashbackCents != null && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0) ? 'cashback' : (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : 'points'));
-                  const balance = type === 'cashback' ? (c.rewardCashbackCents ?? 0) : type === 'miles' ? (c.rewardMiles ?? 0) : (c.rewardPoints ?? 0);
-                  const cpp = type === 'points' ? (c.avgCentsPerPoint ?? undefined) : type === 'miles' ? (c.avgCentsPerMile ?? undefined) : undefined;
-                  const approxCents = (type === 'points' && cpp != null && cpp > 0) || (type === 'miles' && cpp != null && cpp > 0) ? Math.round(balance * cpp / 100) : null;
+                {(data.cards || []).map((c: any) => {
+                  const type =
+                    c.rewardType ??
+                    (c.rewardCashbackCents != null &&
+                    (c.rewardPoints == null || c.rewardPoints === 0) &&
+                    (c.rewardMiles == null || c.rewardMiles === 0)
+                      ? 'cashback'
+                      : c.rewardMiles != null && c.rewardMiles > 0
+                        ? 'miles'
+                        : 'points');
+                  const balance =
+                    type === 'cashback'
+                      ? c.rewardCashbackCents ?? 0
+                      : type === 'miles'
+                        ? c.rewardMiles ?? 0
+                        : c.rewardPoints ?? 0;
+                  const cpp =
+                    type === 'points'
+                      ? c.avgCentsPerPoint ?? undefined
+                      : type === 'miles'
+                        ? c.avgCentsPerMile ?? undefined
+                        : undefined;
+                  const approxCents =
+                    (type === 'points' && cpp != null && cpp > 0) ||
+                    (type === 'miles' && cpp != null && cpp > 0)
+                      ? Math.round((balance * cpp) / 100)
+                      : null;
                   return (
-                    <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                    <div
+                      key={c.id}
+                      style={{
+                        padding: '8px 0',
+                        borderBottom: '1px solid var(--border)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                      }}
+                    >
                       <div>
                         <div style={{ fontWeight: 600 }}>{c.name || 'Card'}</div>
                         <div style={{ fontSize: '0.95rem', color: 'var(--fg, inherit)', fontWeight: 500 }}>
@@ -298,13 +394,15 @@ export function SpendingPage() {
                         type="button"
                         className="btn btn-secondary"
                         style={{ fontSize: '0.8rem', padding: '2px 8px' }}
-                        onClick={() => setEditBalanceModal({
-                          cardId: c.id,
-                          cardName: c.name || 'Card',
-                          rewardType: type,
-                          balance: type === 'cashback' ? balance : balance,
-                          cpp
-                        })}
+                        onClick={() =>
+                          setEditBalanceModal({
+                            cardId: c.id,
+                            cardName: c.name || 'Card',
+                            rewardType: type,
+                            balance,
+                            cpp,
+                          })
+                        }
                       >
                         Edit balance
                       </button>
@@ -312,17 +410,37 @@ export function SpendingPage() {
                   );
                 })}
                 {(() => {
-                  let totalCashback = 0, totalPoints = 0, totalMiles = 0, totalApproxCents = 0;
-                  (data.cards || []).forEach((c) => {
-                    const type = c.rewardType ?? (c.rewardCashbackCents != null && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0) ? 'cashback' : (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : 'points'));
-                    const balance = type === 'cashback' ? (c.rewardCashbackCents ?? 0) : type === 'miles' ? (c.rewardMiles ?? 0) : (c.rewardPoints ?? 0);
+                  let totalCashback = 0;
+                  let totalPoints = 0;
+                  let totalMiles = 0;
+                  let totalApproxCents = 0;
+                  (data.cards || []).forEach((c: any) => {
+                    const type =
+                      c.rewardType ??
+                      (c.rewardCashbackCents != null &&
+                      (c.rewardPoints == null || c.rewardPoints === 0) &&
+                      (c.rewardMiles == null || c.rewardMiles === 0)
+                        ? 'cashback'
+                        : c.rewardMiles != null && c.rewardMiles > 0
+                          ? 'miles'
+                          : 'points');
+                    const balance =
+                      type === 'cashback'
+                        ? c.rewardCashbackCents ?? 0
+                        : type === 'miles'
+                          ? c.rewardMiles ?? 0
+                          : c.rewardPoints ?? 0;
                     if (type === 'cashback') totalCashback += balance;
                     else if (type === 'points') {
                       totalPoints += balance;
-                      if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) totalApproxCents += Math.round(balance * c.avgCentsPerPoint / 100);
+                      if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) {
+                        totalApproxCents += Math.round((balance * c.avgCentsPerPoint) / 100);
+                      }
                     } else {
                       totalMiles += balance;
-                      if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) totalApproxCents += Math.round(balance * c.avgCentsPerMile / 100);
+                      if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) {
+                        totalApproxCents += Math.round((balance * c.avgCentsPerMile) / 100);
+                      }
                     }
                   });
                   const hasTotals = totalCashback > 0 || totalPoints > 0 || totalMiles > 0;
@@ -346,12 +464,7 @@ export function SpendingPage() {
               </>
             )}
           </div>
-        </>
-      ) : null}
-
-      <p className="section-title">This period total</p>
-      <div className="card">
-        <span className="amount">{formatCents(periodTotalCents)}</span>
+        )}
       </div>
 
       {view === 'category' ? (
