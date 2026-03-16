@@ -190,32 +190,10 @@ export function SpendingPage() {
       points: number;
       miles: number;
     }>();
-    const isMyPurchase = (p: any) => !!p.applyToSnapshot && (p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
-    periodCardPurchases.forEach((p: any) => {
-      const cardId = p.paymentTargetId as string;
-      const card = cardById.get(cardId);
-      if (!card) return;
-      const amountCents = p.amountCents || 0;
-      const rules = getEffectiveRules(card);
-      const rule = matchRule(rules, p.category || '', p.subcategory || '');
-      const reward = rule ? computeEstimatedReward(rule, amountCents) : {};
-      const categoryKey = `${p.category || 'uncategorized'}\t${p.subcategory || ''}`;
-      const categoryId = p.category || 'uncategorized';
-      const subcategory = p.subcategory || '';
-      const categoryLabel = getCategoryName(cfg, categoryId) + (subcategory ? ` → ${subcategory}` : '');
-      const displayLabel = subcategory ? subcategory : getCategoryName(cfg, categoryId);
-      const cashbackCents = reward.cashbackCents ?? 0;
-      const points = reward.points ?? 0;
-      const miles = reward.miles ?? 0;
-      let rewardLabel = '';
-      if (rule) {
-        if (rule.unit === 'cashback_percent') rewardLabel = `${rule.value}%`;
-        else if (rule.unit === 'points_multiplier') rewardLabel = `${rule.value}× pts`;
-        else if (rule.unit === 'miles_multiplier') rewardLabel = `${rule.value}× mi`;
-      }
-      if (!byCardId.has(cardId)) {
-        byCardId.set(cardId, {
-          cardId,
+    (data.cards || []).forEach((card) => {
+      if (!byCardId.has(card.id)) {
+        byCardId.set(card.id, {
+          cardId: card.id,
           cardName: card.name || 'Card',
           amountCents: 0,
           byCategory: new Map(),
@@ -226,12 +204,41 @@ export function SpendingPage() {
           miles: 0
         });
       }
+    });
+    periodCardPurchases.forEach((p: any) => {
+      const cardId = p.paymentTargetId as string;
+      const card = cardById.get(cardId);
+      if (!card) return;
+      const fullChargeCents = typeof p.splitTotalCents === 'number' ? p.splitTotalCents : typeof p.originalTotal === 'number' ? p.originalTotal : (p.amountCents || 0);
+      const isSplit = !!p.isSplit && (typeof p.splitTotalCents === 'number' || typeof p.originalTotal === 'number');
+      const applied = !!(p.paymentSource === 'card' || p.paymentSource === 'credit_card') && p.paymentTargetId;
+      const myPortionCents = applied ? (isSplit ? (typeof p.splitMyPortionCents === 'number' ? p.splitMyPortionCents : p.amountCents || 0) : fullChargeCents) : 0;
+      const otherPortionCents = Math.max(0, fullChargeCents - myPortionCents);
+      const rules = getEffectiveRules(card);
+      const rule = matchRule(rules, p.category || '', p.subcategory || '');
+      const rewardFull = rule && fullChargeCents > 0 ? computeEstimatedReward(rule, fullChargeCents) : {};
+      const ratioMy = fullChargeCents > 0 ? myPortionCents / fullChargeCents : 0;
+      const ratioOther = fullChargeCents > 0 ? otherPortionCents / fullChargeCents : 0;
+      const categoryKey = `${p.category || 'uncategorized'}\t${p.subcategory || ''}`;
+      const categoryId = p.category || 'uncategorized';
+      const subcategory = p.subcategory || '';
+      const categoryLabel = getCategoryName(cfg, categoryId) + (subcategory ? ` → ${subcategory}` : '');
+      const displayLabel = subcategory ? subcategory : getCategoryName(cfg, categoryId);
+      let rewardLabel = '';
+      if (rule) {
+        if (rule.unit === 'cashback_percent') rewardLabel = `${rule.value}%`;
+        else if (rule.unit === 'points_multiplier') rewardLabel = `${rule.value}× pts`;
+        else if (rule.unit === 'miles_multiplier') rewardLabel = `${rule.value}× mi`;
+      }
+      const cashbackFull = rewardFull.cashbackCents ?? 0;
+      const pointsFull = rewardFull.points ?? 0;
+      const milesFull = rewardFull.miles ?? 0;
       const row = byCardId.get(cardId)!;
-      row.amountCents += amountCents;
-      row.cashbackCents += cashbackCents;
-      row.points += points;
-      row.miles += miles;
-      const addToMap = (map: Map<string, CategoryRow>, isMy: boolean) => {
+      row.amountCents += fullChargeCents;
+      row.cashbackCents += cashbackFull;
+      row.points += pointsFull;
+      row.miles += milesFull;
+      const addToCategory = (map: Map<string, CategoryRow>, amountCents: number, cashbackCents: number, points: number, miles: number) => {
         const existing = map.get(categoryKey);
         if (existing) {
           existing.amountCents += amountCents;
@@ -242,8 +249,9 @@ export function SpendingPage() {
           map.set(categoryKey, { categoryKey, categoryId, subcategory, categoryLabel, displayLabel, amountCents, rewardLabel, cashbackCents, points, miles });
         }
       };
-      addToMap(row.byCategory, false);
-      if (isMyPurchase(p)) addToMap(row.byCategoryMy, true); else addToMap(row.byCategoryOther, true);
+      addToCategory(row.byCategory, fullChargeCents, cashbackFull, pointsFull, milesFull);
+      if (myPortionCents > 0) addToCategory(row.byCategoryMy, myPortionCents, Math.round(cashbackFull * ratioMy), Math.round(pointsFull * ratioMy), Math.round(milesFull * ratioMy));
+      if (otherPortionCents > 0) addToCategory(row.byCategoryOther, otherPortionCents, Math.round(cashbackFull * ratioOther), Math.round(pointsFull * ratioOther), Math.round(milesFull * ratioOther));
     });
     Object.keys(rewardOnlyEntries || {}).forEach((cardId) => {
       const card = cardById.get(cardId);
@@ -362,7 +370,8 @@ export function SpendingPage() {
     result.sort((a, b) => b.amountCents - a.amountCents);
     const totalCashbackCents = result.reduce((s, r) => s + r.cashbackCents, 0);
     const totalMiles = result.reduce((s, r) => s + r.miles, 0);
-    const pointsByCard = result.filter((r) => r.points > 0).map((r) => ({ cardName: r.cardName, points: r.points }));
+    const pointsByCard = result.filter((r) => r.points > 0).map((r) => ({ cardId: r.cardId, cardName: r.cardName, points: r.points }));
+    const milesByCard = result.filter((r) => r.miles > 0).map((r) => ({ cardId: r.cardId, cardName: r.cardName, miles: r.miles }));
     const cardsWithBalance = result.map((r) => {
       const c = cardById.get(r.cardId);
       return {
@@ -376,7 +385,7 @@ export function SpendingPage() {
         avgCentsPerMile: c?.avgCentsPerMile
       };
     });
-    return { cards: result, totalCashbackCents, totalMiles, pointsByCard, cardsWithBalance };
+    return { cards: result, totalCashbackCents, totalMiles, pointsByCard, milesByCard, cardsWithBalance };
   }, [periodPurchases, data.cards, cfg, rewardAdjustments, rewardOnlyEntries]);
 
   const drilldownFilteredPurchases = useMemo(() => {
@@ -471,10 +480,13 @@ export function SpendingPage() {
         )}
       </div>
 
-      {view === 'card' && cardSpendingAndRewards.cards.length > 0 ? (
+      {view === 'card' ? (
         <>
           <p className="section-title" style={{ marginTop: 24 }}>Rewards by card</p>
           <div className="card" style={{ marginBottom: 0 }}>
+            {cardSpendingAndRewards.cards.length === 0 ? (
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No credit cards. Add a card in Snapshot to track rewards.</div>
+            ) : null}
             {cardSpendingAndRewards.cards.map((card) => {
               const balance = cardSpendingAndRewards.cardsWithBalance?.find((b) => b.cardId === card.cardId);
               const storedCashback = balance?.currentCashbackCents ?? 0;
@@ -578,7 +590,7 @@ export function SpendingPage() {
                       ) : null}
                       {card.byCategoryOther && card.byCategoryOther.length > 0 ? (
                         <>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>Other purchases on card</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>Reimbursed / other card spend</div>
                           {card.byCategoryOther.map((line, i) => (
                             <div key={`other-${i}`} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
                               <span>{line.displayLabel}: {formatCents(line.amountCents)}{line.rewardLabel ? ` × ${line.rewardLabel}` : ''}</span>
@@ -617,29 +629,94 @@ export function SpendingPage() {
               );
             })}
           </div>
-          <p className="section-title" style={{ marginTop: 16 }}>Period reward totals</p>
+          <p className="section-title" style={{ marginTop: 16 }}>Earned this period</p>
           <div className="card">
             {cardSpendingAndRewards.totalCashbackCents > 0 ? (
               <div className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span className="name">Total cashback</span>
+                <span className="name">Cashback earned this period</span>
                 <span className="amount" style={{ color: 'var(--green)' }}>{formatCents(cardSpendingAndRewards.totalCashbackCents)}</span>
               </div>
             ) : null}
-            {cardSpendingAndRewards.pointsByCard.map((p) => (
-              <div key={p.cardName} className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span className="name">{p.cardName} points</span>
-                <span className="amount" style={{ color: 'var(--muted)' }}>{p.points.toLocaleString()} pts</span>
-              </div>
-            ))}
-            {cardSpendingAndRewards.totalMiles > 0 ? (
-              <div className="row" style={{ padding: '6px 0' }}>
-                <span className="name">Total miles</span>
-                <span className="amount" style={{ color: 'var(--muted)' }}>{cardSpendingAndRewards.totalMiles.toLocaleString()} mi</span>
-              </div>
-            ) : null}
-            {cardSpendingAndRewards.totalCashbackCents === 0 && cardSpendingAndRewards.pointsByCard.length === 0 && cardSpendingAndRewards.totalMiles === 0 ? (
+            {cardSpendingAndRewards.pointsByCard.map((p) => {
+              const bal = cardSpendingAndRewards.cardsWithBalance?.find((b) => b.cardId === p.cardId);
+              const approxCents = (bal?.avgCentsPerPoint != null && bal.avgCentsPerPoint > 0) ? Math.round(p.points * bal.avgCentsPerPoint) : null;
+              return (
+                <div key={p.cardId || p.cardName} className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span className="name">{p.cardName} points earned this period</span>
+                  <span className="amount" style={{ color: 'var(--muted)' }}>
+                    {p.points.toLocaleString()} pts
+                    {approxCents != null && approxCents > 0 ? ` (~${formatCents(approxCents)})` : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {cardSpendingAndRewards.milesByCard?.map((m) => {
+              const bal = cardSpendingAndRewards.cardsWithBalance?.find((b) => b.cardId === m.cardId);
+              const approxCents = (bal?.avgCentsPerMile != null && bal.avgCentsPerMile > 0) ? Math.round(m.miles * bal.avgCentsPerMile) : null;
+              return (
+                <div key={m.cardId || m.cardName} className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span className="name">{m.cardName} miles earned this period</span>
+                  <span className="amount" style={{ color: 'var(--muted)' }}>
+                    {m.miles.toLocaleString()} mi
+                    {approxCents != null && approxCents > 0 ? ` (~${formatCents(approxCents)})` : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {cardSpendingAndRewards.totalCashbackCents === 0 && cardSpendingAndRewards.pointsByCard.length === 0 && (!cardSpendingAndRewards.milesByCard || cardSpendingAndRewards.milesByCard.length === 0) ? (
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No rewards in this period (no matching rules or no card purchases).</div>
             ) : null}
+          </div>
+          <p className="section-title" style={{ marginTop: 16 }}>Current rewards balance</p>
+          <div className="card">
+            {(() => {
+              let sumCashback = 0; let sumPoints = 0; let sumMiles = 0; let sumApproxCents = 0;
+              (cardSpendingAndRewards.cards || []).forEach((card) => {
+                const balance = cardSpendingAndRewards.cardsWithBalance?.find((b) => b.cardId === card.cardId);
+                const storedCashback = balance?.currentCashbackCents ?? 0;
+                const storedPoints = balance?.currentPoints ?? 0;
+                const storedMiles = balance?.currentMiles ?? 0;
+                const wasCleared = balance?.rewardBalanceCleared ?? false;
+                const cb = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.cashbackCents : storedCashback;
+                const pt = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.points : storedPoints;
+                const mi = !wasCleared && storedCashback === 0 && storedPoints === 0 && storedMiles === 0 ? card.miles : storedMiles;
+                sumCashback += cb; sumPoints += pt; sumMiles += mi;
+                if (balance?.avgCentsPerPoint != null && balance.avgCentsPerPoint > 0) sumApproxCents += Math.round(pt * balance.avgCentsPerPoint);
+                if (balance?.avgCentsPerMile != null && balance.avgCentsPerMile > 0) sumApproxCents += Math.round(mi * balance.avgCentsPerMile);
+              });
+              const hasAny = sumCashback > 0 || sumPoints > 0 || sumMiles > 0;
+              return (
+                <>
+                  {sumCashback > 0 ? (
+                    <div className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span className="name">Current cashback balance</span>
+                      <span className="amount" style={{ color: 'var(--green)' }}>{formatCents(sumCashback)}</span>
+                    </div>
+                  ) : null}
+                  {sumPoints > 0 ? (
+                    <div className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span className="name">Current points balance</span>
+                      <span className="amount" style={{ color: 'var(--muted)' }}>{sumPoints.toLocaleString()} pts</span>
+                    </div>
+                  ) : null}
+                  {sumMiles > 0 ? (
+                    <div className="row" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span className="name">Current miles balance</span>
+                      <span className="amount" style={{ color: 'var(--muted)' }}>{sumMiles.toLocaleString()} mi</span>
+                    </div>
+                  ) : null}
+                  {sumApproxCents > 0 ? (
+                    <div className="row" style={{ padding: '6px 0' }}>
+                      <span className="name">Approx. value (points + miles)</span>
+                      <span className="amount" style={{ color: 'var(--muted)' }}>~{formatCents(sumApproxCents)}</span>
+                    </div>
+                  ) : null}
+                  {!hasAny && sumApproxCents === 0 ? (
+                    <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No current balance.</div>
+                  ) : null}
+                </>
+              );
+            })()}
           </div>
         </>
       ) : null}
@@ -704,6 +781,8 @@ export function SpendingPage() {
       </>
       ) : null}
 
+      {view === 'category' ? (
+      <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '24px 0 12px 0' }}>
         <div
           className="section-header"
@@ -824,6 +903,8 @@ export function SpendingPage() {
           Add Card Purchase (Full reimbursement expected)
         </button>
       </div>
+      </>
+      ) : null}
 
       {openAdd && detected?.launchFlow?.flow === 'add_purchase' && detected.launchFlow.item ? (
         <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--muted)', border: '1px solid var(--border)' }}>

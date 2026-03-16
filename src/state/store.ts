@@ -123,14 +123,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (!card) return;
       if (config.rewardCategory !== undefined) card.rewardCategory = config.rewardCategory || undefined;
       if (config.rewardSubcategory !== undefined) card.rewardSubcategory = config.rewardSubcategory || undefined;
-      if (config.isCatchAll !== undefined) {
-        card.isCatchAll = config.isCatchAll;
-        if (config.isCatchAll) {
-          next.cards.forEach((c) => {
-            if (c.id !== cardId) c.isCatchAll = false;
-          });
-        }
-      }
+      if (config.isCatchAll !== undefined) card.isCatchAll = config.isCatchAll;
       saveData(next);
       set({ data: next });
     },
@@ -139,13 +132,6 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const card = next.cards.find((c) => c.id === cardId);
       if (!card) return;
       card.rewardRules = rules && rules.length > 0 ? rules : undefined;
-      if (rules?.some((r) => r.isCatchAll)) {
-        next.cards.forEach((c) => {
-          if (c.id !== cardId && c.rewardRules) {
-            c.rewardRules = c.rewardRules!.map((r) => ({ ...r, isCatchAll: false }));
-          }
-        });
-      }
       card.updatedAt = nowIso();
       saveData(next);
       set({ data: next });

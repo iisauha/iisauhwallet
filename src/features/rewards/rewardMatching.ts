@@ -112,17 +112,27 @@ export function suggestCardForPurchase(
 
   let best: SuggestResult | null = null;
   let bestScore = -1;
+  let bestCatchAll: SuggestResult | null = null;
+  let bestCatchAllScore = -1;
   for (const card of list) {
     const rules = getEffectiveRules(card);
     const rule = matchRule(rules, cat, sub);
     if (!rule) continue;
     const score = ruleScore(rule);
-    if (score > bestScore) {
-      bestScore = score;
-      best = { card, rule };
+    if (rule.isCatchAll) {
+      if (score > bestCatchAllScore) {
+        bestCatchAllScore = score;
+        bestCatchAll = { card, rule };
+      }
+    } else {
+      if (score > bestScore) {
+        bestScore = score;
+        best = { card, rule };
+      }
     }
   }
-  return best;
+  if (best) return best;
+  return bestCatchAll;
 }
 
 export function getRewardRuleUnitLabel(unit: string): string {
