@@ -1309,7 +1309,8 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      <div className="summary-compact" style={{ marginBottom: 12, padding: '10px 12px' }}>
+      <div className="summary">
+        <div className="summary-compact" style={{ marginBottom: 0 }}>
         <div className="summary-kv" style={{ marginTop: 0 }}>
           <span className="k">Total balance</span>
           <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
@@ -1400,6 +1401,7 @@ export function LoansPage() {
             <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
           </div>
         ) : null}
+        </div>
       </div>
 
       <div

@@ -290,7 +290,7 @@ export function SpendingPage() {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Rewards preview</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Current rewards</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 4 }}>
               {totalRewardsApproxCents > 0 ? formatCents(totalRewardsApproxCents) : '—'}
             </div>

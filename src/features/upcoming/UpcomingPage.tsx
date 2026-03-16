@@ -222,7 +222,7 @@ export function UpcomingPage() {
         style={{ marginTop: 24 }}
         onClick={() => setIncomeCollapsed(!incomeCollapsed)}
       >
-        <span className="section-header-left" style={{ color: 'var(--green)' }}>
+        <span className="section-header-left" style={{ color: 'var(--ui-title-text, var(--green))' }}>
           Expected Income
         </span>
         <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
@@ -429,17 +429,17 @@ export function UpcomingPage() {
         </>
       ) : null}
 
-      <div className="card" style={{ marginTop: 24 }}>
+      <div className="summary" style={{ marginTop: 24 }}>
         <div className="summary-kv">
           <span className="k">Final Net Cash</span>
           <span className="v pos">{formatCents(displayedFinalNetCashCents)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Expected income in window</span>
+          <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected income in window</span>
           <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k">Expected costs in window</span>
+          <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected costs in window</span>
           <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
         </div>
         <div className="summary-kv">
