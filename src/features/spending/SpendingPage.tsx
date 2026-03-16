@@ -414,6 +414,7 @@ export function SpendingPage() {
         currentPoints: c?.rewardPoints ?? 0,
         currentMiles: c?.rewardMiles ?? 0,
         rewardBalanceCleared: !!c?.rewardBalanceCleared,
+        rewardManualOverride: !!c?.rewardManualOverride,
         avgCentsPerPoint: c?.avgCentsPerPoint,
         avgCentsPerMile: c?.avgCentsPerMile
       };
@@ -541,10 +542,10 @@ export function SpendingPage() {
               const storedCashback = balance?.currentCashbackCents ?? 0;
               const storedPoints = balance?.currentPoints ?? 0;
               const storedMiles = balance?.currentMiles ?? 0;
-              const wasCleared = balance?.rewardBalanceCleared ?? false;
-              const currentCashback = wasCleared ? storedCashback : card.cashbackCents;
-              const currentPoints = wasCleared ? storedPoints : card.points;
-              const currentMiles = wasCleared ? storedMiles : card.miles;
+              const useStoredBalance = (balance?.rewardBalanceCleared ?? false) || (balance?.rewardManualOverride ?? false);
+              const currentCashback = useStoredBalance ? storedCashback : card.cashbackCents;
+              const currentPoints = useStoredBalance ? storedPoints : card.points;
+              const currentMiles = useStoredBalance ? storedMiles : card.miles;
               const hasCurrentBalance = currentCashback > 0 || currentPoints > 0 || currentMiles > 0;
               return (
                 <div key={card.cardId} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
@@ -795,10 +796,10 @@ export function SpendingPage() {
                 const storedCashback = balance?.currentCashbackCents ?? 0;
                 const storedPoints = balance?.currentPoints ?? 0;
                 const storedMiles = balance?.currentMiles ?? 0;
-                const wasCleared = balance?.rewardBalanceCleared ?? false;
-                const currentCashback = wasCleared ? storedCashback : card.cashbackCents;
-                const currentPoints = wasCleared ? storedPoints : card.points;
-                const currentMiles = wasCleared ? storedMiles : card.miles;
+                const useStoredBalance = (balance?.rewardBalanceCleared ?? false) || (balance?.rewardManualOverride ?? false);
+                const currentCashback = useStoredBalance ? storedCashback : card.cashbackCents;
+                const currentPoints = useStoredBalance ? storedPoints : card.points;
+                const currentMiles = useStoredBalance ? storedMiles : card.miles;
                 sumCashback += currentCashback; sumPoints += currentPoints; sumMiles += currentMiles;
                 if (balance?.avgCentsPerPoint != null && balance.avgCentsPerPoint > 0) sumApproxCents += Math.round(currentPoints * balance.avgCentsPerPoint);
                 if (balance?.avgCentsPerMile != null && balance.avgCentsPerMile > 0) sumApproxCents += Math.round(currentMiles * balance.avgCentsPerMile);
@@ -1079,7 +1080,7 @@ export function SpendingPage() {
           modal={editBalanceModal}
           onClose={() => setEditBalanceModal(null)}
           onSave={(rewardCashbackCents, rewardPoints, rewardMiles) => {
-            actions.updateCardRewardTotals(editBalanceModal.cardId, { rewardCashbackCents, rewardPoints, rewardMiles });
+            actions.updateCardRewardTotals(editBalanceModal.cardId, { rewardCashbackCents, rewardPoints, rewardMiles, rewardManualOverride: true });
             setEditBalanceModal(null);
           }}
         />

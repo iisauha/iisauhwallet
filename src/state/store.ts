@@ -21,7 +21,7 @@ export interface LedgerState {
     updateCardName: (id: string, name: string) => void;
     updateCardRewardConfig: (cardId: string, config: { rewardCategory?: string; rewardSubcategory?: string; isCatchAll?: boolean }) => void;
     updateCardRewardRules: (cardId: string, rules: RewardRule[]) => void;
-    updateCardRewardTotals: (cardId: string, totals: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number; rewardBalanceCleared?: boolean }) => void;
+    updateCardRewardTotals: (cardId: string, totals: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number; rewardBalanceCleared?: boolean; rewardManualOverride?: boolean }) => void;
     updateCardRewardCpp: (cardId: string, cpp: { avgCentsPerPoint?: number; avgCentsPerMile?: number }) => void;
     addPendingInbound: (item: Omit<PendingInboundItem, 'id' | 'createdAt'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id' | 'createdAt'>) => void;
@@ -144,6 +144,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (totals.rewardPoints !== undefined) card.rewardPoints = Math.max(0, Math.round(totals.rewardPoints));
       if (totals.rewardMiles !== undefined) card.rewardMiles = Math.max(0, Math.round(totals.rewardMiles));
       if (totals.rewardBalanceCleared !== undefined) card.rewardBalanceCleared = totals.rewardBalanceCleared;
+      if (totals.rewardManualOverride !== undefined) card.rewardManualOverride = totals.rewardManualOverride;
       card.updatedAt = nowIso();
       saveData(next);
       set({ data: next });

@@ -993,11 +993,14 @@ export function SnapshotPage() {
                         const cashbackCents = cashbackStr ? Math.round(parseFloat(cashbackStr) * 100) : undefined;
                         const points = pointsStr ? Math.round(parseFloat(pointsStr)) : undefined;
                         const miles = milesStr ? Math.round(parseFloat(milesStr)) : undefined;
-                        const totalsPayload: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number } = {};
+                        const totalsPayload: { rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number; rewardManualOverride?: boolean } = {};
                         if (typeof cashbackCents === 'number' && !Number.isNaN(cashbackCents)) totalsPayload.rewardCashbackCents = cashbackCents;
                         if (typeof points === 'number' && !Number.isNaN(points)) totalsPayload.rewardPoints = points;
                         if (typeof miles === 'number' && !Number.isNaN(miles)) totalsPayload.rewardMiles = miles;
-                        if (Object.keys(totalsPayload).length > 0) actions.updateCardRewardTotals(modal.cardId, totalsPayload);
+                        if (Object.keys(totalsPayload).length > 0) {
+                          totalsPayload.rewardManualOverride = true;
+                          actions.updateCardRewardTotals(modal.cardId, totalsPayload);
+                        }
                         const cppPoint = modal.avgCentsPerPoint.trim().replace(/,/g, '');
                         const cppMile = modal.avgCentsPerMile.trim().replace(/,/g, '');
                         const avgCentsPerPoint = cppPoint ? parseFloat(cppPoint) : undefined;
