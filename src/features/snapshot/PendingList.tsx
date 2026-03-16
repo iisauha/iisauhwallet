@@ -58,32 +58,54 @@ function renderInboundItem(
   const canJoinWith = joiningFromId && joiningFromId !== p.id;
   return (
     <div className="pending-item" key={p.id}>
-      <span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+        <span>
         {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
         {isHysa && !isRefund ? <span className="pending-refund-badge" style={{ background: 'var(--green-light)' }}>HYSA</span> : null}
         {isRefund || isHysa ? ' — ' : null}
         {escapeText(baseLabel.replace(/^Refund —\s*/, '').replace(/^To HYSA —\s*/, ''))}
         {' '}
         <span className="pending-amount inbound-amount">{amountText}</span>
-      </span>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        </span>
+        {isJoiningFrom ? (
+          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join…</span>
+        ) : null}
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {onJoin && !joiningFromId ? (
-          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '2px 6px' }} onClick={() => onJoin(p.id)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+            onClick={() => onJoin(p.id)}
+          >
             Join
           </button>
         ) : null}
         {onJoinWithThis && canJoinWith ? (
-          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '2px 6px' }} onClick={() => onJoinWithThis(p.id)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+            onClick={() => onJoinWithThis(p.id)}
+          >
             Join with this
           </button>
         ) : null}
-        {isJoiningFrom ? (
-          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join...</span>
-        ) : null}
-        <button type="button" className="btn btn-posted" onClick={() => onPosted?.(p.id)}>
+        <button
+          type="button"
+          className="btn btn-posted"
+          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          onClick={() => onPosted?.(p.id)}
+        >
           Posted
         </button>
-        <button type="button" className="btn-delete" onClick={() => onDelete?.(p.id)}>
+        <button
+          type="button"
+          className="btn-delete"
+          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          onClick={() => onDelete?.(p.id)}
+        >
           Delete
         </button>
       </div>
@@ -143,16 +165,55 @@ export function PendingInboundList(props: {
   return (
     <div>
       {joinStep !== 'idle' && 'toId' in joinStep && fromItem && toItem ? (
-        <div className="pending-item" style={{ flexWrap: 'wrap', marginBottom: 8, padding: 8, background: 'var(--surface)', borderRadius: 6 }}>
-          <div style={{ width: '100%', marginBottom: 6, fontSize: '0.9rem' }}>
-            Join into one: <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong> — Transfer to {getInboundDestinationName(props.data, fromItem)}
+        <div
+          className="card"
+          style={{
+            padding: '10px 12px',
+            marginBottom: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
+            Join into one:{' '}
+            <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
+            — Transfer to {getInboundDestinationName(props.data, fromItem)}
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 8 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Date:</span>
-            <input type="date" value={joinDate} onChange={(e) => setJoinDate(e.target.value)} style={{ padding: 4, fontSize: '0.9rem' }} />
-          </label>
-          <button type="button" className="btn btn-posted" onClick={confirmJoin}>Confirm join</button>
-          <button type="button" className="btn btn-secondary" onClick={() => setJoinStep('idle')}>Cancel</button>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Date</span>
+              <input
+                type="date"
+                value={joinDate}
+                onChange={(e) => setJoinDate(e.target.value)}
+                style={{
+                  padding: '6px 8px',
+                  fontSize: '0.9rem',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-hover)',
+                  color: 'var(--text)',
+                }}
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-posted" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={confirmJoin}>
+                Confirm join
+              </button>
+              <button type="button" className="btn btn-secondary" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={() => setJoinStep('idle')}>
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
       {refunds.length > 0 ? (
@@ -229,31 +290,53 @@ function renderOutboundItem(
   const canJoinWith = joiningFromId && joiningFromId !== p.id;
   return (
     <div className="pending-item" key={p.id}>
-      <span>
-        {isCcPay ? <span className="pending-ccpay-badge">CC Payment</span> : null}
-        {isCcPay ? ' ' : null}
-        {escapeText(label.replace(/^CC Payment\s*/, ''))}
-        {' '}
-        <span className="pending-amount outbound-amount">{amountText}</span>
-      </span>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+        <span>
+          {isCcPay ? <span className="pending-ccpay-badge">CC Payment</span> : null}
+          {isCcPay ? ' ' : null}
+          {escapeText(label.replace(/^CC Payment\s*/, ''))}
+          {' '}
+          <span className="pending-amount outbound-amount">{amountText}</span>
+        </span>
+        {isJoiningFrom ? (
+          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join…</span>
+        ) : null}
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {onJoin && !joiningFromId ? (
-          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '2px 6px' }} onClick={() => onJoin(p.id)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+            onClick={() => onJoin(p.id)}
+          >
             Join
           </button>
         ) : null}
         {onJoinWithThis && canJoinWith ? (
-          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '2px 6px' }} onClick={() => onJoinWithThis(p.id)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+            onClick={() => onJoinWithThis(p.id)}
+          >
             Join with this
           </button>
         ) : null}
-        {isJoiningFrom ? (
-          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join...</span>
-        ) : null}
-        <button type="button" className="btn btn-posted" onClick={() => onPosted?.(p.id)}>
+        <button
+          type="button"
+          className="btn btn-posted"
+          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          onClick={() => onPosted?.(p.id)}
+        >
           Posted
         </button>
-        <button type="button" className="btn-delete" onClick={() => onDelete?.(p.id)}>
+        <button
+          type="button"
+          className="btn-delete"
+          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          onClick={() => onDelete?.(p.id)}
+        >
           Delete
         </button>
       </div>
@@ -312,16 +395,55 @@ export function PendingOutboundList(props: {
   return (
     <div>
       {joinStep !== 'idle' && 'toId' in joinStep && fromItem && toItem ? (
-        <div className="pending-item" style={{ flexWrap: 'wrap', marginBottom: 8, padding: 8, background: 'var(--surface)', borderRadius: 6 }}>
-          <div style={{ width: '100%', marginBottom: 6, fontSize: '0.9rem' }}>
-            Join into one: <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong> — {getOutboundDestinationLabel(props.data, fromItem)}
+        <div
+          className="card"
+          style={{
+            padding: '10px 12px',
+            marginBottom: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
+            Join into one:{' '}
+            <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
+            — {getOutboundDestinationLabel(props.data, fromItem)}
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 8 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Date:</span>
-            <input type="date" value={joinDate} onChange={(e) => setJoinDate(e.target.value)} style={{ padding: 4, fontSize: '0.9rem' }} />
-          </label>
-          <button type="button" className="btn btn-posted" onClick={confirmJoinOut}>Confirm join</button>
-          <button type="button" className="btn btn-secondary" onClick={() => setJoinStep('idle')}>Cancel</button>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Date</span>
+              <input
+                type="date"
+                value={joinDate}
+                onChange={(e) => setJoinDate(e.target.value)}
+                style={{
+                  padding: '6px 8px',
+                  fontSize: '0.9rem',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-hover)',
+                  color: 'var(--text)',
+                }}
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-posted" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={confirmJoinOut}>
+                Confirm join
+              </button>
+              <button type="button" className="btn btn-secondary" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={() => setJoinStep('idle')}>
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
       {ccPayments.length > 0 ? (
