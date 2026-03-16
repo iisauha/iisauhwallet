@@ -95,9 +95,14 @@ export function SpendingPage() {
     });
   }, [data.purchases, startKey, endKey]);
 
+  /** Personal spending only: exclude full-reimbursement card purchases (they are not my spending). */
+  const personalPeriodPurchases = useMemo(() => {
+    return periodPurchases.filter((p: any) => !p.fullReimbursementExpected);
+  }, [periodPurchases]);
+
   const filteredPurchases = useMemo(() => {
     const q = (searchQuery || '').trim();
-    if (!q) return periodPurchases;
+    if (!q) return personalPeriodPurchases;
     const lower = q.toLowerCase();
 
     let rx: RegExp | null = null;
@@ -110,7 +115,7 @@ export function SpendingPage() {
       }
     }
 
-    return periodPurchases.filter((p: any) => {
+    return personalPeriodPurchases.filter((p: any) => {
       const title = String(p.title || '');
       const catId = String(p.category || 'uncategorized');
       const catName = String(getCategoryName(cfg, catId) || '');
@@ -119,7 +124,7 @@ export function SpendingPage() {
       if (rx) return rx.test(haystack);
       return haystack.toLowerCase().includes(lower);
     });
-  }, [periodPurchases, searchQuery, cfg]);
+  }, [personalPeriodPurchases, searchQuery, cfg]);
 
   const periodTotalCents = useMemo(() => {
     return filteredPurchases.reduce((s, p) => s + (p.amountCents || 0), 0);
