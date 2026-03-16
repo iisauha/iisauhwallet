@@ -53,7 +53,7 @@ export function SpendingPage() {
   const [rewardAdjustments, setRewardAdjustments] = useState<CardRewardAdjustmentsState>(() => loadCardRewardAdjustments());
   const [rewardOnlyEntries, setRewardOnlyEntries] = useState<CardRewardOnlyEntriesState>(() => loadCardRewardOnlyEntries());
   const [rewardsVisibleCardIds, setRewardsVisibleCardIds] = useState<string[]>(() => loadRewardsVisibleCardIds());
-  const [editingRewardAmount, setEditingRewardAmount] = useState<{ cardId: string; categoryKey: string } | null>(null);
+  const [editingRewardAmount, setEditingRewardAmount] = useState<{ cardId: string; categoryKey: string; section?: 'my' | 'other' } | null>(null);
   const [editingRewardAmountValue, setEditingRewardAmountValue] = useState('');
   const [clearBalanceConfirm, setClearBalanceConfirm] = useState<{ cardId: string; cardName: string } | null>(null);
   const [editBalanceModal, setEditBalanceModal] = useState<{
@@ -344,10 +344,50 @@ export function SpendingPage() {
         row.miles = reward.miles ?? 0;
       });
       cardRow.byCategory = cardRow.byCategory.filter((row) => row.amountCents > 0);
-      cardRow.cashbackCents = cardRow.byCategory.reduce((s, row) => s + row.cashbackCents, 0);
-      cardRow.points = cardRow.byCategory.reduce((s, row) => s + row.points, 0);
-      cardRow.miles = cardRow.byCategory.reduce((s, row) => s + row.miles, 0);
-      cardRow.amountCents = cardRow.byCategory.reduce((s, row) => s + row.amountCents, 0);
+
+      const applyToSection = (rows: typeof cardRow.byCategoryMy, suffix: string) => {
+        const byKey = new Map(rows.map((r) => [r.categoryKey, { ...r }]));
+        Object.keys(rewardAdjustments[cardRow.cardId] || {}).forEach((adjKey) => {
+          if (!adjKey.endsWith(suffix)) return;
+          const categoryKey = adjKey.slice(0, -suffix.length);
+          if (byKey.has(categoryKey)) return;
+          const [categoryId, subcategory] = categoryKey.split('\t');
+          const categoryLabel = getCategoryName(cfg, categoryId || 'uncategorized') + (subcategory ? ` → ${subcategory}` : '');
+          const displayLabel = (subcategory || '') ? (subcategory || '') : getCategoryName(cfg, categoryId || 'uncategorized');
+          byKey.set(categoryKey, { categoryKey, categoryId: categoryId || 'uncategorized', subcategory: subcategory || '', categoryLabel, displayLabel, amountCents: 0, rewardLabel: '', cashbackCents: 0, points: 0, miles: 0 });
+        });
+        byKey.forEach((row) => {
+          const adj = rewardAdjustments[cardRow.cardId]?.[row.categoryKey + suffix];
+          const baseAmount = row.amountCents;
+          const effectiveAmount = adj
+            ? (adj.mode === 'set' ? adj.amountCents : baseAmount + adj.amountCents)
+            : baseAmount;
+          const rule = matchRule(rules, row.categoryId, row.subcategory);
+          const reward = rule && effectiveAmount > 0 ? computeEstimatedReward(rule, effectiveAmount) : {};
+          row.amountCents = effectiveAmount;
+          row.cashbackCents = reward.cashbackCents ?? 0;
+          row.points = reward.points ?? 0;
+          row.miles = reward.miles ?? 0;
+        });
+        return Array.from(byKey.values()).filter((r) => r.amountCents > 0).sort((a, b) => b.amountCents - a.amountCents);
+      };
+      cardRow.byCategoryMy = applyToSection(cardRow.byCategoryMy, '|my');
+      cardRow.byCategoryOther = applyToSection(cardRow.byCategoryOther, '|other');
+
+      const hasSplit = (cardRow.byCategoryMy?.length ?? 0) > 0 || (cardRow.byCategoryOther?.length ?? 0) > 0;
+      if (hasSplit) {
+        const mySum = (cardRow.byCategoryMy || []).reduce((s, r) => s + r.amountCents, 0);
+        const otherSum = (cardRow.byCategoryOther || []).reduce((s, r) => s + r.amountCents, 0);
+        cardRow.amountCents = mySum + otherSum;
+        cardRow.cashbackCents = (cardRow.byCategoryMy || []).reduce((s, r) => s + r.cashbackCents, 0) + (cardRow.byCategoryOther || []).reduce((s, r) => s + r.cashbackCents, 0);
+        cardRow.points = (cardRow.byCategoryMy || []).reduce((s, r) => s + r.points, 0) + (cardRow.byCategoryOther || []).reduce((s, r) => s + r.points, 0);
+        cardRow.miles = (cardRow.byCategoryMy || []).reduce((s, r) => s + r.miles, 0) + (cardRow.byCategoryOther || []).reduce((s, r) => s + r.miles, 0);
+      } else {
+        cardRow.cashbackCents = cardRow.byCategory.reduce((s, row) => s + row.cashbackCents, 0);
+        cardRow.points = cardRow.byCategory.reduce((s, row) => s + row.points, 0);
+        cardRow.miles = cardRow.byCategory.reduce((s, row) => s + row.miles, 0);
+        cardRow.amountCents = cardRow.byCategory.reduce((s, row) => s + row.amountCents, 0);
+      }
     });
     result.forEach((r) => {
       r.byCategory.sort((a, b) => b.amountCents - a.amountCents);
@@ -553,105 +593,108 @@ export function SpendingPage() {
                   </div>
                   {card.byCategory.length > 0 ? (
                     <div style={{ paddingLeft: 12, marginBottom: 8 }}>
-                      {card.byCategoryMy && card.byCategoryMy.length > 0 ? (
-                        <>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>My purchases</div>
-                          {card.byCategoryMy.map((line, i) => (
-                            <div key={`my-${i}`} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
-                              <span>{line.displayLabel}: {formatCents(line.amountCents)}</span>
-                              <span style={{ color: 'var(--muted)' }}>
-                                {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
-                                {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
-                                {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
-                                {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 ? '—' : ''}
-                              </span>
-                            </div>
-                          ))}
-                        </>
-                      ) : null}
-                      {card.byCategoryOther && card.byCategoryOther.length > 0 ? (
-                        <>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>Reimbursed / other card spend</div>
-                          {card.byCategoryOther.map((line, i) => (
-                            <div key={`other-${i}`} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
-                              <span>{line.displayLabel}: {formatCents(line.amountCents)}</span>
-                              <span style={{ color: 'var(--muted)' }}>
-                                {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
-                                {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
-                                {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
-                                {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 ? '—' : ''}
-                              </span>
-                            </div>
-                          ))}
-                        </>
-                      ) : null}
-                      {(!card.byCategoryMy || card.byCategoryMy.length === 0) && (!card.byCategoryOther || card.byCategoryOther.length === 0)
-                        ? card.byCategory.map((line, i) => {
-                            const isEditing = editingRewardAmount?.cardId === card.cardId && editingRewardAmount?.categoryKey === line.categoryKey;
-                            return (
-                              <div key={line.categoryKey} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
-                                <span>
-                                  {line.displayLabel}:{' '}
-                                  {isEditing ? (
-                                    <input
-                                      className="ll-control"
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      autoFocus
-                                      style={{ width: 80, padding: '2px 6px', fontSize: 'inherit' }}
-                                      value={editingRewardAmountValue}
-                                      onChange={(e) => setEditingRewardAmountValue(e.target.value)}
-                                      onBlur={() => {
-                                        const parsed = parseFloat(editingRewardAmountValue);
-                                        const amountCents = Number.isNaN(parsed) || parsed < 0 ? 0 : Math.round(parsed * 100);
-                                        const next: CardRewardAdjustmentsState = { ...rewardAdjustments };
-                                        next[card.cardId] = { ...(next[card.cardId] || {}) };
-                                        next[card.cardId][line.categoryKey] = { amountCents, mode: 'set' as const };
-                                        saveCardRewardAdjustments(next);
-                                        setRewardAdjustments(next);
-                                        setEditingRewardAmount(null);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                                      }}
-                                    />
-                                  ) : (
-                                    <span
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={() => {
-                                        setEditingRewardAmount({ cardId: card.cardId, categoryKey: line.categoryKey });
-                                        setEditingRewardAmountValue((line.amountCents / 100).toFixed(2));
-                                      }}
-                                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingRewardAmount({ cardId: card.cardId, categoryKey: line.categoryKey }); setEditingRewardAmountValue((line.amountCents / 100).toFixed(2)); } }}
-                                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                                      title="Click to edit amount"
-                                    >
-                                      {formatCents(line.amountCents)}
-                                    </span>
-                                  )}
-                                </span>
-                                <span style={{ color: 'var(--muted)' }}>
-                                  {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
-                                  {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
-                                  {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
-                                  {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 ? '—' : ''}
-                                </span>
-                              </div>
-                            );
-                          })
-                        : card.byCategory.map((line, i) => (
-                            <div key={line.categoryKey} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
-                              <span>{line.displayLabel}: {formatCents(line.amountCents)}</span>
-                              <span style={{ color: 'var(--muted)' }}>
-                                {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
-                                {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
-                                {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
-                                {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 ? '—' : ''}
-                              </span>
-                            </div>
-                          ))}
+                      {(() => {
+                        const hasMy = card.byCategoryMy && card.byCategoryMy.length > 0;
+                        const hasOther = card.byCategoryOther && card.byCategoryOther.length > 0;
+                        const showSplit = hasMy || hasOther;
+                        const saveAdjustment = (adjKey: string, amountCents: number, mode: 'set' | 'add') => {
+                          const next: CardRewardAdjustmentsState = { ...rewardAdjustments };
+                          next[card.cardId] = { ...(next[card.cardId] || {}) };
+                          next[card.cardId][adjKey] = { amountCents, mode };
+                          saveCardRewardAdjustments(next);
+                          setRewardAdjustments(next);
+                          setEditingRewardAmount(null);
+                        };
+                        const renderEditableAmount = (line: { categoryKey: string; amountCents: number; displayLabel: string; cashbackCents: number; points: number; miles: number }, section: 'my' | 'other' | undefined) => {
+                          const adjKey = section ? line.categoryKey + (section === 'my' ? '|my' : '|other') : line.categoryKey;
+                          const isEditing = editingRewardAmount?.cardId === card.cardId && editingRewardAmount?.categoryKey === line.categoryKey && editingRewardAmount?.section === section;
+                          return isEditing ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              style={{ width: 64, padding: '0 4px', fontSize: 'inherit', border: 'none', borderBottom: '1px solid var(--muted)', borderRadius: 0, background: 'transparent' }}
+                              value={editingRewardAmountValue}
+                              onChange={(e) => setEditingRewardAmountValue(e.target.value)}
+                              onBlur={() => {
+                                const raw = editingRewardAmountValue.trim();
+                                const isAdd = raw.startsWith('+') || raw.startsWith('-');
+                                const num = raw.replace(/^[+-]/, '');
+                                const parsed = parseFloat(num);
+                                const amountCents = Number.isNaN(parsed) ? 0 : Math.round(parsed * 100);
+                                const mode: 'set' | 'add' = isAdd ? 'add' : 'set';
+                                const finalCents = mode === 'add' ? Math.max(0, line.amountCents + (raw.startsWith('-') ? -amountCents : amountCents)) : amountCents;
+                                saveAdjustment(adjKey, finalCents, 'set');
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                              }}
+                            />
+                          ) : (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => {
+                                setEditingRewardAmount({ cardId: card.cardId, categoryKey: line.categoryKey, section });
+                                setEditingRewardAmountValue((line.amountCents / 100).toFixed(2));
+                              }}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingRewardAmount({ cardId: card.cardId, categoryKey: line.categoryKey, section }); setEditingRewardAmountValue((line.amountCents / 100).toFixed(2)); } }}
+                              style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                              title="Click to edit (type +10 to add)"
+                            >
+                              {formatCents(line.amountCents)}
+                            </span>
+                          );
+                        };
+                        if (showSplit) {
+                          return (
+                            <>
+                              {hasMy ? (
+                                <>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>My purchases</div>
+                                  {card.byCategoryMy!.map((line, i) => (
+                                    <div key={`my-${line.categoryKey}`} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
+                                      <span>{line.displayLabel}: {renderEditableAmount(line, 'my')}</span>
+                                      <span style={{ color: 'var(--muted)' }}>
+                                        {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
+                                        {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
+                                        {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
+                                        {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 ? '—' : ''}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </>
+                              ) : null}
+                              {hasOther ? (
+                                <>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8, marginBottom: 4 }}>Reimbursed / other card spend</div>
+                                  {card.byCategoryOther!.map((line, i) => (
+                                    <div key={`other-${line.categoryKey}`} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
+                                      <span>{line.displayLabel}: {renderEditableAmount(line, 'other')}</span>
+                                      <span style={{ color: 'var(--muted)' }}>
+                                        {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
+                                        {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
+                                        {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
+                                        {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 ? '—' : ''}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </>
+                              ) : null}
+                            </>
+                          );
+                        }
+                        return card.byCategory.map((line) => (
+                          <div key={line.categoryKey} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontSize: '0.9rem', marginBottom: 4 }}>
+                            <span>{line.displayLabel}: {renderEditableAmount(line, undefined)}</span>
+                            <span style={{ color: 'var(--muted)' }}>
+                              {line.cashbackCents > 0 ? formatCents(line.cashbackCents) : ''}
+                              {line.points > 0 ? (line.cashbackCents > 0 ? ' · ' : '') + `${line.points.toLocaleString()} pts` : ''}
+                              {line.miles > 0 ? (line.cashbackCents > 0 || line.points > 0 ? ' · ' : '') + `${line.miles.toLocaleString()} mi` : ''}
+                              {line.cashbackCents === 0 && line.points === 0 && line.miles === 0 ? '—' : ''}
+                            </span>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   ) : null}
                   <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
