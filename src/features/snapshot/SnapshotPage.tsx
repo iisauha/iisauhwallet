@@ -410,16 +410,16 @@ export function SnapshotPage() {
                         type="button"
                         className="icon-btn"
                         style={{
-                          width: 20,
-                          height: 20,
-                          minWidth: 20,
-                          minHeight: 20,
+                          width: 18,
+                          height: 18,
+                          minWidth: 18,
+                          minHeight: 18,
                           borderRadius: '50%',
                           padding: 0,
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '0.75rem',
+                          fontSize: '0.7rem',
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
