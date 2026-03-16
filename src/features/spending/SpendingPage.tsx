@@ -41,6 +41,7 @@ export function SpendingPage() {
     if (detected?.launchFlow?.flow === 'add_purchase') setOpenAdd(true);
   }, [detected?.launchFlow?.flow]);
   const [view, setView] = useState<BreakdownView>('category');
+  const [lastRewardsSubView, setLastRewardsSubView] = useState<'rewards' | 'card'>('rewards');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
@@ -298,7 +299,15 @@ export function SpendingPage() {
         <button
           type="button"
           className={view === 'rewards' || view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-          onClick={() => setView((prev) => (prev === 'card' ? 'rewards' : 'card'))}
+          onClick={() => {
+            if (view === 'category') {
+              setView(lastRewardsSubView);
+            } else {
+              const next = view === 'card' ? 'rewards' : 'card';
+              setLastRewardsSubView(next);
+              setView(next);
+            }
+          }}
           aria-pressed={view === 'rewards' || view === 'card'}
           style={{ flexShrink: 0 }}
         >
@@ -307,7 +316,10 @@ export function SpendingPage() {
         <button
           type="button"
           className={view === 'category' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-          onClick={() => setView('category')}
+          onClick={() => {
+            if (view === 'rewards' || view === 'card') setLastRewardsSubView(view);
+            setView('category');
+          }}
           aria-pressed={view === 'category'}
           style={{ flexShrink: 0 }}
         >
@@ -505,7 +517,7 @@ export function SpendingPage() {
           </button>
         </div>
       ) : null}
-      <div>
+      <div style={{ paddingTop: 10 }}>
         {byCategory.map((c) => (
           <div
             className="card"

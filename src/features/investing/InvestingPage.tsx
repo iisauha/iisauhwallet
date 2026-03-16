@@ -1761,7 +1761,7 @@ export function InvestingPage() {
       <div style={{ marginTop: 16 }}>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn btn-add"
           style={{ width: '100%' }}
           onClick={() => {
             const source = coastFireAssumptions || coastFireForm;

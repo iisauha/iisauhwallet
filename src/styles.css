@@ -107,8 +107,11 @@ body {
   padding: 8px 4px;
   cursor: pointer;
   border-radius: 8px;
-  background: var(--ui-section-bg, transparent);
+  background: var(--ui-section-bg, var(--ui-surface-secondary, var(--surface)));
   -webkit-tap-highlight-color: transparent;
+}
+.section-header:active {
+  background: var(--ui-section-bg, var(--ui-surface-secondary, var(--surface)));
 }
 .section-header-left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .section-header .chevron {
@@ -180,6 +183,14 @@ body {
 .upcoming-cost-amount { color: var(--red); font-weight: 700; }
 .upcoming-status-ok { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(22, 163, 74, 0.2); color: var(--green); font-size: 0.85rem; font-weight: 600; }
 .upcoming-status-warn { display: inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(220, 38, 38, 0.2); color: var(--red); font-size: 0.85rem; font-weight: 600; }
+.pending-inbound-wrapper,
+.pending-outbound-wrapper {
+  padding: 14px 16px;
+  margin-top: 6px;
+  background: var(--ui-surface-secondary, var(--surface));
+  border: 1px solid var(--ui-border, var(--border));
+  border-radius: var(--radius-card);
+}
 .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); -webkit-tap-highlight-color: transparent; }
 .pending-amount.inbound-amount { color: var(--green); font-weight: 600; }
 .pending-amount.outbound-amount { color: var(--red); font-weight: 600; }

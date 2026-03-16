@@ -409,6 +409,18 @@ export function SnapshotPage() {
                       <button
                         type="button"
                         className="icon-btn"
+                        style={{
+                          width: 20,
+                          height: 20,
+                          minWidth: 20,
+                          minHeight: 20,
+                          borderRadius: '50%',
+                          padding: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
                           const rules = getEffectiveRules(c);

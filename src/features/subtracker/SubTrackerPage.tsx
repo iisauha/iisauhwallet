@@ -548,30 +548,6 @@ export function SubTrackerPage() {
                   >
                     <span>{Math.round(ratio * 100)}%</span>
                   </div>
-                  {/* subtle internal tick marks */}
-                  <div
-                    aria-hidden="true"
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '0 4px',
-                      pointerEvents: 'none'
-                    }}
-                  >
-                    {Array.from({ length: 4 }).map((_, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          width: 1,
-                          height: '60%',
-                          alignSelf: 'center',
-                          background: 'rgba(15, 23, 42, 0.28)'
-                        }}
-                      />
-                    ))}
-                  </div>
                 </div>
               </div>
             ) : null}

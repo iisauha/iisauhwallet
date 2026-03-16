@@ -289,7 +289,7 @@ export function RecurringPage() {
               style={{ fontSize: '0.98rem', fontWeight: 600 }}
             >
               <span className="section-header-left">
-                {headerLabel} — <span>{items.length} item{items.length === 1 ? '' : 's'}</span>
+                {items.length === 1 ? headerLabel : `${headerLabel} (${items.length} items)`}
               </span>
               <span className="chevron">{collapsed ? '▸' : '▾'}</span>
             </div>
