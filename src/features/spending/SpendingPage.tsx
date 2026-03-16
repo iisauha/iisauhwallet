@@ -124,8 +124,11 @@ export function SpendingPage() {
     return filteredPurchases.reduce((s, p) => s + (p.amountCents || 0), 0);
   }, [filteredPurchases]);
 
-  const totalRewardsApproxCents = useMemo(() => {
-    let total = 0;
+  const totalRewards = useMemo(() => {
+    let totalCashback = 0;
+    let totalPoints = 0;
+    let totalMiles = 0;
+    let totalApproxCents = 0;
     (data.cards || []).forEach((c: any) => {
       const type =
         c.rewardType ??
@@ -136,15 +139,27 @@ export function SpendingPage() {
           : c.rewardMiles != null && c.rewardMiles > 0
             ? 'miles'
             : 'points');
+      const balance =
+        type === 'cashback'
+          ? c.rewardCashbackCents ?? 0
+          : type === 'miles'
+            ? c.rewardMiles ?? 0
+            : c.rewardPoints ?? 0;
       if (type === 'cashback') {
-        total += c.rewardCashbackCents ?? 0;
-      } else if (type === 'points' && c.rewardPoints && c.avgCentsPerPoint) {
-        total += Math.round((c.rewardPoints * c.avgCentsPerPoint) / 100);
-      } else if (type === 'miles' && c.rewardMiles && c.avgCentsPerMile) {
-        total += Math.round((c.rewardMiles * c.avgCentsPerMile) / 100);
+        totalCashback += balance;
+      } else if (type === 'points') {
+        totalPoints += balance;
+        if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) {
+          totalApproxCents += Math.round((balance * c.avgCentsPerPoint) / 100);
+        }
+      } else {
+        totalMiles += balance;
+        if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) {
+          totalApproxCents += Math.round((balance * c.avgCentsPerMile) / 100);
+        }
       }
     });
-    return total;
+    return { totalCashback, totalPoints, totalMiles, totalApproxCents };
   }, [data.cards]);
 
   const byCategory = useMemo(() => {
@@ -255,22 +270,32 @@ export function SpendingPage() {
           </span>
         ) : null}
         <span style={{ flex: 1 }} />
-        <button
-          type="button"
-          className={view === 'category' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-          onClick={() => setView('category')}
-          aria-pressed={view === 'category'}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            marginRight: 2,
+            marginTop: -4,
+          }}
         >
-          Categories
-        </button>
-        <button
-          type="button"
-          className={view === 'rewards' || view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
-          onClick={() => setView((prev) => (prev === 'card' ? 'rewards' : 'card'))}
-          aria-pressed={view === 'rewards' || view === 'card'}
-        >
-          {view === 'card' ? 'By card' : 'Rewards'}
-        </button>
+          <button
+            type="button"
+            className={view === 'category' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+            onClick={() => setView('category')}
+            aria-pressed={view === 'category'}
+          >
+            Categories
+          </button>
+          <button
+            type="button"
+            className={view === 'rewards' || view === 'card' ? 'btn btn-secondary ll-toggle active' : 'btn btn-secondary ll-toggle'}
+            onClick={() => setView((prev) => (prev === 'card' ? 'rewards' : 'card'))}
+            aria-pressed={view === 'rewards' || view === 'card'}
+          >
+            {view === 'card' ? 'By card' : 'Rewards'}
+          </button>
+        </div>
       </div>
 
       <div
@@ -290,9 +315,15 @@ export function SpendingPage() {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Current rewards</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Current Rewards</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 4 }}>
-              {totalRewardsApproxCents > 0 ? formatCents(totalRewardsApproxCents) : '—'}
+              {totalRewards.totalApproxCents > 0 ? (
+                <>
+                  ~{formatCents(totalRewards.totalApproxCents)} <span style={{ fontSize: '0.9rem' }}>(approx)</span>
+                </>
+              ) : (
+                '—'
+              )}
             </div>
             <div
               style={{
@@ -321,6 +352,59 @@ export function SpendingPage() {
             }}
           >
             <canvas ref={canvasRef} />
+            {byCategory.length > 0 && periodTotalCents > 0 ? (
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 8,
+                  borderTop: '1px solid var(--border)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  fontSize: '0.8rem',
+                }}
+              >
+                {byCategory.map((c) => {
+                  const pct = (c.amountCents / periodTotalCents) * 100;
+                  return (
+                    <div
+                      key={c.categoryId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '2px 6px',
+                        borderRadius: 999,
+                        background: 'var(--ui-surface-secondary, var(--surface))',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          background: getCategoryColor(c.categoryId),
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span
+                        style={{
+                          maxWidth: 120,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {getCategoryName(cfg, c.categoryId)}
+                      </span>
+                      <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>
+                        {pct.toFixed(0)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         ) : view === 'card' ? (
           <div>
@@ -409,39 +493,7 @@ export function SpendingPage() {
                   );
                 })}
                 {(() => {
-                  let totalCashback = 0;
-                  let totalPoints = 0;
-                  let totalMiles = 0;
-                  let totalApproxCents = 0;
-                  (data.cards || []).forEach((c: any) => {
-                    const type =
-                      c.rewardType ??
-                      (c.rewardCashbackCents != null &&
-                      (c.rewardPoints == null || c.rewardPoints === 0) &&
-                      (c.rewardMiles == null || c.rewardMiles === 0)
-                        ? 'cashback'
-                        : c.rewardMiles != null && c.rewardMiles > 0
-                          ? 'miles'
-                          : 'points');
-                    const balance =
-                      type === 'cashback'
-                        ? c.rewardCashbackCents ?? 0
-                        : type === 'miles'
-                          ? c.rewardMiles ?? 0
-                          : c.rewardPoints ?? 0;
-                    if (type === 'cashback') totalCashback += balance;
-                    else if (type === 'points') {
-                      totalPoints += balance;
-                      if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) {
-                        totalApproxCents += Math.round((balance * c.avgCentsPerPoint) / 100);
-                      }
-                    } else {
-                      totalMiles += balance;
-                      if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) {
-                        totalApproxCents += Math.round((balance * c.avgCentsPerMile) / 100);
-                      }
-                    }
-                  });
+                  const { totalCashback, totalPoints, totalMiles, totalApproxCents } = totalRewards;
                   const hasTotals = totalCashback > 0 || totalPoints > 0 || totalMiles > 0;
                   if (!hasTotals && totalApproxCents === 0) return null;
                   return (

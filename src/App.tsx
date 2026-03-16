@@ -127,7 +127,10 @@ function MainApp() {
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
-            style={{ userSelect: 'none' }}
+            style={{
+              userSelect: 'none',
+              marginLeft: tabKey === 'snapshot' ? 6 : 0,
+            }}
           >
             {TAB_LABELS[tabKey]}
           </button>

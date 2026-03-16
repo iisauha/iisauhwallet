@@ -1367,7 +1367,7 @@ export function LoansPage() {
                 height: 22,
                 borderRadius: '50%',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-secondary)',
+                background: 'transparent',
                 color: 'var(--muted)',
                 fontSize: '0.75rem',
                 fontWeight: 600,
@@ -1409,11 +1409,12 @@ export function LoansPage() {
         style={{
           display: 'flex',
           gap: 0,
+          marginTop: 16,
           marginBottom: 12,
           borderRadius: 999,
           padding: 2,
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border)'
+          background: 'var(--ui-surface-secondary, var(--surface))',
+          border: '1px solid var(--ui-border, var(--border))'
         }}
         role="tablist"
         aria-label="Loan type"
