@@ -415,11 +415,15 @@ export function SnapshotPage() {
                           minWidth: 18,
                           minHeight: 18,
                           borderRadius: '50%',
+                          border: '1px solid var(--border)',
+                          background: 'transparent',
+                          color: 'var(--muted)',
+                          fontSize: '0.7rem',
+                          fontWeight: 500,
                           padding: 0,
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '0.7rem',
                         }}
                         onClick={(e) => {
                           e.stopPropagation();

@@ -387,9 +387,10 @@ input[type="date"].ll-control:focus {
   }
 }
 
-/* Touch devices: avoid sticky hover/pressed visuals */
+/* Touch devices: avoid sticky hover; keep section header background visible on tap */
 @media (hover: none) {
-  .section-header:hover { background: transparent; }
+  .section-header:hover { background: var(--ui-section-bg, var(--ui-card-bg, var(--surface))); }
+  .section-header:active { background: var(--ui-section-bg, var(--ui-card-bg, var(--surface))); }
   .icon-btn:hover { background: transparent; }
 }
 .modal h3 { margin: 0 0 16px 0; font-size: 1.25rem; }

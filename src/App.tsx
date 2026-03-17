@@ -129,7 +129,7 @@ function MainApp() {
             onDrop={(e) => handleDrop(e, index)}
             style={{
               userSelect: 'none',
-              marginLeft: tabKey === 'snapshot' ? 12 : 0,
+              marginLeft: tabKey === 'snapshot' ? 20 : 0,
             }}
           >
             {TAB_LABELS[tabKey]}
