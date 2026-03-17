@@ -55,7 +55,6 @@ export function SpendingPage() {
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
   const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
-  const [legendOpen, setLegendOpen] = useState(false);
   const [editBalanceModal, setEditBalanceModal] = useState<{
     cardId: string;
     cardName: string;
@@ -401,69 +400,14 @@ export function SpendingPage() {
       </p>
       <div className="card">
         {view === 'category' ? (
-          <div style={{ position: 'relative' }}>
-            <div
-              className="spending-chart-wrap"
-              style={{ position: 'relative', width: '100%', height: 220 }}
-              onClick={(e) => {
-                if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
-              }}
-            >
-              <canvas ref={canvasRef} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
-                onClick={() => setLegendOpen(true)}
-              >
-                See legend
-              </button>
-            </div>
-            {legendOpen ? (
-              <div className="modal-overlay" onClick={() => setLegendOpen(false)}>
-                <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
-                  <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem' }}>Spending by category</h3>
-                  <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                    {byCategory.map((c) => {
-                      const pct = periodTotalCents > 0 ? (c.amountCents / periodTotalCents) * 100 : 0;
-                      return (
-                        <div
-                          key={c.categoryId}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            padding: '6px 0',
-                            borderBottom: '1px solid var(--border)',
-                            fontSize: '0.95rem',
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 14,
-                              height: 14,
-                              borderRadius: 4,
-                              flexShrink: 0,
-                              background: getCategoryColor(c.categoryId),
-                            }}
-                          />
-                          <span style={{ flex: 1, fontWeight: 500 }}>{getCategoryName(cfg, c.categoryId)}</span>
-                          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCents(c.amountCents)}</span>
-                          <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>({pct.toFixed(1)}%)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setLegendOpen(false)}>
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
+          <div
+            className="spending-chart-wrap"
+            style={{ position: 'relative', width: '100%', height: 220 }}
+            onClick={(e) => {
+              if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
+            }}
+          >
+            <canvas ref={canvasRef} />
           </div>
         ) : view === 'card' ? (
           <div>
@@ -553,36 +497,21 @@ export function SpendingPage() {
                   );
                 })}
                 {(() => {
-                  const { totalCashback, pointsApproxCents, milesApproxCents } = totalRewards;
-                  const cashbackCents = totalCashback || 0;
-                  const pointsCents = pointsApproxCents || 0;
-                  const milesCents = milesApproxCents || 0;
-                  const totalCents = cashbackCents + pointsCents + milesCents;
-                  if (totalCents <= 0) return null;
-                  const rowStyle = { fontSize: '0.9rem', marginBottom: 4, display: 'flex', justifyContent: 'space-between', gap: 12 } as const;
+                  const { totalCashback, totalPoints, totalMiles, totalApproxCents } = totalRewards;
+                  const hasTotals = totalCashback > 0 || totalPoints > 0 || totalMiles > 0;
+                  if (!hasTotals && totalApproxCents === 0) return null;
                   return (
                     <div style={{ paddingTop: 12, marginTop: 8, borderTop: '1px solid var(--border)' }}>
-                      {cashbackCents > 0 && (
-                        <div style={rowStyle}>
-                          <span style={{ color: 'var(--muted)' }}>Cashback value</span>
-                          <span style={{ fontWeight: 600 }}>{formatCents(cashbackCents)}</span>
-                        </div>
-                      )}
-                      {pointsCents > 0 && (
-                        <div style={rowStyle}>
-                          <span style={{ color: 'var(--muted)' }}>Points value</span>
-                          <span style={{ fontWeight: 600 }}>{formatCents(pointsCents)}</span>
-                        </div>
-                      )}
-                      {milesCents > 0 && (
-                        <div style={rowStyle}>
-                          <span style={{ color: 'var(--muted)' }}>Miles value</span>
-                          <span style={{ fontWeight: 600 }}>{formatCents(milesCents)}</span>
-                        </div>
-                      )}
-                      <div style={{ ...rowStyle, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)', fontWeight: 700 }}>
-                        <span>Total current</span>
-                        <span>{formatCents(totalCents)}</span>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 6 }}>Total current</div>
+                      <div style={{ fontSize: '0.95rem', color: 'var(--fg, inherit)', fontWeight: 500 }}>
+                        {totalCashback > 0 && <span>{formatCents(totalCashback)} cashback</span>}
+                        {totalCashback > 0 && (totalPoints > 0 || totalMiles > 0) && ' · '}
+                        {totalPoints > 0 && <span>{totalPoints.toLocaleString()} pts</span>}
+                        {totalPoints > 0 && totalMiles > 0 && ' · '}
+                        {totalMiles > 0 && <span>{totalMiles.toLocaleString()} mi</span>}
+                        {totalApproxCents > 0 && (
+                          <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · ~{formatCents(totalApproxCents)} (approx)</span>
+                        )}
                       </div>
                     </div>
                   );
@@ -592,6 +521,61 @@ export function SpendingPage() {
           </div>
         )}
       </div>
+
+      {view === 'category' ? (
+      <>
+      <div
+        className="section-header"
+        style={{ marginTop: 20, marginBottom: 0 }}
+        onClick={() => setByCategoryCollapsed(!byCategoryCollapsed)}
+      >
+        <span className="section-header-left">By category</span>
+        <span className="chevron">{byCategoryCollapsed ? '▸' : '▾'}</span>
+      </div>
+      {!byCategoryCollapsed ? (
+      <>
+      {drilldownCategoryId ? (
+        <div style={{ marginBottom: 8 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setDrilldownCategoryId(null)}
+          >
+            Show all categories
+          </button>
+        </div>
+      ) : null}
+      <div style={{ paddingTop: 10 }}>
+        {byCategory.map((c) => (
+          <div
+            className="card"
+            key={c.categoryId}
+            style={{
+              background: getCategoryColor(c.categoryId),
+              borderColor: 'var(--border)',
+              cursor: 'pointer'
+            }}
+            onClick={() => setDrilldownCategoryId((prev) => (prev === c.categoryId ? null : c.categoryId))}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setDrilldownCategoryId((prev) => (prev === c.categoryId ? null : c.categoryId));
+              }
+            }}
+          >
+            <div className="row">
+              <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
+              <span className="amount">{formatCents(c.amountCents)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      </>
+      ) : null}
+      </>
+      ) : null}
 
       {view === 'category' ? (
       <>
