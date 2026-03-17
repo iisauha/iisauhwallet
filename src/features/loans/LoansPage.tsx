@@ -1360,23 +1360,9 @@ export function LoansPage() {
             </span>
             <button
               type="button"
+              className="info-icon"
               aria-label="Future payment breakdown"
               onClick={() => setShowAfterGraceBreakdown(true)}
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: '50%',
-                border: '1px solid var(--border)',
-                background: 'transparent',
-                color: 'var(--muted)',
-                fontSize: '0.7rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0,
-              }}
             >
               i
             </button>

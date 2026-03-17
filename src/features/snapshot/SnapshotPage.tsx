@@ -408,23 +408,7 @@ export function SnapshotPage() {
                       <span className="name bank-card-name">{c.name}</span>
                       <button
                         type="button"
-                        className="icon-btn"
-                        style={{
-                          width: 18,
-                          height: 18,
-                          minWidth: 18,
-                          minHeight: 18,
-                          borderRadius: '50%',
-                          border: '1px solid var(--border)',
-                          background: 'transparent',
-                          color: 'var(--muted)',
-                          fontSize: '0.7rem',
-                          fontWeight: 500,
-                          padding: 0,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
+                        className="info-icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           const rules = getEffectiveRules(c);
@@ -448,7 +432,7 @@ export function SnapshotPage() {
                         title="Card reward categories"
                         aria-label="Card reward categories"
                       >
-                        ⓘ
+                        i
                       </button>
                     </span>
                     <span className={amountClass}>{formatCents(balanceCents)}</span>
@@ -506,7 +490,7 @@ export function SnapshotPage() {
         <span className="chevron">{pendingInCollapsed ? '▸' : '▾'}</span>
       </div>
       {!pendingInCollapsed ? (
-        <div className="pending-inbound-wrapper">
+        <>
           <PendingInboundList
             data={data}
             items={data.pendingIn || []}
@@ -526,7 +510,7 @@ export function SnapshotPage() {
               Clear All
             </button>
           </div>
-        </div>
+        </>
       ) : null}
 
       <div
@@ -541,7 +525,7 @@ export function SnapshotPage() {
         <span className="chevron">{pendingOutCollapsed ? '▸' : '▾'}</span>
       </div>
       {!pendingOutCollapsed ? (
-        <div className="pending-outbound-wrapper">
+        <>
           <PendingOutboundList
             data={data}
             items={data.pendingOut || []}
@@ -561,7 +545,7 @@ export function SnapshotPage() {
               Clear All
             </button>
           </div>
-        </div>
+        </>
       ) : null}
 
       <div className="summary" id="snapshotSummary">

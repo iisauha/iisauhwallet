@@ -217,28 +217,42 @@ export function PendingInboundList(props: {
         </div>
       ) : null}
       {refunds.length > 0 ? (
-        <>
+        <div style={{ marginBottom: 8 }}>
           <div
-            className="pending-group-header"
-            style={{ cursor: 'pointer', padding: '6px 0', marginBottom: 2, fontSize: '0.9rem', color: 'var(--muted)' }}
+            className="section-header"
             onClick={() => setRefundsCollapsed(!refundsCollapsed)}
+            style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
-            Refunds ({refunds.length}) {refundsCollapsed ? '▸' : '▾'}
+            <span className="section-header-left">
+              {refunds.length === 1 ? 'Refunds' : `Refunds (${refunds.length})`}
+            </span>
+            <span className="chevron">{refundsCollapsed ? '▸' : '▾'}</span>
           </div>
-          {!refundsCollapsed ? refunds.map((p) => renderItem(p)) : null}
-        </>
+          {!refundsCollapsed ? (
+            <div className="pending-inbound-wrapper">
+              {refunds.map((p) => renderItem(p))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {otherIn.length > 0 ? (
-        <>
+        <div style={{ marginBottom: 8 }}>
           <div
-            className="pending-group-header"
-            style={{ cursor: 'pointer', padding: '6px 0', marginBottom: 2, fontSize: '0.9rem', color: 'var(--muted)' }}
+            className="section-header"
             onClick={() => setOtherInCollapsed(!otherInCollapsed)}
+            style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
-            Other inbound ({otherIn.length}) {otherInCollapsed ? '▸' : '▾'}
+            <span className="section-header-left">
+              {otherIn.length === 1 ? 'Other inbound' : `Other inbound (${otherIn.length})`}
+            </span>
+            <span className="chevron">{otherInCollapsed ? '▸' : '▾'}</span>
           </div>
-          {!otherInCollapsed ? otherIn.map((p) => renderItem(p)) : null}
-        </>
+          {!otherInCollapsed ? (
+            <div className="pending-inbound-wrapper">
+              {otherIn.map((p) => renderItem(p))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -447,28 +461,42 @@ export function PendingOutboundList(props: {
         </div>
       ) : null}
       {ccPayments.length > 0 ? (
-        <>
+        <div style={{ marginBottom: 8 }}>
           <div
-            className="pending-group-header"
-            style={{ cursor: 'pointer', padding: '6px 0', marginBottom: 2, fontSize: '0.9rem', color: 'var(--muted)' }}
+            className="section-header"
             onClick={() => setCcPaymentsCollapsed(!ccPaymentsCollapsed)}
+            style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
-            Credit card payments ({ccPayments.length}) {ccPaymentsCollapsed ? '▸' : '▾'}
+            <span className="section-header-left">
+              {ccPayments.length === 1 ? 'Credit card payments' : `Credit card payments (${ccPayments.length})`}
+            </span>
+            <span className="chevron">{ccPaymentsCollapsed ? '▸' : '▾'}</span>
           </div>
-          {!ccPaymentsCollapsed ? ccPayments.map((p) => renderOutItem(p)) : null}
-        </>
+          {!ccPaymentsCollapsed ? (
+            <div className="pending-outbound-wrapper">
+              {ccPayments.map((p) => renderOutItem(p))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {otherOut.length > 0 ? (
-        <>
+        <div style={{ marginBottom: 8 }}>
           <div
-            className="pending-group-header"
-            style={{ cursor: 'pointer', padding: '6px 0', marginBottom: 2, fontSize: '0.9rem', color: 'var(--muted)' }}
+            className="section-header"
             onClick={() => setOtherOutCollapsed(!otherOutCollapsed)}
+            style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
-            Other pending outbound ({otherOut.length}) {otherOutCollapsed ? '▸' : '▾'}
+            <span className="section-header-left">
+              {otherOut.length === 1 ? 'Other pending outbound' : `Other pending outbound (${otherOut.length})`}
+            </span>
+            <span className="chevron">{otherOutCollapsed ? '▸' : '▾'}</span>
           </div>
-          {!otherOutCollapsed ? otherOut.map((p) => renderOutItem(p)) : null}
-        </>
+          {!otherOutCollapsed ? (
+            <div className="pending-outbound-wrapper">
+              {otherOut.map((p) => renderOutItem(p))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
