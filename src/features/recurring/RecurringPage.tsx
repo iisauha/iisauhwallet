@@ -101,13 +101,57 @@ export function RecurringPage() {
   const { getDropdownCollapsed, setDropdownCollapsed } = useDropdownState();
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
+  const openAddRecurring = () => {
+    setEditingId(null);
+    setType('expense');
+    setName('');
+    setAmount('');
+    setExpectedMin('');
+    setExpectedMax('');
+    setFrequency('monthly');
+    setEveryNDays('30');
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    setStartDate(`${y}-${m}-${dd}`);
+    setActive(true);
+    setAutoPay(false);
+    setPaymentSource('');
+    setPaymentTargetId('');
+    setHysaSubBucket('');
+    setCategory('food');
+    setSubcategory('');
+    setNotes('');
+    setIsSplit(false);
+    setMyPortion('');
+    setUseLastDayOfMonth(false);
+    setIsFullTimeJob(false);
+    setPreTaxDeductions([]);
+    setInvestingTransferEnabled(false);
+    setInvestingFromBankId('');
+    setInvestingTargetAccountId('');
+    setInvestingTargetType('');
+    setUseLoanEstimatedPayment(false);
+    setLinkedLoanId('');
+    setOpen(true);
+  };
+
   return (
     <div className="tab-panel active" id="recurringContent">
       <p className="section-title page-title">Recurring Items</p>
+      <button
+        type="button"
+        className="btn btn-add"
+        style={{ marginTop: 8, marginBottom: 16, width: '100%' }}
+        onClick={openAddRecurring}
+      >
+        + Add Recurring Item
+      </button>
       <div
         className="section-header"
         style={{
-          marginTop: 16,
+          marginTop: 0,
           fontSize: '1.05rem',
           fontWeight: 640,
           borderRadius: 10
@@ -378,41 +422,7 @@ export function RecurringPage() {
         type="button"
         className="btn btn-add"
         style={{ marginTop: 16, width: '100%' }}
-        onClick={() => {
-          setEditingId(null);
-          setType('expense');
-          setName('');
-          setAmount('');
-          setExpectedMin('');
-          setExpectedMax('');
-          setFrequency('monthly');
-          setEveryNDays('30');
-          const d = new Date();
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, '0');
-          const dd = String(d.getDate()).padStart(2, '0');
-          setStartDate(`${y}-${m}-${dd}`);
-          setActive(true);
-          setAutoPay(false);
-          setPaymentSource('');
-          setPaymentTargetId('');
-          setHysaSubBucket('');
-          setCategory('food');
-          setSubcategory('');
-          setNotes('');
-          setIsSplit(false);
-          setMyPortion('');
-          setUseLastDayOfMonth(false);
-          setIsFullTimeJob(false);
-          setPreTaxDeductions([]);
-          setInvestingTransferEnabled(false);
-          setInvestingFromBankId('');
-          setInvestingTargetAccountId('');
-          setInvestingTargetType('');
-          setUseLoanEstimatedPayment(false);
-          setLinkedLoanId('');
-          setOpen(true);
-        }}
+        onClick={openAddRecurring}
       >
         + Add Recurring Item
       </button>
