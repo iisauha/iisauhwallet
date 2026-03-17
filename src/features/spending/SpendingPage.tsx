@@ -346,23 +346,15 @@ export function SpendingPage() {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Current Rewards</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 4 }}>
-              {totalRewards.totalApproxCents > 0 ? (
-                <>
-                  ~{formatCents(totalRewards.totalApproxCents)} <span style={{ fontSize: '0.9rem' }}>(approx)</span>
-                </>
-              ) : (
-                '—'
-              )}
-            </div>
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: '0.75rem',
-                opacity: 0.9,
-                fontStyle: 'italic',
-              }}
-            >
-              Manual balances only. Informational.
+              {(() => {
+                const { totalCashback, totalApproxCents } = totalRewards;
+                const hasCashback = totalCashback > 0;
+                const hasValue = totalApproxCents > 0;
+                if (!hasCashback && !hasValue) return '—';
+                const cashbackStr = hasCashback ? `${formatCents(totalCashback)} cashback` : '';
+                const valueStr = hasValue ? `~${formatCents(totalApproxCents)} travel value` : '';
+                return hasCashback && hasValue ? `${cashbackStr} · ${valueStr}` : cashbackStr || valueStr;
+              })()}
             </div>
           </div>
         </div>

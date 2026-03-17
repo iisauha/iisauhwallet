@@ -241,7 +241,7 @@ export function PendingInboundList(props: {
             style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
             <span className="section-header-left">
-              {refunds.length === 1 ? 'Refunds' : `Refunds (${refunds.length})`}
+              {refunds.length === 1 ? `Refunds (${refunds.length} item)` : `Refunds (${refunds.length} items)`}
             </span>
             <span className="chevron">{refundsCollapsed ? '▸' : '▾'}</span>
           </div>
@@ -260,7 +260,7 @@ export function PendingInboundList(props: {
             style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
             <span className="section-header-left">
-              {otherIn.length === 1 ? 'Other inbound' : `Other inbound (${otherIn.length})`}
+              {otherIn.length === 1 ? `Other inbound (${otherIn.length} item)` : `Other inbound (${otherIn.length} items)`}
             </span>
             <span className="chevron">{otherInCollapsed ? '▸' : '▾'}</span>
           </div>
@@ -502,7 +502,7 @@ export function PendingOutboundList(props: {
             style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
             <span className="section-header-left">
-              {ccPayments.length === 1 ? 'Credit card payments' : `Credit card payments (${ccPayments.length})`}
+              {ccPayments.length === 1 ? `Credit card payments (${ccPayments.length} item)` : `Credit card payments (${ccPayments.length} items)`}
             </span>
             <span className="chevron">{ccPaymentsCollapsed ? '▸' : '▾'}</span>
           </div>
@@ -521,7 +521,7 @@ export function PendingOutboundList(props: {
             style={{ fontSize: '0.98rem', fontWeight: 600 }}
           >
             <span className="section-header-left">
-              {otherOut.length === 1 ? 'Other pending outbound' : `Other pending outbound (${otherOut.length})`}
+              {otherOut.length === 1 ? `Other pending outbound (${otherOut.length} item)` : `Other pending outbound (${otherOut.length} items)`}
             </span>
             <span className="chevron">{otherOutCollapsed ? '▸' : '▾'}</span>
           </div>
