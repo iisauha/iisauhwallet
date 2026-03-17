@@ -7,7 +7,7 @@ import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
-import type { RewardRule, RewardUnitType } from '../../state/models';
+import type { PendingInboundItem, PendingOutboundItem, RewardRule, RewardUnitType } from '../../state/models';
 import { getEffectiveRules } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
@@ -90,6 +90,7 @@ export function SnapshotPage() {
     | {
         type: 'add-pending';
         kind: 'in' | 'out';
+        editId?: string;
         label: string;
         amount: string;
         isRefund: boolean;
@@ -271,6 +272,7 @@ export function SnapshotPage() {
 
   return (
     <div className="tab-panel active" id="snapshotContent">
+      <p className="section-title page-title" style={{ marginBottom: 8 }}>Snapshot</p>
       <div
         className="section-header"
         id="bankHeader"
@@ -496,6 +498,32 @@ export function SnapshotPage() {
             items={data.pendingIn || []}
             onPosted={(id) => handlePendingPosted('in', id)}
             onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('in', id))}
+            onEditInbound={(item: PendingInboundItem) => {
+              const depositTo = (item.depositTo || 'bank') as 'bank' | 'card' | 'hysa';
+              const firstBankId = (data.banks || [])[0]?.id || '';
+              setModal({
+                type: 'add-pending',
+                kind: 'in',
+                editId: item.id,
+                label: item.label || '',
+                amount: item.amountCents != null ? (item.amountCents / 100).toFixed(2) : '',
+                isRefund: !!(item.isRefund || item.depositTo === 'card'),
+                depositTo: item.depositTo === 'card' ? 'card' : depositTo,
+                targetCardId: item.targetCardId || '',
+                targetBankId: item.targetBankId || firstBankId,
+                targetInvestingAccountId: item.targetInvestingAccountId || '',
+                hysaSubBucket: (() => {
+                  const v = (item.meta as { hysaSubBucket?: string })?.hysaSubBucket || '';
+                  return v === 'reserved' ? 'reserved' : v === 'liquid' ? 'liquid' : '';
+                })(),
+                outboundType: 'standard',
+                sourceBankId: firstBankId,
+                targetCardIdOut: '',
+                outboundSourceKind: 'bank',
+                outboundSourceHysaAccountId: '',
+                outboundHysaSubBucket: ''
+              });
+            }}
             onJoinInbound={(id1, id2, combined) => {
               actions.deletePending('in', id1);
               actions.deletePending('in', id2);
@@ -531,6 +559,30 @@ export function SnapshotPage() {
             items={data.pendingOut || []}
             onPosted={(id) => handlePendingPosted('out', id)}
             onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('out', id))}
+            onEditOutbound={(item: PendingOutboundItem) => {
+              const firstBankId = (data.banks || [])[0]?.id || '';
+              const isCc = item.outboundType === 'cc_payment';
+              const fromHysa = item.paymentSource === 'hysa' || (item as any).meta?.hysaSubBucket;
+              setModal({
+                type: 'add-pending',
+                kind: 'out',
+                editId: item.id,
+                label: item.label || '',
+                amount: item.amountCents != null ? (item.amountCents / 100).toFixed(2) : '',
+                isRefund: false,
+                depositTo: 'bank',
+                targetCardId: '',
+                targetBankId: firstBankId,
+                targetInvestingAccountId: '',
+                hysaSubBucket: '',
+                outboundType: isCc ? 'cc_payment' : 'standard',
+                sourceBankId: item.sourceBankId || firstBankId,
+                targetCardIdOut: item.targetCardId || '',
+                outboundSourceKind: fromHysa ? 'hysa' : 'bank',
+                outboundSourceHysaAccountId: (item as any).paymentTargetId || (item as any).meta?.investingAccountId || '',
+                outboundHysaSubBucket: (item as any).meta?.hysaSubBucket || ''
+              });
+            }}
             onJoinOutbound={(id1, id2, combined) => {
               actions.deletePending('out', id1);
               actions.deletePending('out', id2);
@@ -1024,7 +1076,7 @@ export function SnapshotPage() {
                     <div>Status: {detected.launchFlow.item.pending ? 'Pending' : 'Posted'}</div>
                   </div>
                 ) : null}
-                <h3>{modal.kind === 'in' ? 'Add pending inbound item' : 'Add pending outbound item'}</h3>
+                <h3>{modal.editId ? (modal.kind === 'in' ? 'Edit pending inbound item' : 'Edit pending outbound item') : (modal.kind === 'in' ? 'Add pending inbound item' : 'Add pending outbound item')}</h3>
                 <div className="field">
                   <label>Label</label>
                   <input value={modal.label} onChange={(e) => setModal({ ...modal, label: e.target.value })} placeholder="e.g. Venmo" />
@@ -1059,8 +1111,14 @@ export function SnapshotPage() {
                         }}
                         disabled={modal.isRefund}
                       >
-                        <option value="bank">Bank</option>
-                        <option value="hysa">HYSA</option>
+                        {modal.isRefund ? (
+                          <option value="card">Credit Card</option>
+                        ) : (
+                          <>
+                            <option value="bank">Bank</option>
+                            <option value="hysa">HYSA</option>
+                          </>
+                        )}
                       </Select>
                     </div>
                     {modal.isRefund || modal.depositTo === 'card' ? (
@@ -1214,11 +1272,12 @@ export function SnapshotPage() {
                     onClick={() => {
                       const amountCents = parseCents(modal.amount);
                       if (!(amountCents > 0)) return;
+                      const editId = modal.editId;
                       if (modal.kind === 'in') {
                         const depositTo = modal.isRefund ? 'card' : modal.depositTo;
                         if (depositTo === 'card' && !modal.targetCardId) return;
                         if (depositTo === 'hysa' && (!modal.targetInvestingAccountId || !modal.hysaSubBucket)) return;
-                        actions.addPendingInbound({
+                        const inUpdates = {
                           label: modal.label.trim() || 'Pending',
                           amountCents,
                           depositTo,
@@ -1227,31 +1286,39 @@ export function SnapshotPage() {
                           targetBankId: depositTo === 'bank' ? (modal.targetBankId || undefined) : undefined,
                           targetInvestingAccountId: depositTo === 'hysa' ? modal.targetInvestingAccountId : undefined,
                           meta: depositTo === 'hysa' && (modal.hysaSubBucket === 'liquid' || modal.hysaSubBucket === 'reserved') ? { hysaSubBucket: modal.hysaSubBucket } : undefined
-                        });
+                        };
+                        if (editId) actions.updatePendingInbound(editId, inUpdates);
+                        else actions.addPendingInbound(inUpdates);
                       } else {
                         if (modal.outboundType === 'cc_payment') {
                           if (!modal.sourceBankId || !modal.targetCardIdOut) return;
-                          actions.addPendingOutbound({
+                          const outUpdates = {
                             label: modal.label.trim() || 'Pending',
                             amountCents,
-                            outboundType: 'cc_payment',
+                            outboundType: 'cc_payment' as const,
                             sourceBankId: modal.sourceBankId,
                             targetCardId: modal.targetCardIdOut
-                          });
+                          };
+                          if (editId) actions.updatePendingOutbound(editId, outUpdates);
+                          else actions.addPendingOutbound(outUpdates);
                         } else {
                           if (modal.outboundSourceKind === 'hysa') {
                             if (!modal.outboundSourceHysaAccountId) return;
-                            const subBucket = modal.outboundHysaSubBucket === 'reserved' ? 'reserved' : 'liquid';
-                            actions.addPendingOutbound({
+                            const subBucket: 'liquid' | 'reserved' = modal.outboundHysaSubBucket === 'reserved' ? 'reserved' : 'liquid';
+                            const outUpdates = {
                               label: modal.label.trim() || 'Pending',
                               amountCents,
-                              outboundType: 'standard',
-                              paymentSource: 'hysa',
+                              outboundType: 'standard' as const,
+                              paymentSource: 'hysa' as const,
                               paymentTargetId: modal.outboundSourceHysaAccountId,
                               meta: { hysaSubBucket: subBucket }
-                            });
+                            };
+                            if (editId) actions.updatePendingOutbound(editId, outUpdates);
+                            else actions.addPendingOutbound(outUpdates);
                           } else {
-                            actions.addPendingOutbound({ label: modal.label.trim() || 'Pending', amountCents, outboundType: 'standard' });
+                            const outUpdates = { label: modal.label.trim() || 'Pending', amountCents, outboundType: 'standard' as const };
+                            if (editId) actions.updatePendingOutbound(editId, outUpdates);
+                            else actions.addPendingOutbound(outUpdates);
                           }
                         }
                       }
@@ -1262,7 +1329,7 @@ export function SnapshotPage() {
                       setModal({ type: 'none' });
                     }}
                   >
-                    Add
+                    {modal.editId ? 'Save' : 'Add'}
                   </button>
                 </div>
               </>

@@ -32,6 +32,7 @@ import {
   APP_FONT_SCALE_KEY,
   LOANS_SECTION_SHOW_PUBLIC_KEY,
   LOANS_SECTION_SHOW_PRIVATE_KEY,
+  PUBLIC_LOAN_SHOW_PAYMENT_ACTIONS_KEY,
   UI_ADVANCED_COLORS_KEY,
   PASSCODE_HASH_KEY,
   PASSCODE_HINT_KEY,
@@ -46,6 +47,9 @@ import {
   CARD_REWARD_ADJUSTMENTS_KEY,
   CARD_REWARD_ONLY_ENTRIES_KEY,
   REWARDS_VISIBLE_CARD_IDS_KEY,
+  HIDDEN_TABS_KEY,
+  USER_DISPLAY_NAME_KEY,
+  USER_PROFILE_IMAGE_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 
@@ -165,16 +169,14 @@ export type AdvancedUIColors = Partial<{
   surfaceSecondary: string;
   sectionBg: string;
   modalBg: string;
-  dropdownBg: string;
   tabBarBg: string;
   border: string;
+  /** General text (excluding titles); also used for muted surfaces */
   muted: string;
   /** Title text = page titles / strong headings */
   titleText: string;
   /** Primary text = regular text in cards/rows */
   primaryText: string;
-  /** Muted text = descriptors, subheaders, helper text (overrides muted surface label when used for text) */
-  mutedText: string;
 }>;
 
 export function loadAdvancedUIColors(): AdvancedUIColors {
@@ -974,6 +976,22 @@ export function saveLoansSectionShowPrivate(value: boolean) {
   } catch (_) {}
 }
 
+export function loadPublicLoanShowPaymentActions(): boolean {
+  try {
+    const raw = localStorage.getItem(PUBLIC_LOAN_SHOW_PAYMENT_ACTIONS_KEY);
+    if (raw == null) return true;
+    return raw === 'true';
+  } catch (_) {
+    return true;
+  }
+}
+
+export function savePublicLoanShowPaymentActions(value: boolean) {
+  try {
+    localStorage.setItem(PUBLIC_LOAN_SHOW_PAYMENT_ACTIONS_KEY, value ? 'true' : 'false');
+  } catch (_) {}
+}
+
 /** Default base for surface/border/muted when only app background is customized. Exported for theme init. */
 export const DEFAULT_THEME_COLOR = '#1e293b';
 const DEFAULT_ACCENT_COLOR = '#0ea5e9';
@@ -1513,6 +1531,46 @@ export function loadBirthdateISO(): string | null {
   }
 }
 
+export function loadUserDisplayName(): string | null {
+  try {
+    const raw = localStorage.getItem(USER_DISPLAY_NAME_KEY);
+    if (typeof raw !== 'string' || !raw) return null;
+    return raw;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveUserDisplayName(name: string | null) {
+  try {
+    if (!name || !name.trim()) {
+      localStorage.removeItem(USER_DISPLAY_NAME_KEY);
+    } else {
+      localStorage.setItem(USER_DISPLAY_NAME_KEY, name.trim());
+    }
+  } catch (_) {}
+}
+
+export function loadUserProfileImage(): string | null {
+  try {
+    const raw = localStorage.getItem(USER_PROFILE_IMAGE_KEY);
+    if (typeof raw !== 'string' || !raw) return null;
+    return raw;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveUserProfileImage(dataUrl: string | null) {
+  try {
+    if (!dataUrl || !dataUrl.startsWith('data:')) {
+      localStorage.removeItem(USER_PROFILE_IMAGE_KEY);
+    } else {
+      localStorage.setItem(USER_PROFILE_IMAGE_KEY, dataUrl);
+    }
+  } catch (_) {}
+}
+
 export function loadPasscodeHash(): string | null {
   try {
     const raw = localStorage.getItem(PASSCODE_HASH_KEY);
@@ -1740,6 +1798,25 @@ export function saveBirthdateISO(iso: string | null) {
     } else {
       localStorage.setItem(BIRTHDATE_KEY, iso);
     }
+  } catch (_) {}
+}
+
+/** Hidden tab keys (e.g. ['loans','recurring']). Settings should not be in this list. */
+export function loadHiddenTabs(): string[] {
+  try {
+    const raw = localStorage.getItem(HIDDEN_TABS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((k): k is string => typeof k === 'string');
+  } catch (_) {
+    return [];
+  }
+}
+
+export function saveHiddenTabs(tabKeys: string[]) {
+  try {
+    localStorage.setItem(HIDDEN_TABS_KEY, JSON.stringify(tabKeys));
   } catch (_) {}
 }
 

@@ -30,18 +30,16 @@ const FONT_SCALE_OPTIONS = [
 const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helper: string }[] = [
   { key: 'titleText', label: 'Title text', helper: 'Page titles and strong headings. Do not use green/red here.' },
   { key: 'primaryText', label: 'Primary text', helper: 'Regular text inside cards and rows.' },
-  { key: 'mutedText', label: 'Muted / secondary text', helper: 'Descriptors, subheaders, and helper text.' },
 ];
 
 const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helper: string }[] = [
   { key: 'cardBg', label: 'Card background', helper: 'Only changes cards.' },
   { key: 'surfaceSecondary', label: 'Padding / secondary surface blocks', helper: 'Only changes summary and secondary blocks.' },
   { key: 'sectionBg', label: 'Section background', helper: 'Only changes section headers.' },
-  { key: 'modalBg', label: 'Modal background', helper: 'Only changes modal surfaces.' },
-  { key: 'dropdownBg', label: 'Dropdown background', helper: 'Only changes dropdowns and selects.' },
+  { key: 'modalBg', label: 'Popup card background', helper: 'Background of modal/popup cards.' },
   { key: 'tabBarBg', label: 'Bottom Tab Bar background', helper: 'The navigation bar at the bottom (Spending, Recurring, etc.).' },
   { key: 'border', label: 'Border color', helper: 'Only changes borders.' },
-  { key: 'muted', label: 'Muted surface / secondary', helper: 'Muted backgrounds and secondary surfaces.' },
+  { key: 'muted', label: 'General Text Color (Excluding Titles)', helper: 'Descriptors, subheaders, and body text. Also used for muted surfaces.' },
 ];
 
 function ColorCustomize({
@@ -277,7 +275,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
 
         <p className="section-title" style={{ marginTop: 16, marginBottom: 8 }}>Text colors</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
-          Title = page headings; Primary = regular text; Muted = descriptors. Leave empty for defaults. Green/red stay for amounts only.
+          Title = page headings; Primary = regular text. Use &quot;General Text Color&quot; below for descriptors and body text. Leave empty for defaults. Green/red stay for amounts only.
         </p>
         <div style={{ marginBottom: 24 }}>
           <TextColorsSection />

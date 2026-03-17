@@ -46,7 +46,7 @@ body {
 .tabs {
   display: flex;
   justify-content: flex-start;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
   position: fixed;
   bottom: 0;
@@ -84,8 +84,8 @@ body {
 .tab {
   flex: 0 0 auto;
   min-width: max-content;
-  padding: 10px 14px;
-  margin: 6px 0 10px 0;
+  padding: 8px 10px;
+  margin: 4px 0 6px 0;
   font-size: 0.9rem;
   font-weight: 500;
   background: transparent;
@@ -190,10 +190,15 @@ body {
 .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; }
 .summary-kv .v.pos { color: var(--green); }
 .summary-kv .v.neg { color: var(--red); }
-.summary-kv.final-net-cash { border-radius: 8px; padding: 6px 8px; }
+.summary-kv.final-net-cash { border-radius: 8px; padding: 8px 0; }
 .summary-kv.final-net-cash.positive { background: var(--ui-surface-secondary, var(--surface)); }
 .summary-kv.final-net-cash.negative { background: var(--ui-surface-secondary, var(--surface)); }
+.summary-kv.final-net-cash .k { font-size: 1rem; }
 .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
+.summary-kv.amount-remaining-emphasis .k { font-size: 1rem; }
+.summary-kv.amount-remaining-emphasis .v { font-size: 1.15rem; }
+.summary-kv.payment-now-emphasis .k { font-size: 1rem; }
+.summary-kv.payment-now-emphasis .v { font-size: 1.15rem; }
 
 .section-title.page-title { font-size: 1.3rem; font-weight: 700; color: var(--ui-title-text, var(--text)); }
 .amount-credit { color: var(--green); font-weight: 600; }
@@ -324,7 +329,7 @@ input[type="date"].ll-control {
   padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid var(--ui-border, var(--border));
-  background: var(--ui-dropdown-bg, var(--surface));
+  background: var(--ui-card-bg, var(--surface));
   color: var(--text);
   font-size: 1rem;
 }
@@ -351,7 +356,7 @@ input[type="date"].ll-control:focus {
 /* Hover styles are scoped to desktop pointers below to avoid sticky states on touch. */
 
 .ll-select option {
-  background: var(--ui-dropdown-bg, var(--surface));
+  background: var(--ui-card-bg, var(--surface));
   color: var(--text);
 }
 
@@ -436,7 +441,7 @@ input[type="date"].ll-control:focus {
   to { opacity: 1; }
 }
 
-.section-title { font-size: 1.125rem; font-weight: 600; color: var(--ui-muted-text, var(--ui-muted, var(--muted))); margin: 0 0 12px 0; }
+.section-title { font-size: 1.125rem; font-weight: 600; color: var(--ui-muted, var(--muted)); margin: 0 0 12px 0; }
 .settings-section { margin-bottom: 24px; }
 .toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
 .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }

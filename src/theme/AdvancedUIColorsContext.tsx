@@ -18,13 +18,11 @@ const UI_VAR_KEYS: Record<keyof AdvancedUIColors, string> = {
   surfaceSecondary: '--ui-surface-secondary',
   sectionBg: '--ui-section-bg',
   modalBg: '--ui-modal-bg',
-  dropdownBg: '--ui-dropdown-bg',
   tabBarBg: '--ui-tabbar-bg',
   border: '--ui-border',
   muted: '--ui-muted',
   titleText: '--ui-title-text',
   primaryText: '--ui-primary-text',
-  mutedText: '--ui-muted-text',
 };
 
 type AdvancedUIColorsContextValue = {

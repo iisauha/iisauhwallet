@@ -40,6 +40,7 @@ function renderInboundItem(
   data: LedgerData,
   onPosted?: (id: string) => void,
   onDelete?: (id: string) => void,
+  onEdit?: (item: PendingInboundItem) => void,
   onJoin?: (id: string) => void,
   onJoinWithThis?: (id: string) => void,
   joiningFromId?: string | null,
@@ -91,6 +92,16 @@ function renderInboundItem(
         >
           Delete
         </button>
+        {onEdit ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={() => onEdit(p)}
+          >
+            Edit
+          </button>
+        ) : null}
         {onJoin && !joiningFromId ? (
           <button
             type="button"
@@ -134,6 +145,7 @@ export function PendingInboundList(props: {
   items: PendingInboundItem[];
   onPosted?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onEditInbound?: (item: PendingInboundItem) => void;
   onJoinInbound?: (id1: string, id2: string, combined: Omit<PendingInboundItem, 'id'>, dateISO: string) => void;
 }) {
   const [refundsCollapsed, setRefundsCollapsed] = useDropdownCollapsed('pending_in_refunds', true);
@@ -153,6 +165,7 @@ export function PendingInboundList(props: {
       props.data,
       props.onPosted,
       props.onDelete,
+      props.onEditInbound,
       props.onJoinInbound ? () => setJoinStep({ fromId: p.id }) : undefined,
       props.onJoinInbound && fromItem && sameDestinationInbound(fromItem, p)
         ? (toId) => setJoinStep({ fromId: fromItem.id, toId })
@@ -301,6 +314,7 @@ function renderOutboundItem(
   data: LedgerData,
   onPosted?: (id: string) => void,
   onDelete?: (id: string) => void,
+  onEdit?: (item: PendingOutboundItem) => void,
   onJoin?: (id: string) => void,
   onJoinWithThis?: (id: string) => void,
   joiningFromId?: string | null,
@@ -353,6 +367,16 @@ function renderOutboundItem(
         >
           Delete
         </button>
+        {onEdit ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={() => onEdit(p)}
+          >
+            Edit
+          </button>
+        ) : null}
         {onJoin && !joiningFromId ? (
           <button
             type="button"
@@ -396,6 +420,7 @@ export function PendingOutboundList(props: {
   items: PendingOutboundItem[];
   onPosted?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onEditOutbound?: (item: PendingOutboundItem) => void;
   onJoinOutbound?: (id1: string, id2: string, combined: Omit<PendingOutboundItem, 'id'>, dateISO: string) => void;
 }) {
   const [ccPaymentsCollapsed, setCcPaymentsCollapsed] = useDropdownCollapsed('pending_out_cc', true);
@@ -415,6 +440,7 @@ export function PendingOutboundList(props: {
       props.data,
       props.onPosted,
       props.onDelete,
+      props.onEditOutbound,
       props.onJoinOutbound ? () => setJoinStep({ fromId: p.id }) : undefined,
       props.onJoinOutbound && fromItem && sameDestinationOutbound(fromItem, p)
         ? (toId) => setJoinStep({ fromId: fromItem.id, toId })

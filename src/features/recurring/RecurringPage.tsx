@@ -147,14 +147,14 @@ export function RecurringPage() {
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
                 {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
               </div>
-              <div className="btn-row">
+              <div className="btn-row" style={{ display: 'flex', flexWrap: 'nowrap', gap: 8, marginTop: 10 }}>
                 {inactive ? (
                   <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => actions.updateRecurringItem(r.id, { isActive: true })}
                   >
-                    Re-enable income
+                    Resume
                   </button>
                 ) : (
                   <button
@@ -162,7 +162,7 @@ export function RecurringPage() {
                     className="btn btn-secondary"
                     onClick={() => actions.updateRecurringItem(r.id, { isActive: false })}
                   >
-                    Temporarily disable
+                    Pause
                   </button>
                 )}
                 <button

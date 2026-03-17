@@ -4,7 +4,7 @@ import {
   loadPublicLoanSummary,
   savePublicLoanSummary
 } from './PublicLoanSummaryStore';
-import { loadPublicPaymentNowAdded, savePublicPaymentNowAdded } from '../../state/storage';
+import { loadPublicPaymentNowAdded, savePublicPaymentNowAdded, loadPublicLoanShowPaymentActions, savePublicLoanShowPaymentActions } from '../../state/storage';
 import { formatCents } from '../../state/calc';
 
 const LOAN_SIMULATOR_URL = 'https://studentaid.gov/loan-simulator/';
@@ -166,7 +166,13 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
           type="button"
           className="btn btn-secondary"
           style={{ marginBottom: showPaymentActions ? 8 : 0, fontSize: '0.85rem', padding: '4px 10px' }}
-          onClick={() => setShowPaymentActions((v) => !v)}
+          onClick={() => {
+            setShowPaymentActions((v) => {
+              const next = !v;
+              savePublicLoanShowPaymentActions(next);
+              return next;
+            });
+          }}
         >
           {showPaymentActions ? 'Hide payment actions' : 'Show payment actions'}
         </button>

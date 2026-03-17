@@ -61,6 +61,8 @@ export const APP_FONT_SCALE_KEY = 'iisauhwallet_app_font_scale_v1';
 // UI-only: loans page Public/Private section visibility.
 export const LOANS_SECTION_SHOW_PUBLIC_KEY = 'loansSectionShowPublic';
 export const LOANS_SECTION_SHOW_PRIVATE_KEY = 'loansSectionShowPrivate';
+// UI-only: public loans card "Hide payment actions" toggle (true = show, false = hide).
+export const PUBLIC_LOAN_SHOW_PAYMENT_ACTIONS_KEY = 'iisauhwallet_public_loan_show_payment_actions_v1';
 
 // Optimizer: editable assumptions and last result.
 export const OPTIMIZER_ASSUMPTIONS_KEY = 'iisauhwallet_optimizer_assumptions_v1';
@@ -68,6 +70,12 @@ export const OPTIMIZER_LAST_RESULT_KEY = 'iisauhwallet_optimizer_last_result_v1'
 
 // UI: main app tab order (array of tab keys).
 export const TAB_ORDER_KEY = 'iisauhwallet_tab_order_v1';
+// UI: tabs hidden from the tab bar (array of tab keys; Settings cannot be hidden).
+export const HIDDEN_TABS_KEY = 'iisauhwallet_hidden_tabs_v1';
+
+// Settings: user display name and profile picture (base64 data URL).
+export const USER_DISPLAY_NAME_KEY = 'iisauhwallet_user_display_name_v1';
+export const USER_PROFILE_IMAGE_KEY = 'iisauhwallet_user_profile_image_v1';
 
 // Passcode gate: stored hash of 4-digit passcode (local device only).
 export const PASSCODE_HASH_KEY = 'iisauhwallet_passcode_hash_v1';

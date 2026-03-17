@@ -1313,23 +1313,35 @@ export function LoansPage() {
         <div className="summary-compact" style={{ marginBottom: 0 }}>
         <div className="summary-kv" style={{ marginTop: 0 }}>
           <span className="k">Total balance</span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 600 }}>
+          <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
             <AnimatedNumber value={summary.totalBalance} format={formatCents} />
           </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
           <span className="k">Public</span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+          <span className="v" style={{ color: 'var(--red)' }}>
             <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
           </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           <span className="k">Private</span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+          <span className="v" style={{ color: 'var(--red)' }}>
             <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
           </span>
         </div>
-        <div className="summary-kv" style={{ marginTop: 4, alignItems: 'center' }}>
+        {summary.avgPrivateRate != null ? (
+          <div className="summary-kv" style={{ marginTop: 2 }}>
+            <span className="k">Avg private rate</span>
+            <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+          </div>
+        ) : null}
+        {summary.avgPublicRate != null ? (
+          <div className="summary-kv" style={{ marginTop: 2 }}>
+            <span className="k">Avg public rate</span>
+            <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+          </div>
+        ) : null}
+        <div className="summary-kv payment-now-emphasis" style={{ marginTop: 4, alignItems: 'center' }}>
           <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span
               role="button"
@@ -1347,7 +1359,7 @@ export function LoansPage() {
                 }
               }}
               style={{
-                color: 'var(--ui-muted-text, var(--ui-muted, var(--muted)))',
+                color: 'var(--ui-muted, var(--muted))',
                 fontWeight: 700,
                 cursor: 'pointer',
                 border: 'none',
@@ -1367,7 +1379,7 @@ export function LoansPage() {
               i
             </button>
           </span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+          <span className="v" style={{ color: 'var(--red)' }}>
             {summary.totalMonthlyNow > 0 ? (
               <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
             ) : (
@@ -1375,18 +1387,6 @@ export function LoansPage() {
             )}
           </span>
         </div>
-        {summary.avgPrivateRate != null ? (
-          <div className="summary-kv" style={{ marginTop: 2 }}>
-            <span className="k">Avg private rate</span>
-            <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
-          </div>
-        ) : null}
-        {summary.avgPublicRate != null ? (
-          <div className="summary-kv" style={{ marginTop: 2 }}>
-            <span className="k">Avg public rate</span>
-            <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
-          </div>
-        ) : null}
         </div>
       </div>
 
@@ -1417,7 +1417,7 @@ export function LoansPage() {
             border: 'none',
             borderRadius: 999,
             background: showPublic ? 'var(--accent)' : 'transparent',
-            color: showPublic ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted-text, var(--ui-muted, var(--muted)))',
+            color: showPublic ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted, var(--muted))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
@@ -1445,7 +1445,7 @@ export function LoansPage() {
             border: 'none',
             borderRadius: 999,
             background: showPrivate ? 'var(--accent)' : 'transparent',
-            color: showPrivate ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted-text, var(--ui-muted, var(--muted)))',
+            color: showPrivate ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted, var(--muted))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}

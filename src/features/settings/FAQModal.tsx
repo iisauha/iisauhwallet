@@ -16,39 +16,39 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'How do I back up my data?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy (Settings → Security Policy). You can use Settings → Export JSON to save a copy of your wallet data and Export Monthly Purchases CSV; Import JSON restores from a backup.',
+    a: 'Yes. Use Settings → Export JSON or Export Monthly Purchases CSV; Import JSON restores from a backup. Please reference the Security Policy.',
   },
   {
     q: 'How does passcode setup work?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
+    a: 'Yes, you can set a passcode in Settings. Please reference the Security Policy.',
   },
   {
     q: 'What is the recovery key?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
+    a: 'It is a key you create to recover access if you forget your passcode. Please reference the Security Policy.',
   },
   {
     q: 'What do security questions do?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
+    a: 'They help you recover access if you forget your passcode. Please reference the Security Policy.',
   },
   {
     q: 'What does the password hint do?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
+    a: 'It reminds you of your passcode without revealing it. Please reference the Security Policy.',
   },
   {
     q: 'What happens after too many wrong passcode attempts?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
+    a: 'The app may temporarily lock. Please reference the Security Policy.',
   },
   {
     q: 'Can the creator access my passcode or recovery key?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
+    a: 'No. Please reference the Security Policy.',
   },
   {
     q: 'How do I reset my passcode?',
-    a: 'From the lock screen: tap "Forgot passcode?" then use your recovery key or security questions to reset. From inside the app: Settings → Security → Reset passcode. You must enter your current passcode, then set and confirm a new one. For full details on recovery and storage, see the Security Policy.',
+    a: 'Yes. From the lock screen tap "Forgot passcode?" or use Settings → Security & privacy → Reset passcode. Please reference the Security Policy.',
   },
   {
     q: 'Does the app connect to my real bank automatically?',
-    a: 'For a complete explanation of passcodes, recovery keys, local data storage, and how your information is protected, please see the Security Policy.',
+    a: 'No. Please reference the Security Policy.',
   },
   {
     q: 'How do I edit account names or categories?',
@@ -101,7 +101,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
                   padding: '0 16px 14px',
                   fontSize: '0.9rem',
                   lineHeight: 1.55,
-                  color: 'var(--ui-muted-text, var(--muted))',
+                  color: 'var(--ui-muted, var(--muted))',
                 }}
               >
                 {item.a}

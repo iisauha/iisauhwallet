@@ -442,7 +442,7 @@ export function UpcomingPage() {
           <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected costs in window</span>
           <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
         </div>
-        <div className="summary-kv">
+        <div className="summary-kv amount-remaining-emphasis">
           <span className="k">Amount remaining</span>
           <span className={amountRemainingCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(amountRemainingCents)}</span>
         </div>

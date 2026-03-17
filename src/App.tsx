@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { SnapshotPage } from './features/snapshot/SnapshotPage';
 import { SpendingPage } from './features/spending/SpendingPage';
@@ -17,6 +17,7 @@ import { AppearanceProvider } from './theme/AppearanceContext';
 import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
 import { ReminderProvider } from './state/ReminderContext';
 import { TAB_ORDER_KEY } from './state/keys';
+import { loadHiddenTabs } from './state/storage';
 
 export type TabKey =
   | 'snapshot'
@@ -78,6 +79,18 @@ function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
   const [tabOrder, setTabOrder] = useState<TabKey[]>(() => loadTabOrder());
 
+  const hiddenSet = useMemo(() => new Set(loadHiddenTabs()), [tab]);
+  const visibleTabOrder = useMemo(
+    () => tabOrder.filter((k) => !hiddenSet.has(k)),
+    [tabOrder, hiddenSet]
+  );
+
+  useEffect(() => {
+    if (visibleTabOrder.length > 0 && !visibleTabOrder.includes(tab)) {
+      setTab(visibleTabOrder[0]);
+    }
+  }, [tab, visibleTabOrder]);
+
   const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;
     if (tab === 'spending') return <SpendingPage />;
@@ -104,20 +117,27 @@ function MainApp() {
       e.preventDefault();
       const dragIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
       if (!Number.isFinite(dragIndex) || dragIndex === dropIndex) return;
+      const draggedKey = visibleTabOrder[dragIndex];
+      const dropKey = visibleTabOrder[dropIndex];
+      if (!draggedKey || !dropKey || draggedKey === dropKey) return;
       const next = [...tabOrder];
-      const [removed] = next.splice(dragIndex, 1);
-      next.splice(dropIndex, 0, removed);
+      const fromIdx = next.indexOf(draggedKey);
+      const toIdx = next.indexOf(dropKey);
+      if (fromIdx === -1 || toIdx === -1) return;
+      next.splice(fromIdx, 1);
+      const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
+      next.splice(insertIdx, 0, draggedKey);
       setTabOrder(next);
       saveTabOrder(next);
     },
-    [tabOrder]
+    [tabOrder, visibleTabOrder]
   );
 
   return (
     <>
       <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>{content}</div>
       <nav className="tabs" aria-label="Sections">
-        {tabOrder.map((tabKey, index) => (
+        {visibleTabOrder.map((tabKey, index) => (
           <button
             key={tabKey}
             type="button"

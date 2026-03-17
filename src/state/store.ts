@@ -24,6 +24,8 @@ export interface LedgerState {
     updateCardRewardCpp: (cardId: string, cpp: { avgCentsPerPoint?: number; avgCentsPerMile?: number }) => void;
     addPendingInbound: (item: Omit<PendingInboundItem, 'id'>) => void;
     addPendingOutbound: (item: Omit<PendingOutboundItem, 'id'>) => void;
+    updatePendingInbound: (id: string, updates: Partial<Omit<PendingInboundItem, 'id'>>) => void;
+    updatePendingOutbound: (id: string, updates: Partial<Omit<PendingOutboundItem, 'id'>>) => void;
     addPurchase: (purchase: Omit<Purchase, 'id'>) => void;
     updatePurchase: (id: string, updated: Omit<Purchase, 'id'>) => void;
     deletePurchase: (id: string) => void;
@@ -180,6 +182,24 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const next = structuredClone(get().data) as LedgerData;
       const createdAt = (item as PendingOutboundItem).createdAt ?? nowIso();
       next.pendingOut.push({ ...item, id: uid(), createdAt } as PendingOutboundItem);
+      saveData(next);
+      set({ data: next });
+    },
+    updatePendingInbound: (id, updates) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const item = (next.pendingIn || []).find((p) => p.id === id);
+      if (!item) return;
+      const idx = next.pendingIn!.findIndex((p) => p.id === id);
+      next.pendingIn![idx] = { ...item, ...updates, id };
+      saveData(next);
+      set({ data: next });
+    },
+    updatePendingOutbound: (id, updates) => {
+      const next = structuredClone(get().data) as LedgerData;
+      const item = (next.pendingOut || []).find((p) => p.id === id);
+      if (!item) return;
+      const idx = next.pendingOut!.findIndex((p) => p.id === id);
+      next.pendingOut![idx] = { ...item, ...updates, id };
       saveData(next);
       set({ data: next });
     },

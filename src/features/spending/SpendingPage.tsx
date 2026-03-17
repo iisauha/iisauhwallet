@@ -5,6 +5,7 @@ import { useDetectedActivityOptional } from '../../state/DetectedActivityContext
 import { getCategoryName, loadCategoryConfig } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
+import { Modal } from '../../ui/Modal';
 import { AddPurchaseModal } from './AddPurchaseModal';
 import { getCategoryColor, renderSpendingPieChart } from './charts';
 
@@ -46,7 +47,7 @@ export function SpendingPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
   const [purchasesCollapsed, setPurchasesCollapsed] = useDropdownCollapsed('spending_purchases', true);
-  const [byCategoryCollapsed, setByCategoryCollapsed] = useDropdownCollapsed('spending_by_category', false);
+  const [legendOpen, setLegendOpen] = useState(false);
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
   const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
@@ -345,7 +346,7 @@ export function SpendingPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Total spend this period</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 650, marginTop: 4 }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 650, marginTop: 4, color: 'var(--red)' }}>
               {formatCents(periodTotalCents)}
             </div>
           </div>
@@ -370,13 +371,13 @@ export function SpendingPage() {
                   <>
                     {cashbackCents > 0 && (
                       <div>
-                        <span>{formatCents(cashbackCents)}</span>{' '}
+                        <span style={{ color: 'var(--green)' }}>{formatCents(cashbackCents)}</span>{' '}
                         <span style={labelStyle}>cashback</span>
                       </div>
                     )}
                     {travelCents > 0 && (
                       <div style={{ marginTop: cashbackCents > 0 ? 2 : 0 }}>
-                        <span>{formatCents(travelCents)}</span>{' '}
+                        <span style={{ color: 'var(--green)' }}>{formatCents(travelCents)}</span>{' '}
                         <span style={labelStyle}>travel value</span>
                       </div>
                     )}
@@ -401,6 +402,23 @@ export function SpendingPage() {
             }}
           >
             <canvas ref={canvasRef} />
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{
+                position: 'absolute',
+                bottom: 10,
+                right: 10,
+                fontSize: '0.85rem',
+                padding: '6px 12px',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLegendOpen(true);
+              }}
+            >
+              Legend
+            </button>
           </div>
         ) : view === 'card' ? (
           <div>
@@ -495,7 +513,7 @@ export function SpendingPage() {
                   const hasTotals = cashbackCents > 0 || travelCents > 0;
                   if (!hasTotals) return null;
                   return (
-                    <div style={{ paddingTop: 12, marginTop: 8, borderTop: '1px solid var(--border)' }}>
+                    <div style={{ paddingTop: 12, marginTop: 8 }}>
                       <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 6 }}>Total current</div>
                       <div style={{ fontSize: '0.95rem', color: 'var(--fg, inherit)', fontWeight: 500 }}>
                         {cashbackCents > 0 && <span>{formatCents(cashbackCents)} cashback</span>}
@@ -512,19 +530,33 @@ export function SpendingPage() {
       </div>
 
       {view === 'category' ? (
-      <>
-      <div
-        className="section-header"
-        style={{ marginTop: 20, marginBottom: 0 }}
-        onClick={() => setByCategoryCollapsed(!byCategoryCollapsed)}
-      >
-        <span className="section-header-left">By category</span>
-        <span className="chevron">{byCategoryCollapsed ? '▸' : '▾'}</span>
-      </div>
-      {!byCategoryCollapsed ? (
-      <>
-      {drilldownCategoryId ? (
-        <div style={{ marginBottom: 8 }}>
+        <Modal open={legendOpen} title="Legend" onClose={() => setLegendOpen(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {byCategory.length === 0 ? (
+              <p style={{ color: 'var(--muted)', margin: 0 }}>No spending in this period.</p>
+            ) : (
+              byCategory.map((c) => (
+                <div
+                  className="row"
+                  key={c.categoryId}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    background: getCategoryColor(c.categoryId),
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
+                  <span className="amount">{formatCents(c.amountCents)}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </Modal>
+      ) : null}
+
+      {view === 'category' && drilldownCategoryId ? (
+        <div style={{ marginTop: 12, marginBottom: 0 }}>
           <button
             type="button"
             className="btn btn-secondary"
@@ -533,37 +565,6 @@ export function SpendingPage() {
             Show all categories
           </button>
         </div>
-      ) : null}
-      <div style={{ paddingTop: 10 }}>
-        {byCategory.map((c) => (
-          <div
-            className="card"
-            key={c.categoryId}
-            style={{
-              background: getCategoryColor(c.categoryId),
-              borderColor: 'var(--border)',
-              cursor: 'pointer'
-            }}
-            onClick={() => setDrilldownCategoryId((prev) => (prev === c.categoryId ? null : c.categoryId))}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setDrilldownCategoryId((prev) => (prev === c.categoryId ? null : c.categoryId));
-              }
-            }}
-          >
-            <div className="row">
-              <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
-              <span className="amount">{formatCents(c.amountCents)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-      </>
-      ) : null}
-      </>
       ) : null}
 
       {view === 'category' ? (

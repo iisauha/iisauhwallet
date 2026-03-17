@@ -373,7 +373,7 @@ export function SubTrackerPage() {
             style={{ marginBottom: 12 }}
             onClick={() => setCompletedBonusesCollapsed(!completedBonusesCollapsed)}
           >
-            <span className="section-header-left">Completed Sign Up Bonuses</span>
+            <span className="section-header-left">Show All Completed sign up bonuses</span>
             <span className="chevron">{completedBonusesCollapsed ? '▸' : '▾'}</span>
           </div>
           {!completedBonusesCollapsed ? (
@@ -431,6 +431,8 @@ export function SubTrackerPage() {
           >
             Add Completed Bonus
           </button>
+          </>
+          ) : null}
           <div
             className="card"
             style={{
@@ -450,8 +452,6 @@ export function SubTrackerPage() {
               </p>
             ) : null}
           </div>
-          </>
-          ) : null}
           {completedEditor ? (
             <CompletedBonusEditorModal
               mode={completedEditor.mode}
@@ -551,10 +551,11 @@ export function SubTrackerPage() {
                 </div>
               </div>
             ) : null}
-            <div className="btn-row" style={{ marginTop: 10 }}>
+            <div className="btn-row" style={{ marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
               <button
                 type="button"
                 className="btn btn-secondary"
+                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
                 onClick={() => {
                   // Open edit modal with this entry's values.
                   const ref = e.cardRef;
@@ -588,6 +589,7 @@ export function SubTrackerPage() {
               <button
                 type="button"
                 className="btn btn-danger"
+                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
                 onClick={() => setConfirmDelete({ kind: 'entry', entryId: e.id, label: name })}
               >
                 Delete
@@ -595,6 +597,7 @@ export function SubTrackerPage() {
               <button
                 type="button"
                 className="btn btn-secondary"
+                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
                 onClick={() => {
                   const achievedTier = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents).pop() || tiers[tiers.length - 1];
                   if (!achievedTier) return;
@@ -605,46 +608,49 @@ export function SubTrackerPage() {
                   });
                 }}
               >
-                Mark complete
+                Complete
               </button>
-            </div>
-            <div className="btn-row" style={{ marginTop: 4 }}>
               <button
                 type="button"
                 className="btn btn-secondary"
+                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
                 onClick={() => {
                   const current = (e.spendCents || 0) / 100;
-                  const v = window.prompt('Set spent so far ($)', current.toFixed(2));
-                  if (v == null) return;
-                  const cents = parseCents(v);
-                  if (!(cents >= 0)) return;
-                  const updated = entries.map((x) =>
-                    x.id === e.id ? { ...x, spendCents: cents, updatedAt: new Date().toISOString() } : x
+                  const v = window.prompt(
+                    'Spent so far ($): enter new total to set, or +amount to add (e.g. +50)',
+                    current.toFixed(2)
                   );
-                  persist({ version: 1, entries: updated });
+                  if (v == null || !v.trim()) return;
+                  const trimmed = v.trim();
+                  if (trimmed.startsWith('+')) {
+                    const delta = parseCents(trimmed.slice(1));
+                    if (!(delta > 0)) return;
+                    const updated = entries.map((x) => {
+                      if (x.id !== e.id) return x;
+                      const prev = typeof x.spendCents === 'number' ? x.spendCents : 0;
+                      return { ...x, spendCents: prev + delta, updatedAt: new Date().toISOString() };
+                    });
+                    persist({ version: 1, entries: updated });
+                  } else {
+                    const cents = parseCents(trimmed);
+                    if (!(cents >= 0)) return;
+                    const updated = entries.map((x) =>
+                      x.id === e.id ? { ...x, spendCents: cents, updatedAt: new Date().toISOString() } : x
+                    );
+                    persist({ version: 1, entries: updated });
+                  }
                 }}
               >
-                Set
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  const v = window.prompt('Add to spent so far ($)', '0.00');
-                  if (v == null) return;
-                  const delta = parseCents(v);
-                  if (!(delta > 0)) return;
-                  const updated = entries.map((x) => {
-                    if (x.id !== e.id) return x;
-                    const prev = typeof x.spendCents === 'number' ? x.spendCents : 0;
-                    return { ...x, spendCents: prev + delta, updatedAt: new Date().toISOString() };
-                  });
-                  persist({ version: 1, entries: updated });
-                }}
-              >
-                Add
+                Add/Set
               </button>
             </div>
+            {requiredPace != null && currentPace != null ? (
+              <div style={{ marginTop: 8 }}>
+                <span className={currentPace >= requiredPace ? 'upcoming-status-ok' : 'upcoming-status-warn'}>
+                  {currentPace >= requiredPace ? 'On pace' : 'Not on pace'}
+                </span>
+              </div>
+            ) : null}
           </div>
         );
       })}
@@ -707,7 +713,7 @@ export function SubTrackerPage() {
 
       <button
         type="button"
-        className="btn btn-add"
+        className="btn btn-secondary"
         style={{ width: '100%', marginTop: 10 }}
         onClick={() => setSubview('completed')}
       >
