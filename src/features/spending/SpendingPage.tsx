@@ -26,6 +26,11 @@ function addMonths(d: Date, months: number) {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
+/** Stored value is cents per point/mile (e.g. 1.2 = 1.2 cpp). Legacy values stored as hundredths (e.g. 120 for 1.2 cpp) are normalized. */
+function cppStoredToEffective(stored: number): number {
+  return stored >= 10 ? stored / 100 : stored;
+}
+
 export function SpendingPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -150,17 +155,19 @@ export function SpendingPage() {
             : c.rewardPoints ?? 0;
       if (type === 'cashback') {
         totalCashback += balance;
-      } else if (type === 'points') {
+      } else       if (type === 'points') {
         totalPoints += balance;
         if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) {
-          const approx = Math.round((balance * c.avgCentsPerPoint) / 100);
+          const cpp = cppStoredToEffective(c.avgCentsPerPoint);
+          const approx = Math.round(balance * cpp);
           totalApproxCents += approx;
           pointsApproxCents += approx;
         }
       } else {
         totalMiles += balance;
         if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) {
-          const approx = Math.round((balance * c.avgCentsPerMile) / 100);
+          const cpm = cppStoredToEffective(c.avgCentsPerMile);
+          const approx = Math.round(balance * cpm);
           totalApproxCents += approx;
           milesApproxCents += approx;
         }
@@ -434,16 +441,17 @@ export function SpendingPage() {
                       : type === 'miles'
                         ? c.rewardMiles ?? 0
                         : c.rewardPoints ?? 0;
-                  const cpp =
+                  const cppRaw =
                     type === 'points'
                       ? c.avgCentsPerPoint ?? undefined
                       : type === 'miles'
                         ? c.avgCentsPerMile ?? undefined
                         : undefined;
+                  const cpp = cppRaw != null ? cppStoredToEffective(cppRaw) : undefined;
                   const approxCents =
                     (type === 'points' && cpp != null && cpp > 0) ||
                     (type === 'miles' && cpp != null && cpp > 0)
-                      ? Math.round((balance * cpp) / 100)
+                      ? Math.round(balance * cpp)
                       : null;
                   return (
                     <div

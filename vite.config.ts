@@ -15,6 +15,20 @@ const devCspPermissive = [
 
 export default defineConfig({
   base: '/iisauhwallet/',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('react/')) return 'react';
+            if (id.includes('react-router')) return 'router';
+            if (id.includes('chart.js')) return 'charts';
+            return 'vendor';
+          }
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {

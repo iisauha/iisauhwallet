@@ -426,7 +426,12 @@ export function SnapshotPage() {
                               : c.rewardType === 'miles' || (c.rewardMiles != null && c.rewardMiles > 0)
                                 ? String(c.rewardMiles ?? '')
                                 : String(c.rewardPoints ?? ''),
-                            rewardCppStr: c.rewardType === 'points' || (c.rewardPoints != null && c.rewardPoints > 0) ? (typeof c.avgCentsPerPoint === 'number' ? String(c.avgCentsPerPoint) : '') : (typeof c.avgCentsPerMile === 'number' ? String(c.avgCentsPerMile) : '')
+                            rewardCppStr: (() => {
+                              const raw = c.rewardType === 'points' || (c.rewardPoints != null && c.rewardPoints > 0) ? c.avgCentsPerPoint : c.avgCentsPerMile;
+                              if (typeof raw !== 'number') return '';
+                              const effective = raw >= 10 ? raw / 100 : raw;
+                              return String(effective);
+                            })()
                           });
                         }}
                         title="Card reward categories"
