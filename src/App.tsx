@@ -1,17 +1,16 @@
-import { useMemo, useState, useCallback, lazy, Suspense } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { SnapshotPage } from './features/snapshot/SnapshotPage';
+import { SpendingPage } from './features/spending/SpendingPage';
+import { UpcomingPage } from './features/upcoming/UpcomingPage';
+import { LoansPage } from './features/loans/LoansPage';
+import { InvestingPage } from './features/investing/InvestingPage';
+import { RecurringPage } from './features/recurring/RecurringPage';
+import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
+import { SettingsPage } from './features/settings/SettingsPage';
+import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { PasscodeGate } from './features/passcode/PasscodeGate';
 import { DropdownStateProvider } from './state/DropdownStateContext';
-
-const SnapshotPage = lazy(() => import('./features/snapshot/SnapshotPage').then((m) => ({ default: m.SnapshotPage })));
-const SpendingPage = lazy(() => import('./features/spending/SpendingPage').then((m) => ({ default: m.SpendingPage })));
-const UpcomingPage = lazy(() => import('./features/upcoming/UpcomingPage').then((m) => ({ default: m.UpcomingPage })));
-const LoansPage = lazy(() => import('./features/loans/LoansPage').then((m) => ({ default: m.LoansPage })));
-const InvestingPage = lazy(() => import('./features/investing/InvestingPage').then((m) => ({ default: m.InvestingPage })));
-const RecurringPage = lazy(() => import('./features/recurring/RecurringPage').then((m) => ({ default: m.RecurringPage })));
-const SubTrackerPage = lazy(() => import('./features/subtracker/SubTrackerPage').then((m) => ({ default: m.SubTrackerPage })));
-const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
-const PrivacyPage = lazy(() => import('./features/privacy/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
 import { DetectedActivityProvider } from './state/DetectedActivityContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AppearanceProvider } from './theme/AppearanceContext';
@@ -116,11 +115,7 @@ function MainApp() {
 
   return (
     <>
-      <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>
-        <Suspense fallback={<div style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>Loading…</div>}>
-          {content}
-        </Suspense>
-      </div>
+      <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>{content}</div>
       <nav className="tabs" aria-label="Sections">
         {tabOrder.map((tabKey, index) => (
           <button
@@ -151,12 +146,10 @@ export function App() {
             <DropdownStateProvider>
               <DetectedActivityProvider>
                 <PasscodeGate>
-                  <Suspense fallback={<div style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>Loading…</div>}>
-                    <Routes>
-                      <Route path="/" element={<MainApp />} />
-                      <Route path="/privacy" element={<PrivacyPage />} />
-                    </Routes>
-                  </Suspense>
+                  <Routes>
+                    <Route path="/" element={<MainApp />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                  </Routes>
                 </PasscodeGate>
               </DetectedActivityProvider>
             </DropdownStateProvider>
