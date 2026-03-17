@@ -253,8 +253,8 @@ export function SpendingPage() {
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          paddingLeft: 14,
-          paddingRight: 14,
+          paddingLeft: 0,
+          paddingRight: 0,
           overflow: 'hidden',
         }}
       >
@@ -554,7 +554,7 @@ export function SpendingPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '24px 0 12px 0' }}>
         <div
           className="section-header"
-          style={{ margin: 0, padding: '4px 8px', flex: 1 }}
+          style={{ margin: 0, flex: 1 }}
           onClick={() => setPurchasesCollapsed(!purchasesCollapsed)}
         >
           <span className="section-header-left">Purchases</span>

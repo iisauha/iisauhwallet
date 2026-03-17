@@ -42,7 +42,8 @@ function renderInboundItem(
   onDelete?: (id: string) => void,
   onJoin?: (id: string) => void,
   onJoinWithThis?: (id: string) => void,
-  joiningFromId?: string | null
+  joiningFromId?: string | null,
+  onExitJoin?: () => void
 ) {
   const isRefund = Boolean(p.isRefund || p.depositTo === 'card');
   const isHysa = p.depositTo === 'hysa';
@@ -56,6 +57,8 @@ function renderInboundItem(
   const amountText = formatCents(p.amountCents);
   const isJoiningFrom = joiningFromId === p.id;
   const canJoinWith = joiningFromId && joiningFromId !== p.id;
+  const inJoinMode = joiningFromId != null;
+  const btnStyle = { minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' };
   return (
     <div className="pending-item" key={p.id}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
@@ -71,31 +74,11 @@ function renderInboundItem(
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join…</span>
         ) : null}
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        {onJoin && !joiningFromId ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
-            onClick={() => onJoin(p.id)}
-          >
-            Join
-          </button>
-        ) : null}
-        {onJoinWithThis && canJoinWith ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
-            onClick={() => onJoinWithThis(p.id)}
-          >
-            Join with this
-          </button>
-        ) : null}
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end' }}>
         <button
           type="button"
           className="btn btn-posted"
-          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          style={btnStyle}
           onClick={() => onPosted?.(p.id)}
         >
           Posted
@@ -103,11 +86,44 @@ function renderInboundItem(
         <button
           type="button"
           className="btn-delete"
-          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          style={btnStyle}
           onClick={() => onDelete?.(p.id)}
         >
           Delete
         </button>
+        {onJoin && !joiningFromId ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={() => onJoin(p.id)}
+          >
+            Join
+          </button>
+        ) : onJoinWithThis && canJoinWith ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={() => onJoinWithThis(p.id)}
+          >
+            Join with this
+          </button>
+        ) : (
+          <span />
+        )}
+        {inJoinMode && onExitJoin ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={onExitJoin}
+          >
+            Exit
+          </button>
+        ) : (
+          <span />
+        )}
       </div>
     </div>
   );
@@ -141,7 +157,8 @@ export function PendingInboundList(props: {
       props.onJoinInbound && fromItem && sameDestinationInbound(fromItem, p)
         ? (toId) => setJoinStep({ fromId: fromItem.id, toId })
         : undefined,
-      joiningFromId
+      joiningFromId,
+      () => setJoinStep('idle')
     );
 
   const confirmJoin = () => {
@@ -286,7 +303,8 @@ function renderOutboundItem(
   onDelete?: (id: string) => void,
   onJoin?: (id: string) => void,
   onJoinWithThis?: (id: string) => void,
-  joiningFromId?: string | null
+  joiningFromId?: string | null,
+  onExitJoin?: () => void
 ) {
   const isCcPay = p.outboundType === 'cc_payment';
   let label: string;
@@ -302,6 +320,8 @@ function renderOutboundItem(
   }
   const isJoiningFrom = joiningFromId === p.id;
   const canJoinWith = joiningFromId && joiningFromId !== p.id;
+  const inJoinMode = joiningFromId != null;
+  const btnStyle = { minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' };
   return (
     <div className="pending-item" key={p.id}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
@@ -316,31 +336,11 @@ function renderOutboundItem(
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join…</span>
         ) : null}
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        {onJoin && !joiningFromId ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
-            onClick={() => onJoin(p.id)}
-          >
-            Join
-          </button>
-        ) : null}
-        {onJoinWithThis && canJoinWith ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
-            onClick={() => onJoinWithThis(p.id)}
-          >
-            Join with this
-          </button>
-        ) : null}
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end' }}>
         <button
           type="button"
           className="btn btn-posted"
-          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          style={btnStyle}
           onClick={() => onPosted?.(p.id)}
         >
           Posted
@@ -348,11 +348,44 @@ function renderOutboundItem(
         <button
           type="button"
           className="btn-delete"
-          style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+          style={btnStyle}
           onClick={() => onDelete?.(p.id)}
         >
           Delete
         </button>
+        {onJoin && !joiningFromId ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={() => onJoin(p.id)}
+          >
+            Join
+          </button>
+        ) : onJoinWithThis && canJoinWith ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={() => onJoinWithThis(p.id)}
+          >
+            Join with this
+          </button>
+        ) : (
+          <span />
+        )}
+        {inJoinMode && onExitJoin ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={btnStyle}
+            onClick={onExitJoin}
+          >
+            Exit
+          </button>
+        ) : (
+          <span />
+        )}
       </div>
     </div>
   );
@@ -386,7 +419,8 @@ export function PendingOutboundList(props: {
       props.onJoinOutbound && fromItem && sameDestinationOutbound(fromItem, p)
         ? (toId) => setJoinStep({ fromId: fromItem.id, toId })
         : undefined,
-      joiningFromId
+      joiningFromId,
+      () => setJoinStep('idle')
     );
 
   const confirmJoinOut = () => {

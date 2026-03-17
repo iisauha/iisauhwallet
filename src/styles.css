@@ -52,8 +52,8 @@ body {
   right: 0;
   background: var(--ui-tabbar-bg, var(--surface));
   border-top: 1px solid var(--border);
-  padding-left: 12px;
-  padding-right: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
   padding-bottom: var(--safe-bottom);
   z-index: 100;
   overflow-x: auto;
@@ -123,7 +123,7 @@ body {
   font-weight: 600;
   color: var(--ui-muted, var(--muted));
   margin: 0 0 12px 0;
-  padding: 8px 4px;
+  padding: 8px 8px;
   cursor: pointer;
   border-radius: 8px;
   background: var(--ui-section-bg, var(--ui-card-bg, var(--surface)));
