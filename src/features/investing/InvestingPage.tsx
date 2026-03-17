@@ -1626,7 +1626,7 @@ export function InvestingPage() {
               style={{ marginTop: 8, width: '100%' }}
               onClick={() => addAccount(type)}
             >
-              + Add {label} account
+              Add {label} account
             </button>
           </>
         ) : null}

@@ -354,7 +354,7 @@ export function SnapshotPage() {
             })}
           </div>
           <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })} >
-            + Add Bank Account
+            Add Bank Account
           </button>
         </>
       ) : null}
@@ -473,7 +473,7 @@ export function SnapshotPage() {
             })}
           </div>
           <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })} >
-            + Add Credit Card
+            Add Credit Card
           </button>
         </>
       ) : null}
@@ -504,7 +504,7 @@ export function SnapshotPage() {
           />
           <div className="btn-row">
             <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
-              + Add item
+              Add item
             </button>
             <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending inbound items?', () => actions.clearPending('in'))}>
               Clear All
@@ -539,7 +539,7 @@ export function SnapshotPage() {
           />
           <div className="btn-row">
             <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
-              + Add item
+              Add item
             </button>
             <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending outbound items?', () => actions.clearPending('out'))}>
               Clear All
@@ -906,7 +906,7 @@ export function SnapshotPage() {
                       </div>
                     );
                   })}
-                  <button type="button" className="btn btn-secondary" style={{ marginBottom: 12 }} onClick={addRule}>+ Add rule</button>
+                  <button type="button" className="btn btn-secondary" style={{ marginBottom: 12 }} onClick={addRule}>Add rule</button>
                   <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                     <label style={{ fontSize: '0.9rem' }}>Current reward balance</label>
                     <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
@@ -1037,7 +1037,16 @@ export function SnapshotPage() {
                 {modal.kind === 'in' ? (
                   <>
                     <div className="toggle-row">
-                      <input type="checkbox" checked={modal.isRefund} onChange={(e) => setModal({ ...modal, isRefund: e.target.checked })} id="isRefund" />
+                      <input
+                        type="checkbox"
+                        checked={modal.isRefund}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          const singleCardId = checked && cardsSortedByBalance.length === 1 ? cardsSortedByBalance[0]?.id ?? '' : '';
+                          setModal({ ...modal, isRefund: checked, targetCardId: checked ? (singleCardId || modal.targetCardId) : '' });
+                        }}
+                        id="isRefund"
+                      />
                       <label htmlFor="isRefund">Is this a refund/credit?</label>
                     </div>
                     <div className="field">
@@ -1051,7 +1060,6 @@ export function SnapshotPage() {
                         disabled={modal.isRefund}
                       >
                         <option value="bank">Bank</option>
-                        <option value="card">Credit Card</option>
                         <option value="hysa">HYSA</option>
                       </Select>
                     </div>

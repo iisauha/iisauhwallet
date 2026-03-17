@@ -125,7 +125,7 @@ export function ManageCategoriesModal(props: {
                       commit(next);
                     }}
                   >
-                    + Add subcategory
+                    Add subcategory
                   </button>
                 </div>
               </div>

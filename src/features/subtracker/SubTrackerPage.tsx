@@ -80,7 +80,7 @@ function entryToCompletedBonus(
 function completedBonusCashValueCents(b: CompletedBonus): number {
   if (b.unitType === 'cash') return Math.round(b.rewardQuantity * 100);
   const cpp = b.centsPerUnit != null && b.centsPerUnit >= 0 ? b.centsPerUnit : 1;
-  return Math.round(b.rewardQuantity * (cpp / 100));
+  return Math.round(b.rewardQuantity * cpp);
 }
 
 function CompletedBonusEditorModal({
@@ -702,7 +702,7 @@ export function SubTrackerPage() {
           setEditorOpen(true);
         }}
       >
-        + Add tracked card
+        Add tracked card
       </button>
 
       <button

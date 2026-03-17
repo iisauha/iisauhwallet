@@ -153,14 +153,14 @@ export function SpendingPage() {
       } else if (type === 'points') {
         totalPoints += balance;
         if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) {
-          const approx = Math.round((balance * c.avgCentsPerPoint) / 100);
+          const approx = Math.round(balance * c.avgCentsPerPoint);
           totalApproxCents += approx;
           pointsApproxCents += approx;
         }
       } else {
         totalMiles += balance;
         if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) {
-          const approx = Math.round((balance * c.avgCentsPerMile) / 100);
+          const approx = Math.round(balance * c.avgCentsPerMile);
           totalApproxCents += approx;
           milesApproxCents += approx;
         }
@@ -443,7 +443,7 @@ export function SpendingPage() {
                   const approxCents =
                     (type === 'points' && cpp != null && cpp > 0) ||
                     (type === 'miles' && cpp != null && cpp > 0)
-                      ? Math.round((balance * cpp) / 100)
+                      ? Math.round(balance * cpp)
                       : null;
                   return (
                     <div
@@ -489,21 +489,18 @@ export function SpendingPage() {
                   );
                 })}
                 {(() => {
-                  const { totalCashback, totalPoints, totalMiles, totalApproxCents } = totalRewards;
-                  const hasTotals = totalCashback > 0 || totalPoints > 0 || totalMiles > 0;
-                  if (!hasTotals && totalApproxCents === 0) return null;
+                  const { totalCashback, pointsApproxCents, milesApproxCents } = totalRewards;
+                  const cashbackCents = (totalCashback || 0) + (pointsApproxCents || 0);
+                  const travelCents = milesApproxCents || 0;
+                  const hasTotals = cashbackCents > 0 || travelCents > 0;
+                  if (!hasTotals) return null;
                   return (
                     <div style={{ paddingTop: 12, marginTop: 8, borderTop: '1px solid var(--border)' }}>
                       <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 6 }}>Total current</div>
                       <div style={{ fontSize: '0.95rem', color: 'var(--fg, inherit)', fontWeight: 500 }}>
-                        {totalCashback > 0 && <span>{formatCents(totalCashback)} cashback</span>}
-                        {totalCashback > 0 && (totalPoints > 0 || totalMiles > 0) && ' · '}
-                        {totalPoints > 0 && <span>{totalPoints.toLocaleString()} pts</span>}
-                        {totalPoints > 0 && totalMiles > 0 && ' · '}
-                        {totalMiles > 0 && <span>{totalMiles.toLocaleString()} mi</span>}
-                        {totalApproxCents > 0 && (
-                          <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · ~{formatCents(totalApproxCents)} (approx)</span>
-                        )}
+                        {cashbackCents > 0 && <span>{formatCents(cashbackCents)} cashback</span>}
+                        {cashbackCents > 0 && travelCents > 0 && ' · '}
+                        {travelCents > 0 && <span>{formatCents(travelCents)} travel value</span>}
                       </div>
                     </div>
                   );
@@ -676,7 +673,7 @@ export function SpendingPage() {
             setOpenAdd(true);
           }}
         >
-          + Add Purchase
+          Add Purchase
         </button>
         <button
           type="button"

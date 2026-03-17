@@ -1313,19 +1313,19 @@ export function LoansPage() {
         <div className="summary-compact" style={{ marginBottom: 0 }}>
         <div className="summary-kv" style={{ marginTop: 0 }}>
           <span className="k">Total balance</span>
-          <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
+          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 600 }}>
             <AnimatedNumber value={summary.totalBalance} format={formatCents} />
           </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
           <span className="k">Public</span>
-          <span className="v" style={{ color: 'var(--muted)' }}>
+          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
             <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
           </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           <span className="k">Private</span>
-          <span className="v" style={{ color: 'var(--muted)' }}>
+          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
             <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
           </span>
         </div>
@@ -1347,7 +1347,7 @@ export function LoansPage() {
                 }
               }}
               style={{
-                color: 'var(--muted)',
+                color: 'var(--ui-muted-text, var(--ui-muted, var(--muted)))',
                 fontWeight: 700,
                 cursor: 'pointer',
                 border: 'none',
@@ -1367,7 +1367,7 @@ export function LoansPage() {
               i
             </button>
           </span>
-          <span className="v" style={{ color: 'var(--red)' }}>
+          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
             {summary.totalMonthlyNow > 0 ? (
               <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
             ) : (
@@ -1417,16 +1417,18 @@ export function LoansPage() {
             border: 'none',
             borderRadius: 999,
             background: showPublic ? 'var(--accent)' : 'transparent',
-            color: showPublic ? '#ffffff' : 'var(--muted)',
+            color: showPublic ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted-text, var(--ui-muted, var(--muted)))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
-            setShowPublic((s) => {
-              const next = !s;
-              saveLoansSectionShowPublic(next);
-              return next;
-            });
+            const nextPublic = !showPublic;
+            setShowPublic(nextPublic);
+            saveLoansSectionShowPublic(nextPublic);
+            if (showPrivate) {
+              setShowPrivate(false);
+              saveLoansSectionShowPrivate(false);
+            }
           }}
         >
           Public
@@ -1443,16 +1445,18 @@ export function LoansPage() {
             border: 'none',
             borderRadius: 999,
             background: showPrivate ? 'var(--accent)' : 'transparent',
-            color: showPrivate ? '#ffffff' : 'var(--muted)',
+            color: showPrivate ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted-text, var(--ui-muted, var(--muted)))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
-            setShowPrivate((s) => {
-              const next = !s;
-              saveLoansSectionShowPrivate(next);
-              return next;
-            });
+            const nextPrivate = !showPrivate;
+            setShowPrivate(nextPrivate);
+            saveLoansSectionShowPrivate(nextPrivate);
+            if (showPublic) {
+              setShowPublic(false);
+              saveLoansSectionShowPublic(false);
+            }
           }}
         >
           Private
@@ -1546,7 +1550,7 @@ export function LoansPage() {
               })
             }
           >
-            + Add Private Loan
+            Add Private Loan
           </button>
         </>
       ) : null}

@@ -315,7 +315,7 @@ export function UpcomingPage() {
             }}
             style={{ marginTop: 8 }}
           >
-            + Add expected income
+            Add expected income
           </button>
         </>
       ) : null}
@@ -424,7 +424,7 @@ export function UpcomingPage() {
             }}
             style={{ marginTop: 8 }}
           >
-            + Add expected cost
+            Add expected cost
           </button>
         </>
       ) : null}

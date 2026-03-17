@@ -373,6 +373,8 @@ export function RecurringPage() {
           </div>
         );
       })}
+      </>
+      ) : null}
 
       <button
         type="button"
@@ -414,10 +416,8 @@ export function RecurringPage() {
           setOpen(true);
         }}
       >
-        + Add Recurring Item
+        Add Recurring Item
       </button>
-      </>
-      ) : null}
 
       {open ? (
         <div className="modal-overlay">
