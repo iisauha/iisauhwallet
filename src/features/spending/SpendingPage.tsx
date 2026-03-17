@@ -130,6 +130,8 @@ export function SpendingPage() {
     let totalPoints = 0;
     let totalMiles = 0;
     let totalApproxCents = 0;
+    let pointsApproxCents = 0;
+    let milesApproxCents = 0;
     (data.cards || []).forEach((c: any) => {
       const type =
         c.rewardType ??
@@ -151,16 +153,20 @@ export function SpendingPage() {
       } else if (type === 'points') {
         totalPoints += balance;
         if (c.avgCentsPerPoint != null && c.avgCentsPerPoint > 0) {
-          totalApproxCents += Math.round((balance * c.avgCentsPerPoint) / 100);
+          const approx = Math.round((balance * c.avgCentsPerPoint) / 100);
+          totalApproxCents += approx;
+          pointsApproxCents += approx;
         }
       } else {
         totalMiles += balance;
         if (c.avgCentsPerMile != null && c.avgCentsPerMile > 0) {
-          totalApproxCents += Math.round((balance * c.avgCentsPerMile) / 100);
+          const approx = Math.round((balance * c.avgCentsPerMile) / 100);
+          totalApproxCents += approx;
+          milesApproxCents += approx;
         }
       }
     });
-    return { totalCashback, totalPoints, totalMiles, totalApproxCents };
+    return { totalCashback, totalPoints, totalMiles, totalApproxCents, pointsApproxCents, milesApproxCents };
   }, [data.cards]);
 
   const byCategory = useMemo(() => {
@@ -347,13 +353,35 @@ export function SpendingPage() {
             <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Current Rewards</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 4 }}>
               {(() => {
-                const { totalCashback, totalApproxCents } = totalRewards;
-                const hasCashback = totalCashback > 0;
-                const hasValue = totalApproxCents > 0;
-                if (!hasCashback && !hasValue) return '—';
-                const cashbackStr = hasCashback ? `${formatCents(totalCashback)} cashback` : '';
-                const valueStr = hasValue ? `~${formatCents(totalApproxCents)} travel value` : '';
-                return hasCashback && hasValue ? `${cashbackStr} · ${valueStr}` : cashbackStr || valueStr;
+                const { totalCashback, pointsApproxCents, milesApproxCents } = totalRewards as {
+                  totalCashback: number;
+                  pointsApproxCents?: number;
+                  milesApproxCents?: number;
+                };
+                const cashbackCents = (totalCashback || 0) + (pointsApproxCents || 0);
+                const travelCents = milesApproxCents || 0;
+                if (cashbackCents <= 0 && travelCents <= 0) return '—';
+                const labelStyle = {
+                  fontSize: '0.8rem',
+                  color: 'var(--ui-muted, var(--muted))',
+                  fontWeight: 400,
+                } as const;
+                return (
+                  <>
+                    {cashbackCents > 0 && (
+                      <div>
+                        <span>{formatCents(cashbackCents)}</span>{' '}
+                        <span style={labelStyle}>cashback</span>
+                      </div>
+                    )}
+                    {travelCents > 0 && (
+                      <div style={{ marginTop: cashbackCents > 0 ? 2 : 0 }}>
+                        <span>{formatCents(travelCents)}</span>{' '}
+                        <span style={labelStyle}>travel value</span>
+                      </div>
+                    )}
+                  </>
+                );
               })()}
             </div>
           </div>
