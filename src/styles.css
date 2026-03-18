@@ -359,7 +359,7 @@ input[type="date"].ll-control {
   min-height: 44px;
   padding: 10px 14px;
   border-radius: 10px;
-  border: 1px solid var(--ui-border, var(--border));
+  border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
   background: var(--ui-card-bg, var(--surface));
   color: var(--ui-primary-text, var(--text));
   font-size: 1rem;
@@ -481,9 +481,17 @@ input[type="date"].ll-control:focus {
   padding: 12px 14px;
   font-size: 1.1rem;
   border-radius: 10px;
-  border: 1px solid var(--ui-border, var(--border));
+  border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
   background: var(--ui-card-bg, var(--surface));
   color: var(--ui-primary-text, var(--text));
+}
+
+/* Spending: remove the small caret that looks like an "upside down range". */
+.spending-filter-select::after {
+  display: none;
+}
+.spending-filter-select {
+  padding-right: 14px;
 }
 /* Chart container: subtle fade-in so it doesn’t appear jarring */
 .spending-chart-wrap {

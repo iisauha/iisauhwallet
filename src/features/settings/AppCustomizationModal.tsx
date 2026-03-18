@@ -340,7 +340,9 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                   style={{
                     padding: '10px 16px',
                     borderRadius: 8,
-                    border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      border: isSelected
+                        ? '2px solid var(--ui-outline-btn, var(--accent))'
+                        : '1px solid var(--ui-outline-btn, var(--border))',
                     background: isSelected ? 'var(--surface-hover)' : 'var(--surface)',
                     color: 'var(--ui-primary-text, var(--text))',
                     fontSize: '0.9rem',

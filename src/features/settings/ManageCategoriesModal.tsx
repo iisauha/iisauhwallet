@@ -83,12 +83,12 @@ export function ManageCategoriesModal(props: {
                   </button>
                 </div>
                 <div style={{ marginTop: 10 }}>
-                  <div style={{ color: 'var(--muted)', fontSize: '0.9rem', fontWeight: 600 }}>Subcategories</div>
+                  <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', fontWeight: 600 }}>Subcategories</div>
                   {(cfg[id]?.sub || []).length ? (
                     <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
                       {(cfg[id]?.sub || []).map((s) => (
                         <div key={s} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                          <span style={{ color: 'var(--muted)', flex: 1 }}>{s}</span>
+                          <span style={{ color: 'var(--ui-primary-text, var(--muted))', flex: 1 }}>{s}</span>
                           <button
                             type="button"
                             className="btn-delete"
@@ -107,7 +107,7 @@ export function ManageCategoriesModal(props: {
                       ))}
                     </div>
                   ) : (
-                    <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>No subcategories.</div>
+                    <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>No subcategories.</div>
                   )}
                 </div>
                 <div style={{ marginTop: 10 }}>
@@ -143,7 +143,7 @@ export function ManageCategoriesModal(props: {
         <div className="modal-overlay">
           <div className="modal">
             <h3>Are you sure you want to delete this?</h3>
-            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{confirmDelete.label}</p>
+            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>{confirmDelete.label}</p>
             <div className="btn-row">
               <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
                 Cancel

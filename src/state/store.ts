@@ -972,9 +972,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       }
 
       if (kind === 'out' && item.outboundType === 'cc_payment') {
-        const bank = next.banks.find((b) => b.id === item.sourceBankId);
         const card = next.cards.find((c) => c.id === item.targetCardId);
-        if (!bank || !card) {
+        if (!card) {
           markRecurringInstanceHandledIfPresent(item);
           next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
           saveData(next);
@@ -984,13 +983,49 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
         if (typeof card.balanceCents === 'number' && card.balanceCents < 0) {
           return { needsBankSelection: false };
         }
-        bank.balanceCents = (bank.balanceCents || 0) - amount;
+
+        // Source can be either a bank (classic transfer) or HYSA (HYSA -> credit card payment).
+        if (item.paymentSource === 'hysa' && item.paymentTargetId) {
+          let inv = loadInvesting();
+          inv = accrueHysaAccounts(inv);
+          const idx = inv.accounts.findIndex((a: any) => a.id === item.paymentTargetId && a.type === 'hysa');
+          if (idx === -1) {
+            markRecurringInstanceHandledIfPresent(item);
+            next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+            saveData(next);
+            set({ data: next });
+            return { needsBankSelection: false };
+          }
+
+          const acc = inv.accounts[idx] as any;
+          const newBalanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
+          const subBucket: 'liquid' | 'reserved' = item.meta?.hysaSubBucket === 'reserved' ? 'reserved' : 'liquid';
+          const now = Date.now();
+          let updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+          if (subBucket === 'reserved') {
+            updated = { ...updated, reservedSavingsCents: Math.max(0, (acc.reservedSavingsCents || 0) - amount) };
+          }
+          inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
+          saveInvesting(inv);
+        } else {
+          const bank = next.banks.find((b) => b.id === item.sourceBankId);
+          if (!bank) {
+            markRecurringInstanceHandledIfPresent(item);
+            next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
+            saveData(next);
+            set({ data: next });
+            return { needsBankSelection: false };
+          }
+          bank.balanceCents = (bank.balanceCents || 0) - amount;
+          bank.updatedAt = nowIso();
+        }
+
         card.balanceCents = (card.balanceCents || 0) - amount;
-        bank.updatedAt = nowIso();
         card.updatedAt = nowIso();
         markRecurringInstanceHandledIfPresent(item);
         next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
-        addSpendingFromPendingIfNeeded(item, 'bank', item.sourceBankId);
+        // Purchases don't have a dedicated HYSA source, so map HYSA-paid credit card transfers to "cash" for any optional add-to-spending behavior.
+        addSpendingFromPendingIfNeeded(item, item.paymentSource === 'hysa' ? 'cash' : 'bank', item.paymentSource === 'hysa' ? undefined : item.sourceBankId);
         saveData(next);
         set({ data: next });
         return { needsBankSelection: false };

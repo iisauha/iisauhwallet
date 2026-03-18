@@ -1181,16 +1181,63 @@ export function SnapshotPage() {
                     {modal.outboundType === 'cc_payment' ? (
                       <>
                         <div className="field">
-                          <label>From Bank</label>
-                          <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
-                            <option value="">— Select —</option>
-                            {banksSortedByBalance.map((b) => (
-                              <option key={b.id} value={b.id}>
-                                {b.name} — {formatCents(b.balanceCents || 0)}
-                              </option>
-                            ))}
+                          <label>From</label>
+                          <Select
+                            value={modal.outboundSourceKind}
+                            onChange={(e) =>
+                              setModal({
+                                ...modal,
+                                outboundSourceKind: e.target.value as 'bank' | 'hysa',
+                                outboundSourceHysaAccountId: e.target.value === 'hysa' ? modal.outboundSourceHysaAccountId : '',
+                                outboundHysaSubBucket: e.target.value === 'hysa' ? modal.outboundHysaSubBucket : ''
+                              })
+                            }
+                          >
+                            <option value="bank">Bank</option>
+                            <option value="hysa">HYSA</option>
                           </Select>
                         </div>
+                        {modal.outboundSourceKind === 'bank' ? (
+                          <div className="field">
+                            <label>From Bank</label>
+                            <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
+                              <option value="">— Select —</option>
+                              {banksSortedByBalance.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.name} — {formatCents(b.balanceCents || 0)}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="field">
+                              <label>HYSA Account</label>
+                              <Select
+                                value={modal.outboundSourceHysaAccountId}
+                                onChange={(e) => setModal({ ...modal, outboundSourceHysaAccountId: e.target.value })}
+                              >
+                                <option value="">— Select —</option>
+                                {hysaAccountsSorted.map((a: any) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.name} — {formatCents(a.balanceCents || 0)}
+                                  </option>
+                                ))}
+                              </Select>
+                            </div>
+                            <div className="field">
+                              <label>Use which HYSA portion?</label>
+                              <Select
+                                value={modal.outboundHysaSubBucket}
+                                onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}
+                              >
+                                <option value="">— Select —</option>
+                                <option value="liquid">Money in HYSA Designated for Bills</option>
+                                <option value="reserved">Reserved savings</option>
+                              </Select>
+                            </div>
+                          </>
+                        )}
                         <div className="field">
                           <label>To Credit Card</label>
                           <Select value={modal.targetCardIdOut} onChange={(e) => setModal({ ...modal, targetCardIdOut: e.target.value })}>
@@ -1291,16 +1338,39 @@ export function SnapshotPage() {
                         else actions.addPendingInbound(inUpdates);
                       } else {
                         if (modal.outboundType === 'cc_payment') {
-                          if (!modal.sourceBankId || !modal.targetCardIdOut) return;
-                          const outUpdates = {
-                            label: modal.label.trim() || 'Pending',
-                            amountCents,
-                            outboundType: 'cc_payment' as const,
-                            sourceBankId: modal.sourceBankId,
-                            targetCardId: modal.targetCardIdOut
-                          };
-                          if (editId) actions.updatePendingOutbound(editId, outUpdates);
-                          else actions.addPendingOutbound(outUpdates);
+                          if (!modal.targetCardIdOut) return;
+
+                          if (modal.outboundSourceKind === 'hysa') {
+                            if (!modal.outboundSourceHysaAccountId || !modal.outboundHysaSubBucket) return;
+                            const subBucket: 'liquid' | 'reserved' =
+                              modal.outboundHysaSubBucket === 'reserved' ? 'reserved' : 'liquid';
+                            const outUpdates = {
+                              label: modal.label.trim() || 'Pending',
+                              amountCents,
+                              outboundType: 'cc_payment' as const,
+                              targetCardId: modal.targetCardIdOut,
+                              paymentSource: 'hysa' as const,
+                              paymentTargetId: modal.outboundSourceHysaAccountId,
+                              meta: { hysaSubBucket: subBucket }
+                            };
+                            if (editId) actions.updatePendingOutbound(editId, outUpdates);
+                            else actions.addPendingOutbound(outUpdates);
+                          } else {
+                            if (!modal.sourceBankId) return;
+                            const outUpdates = {
+                              label: modal.label.trim() || 'Pending',
+                              amountCents,
+                              outboundType: 'cc_payment' as const,
+                              sourceBankId: modal.sourceBankId,
+                              targetCardId: modal.targetCardIdOut,
+                              // Ensure we don't accidentally keep HYSA deduction details
+                              paymentSource: undefined,
+                              paymentTargetId: undefined,
+                              meta: undefined
+                            };
+                            if (editId) actions.updatePendingOutbound(editId, outUpdates);
+                            else actions.addPendingOutbound(outUpdates);
+                          }
                         } else {
                           if (modal.outboundSourceKind === 'hysa') {
                             if (!modal.outboundSourceHysaAccountId) return;

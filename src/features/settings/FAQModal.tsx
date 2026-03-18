@@ -68,7 +68,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
           <div
             key={i}
             style={{
-              border: '1px solid var(--border)',
+              border: '1px solid var(--ui-border, var(--border))',
               borderRadius: 10,
               overflow: 'hidden',
               background: 'var(--surface)',

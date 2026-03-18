@@ -105,7 +105,7 @@ export function FederalLoanParametersModal({
   return (
     <Modal open={open} title="Public Loan Parameters" onClose={onClose}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+        <fieldset style={{ border: '1px solid var(--ui-outline-btn, var(--border))', borderRadius: 8, padding: 10 }}>
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Household</legend>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Household size</label>
@@ -149,7 +149,7 @@ export function FederalLoanParametersModal({
           </div>
         </fieldset>
 
-        <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+        <fieldset style={{ border: '1px solid var(--ui-outline-btn, var(--border))', borderRadius: 8, padding: 10 }}>
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Location</legend>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>State of residence</label>
@@ -173,7 +173,7 @@ export function FederalLoanParametersModal({
           </label>
         </fieldset>
 
-        <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+        <fieldset style={{ border: '1px solid var(--ui-outline-btn, var(--border))', borderRadius: 8, padding: 10 }}>
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Income</legend>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: '0.9rem' }}>
             <input
@@ -197,13 +197,13 @@ export function FederalLoanParametersModal({
             </div>
           )}
           {params.useRecurringIncome && detectedAgiCents > 0 && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: 0 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', margin: 0 }}>
               AGI from recurring: ${(detectedAgiCents / 100).toLocaleString()}
             </p>
           )}
         </fieldset>
 
-        <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+        <fieldset style={{ border: '1px solid var(--ui-outline-btn, var(--border))', borderRadius: 8, padding: 10 }}>
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Loan Repayment</legend>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Repayment plan</label>
@@ -232,7 +232,7 @@ export function FederalLoanParametersModal({
           </div>
         </fieldset>
 
-        <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+        <fieldset style={{ border: '1px solid var(--ui-outline-btn, var(--border))', borderRadius: 8, padding: 10 }}>
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Timing</legend>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Next payment date</label>

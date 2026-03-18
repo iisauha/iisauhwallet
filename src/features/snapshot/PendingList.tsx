@@ -293,6 +293,16 @@ function sameDestinationOutbound(a: PendingOutboundItem, b: PendingOutboundItem)
   const typeB = b.outboundType || 'standard';
   if (typeA !== typeB) return false;
   if (typeA === 'cc_payment') {
+    const aIsHysa = a.paymentSource === 'hysa' || a.meta?.hysaSubBucket != null;
+    const bIsHysa = b.paymentSource === 'hysa' || b.meta?.hysaSubBucket != null;
+    if (aIsHysa || bIsHysa) {
+      return (
+        a.paymentSource === b.paymentSource &&
+        (a.paymentTargetId || '') === (b.paymentTargetId || '') &&
+        (a.meta?.hysaSubBucket || '') === (b.meta?.hysaSubBucket || '') &&
+        (a.targetCardId || '') === (b.targetCardId || '')
+      );
+    }
     return (a.sourceBankId || '') === (b.sourceBankId || '') && (a.targetCardId || '') === (b.targetCardId || '');
   }
   return (a.sourceBankId || '') === (b.sourceBankId || '') && (a.targetCardId || '') === (b.targetCardId || '') && (a.paymentTargetId || '') === (b.paymentTargetId || '');
@@ -300,10 +310,16 @@ function sameDestinationOutbound(a: PendingOutboundItem, b: PendingOutboundItem)
 
 function getOutboundDestinationLabel(data: LedgerData, p: PendingOutboundItem): string {
   if (p.outboundType === 'cc_payment') {
-    const bank = p.sourceBankId ? (data.banks || []).find((b) => b.id === p.sourceBankId) : undefined;
     const card = p.targetCardId ? (data.cards || []).find((c) => c.id === p.targetCardId) : undefined;
-    const bankName = bank?.name || 'Bank';
     const cardName = card?.name || 'Card';
+    const hysaSub = p.meta?.hysaSubBucket;
+    if (p.paymentSource === 'hysa' || hysaSub != null) {
+      const sourceLabel = hysaSub === 'reserved' ? 'HYSA (Reserved savings)' : 'HYSA (Money in HYSA Designated for Bills)';
+      return `${sourceLabel} to ${cardName} Transfer`;
+    }
+
+    const bank = p.sourceBankId ? (data.banks || []).find((b) => b.id === p.sourceBankId) : undefined;
+    const bankName = bank?.name || 'Bank';
     return `${bankName} to ${cardName} Transfer`;
   }
   return p.label || 'Transfer';
@@ -324,11 +340,17 @@ function renderOutboundItem(
   let label: string;
   const amountText = formatCents(p.amountCents);
   if (isCcPay) {
-    const bank = p.sourceBankId ? (data.banks || []).find((b) => b.id === p.sourceBankId) : undefined;
     const card = p.targetCardId ? (data.cards || []).find((c) => c.id === p.targetCardId) : undefined;
-    const bankName = bank ? bank.name || 'Bank' : 'Bank';
     const cardName = card ? card.name || 'Card' : 'Card';
-    label = `CC Payment From ${bankName} → ${cardName}`;
+    const hysaSub = p.meta?.hysaSubBucket;
+    if (p.paymentSource === 'hysa' || hysaSub != null) {
+      const sourceLabel = hysaSub === 'reserved' ? 'HYSA (Reserved savings)' : 'HYSA (Money in HYSA Designated for Bills)';
+      label = `CC Payment From ${sourceLabel} → ${cardName}`;
+    } else {
+      const bank = p.sourceBankId ? (data.banks || []).find((b) => b.id === p.sourceBankId) : undefined;
+      const bankName = bank ? bank.name || 'Bank' : 'Bank';
+      label = `CC Payment From ${bankName} → ${cardName}`;
+    }
   } else {
     label = `${p.label}`;
   }
@@ -458,7 +480,9 @@ export function PendingOutboundList(props: {
       outboundType: fromItem.outboundType,
       sourceBankId: fromItem.sourceBankId,
       targetCardId: fromItem.targetCardId,
+      paymentSource: fromItem.paymentSource,
       paymentTargetId: fromItem.paymentTargetId,
+      meta: fromItem.meta,
       createdAt: new Date(joinDate).toISOString(),
     };
     props.onJoinOutbound(fromItem.id, toItem.id, combined, new Date(joinDate).toISOString());
