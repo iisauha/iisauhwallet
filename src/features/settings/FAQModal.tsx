@@ -71,7 +71,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
               border: '1px solid var(--ui-border, var(--border))',
               borderRadius: 10,
               overflow: 'hidden',
-              background: 'var(--surface)',
+              background: 'var(--ui-modal-bg, var(--surface))',
             }}
           >
             <button

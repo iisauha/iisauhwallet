@@ -343,7 +343,8 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                       border: isSelected
                         ? '2px solid var(--ui-outline-btn, var(--accent))'
                         : '1px solid var(--ui-outline-btn, var(--border))',
-                    background: isSelected ? 'var(--surface-hover)' : 'var(--surface)',
+                    // Must follow the user's "Popup card background" setting.
+                    background: 'var(--ui-modal-bg, var(--surface))',
                     color: 'var(--ui-primary-text, var(--text))',
                     fontSize: '0.9rem',
                     fontWeight: 600,

@@ -239,6 +239,7 @@ export function UpcomingPage() {
             setWindowDays(days);
             saveUpcomingWindowPreference({ days });
           }}
+          className="upcoming-window-select"
         >
           <option value="14">Next 14 days</option>
           <option value="21">Next 21 days</option>
