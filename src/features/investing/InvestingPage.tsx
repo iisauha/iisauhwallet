@@ -722,6 +722,15 @@ export function InvestingPage() {
     useInstantSameBank: boolean;
     inv: { type: string; acc: InvestingAccount };
   } | null>(null);
+  const [newAccount, setNewAccount] = useState<{
+    id: string;
+    type: 'hysa' | 'roth' | 'k401' | 'general';
+    name: string;
+    hysaStartingBalance: string;
+    hysaRatePercent: string;
+    hysaWhen: '1' | '2' | '3';
+    hysaInterestThisMonth: string;
+  } | null>(null);
 
   const [balanceModal, setBalanceModal] = useState<{
     acc: InvestingAccount;
@@ -997,96 +1006,15 @@ export function InvestingPage() {
   }
 
   function addAccount(type: 'hysa' | 'roth' | 'k401' | 'general') {
-    const name = window.prompt('Account name?');
-    if (!name) return;
-    const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-    if (type === 'hysa') {
-      const now = Date.now();
-      const nowDate = new Date(now);
-      const monthStartMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
-
-      const balanceInput = window.prompt('Starting balance ($)', '0.00');
-      let balanceCents = 0;
-      if (balanceInput != null && balanceInput.trim() !== '') {
-        const parsed = parseCents(balanceInput);
-        if (parsed >= 0) balanceCents = parsed;
-      }
-
-      const aprInput = window.prompt('APR / interest rate (%)', '4');
-      let interestRate = 4;
-      if (aprInput != null && aprInput.trim() !== '') {
-        const parsed = parseFloat(aprInput);
-        if (Number.isFinite(parsed) && parsed >= 0) interestRate = parsed;
-      }
-
-      const whenInput = window.prompt(
-        'When is this balance valid?\n1) Today (default)\n2) Start of this month\n3) Specific date',
-        '1'
-      );
-      let lastAccruedAt: number;
-      if (whenInput === '3') {
-        const dateStr = window.prompt('Date (YYYY-MM-DD)', nowDate.toISOString().slice(0, 10));
-        if (dateStr != null && dateStr.trim() !== '') {
-          const d = new Date(dateStr + 'T12:00:00');
-          lastAccruedAt = Number.isFinite(d.getTime()) ? d.getTime() : now;
-        } else {
-          lastAccruedAt = now;
-        }
-      } else if (whenInput === '2') {
-        lastAccruedAt = monthStartMs;
-      } else {
-        lastAccruedAt = now;
-      }
-
-      const interestInput = window.prompt('Interest this month so far ($, optional)', '');
-      let interestThisMonth = 0;
-      let manualInterestBaselineThisMonth: number | undefined;
-      let manualInterestBaselineSetAt: number | undefined;
-      let manualInterestBaselineMonthKey: string | undefined;
-      if (interestInput != null && interestInput.trim() !== '') {
-        const parsed = parseCents(interestInput);
-        if (parsed >= 0) {
-          interestThisMonth = parsed;
-          manualInterestBaselineThisMonth = parsed;
-          manualInterestBaselineSetAt = now;
-          manualInterestBaselineMonthKey = getMonthKeyFromTimestamp(now);
-        }
-      }
-
-      const monthKey = getMonthKeyFromTimestamp(now);
-      const monthlyBalanceEvents: { timestamp: number; balanceAfterCents: number }[] = [
-        { timestamp: getStartOfMonthMs(now), balanceAfterCents: balanceCents }
-      ];
-
-      const acc: InvestingAccount = {
-        id,
-        type: 'hysa',
-        name: name.trim(),
-        balanceCents: balanceCents,
-        interestRate,
-        lastAccruedAt,
-        monthKey,
-        interestThisMonth,
-        monthlyBalanceEvents,
-        ...(manualInterestBaselineThisMonth !== undefined && {
-          manualInterestBaselineThisMonth,
-          manualInterestBaselineSetAt: manualInterestBaselineSetAt!,
-          manualInterestBaselineMonthKey: manualInterestBaselineMonthKey!
-        })
-      } as any as HysaAccount;
-
-      persist({ ...investing, accounts: [...investing.accounts, acc] });
-      return;
-    }
-
-    const base: InvestingAccount = {
-      id,
+    setNewAccount({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       type,
-      name: name.trim(),
-      balanceCents: 0
-    } as any;
-    persist({ ...investing, accounts: [...investing.accounts, base] });
+      name: '',
+      hysaStartingBalance: '',
+      hysaRatePercent: '',
+      hysaWhen: '1',
+      hysaInterestThisMonth: '',
+    });
   }
 
   function deleteAccount(acc: InvestingAccount) {
@@ -1689,6 +1617,173 @@ export function InvestingPage() {
               </button>
               <button type="button" className="btn btn-secondary" onClick={submitInvestingBalanceModal}>
                 OK
+              </button>
+            </div>
+          </>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={newAccount != null}
+        title="Add account"
+        onClose={() => setNewAccount(null)}
+      >
+        {newAccount ? (
+          <>
+            <div className="field">
+              <label>Name</label>
+              <input
+                className="ll-control"
+                value={newAccount.name}
+                onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
+                placeholder="Account name"
+              />
+            </div>
+            {newAccount.type === 'hysa' ? (
+              <>
+                <div className="field">
+                  <label>Starting balance ($)</label>
+                  <input
+                    className="ll-control"
+                    value={newAccount.hysaStartingBalance}
+                    onChange={(e) => setNewAccount({ ...newAccount, hysaStartingBalance: e.target.value })}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="field">
+                  <label>APR / interest rate (%)</label>
+                  <input
+                    className="ll-control"
+                    value={newAccount.hysaRatePercent}
+                    onChange={(e) => setNewAccount({ ...newAccount, hysaRatePercent: e.target.value })}
+                    inputMode="decimal"
+                    placeholder="e.g. 4"
+                  />
+                </div>
+                <div className="field">
+                  <label>When is this balance valid?</label>
+                  <select
+                    className="ll-select"
+                    value={newAccount.hysaWhen}
+                    onChange={(e) =>
+                      setNewAccount({
+                        ...newAccount,
+                        hysaWhen: (e.target.value as '1' | '2' | '3') || '1',
+                      })
+                    }
+                  >
+                    <option value="1">Today (default)</option>
+                    <option value="2">Start of this month</option>
+                    <option value="3">Specific date…</option>
+                  </select>
+                </div>
+                {newAccount.hysaWhen === '3' ? (
+                  <div className="field">
+                    <label>Date (YYYY-MM-DD)</label>
+                    <input
+                      className="ll-control"
+                      value={newAccount.hysaInterestThisMonth}
+                      onChange={(e) => setNewAccount({ ...newAccount, hysaInterestThisMonth: e.target.value })}
+                      placeholder={new Date().toISOString().slice(0, 10)}
+                    />
+                  </div>
+                ) : null}
+                <div className="field">
+                  <label>Interest this month so far ($, optional)</label>
+                  <input
+                    className="ll-control"
+                    value={newAccount.hysaInterestThisMonth}
+                    onChange={(e) => setNewAccount({ ...newAccount, hysaInterestThisMonth: e.target.value })}
+                    inputMode="decimal"
+                    placeholder="Leave blank to skip"
+                  />
+                </div>
+              </>
+            ) : null}
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setNewAccount(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  if (!newAccount.name.trim()) {
+                    return;
+                  }
+                  const id = newAccount.id;
+                  if (newAccount.type === 'hysa') {
+                    const now = Date.now();
+                    const nowDate = new Date(now);
+                    const monthStartMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
+                    let balanceCents = 0;
+                    if (newAccount.hysaStartingBalance.trim() !== '') {
+                      const parsed = parseCents(newAccount.hysaStartingBalance);
+                      if (parsed >= 0) balanceCents = parsed;
+                    }
+                    let interestRate = 4;
+                    if (newAccount.hysaRatePercent.trim() !== '') {
+                      const parsed = parseFloat(newAccount.hysaRatePercent);
+                      if (Number.isFinite(parsed) && parsed >= 0) interestRate = parsed;
+                    }
+                    let lastAccruedAt: number;
+                    if (newAccount.hysaWhen === '3') {
+                      const dateStr = newAccount.hysaInterestThisMonth || new Date().toISOString().slice(0, 10);
+                      const d = new Date(dateStr + 'T12:00:00');
+                      lastAccruedAt = Number.isFinite(d.getTime()) ? d.getTime() : now;
+                    } else if (newAccount.hysaWhen === '2') {
+                      lastAccruedAt = monthStartMs;
+                    } else {
+                      lastAccruedAt = now;
+                    }
+                    let interestThisMonth = 0;
+                    let manualInterestBaselineThisMonth: number | undefined;
+                    let manualInterestBaselineSetAt: number | undefined;
+                    let manualInterestBaselineMonthKey: string | undefined;
+                    if (newAccount.hysaInterestThisMonth.trim() !== '') {
+                      const parsed = parseCents(newAccount.hysaInterestThisMonth);
+                      if (parsed >= 0) {
+                        interestThisMonth = parsed;
+                        manualInterestBaselineThisMonth = parsed;
+                        manualInterestBaselineSetAt = now;
+                        manualInterestBaselineMonthKey = getMonthKeyFromTimestamp(now);
+                      }
+                    }
+                    const monthKey = getMonthKeyFromTimestamp(now);
+                    const monthlyBalanceEvents: { timestamp: number; balanceAfterCents: number }[] = [
+                      { timestamp: getStartOfMonthMs(now), balanceAfterCents: balanceCents },
+                    ];
+                    const acc: InvestingAccount = {
+                      id,
+                      type: 'hysa',
+                      name: newAccount.name.trim(),
+                      balanceCents,
+                      interestRate,
+                      lastAccruedAt,
+                      monthKey,
+                      interestThisMonth,
+                      monthlyBalanceEvents,
+                      ...(manualInterestBaselineThisMonth !== undefined && {
+                        manualInterestBaselineThisMonth,
+                        manualInterestBaselineSetAt: manualInterestBaselineSetAt!,
+                        manualInterestBaselineMonthKey: manualInterestBaselineMonthKey!,
+                      }),
+                    } as any as HysaAccount;
+                    persist({ ...investing, accounts: [...investing.accounts, acc] });
+                  } else {
+                    const base: InvestingAccount = {
+                      id,
+                      type: newAccount.type,
+                      name: newAccount.name.trim(),
+                      balanceCents: 0,
+                    } as any;
+                    persist({ ...investing, accounts: [...investing.accounts, base] });
+                  }
+                  setNewAccount(null);
+                }}
+              >
+                Add account
               </button>
             </div>
           </>

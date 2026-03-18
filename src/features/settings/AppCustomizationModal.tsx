@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
 import { useAdvancedUIColors } from '../../theme/AdvancedUIColorsContext';
-import { loadThemePresets, saveThemePresets, type AdvancedUIColors, type SavedThemePreset, uid } from '../../state/storage';
+import {
+  loadThemePresets,
+  saveThemePresets,
+  type AdvancedUIColors,
+  type SavedThemePreset,
+  uid,
+  DEFAULT_THEME_COLOR,
+  DEFAULT_ACCENT_COLOR,
+} from '../../state/storage';
 
 const FONT_FAMILY_OPTIONS = [
   { key: 'system', label: 'System default' },
@@ -44,12 +52,36 @@ const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
 const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
   { key: 'cardBg', label: 'Main Cards' },
   { key: 'surfaceSecondary', label: 'Summary Cards' },
-  { key: 'sectionBg', label: 'Dropdowns Card Color' },
+  { key: 'sectionBg', label: 'Dropdown cards' },
   { key: 'modalBg', label: 'Popup card background' },
   { key: 'tabBarBg', label: 'Bottom Tab Bar background' },
   { key: 'border', label: 'Border of Summary + Popups Cards' },
   { key: 'outlineButton', label: 'Buttons (Text + Border)' },
+  { key: 'addButton', label: 'Adding an Item Buttons' },
 ];
+
+const SYSTEM_DEFAULT_THEME_ID = 'system-default';
+
+const SYSTEM_DEFAULT_ADV_COLORS: AdvancedUIColors = {
+  cardBg: '#F1EFE4',
+  surfaceSecondary: '#F1EFE4',
+  sectionBg: '#F1EFE4',
+  modalBg: '#F1EFE4',
+  tabBarBg: '#F1EFE4',
+  border: '#000000',
+  titleText: '#000000',
+  primaryText: '#000000',
+  outlineButton: '#000000',
+  addButton: '#000000',
+};
+
+const SYSTEM_DEFAULT_THEME_PRESET: SavedThemePreset = {
+  id: SYSTEM_DEFAULT_THEME_ID,
+  name: 'System default',
+  themeColor: DEFAULT_THEME_COLOR,
+  accentColor: DEFAULT_ACCENT_COLOR,
+  advancedColors: SYSTEM_DEFAULT_ADV_COLORS,
+};
 
 function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (hex: string) => void }) {
   return (
@@ -151,6 +183,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
       'titleText',
       'primaryText',
       'outlineButton',
+      'addButton',
     ];
     const nextColors = preset.advancedColors || {};
     keys.forEach((k) => {
@@ -158,6 +191,12 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
       if (v && v.trim() !== '') advCtx.setColor(k, v);
       else advCtx.clearColor(k);
     });
+  };
+
+  const handleDeleteTheme = (id: string) => {
+    const next = themePresets.filter((p) => p.id !== id);
+    setThemePresets(next);
+    saveThemePresets(next);
   };
 
   return (
@@ -209,19 +248,30 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
               Save theme
             </button>
           </div>
-          {themePresets.length > 0 ? (
+          {themePresets.length > 0 || true ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-              {themePresets.map((p: SavedThemePreset) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ justifyContent: 'space-between', display: 'flex' }}
-                  onClick={() => handleApplyTheme(p)}
-                >
-                  <span>{p.name}</span>
-                  <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Apply</span>
-                </button>
+              {[SYSTEM_DEFAULT_THEME_PRESET, ...themePresets].map((p: SavedThemePreset) => (
+                <div key={p.id} style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ justifyContent: 'space-between', display: 'flex', flex: 1 }}
+                    onClick={() => handleApplyTheme(p)}
+                  >
+                    <span>{p.name}</span>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Apply</span>
+                  </button>
+                  {p.id !== SYSTEM_DEFAULT_THEME_ID ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '10px 12px' }}
+                      onClick={() => handleDeleteTheme(p.id)}
+                    >
+                      Delete
+                    </button>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : null}

@@ -23,6 +23,7 @@ const UI_VAR_KEYS: Record<keyof AdvancedUIColors, string> = {
   titleText: '--ui-title-text',
   primaryText: '--ui-primary-text',
   outlineButton: '--ui-outline-btn',
+  addButton: '--ui-add-btn',
 };
 
 type AdvancedUIColorsContextValue = {

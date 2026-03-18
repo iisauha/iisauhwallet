@@ -1417,7 +1417,7 @@ export function LoansPage() {
             border: 'none',
             borderRadius: 999,
             background: showPublic ? 'var(--accent)' : 'transparent',
-            color: showPublic ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted, var(--muted))',
+            color: 'var(--ui-primary-text, var(--text))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
@@ -1445,7 +1445,7 @@ export function LoansPage() {
             border: 'none',
             borderRadius: 999,
             background: showPrivate ? 'var(--accent)' : 'transparent',
-            color: showPrivate ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-muted, var(--muted))',
+            color: 'var(--ui-primary-text, var(--text))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}

@@ -221,7 +221,16 @@ export function UpcomingPage() {
     <div className="tab-panel active" id="upcomingContent">
       <p className="section-title page-title">Upcoming Cashflow</p>
       <div className="settings-section">
-        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 6 }}>Time window</label>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '0.9rem',
+            color: 'var(--ui-primary-text, var(--text))',
+            marginBottom: 6,
+          }}
+        >
+          Time window
+        </label>
         <Select
           value={String(windowDays)}
           onChange={(e) => {

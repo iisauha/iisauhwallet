@@ -178,6 +178,8 @@ export type AdvancedUIColors = Partial<{
   primaryText: string;
   /** Outline buttons: same color for text + border (no fill). Pause / special buttons excluded in CSS. */
   outlineButton: string;
+  /** Adding an Item Buttons: add / create actions */
+  addButton: string;
 }>;
 
 export type SavedThemePreset = {
@@ -191,7 +193,20 @@ export type SavedThemePreset = {
 export function loadAdvancedUIColors(): AdvancedUIColors {
   try {
     const raw = localStorage.getItem(UI_ADVANCED_COLORS_KEY);
-    if (!raw) return {};
+    if (!raw) {
+      return {
+        cardBg: '#F1EFE4',
+        surfaceSecondary: '#F1EFE4',
+        sectionBg: '#F1EFE4',
+        modalBg: '#F1EFE4',
+        tabBarBg: '#F1EFE4',
+        border: '#000000',
+        titleText: '#000000',
+        primaryText: '#000000',
+        outlineButton: '#000000',
+        addButton: '#000000',
+      };
+    }
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object') return parsed;
     return {};
@@ -1047,8 +1062,8 @@ export function savePublicLoanShowPaymentActions(value: boolean) {
 }
 
 /** Default base for surface/border/muted when only app background is customized. Exported for theme init. */
-export const DEFAULT_THEME_COLOR = '#1e293b';
-const DEFAULT_ACCENT_COLOR = '#0ea5e9';
+export const DEFAULT_THEME_COLOR = '#F1EFE4';
+export const DEFAULT_ACCENT_COLOR = '#000000';
 
 function isValidHex(hex: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(hex);
