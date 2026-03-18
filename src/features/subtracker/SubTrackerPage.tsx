@@ -60,17 +60,44 @@ function parseRewardText(text: string): { quantity: number; unitType: CompletedB
 function entryToCompletedBonus(
   e: SubTrackerEntry,
   cardName: string,
-  _rewardText: string,
-  achievedTier: SubTrackerTier
+  achievedTiers: SubTrackerTier[]
 ): CompletedBonus {
-  const { quantity, unitType } = parseRewardText(achievedTier.rewardText || '');
+  const parsedTiers = achievedTiers
+    .filter((t) => t && typeof t.rewardText === 'string')
+    .map((t) => ({ tier: t, parsed: parseRewardText(t.rewardText || '') }));
+
+  const firstUnitType = parsedTiers[0]?.parsed.unitType || 'other';
+  const unitType = parsedTiers.every((x) => x.parsed.unitType === firstUnitType)
+    ? firstUnitType
+    : parsedTiers.find((x) => x.parsed.unitType !== 'other')?.parsed.unitType || firstUnitType;
+
+  const totalQuantity = parsedTiers.reduce((s, x) => s + (Number.isFinite(x.parsed.quantity) ? x.parsed.quantity : 0), 0);
+
+  const formatCompactQty = (qty: number) => {
+    if (!Number.isFinite(qty)) return '0';
+    if (unitType === 'cash') return Number.isInteger(qty) ? qty.toFixed(0) : qty.toFixed(2).replace(/\.00$/, '');
+    if ((unitType === 'points' || unitType === 'miles') && qty >= 1000) {
+      const k = qty / 1000;
+      const decimals = Math.abs(k - Math.round(k)) < 1e-9 ? 0 : 1;
+      const kStr = k.toFixed(decimals).replace(/\.0$/, '');
+      return `${kStr}k`;
+    }
+    return String(Math.round(qty));
+  };
+
+  const rewardLabel =
+    totalQuantity > 0
+      ? unitType === 'cash'
+        ? `$${formatCompactQty(totalQuantity)}`
+        : `${formatCompactQty(totalQuantity)} ${unitType}`
+      : 'Bonus';
   return {
     id: uid(),
     cardId: e.cardRef.type === 'card' ? e.cardRef.cardId : undefined,
     cardName,
     unitType,
-    rewardQuantity: quantity,
-    rewardLabel: (achievedTier.rewardText || '').trim() || 'Bonus',
+    rewardQuantity: totalQuantity,
+    rewardLabel,
     centsPerUnit: unitType === 'points' || unitType === 'miles' ? 1 : undefined,
     completedAt: todayKey(),
     notes: undefined
@@ -306,8 +333,10 @@ export function SubTrackerPage() {
   const [useDeadlineDate, setUseDeadlineDate] = useState(true);
   const [deadlineDate, setDeadlineDate] = useState(todayKey());
   const [monthsWindow, setMonthsWindow] = useState('3');
-  const [tierTarget, setTierTarget] = useState('');
-  const [tierReward, setTierReward] = useState('');
+  type TierDraft = { id: string; spendTarget: string; rewardText: string };
+  const [tierDrafts, setTierDrafts] = useState<TierDraft[]>(() => [
+    { id: uid(), spendTarget: '', rewardText: '' }
+  ]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
   const [spentInput, setSpentInput] = useState<string>('0.00');
@@ -338,9 +367,9 @@ export function SubTrackerPage() {
       const maxTarget = tiers.length ? Math.max(...tiers.map((t) => t.spendTargetCents || 0)) : 0;
       const spendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
       if (maxTarget > 0 && spendCents >= maxTarget) {
-        const achievedTier = tiers[tiers.length - 1];
         const name = entryDisplayName(e);
-        toAdd.push(entryToCompletedBonus(e, name, achievedTier.rewardText, achievedTier));
+        const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
+        toAdd.push(entryToCompletedBonus(e, name, achievedTiers));
       } else {
         stillActive.push(e);
       }
@@ -493,15 +522,15 @@ export function SubTrackerPage() {
               ? totalWindowDays / 30.44
               : null;
 
-        const tiers = Array.isArray(e.tiers) ? e.tiers.slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0)) : [];
-        const nextTier = tiers.find((t) => spendCents < (t.spendTargetCents || 0)) || tiers[tiers.length - 1] || null;
-        const nextTarget = nextTier ? nextTier.spendTargetCents || 0 : 0;
-        const remainingCents = nextTier ? Math.max(0, nextTarget - spendCents) : 0;
+        const tiers = Array.isArray(e.tiers)
+          ? e.tiers.slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0))
+          : [];
+        const finalTarget = tiers.length ? tiers[tiers.length - 1].spendTargetCents || 0 : 0;
 
         const requiredPace =
-          monthsWindowValue != null && nextTarget > 0 ? nextTarget / monthsWindowValue : null;
+          monthsWindowValue != null && finalTarget > 0 ? finalTarget / monthsWindowValue : null;
         const currentPace = elapsedDays != null ? (spendCents / elapsedDays) * 30 : null;
-        const ratio = nextTarget > 0 ? Math.min(1, Math.max(0, spendCents / nextTarget)) : null;
+        const ratio = finalTarget > 0 ? clamp(spendCents / finalTarget, 0, 1) : null;
 
         return (
           <div className="card" key={e.id}>
@@ -512,42 +541,89 @@ export function SubTrackerPage() {
             </div>
             <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
               <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>Required spend: </span>
-              <span>{nextTarget ? formatCents(nextTarget) : '—'}</span>
+              <span>{finalTarget ? formatCents(finalTarget) : '—'}</span>
             </div>
             <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
               <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>Current spend: </span>
-              <span>{formatCents(spendCents)}{nextTarget ? ` / ${formatCents(nextTarget)}` : ''}</span>
+              <span>{formatCents(spendCents)}{finalTarget ? ` / ${formatCents(finalTarget)}` : ''}</span>
             </div>
             {ratio != null ? (
               <div style={{ marginTop: 10 }}>
-                <div
-                  className="sub-tracker-progress-track"
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: 14,
-                    borderRadius: 999,
-                    background: 'rgba(148, 163, 184, 0.35)',
-                    overflow: 'hidden'
-                  }}
-                >
+                <div style={{ position: 'relative', width: '100%', height: 30 }}>
                   <div
+                    className="sub-tracker-progress-track"
                     style={{
-                      width: `${ratio * 100}%`,
-                      height: '100%',
-                      background: 'var(--green)',
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 12,
+                      height: 14,
                       borderRadius: 999,
-                      position: 'relative',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#0b1b33',
-                      fontSize: '0.75rem',
-                      fontWeight: 600
+                      background: 'rgba(148, 163, 184, 0.35)',
+                      overflow: 'hidden'
                     }}
                   >
-                    <span>{Math.round(ratio * 100)}%</span>
+                    {tiers.map((t, idx) => {
+                      const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
+                      return (
+                        <div
+                          key={t.id}
+                          style={{
+                            position: 'absolute',
+                            left: `${left}%`,
+                            top: 0,
+                            bottom: 0,
+                            width: 2,
+                            background: 'var(--ui-outline-btn, var(--muted))',
+                            transform: 'translateX(-1px)',
+                            zIndex: 3
+                          }}
+                        />
+                      );
+                    })}
+                    <div
+                      style={{
+                        width: `${ratio * 100}%`,
+                        height: '100%',
+                        background: 'var(--green)',
+                        borderRadius: 999,
+                        position: 'relative',
+                        zIndex: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#0b1b33',
+                        fontSize: '0.75rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      <span>{Math.round(ratio * 100)}%</span>
+                    </div>
                   </div>
+
+                  {tiers.map((t, idx) => {
+                    const prevSpend = idx === 0 ? 0 : tiers[idx - 1].spendTargetCents || 0;
+                    const segmentPercent = finalTarget > 0 ? ((t.spendTargetCents - prevSpend) / finalTarget) * 100 : 0;
+                    const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
+                    return (
+                      <div
+                        key={t.id + ':label'}
+                        style={{
+                          position: 'absolute',
+                          left: `${left}%`,
+                          top: 0,
+                          transform: 'translateX(-50%)',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          color: 'var(--ui-primary-text, var(--text))',
+                          whiteSpace: 'nowrap',
+                          zIndex: 4
+                        }}
+                      >
+                        {Math.round(segmentPercent)}%
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : null}
@@ -589,9 +665,16 @@ export function SubTrackerPage() {
                     setMonthsWindow(String(e.monthsWindow || '3'));
                     setDeadlineDate(todayKey());
                   }
-                  const firstTier = (e.tiers || [])[0];
-                  setTierTarget(firstTier ? (firstTier.spendTargetCents / 100).toFixed(2) : '');
-                  setTierReward(firstTier?.rewardText || '');
+                  const sortedTiers = Array.isArray(e.tiers)
+                    ? e.tiers.slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0))
+                    : [];
+                  setTierDrafts(
+                    sortedTiers.map((t) => ({
+                      id: t.id,
+                      spendTarget: (t.spendTargetCents / 100).toFixed(2),
+                      rewardText: t.rewardText || ''
+                    }))
+                  );
                   const currentSpendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
                   setSpentInput((currentSpendCents / 100).toFixed(2));
                   setEditorEntryId(e.id);
@@ -613,9 +696,9 @@ export function SubTrackerPage() {
                 className="btn btn-complete-green"
                 style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem', flexShrink: 0 }}
                 onClick={() => {
-                  const achievedTier = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents).pop() || tiers[tiers.length - 1];
-                  if (!achievedTier) return;
-                  const bonus = entryToCompletedBonus(e, name, achievedTier.rewardText, achievedTier);
+                  const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
+                  if (!achievedTiers.length) return;
+                  const bonus = entryToCompletedBonus(e, name, achievedTiers);
                   persist({
                     entries: entries.filter((x) => x.id !== e.id),
                     completedBonuses: [...completedBonuses, bonus]
@@ -681,8 +764,7 @@ export function SubTrackerPage() {
           setUseDeadlineDate(true);
           setDeadlineDate(todayKey());
           setMonthsWindow('3');
-          setTierTarget('');
-          setTierReward('');
+          setTierDrafts([{ id: uid(), spendTarget: '', rewardText: '' }]);
           setSpentInput('0.00');
           setConfirmDelete(null);
           setEditorEntryId(null);
@@ -784,26 +866,65 @@ export function SubTrackerPage() {
           ) : null}
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div className="field" style={{ flex: 1 }}>
-            <label>Tier spend target ($)</label>
-            <input
-              className="ll-control"
-              value={tierTarget}
-              onChange={(e) => setTierTarget(e.target.value)}
-              inputMode="decimal"
-              placeholder="e.g. 3000"
-            />
-          </div>
-          <div className="field" style={{ flex: 1 }}>
-            <label>Tier reward text</label>
-            <input
-              className="ll-control"
-              value={tierReward}
-              onChange={(e) => setTierReward(e.target.value)}
-              placeholder="e.g. 90k miles"
-            />
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {tierDrafts.map((draft, idx) => (
+            <div
+              key={draft.id}
+              style={{
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                padding: 10,
+                background: 'var(--ui-modal-bg, var(--surface))'
+              }}
+            >
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div className="field" style={{ flex: 1, minWidth: 140 }}>
+                  <label>Milestone {idx + 1} spend target ($)</label>
+                  <input
+                    className="ll-control"
+                    value={draft.spendTarget}
+                    onChange={(e) =>
+                      setTierDrafts((prev) => prev.map((x) => (x.id === draft.id ? { ...x, spendTarget: e.target.value } : x)))
+                    }
+                    inputMode="decimal"
+                    placeholder="e.g. 3000"
+                  />
+                </div>
+                <div className="field" style={{ flex: 1, minWidth: 180 }}>
+                  <label>Milestone {idx + 1} reward text</label>
+                  <input
+                    className="ll-control"
+                    value={draft.rewardText}
+                    onChange={(e) =>
+                      setTierDrafts((prev) => prev.map((x) => (x.id === draft.id ? { ...x, rewardText: e.target.value } : x)))
+                    }
+                    placeholder="e.g. 90k miles"
+                  />
+                </div>
+              </div>
+              <div className="btn-row" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
+                {tierDrafts.length > 1 ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+                    onClick={() => setTierDrafts((prev) => prev.filter((x) => x.id !== draft.id))}
+                  >
+                    Remove milestone
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.85rem', width: 'fit-content' }}
+            onClick={() => setTierDrafts((prev) => [...prev, { id: uid(), spendTarget: '', rewardText: '' }])}
+          >
+            Add milestone
+          </button>
         </div>
 
         <div className="btn-row">
@@ -814,9 +935,21 @@ export function SubTrackerPage() {
             type="button"
             className="btn btn-secondary"
             onClick={() => {
-              const targetCents = parseCents(tierTarget);
-              if (!(targetCents > 0)) return;
-              const rewardText = (tierReward || '').trim() || 'Bonus';
+              const parsedDraftTiers = tierDrafts
+                .map((d) => ({
+                  id: d.id,
+                  spendTargetCents: parseCents(d.spendTarget),
+                  rewardText: (d.rewardText || '').trim() || 'Bonus'
+                }))
+                .filter((t) => t.spendTargetCents > 0)
+                .sort((a, b) => a.spendTargetCents - b.spendTargetCents);
+              if (!parsedDraftTiers.length) return;
+
+              const newTiers: SubTrackerTier[] = parsedDraftTiers.map((t) => ({
+                id: t.id,
+                spendTargetCents: t.spendTargetCents,
+                rewardText: t.rewardText
+              }));
               let spentCents: number;
               if (editorEntryId) {
                 const trimmed = (spentInput || '').trim();
@@ -835,15 +968,8 @@ export function SubTrackerPage() {
                 if (!(spentCents >= 0)) return;
               }
               if (editorEntryId) {
-                // Editing top-level fields and first tier.
                 const updatedEntries = entries.map((x) => {
                   if (x.id !== editorEntryId) return x;
-                  const existingTiers = x.tiers || [];
-                  const first = existingTiers[0];
-                  const updatedFirst: SubTrackerTier = first
-                    ? { ...first, spendTargetCents: targetCents, rewardText }
-                    : { id: uid(), spendTargetCents: targetCents, rewardText };
-                  const newTiers = [updatedFirst, ...existingTiers.slice(1)];
                   return {
                     ...x,
                     cardRef: cardMode === 'card' ? { type: 'card', cardId } : { type: 'manual', name: manualName.trim() || 'Card' },
@@ -857,14 +983,13 @@ export function SubTrackerPage() {
                 });
                 persist({ version: 1, entries: updatedEntries });
               } else {
-                const tier: SubTrackerTier = { id: uid(), spendTargetCents: targetCents, rewardText };
                 const entry: SubTrackerEntry = {
                   id: uid(),
                   cardRef: cardMode === 'card' ? { type: 'card', cardId } : { type: 'manual', name: manualName.trim() || 'Card' },
                   startDate: startDate || todayKey(),
                   deadlineDate: useDeadlineDate ? deadlineDate || todayKey() : undefined,
                   monthsWindow: useDeadlineDate ? undefined : Math.max(1, parseInt(monthsWindow || '1', 10) || 1),
-                  tiers: [tier],
+                  tiers: newTiers,
                   spendCents: spentCents,
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString()

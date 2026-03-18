@@ -119,7 +119,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
             <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Investing accounts (HYSA, Roth IRA, etc.)</p>
             {accounts.map((a) => (
               <div key={a.id} style={{ marginBottom: 8 }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--muted)', display: 'block', marginBottom: 2 }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', display: 'block', marginBottom: 2 }}>
                   {a.type === 'hysa' ? 'HYSA' : a.type === 'roth' ? 'Roth IRA' : a.type === 'k401' ? '401(k)' : 'Investing'}
                 </label>
                 <input
@@ -145,7 +145,16 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="btn btn-primary" onClick={handleSave}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSave}
+            style={{
+              background: 'var(--ui-modal-bg, var(--surface))',
+              color: 'var(--ui-primary-text, var(--text))',
+              border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))'
+            }}
+          >
             Save
           </button>
         </div>

@@ -1822,25 +1822,27 @@ export function InvestingPage() {
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-title-text, var(--text))' }}>
           Investing Summary
         </p>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total HYSA</span>
-          <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Roth IRA</span>
-          <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Employer-Based Retirement</span>
-          <span className="v amount-pos">{formatCents(totals.total401k)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total General Investing</span>
-          <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Investing</span>
-          <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
+        <div className="summary-compact">
+          <div className="summary-kv">
+            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total HYSA</span>
+            <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
+          </div>
+          <div className="summary-kv">
+            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Roth IRA</span>
+            <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
+          </div>
+          <div className="summary-kv">
+            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Employer-Based Retirement</span>
+            <span className="v amount-pos">{formatCents(totals.total401k)}</span>
+          </div>
+          <div className="summary-kv">
+            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total General Investing</span>
+            <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
+          </div>
+          <div className="summary-kv">
+            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Investing</span>
+            <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
+          </div>
         </div>
       </div>
 
