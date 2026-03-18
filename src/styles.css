@@ -281,7 +281,32 @@ body {
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 .btn-primary { background: var(--accent); color: white; }
-.btn-secondary { background: transparent; color: var(--ui-primary-text, var(--muted)); border: 1px solid var(--border); }
+.btn-secondary {
+  background: transparent;
+  color: var(--ui-outline-btn, var(--ui-primary-text, var(--muted)));
+  border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
+}
+/* Pause: orange outline (ignores custom outline-button color) */
+.btn-secondary.btn-outline-neutral {
+  color: #ea580c !important;
+  border-color: #ea580c !important;
+}
+.btn-complete-green {
+  background: transparent;
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+.btn-complete-green:hover:not(:disabled) {
+  background: rgba(22, 163, 74, 0.12);
+}
+.btn-private-loan-delete {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+.btn-private-loan-delete:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.1);
+}
 .btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
 .btn-add { background: rgba(59, 130, 246, 0.2); color: #2563EB; }
 .btn-posted { background: var(--green-light); color: var(--green); border: 1px solid var(--green); }
@@ -403,7 +428,16 @@ input[type="date"].ll-control:focus {
 @media (hover: hover) and (pointer: fine) {
   .card:hover { background: var(--surface-hover); box-shadow: var(--shadow-strong); transform: translateY(-1px); }
   .section-header:hover { background: var(--surface-hover); }
-  .btn-secondary:hover { background: var(--surface-hover); color: var(--text); }
+  .btn-secondary:hover:not(:disabled):not(.btn-outline-neutral) {
+    background: var(--surface-hover);
+    color: var(--ui-outline-btn, var(--text));
+    border-color: var(--ui-outline-btn, var(--ui-border, var(--border)));
+  }
+  .btn-secondary.btn-outline-neutral:hover:not(:disabled) {
+    background: rgba(234, 88, 12, 0.12);
+    color: #ea580c !important;
+    border-color: #ea580c !important;
+  }
   .btn-primary:hover { background: var(--accent-hover); }
   .btn-danger:hover { background: rgba(220, 38, 38, 0.10); }
   .btn-add:hover { background: rgba(59, 130, 246, 0.3); }
@@ -450,31 +484,22 @@ input[type="date"].ll-control:focus {
 .toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
 .toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
 
-.visible-tabs-list { display: flex; flex-direction: column; gap: 6px; }
-.visible-tabs-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.settings-outline-trigger {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  text-align: left;
   padding: 12px 14px;
-  border-radius: var(--radius-control);
-  background: var(--ui-card-bg, var(--surface));
-  border: 1px solid var(--ui-border, var(--border));
-  cursor: pointer;
-  font-family: var(--app-font-family);
-  transition: background-color 0.15s ease;
-}
-.visible-tabs-row:hover { background: var(--surface-hover); }
-.visible-tabs-checkbox {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--accent);
-  flex-shrink: 0;
-  cursor: pointer;
-}
-.visible-tabs-label {
   font-size: 0.95rem;
   font-weight: 500;
-  color: var(--ui-primary-text, var(--text));
   font-family: var(--app-font-family);
+  cursor: pointer;
+  border-radius: var(--radius-control);
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  color: var(--ui-outline-btn, var(--muted));
+  border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
+}
+.settings-outline-trigger:hover {
+  background: var(--surface-hover);
 }

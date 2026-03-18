@@ -154,6 +154,7 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
+  const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
 
   const hasPasscode = loadPasscodeHash() !== null;
   const passcodePaused = loadPasscodePaused();
@@ -245,24 +246,42 @@ export function SettingsPage() {
       <AppCustomizationModal open={appCustomizationOpen} onClose={() => setAppCustomizationOpen(false)} />
 
       <p className="section-title" style={{ marginTop: 24 }}>Visible tabs</p>
-      <div className="settings-section visible-tabs-section" style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 12px 0', fontFamily: 'var(--app-font-family)' }}>
-          Hide tabs you don’t use from the bottom bar. Settings is always visible.
-        </p>
-        <div className="visible-tabs-list">
+      <div className="settings-section" style={{ marginBottom: 24 }}>
+        <button type="button" className="settings-outline-trigger" onClick={() => setVisibleTabsModalOpen(true)}>
+          Choose which tabs appear in the bar…
+        </button>
+      </div>
+      <Modal open={visibleTabsModalOpen} title="Visible tabs" onClose={() => setVisibleTabsModalOpen(false)}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
           {HIDEABLE_TAB_KEYS.map((tabKey) => (
-            <label key={tabKey} className="visible-tabs-row">
+            <label
+              key={tabKey}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                cursor: 'pointer',
+                fontSize: '1rem',
+                color: 'var(--text)',
+                fontFamily: 'var(--app-font-family)',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={!hiddenTabs.includes(tabKey)}
                 onChange={() => toggleTabHidden(tabKey)}
-                className="visible-tabs-checkbox"
+                style={{ width: 22, height: 22, flexShrink: 0, accentColor: 'var(--accent)', cursor: 'pointer' }}
               />
-              <span className="visible-tabs-label">{HIDEABLE_TAB_LABELS[tabKey]}</span>
+              <span>{HIDEABLE_TAB_LABELS[tabKey]}</span>
             </label>
           ))}
         </div>
-      </div>
+        <div className="btn-row">
+          <button type="button" className="btn btn-secondary" onClick={() => setVisibleTabsModalOpen(false)}>
+            Done
+          </button>
+        </div>
+      </Modal>
 
       <p className="section-title" style={{ marginTop: 24 }}>Accounts</p>
       <div className="settings-section" style={{ marginBottom: 24 }}>
@@ -293,7 +312,7 @@ export function SettingsPage() {
             ) : (
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-outline-neutral"
                 style={{ padding: '12px 18px', fontSize: '1rem' }}
                 onClick={() => setPausePasscodeStep(1)}
               >

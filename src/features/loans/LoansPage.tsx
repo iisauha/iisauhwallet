@@ -1022,7 +1022,7 @@ function LoanCard(props: {
       ) : null}
       <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onEdit}>Edit</button>
-        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
+        <button type="button" className="btn btn-private-loan-delete" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
       </div>
     </div>
   );
@@ -1310,83 +1310,83 @@ export function LoansPage() {
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
       <div className="summary">
-        <div className="summary-compact" style={{ marginBottom: 0 }}>
-        <div className="summary-kv" style={{ marginTop: 0 }}>
-          <span className="k">Total balance</span>
-          <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-            <AnimatedNumber value={summary.totalBalance} format={formatCents} />
-          </span>
-        </div>
-        <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
-          <span className="k">Public</span>
-          <span className="v" style={{ color: 'var(--red)' }}>
-            <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
-          </span>
-        </div>
-        <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
-          <span className="k">Private</span>
-          <span className="v" style={{ color: 'var(--red)' }}>
-            <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
-          </span>
-        </div>
-        {summary.avgPrivateRate != null ? (
-          <div className="summary-kv" style={{ marginTop: 2 }}>
-            <span className="k">Avg private rate</span>
-            <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+        <div className="summary-compact">
+          <div className="summary-kv">
+            <span className="k">Total balance</span>
+            <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
+              <AnimatedNumber value={summary.totalBalance} format={formatCents} />
+            </span>
           </div>
-        ) : null}
-        {summary.avgPublicRate != null ? (
-          <div className="summary-kv" style={{ marginTop: 2 }}>
-            <span className="k">Avg public rate</span>
-            <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+          <div className="summary-kv">
+            <span className="k" style={{ paddingLeft: 20 }}>Public</span>
+            <span className="v" style={{ color: 'var(--red)' }}>
+              <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
+            </span>
           </div>
-        ) : null}
-        <div className="summary-kv payment-now-emphasis" style={{ marginTop: 4, alignItems: 'center' }}>
-          <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span
-              role="button"
-              tabIndex={0}
-              aria-label="Edit Payment(now)"
-              onClick={() => {
-                setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
-                setShowEditPaymentNow(true);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
+          <div className="summary-kv">
+            <span className="k" style={{ paddingLeft: 20 }}>Private</span>
+            <span className="v" style={{ color: 'var(--red)' }}>
+              <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
+            </span>
+          </div>
+          {summary.avgPrivateRate != null ? (
+            <div className="summary-kv">
+              <span className="k">Avg private rate</span>
+              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+            </div>
+          ) : null}
+          {summary.avgPublicRate != null ? (
+            <div className="summary-kv">
+              <span className="k">Avg public rate</span>
+              <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+            </div>
+          ) : null}
+          <div className="summary-kv payment-now-emphasis" style={{ alignItems: 'center' }}>
+            <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="Edit Payment(now)"
+                onClick={() => {
                   setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
                   setShowEditPaymentNow(true);
-                }
-              }}
-              style={{
-                color: 'var(--ui-primary-text, var(--text))',
-                fontWeight: 700,
-                cursor: 'pointer',
-                border: 'none',
-                background: 'none',
-                padding: 0,
-                WebkitTapHighlightColor: 'transparent'
-              }}
-            >
-              Payment (now)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
+                    setShowEditPaymentNow(true);
+                  }
+                }}
+                style={{
+                  color: 'var(--ui-primary-text, var(--text))',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: 'none',
+                  padding: 0,
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+              >
+                Payment (now)
+              </span>
+              <button
+                type="button"
+                className="info-icon"
+                aria-label="Future payment breakdown"
+                onClick={() => setShowAfterGraceBreakdown(true)}
+              >
+                i
+              </button>
             </span>
-            <button
-              type="button"
-              className="info-icon"
-              aria-label="Future payment breakdown"
-              onClick={() => setShowAfterGraceBreakdown(true)}
-            >
-              i
-            </button>
-          </span>
-          <span className="v" style={{ color: 'var(--red)' }}>
-            {summary.totalMonthlyNow > 0 ? (
-              <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
-            ) : (
-              '—'
-            )}
-          </span>
-        </div>
+            <span className="v" style={{ color: 'var(--red)' }}>
+              {summary.totalMonthlyNow > 0 ? (
+                <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
+              ) : (
+                '—'
+              )}
+            </span>
+          </div>
         </div>
       </div>
 

@@ -400,23 +400,26 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
       <p className="section-title page-title" style={{ marginTop: 4 }}>
         {view === 'category' ? 'Spending distribution' : view === 'card' ? 'Spending by card' : 'Rewards overview'}
       </p>
-      <div className="card">
+      <div className="card" style={view === 'category' ? { position: 'relative' } : undefined}>
         {view === 'category' ? (
-          <div
-            className="spending-chart-wrap"
-            style={{ position: 'relative', width: '100%', height: 220 }}
-            onClick={(e) => {
-              if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
-            }}
-          >
-            <canvas ref={canvasRef} />
+          <>
+            <div
+              className="spending-chart-wrap"
+              style={{ position: 'relative', width: '100%', height: 220 }}
+              onClick={(e) => {
+                if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
+              }}
+            >
+              <canvas ref={canvasRef} />
+            </div>
             <button
               type="button"
               className="btn btn-secondary"
               style={{
                 position: 'absolute',
-                bottom: 6,
-                right: 6,
+                bottom: 10,
+                right: 10,
+                zIndex: 1,
                 fontSize: '0.85rem',
                 padding: '6px 12px',
               }}
@@ -427,7 +430,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
             >
               Legend
             </button>
-          </div>
+          </>
         ) : view === 'card' ? (
           <div>
             {byCard.map((c) => (
@@ -515,19 +518,37 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                   );
                 })}
                 {(() => {
-                  const { totalCashback, pointsApproxCents, milesApproxCents } = totalRewards;
-                  const cashbackCents = (totalCashback || 0) + (pointsApproxCents || 0);
-                  const travelCents = milesApproxCents || 0;
-                  const hasTotals = cashbackCents > 0 || travelCents > 0;
+                  const { totalCashback, totalPoints, totalMiles, pointsApproxCents } = totalRewards;
+                  const hasTotals =
+                    (totalCashback || 0) > 0 || (totalPoints || 0) > 0 || (totalMiles || 0) > 0;
                   if (!hasTotals) return null;
+                  const lineStyle = {
+                    fontSize: '0.95rem' as const,
+                    color: 'var(--fg, inherit)' as const,
+                    fontWeight: 500 as const,
+                    marginTop: 4,
+                  };
                   return (
-                    <div style={{ paddingTop: 12, marginTop: 8 }}>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 6 }}>Total current</div>
-                      <div style={{ fontSize: '0.95rem', color: 'var(--fg, inherit)', fontWeight: 500 }}>
-                        {cashbackCents > 0 && <span>{formatCents(cashbackCents)} cashback</span>}
-                        {cashbackCents > 0 && travelCents > 0 && ' · '}
-                        {travelCents > 0 && <span>{formatCents(travelCents)} travel value</span>}
-                      </div>
+                    <div style={{ paddingTop: 12, marginTop: 8, borderTop: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>Total current</div>
+                      {(totalCashback || 0) > 0 ? (
+                        <div style={lineStyle}>
+                          <span style={{ color: 'var(--green)' }}>{formatCents(totalCashback)}</span> cash back
+                        </div>
+                      ) : null}
+                      {(totalPoints || 0) > 0 ? (
+                        <div style={lineStyle}>
+                          <span style={{ color: 'var(--green)' }}>{totalPoints.toLocaleString()}</span> points
+                          {pointsApproxCents != null && pointsApproxCents > 0 ? (
+                            <span style={{ color: 'var(--muted)', fontWeight: 400 }}> (~{formatCents(pointsApproxCents)})</span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {(totalMiles || 0) > 0 ? (
+                        <div style={lineStyle}>
+                          <span style={{ color: 'var(--green)' }}>{totalMiles.toLocaleString()}</span> miles
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}

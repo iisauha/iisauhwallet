@@ -394,7 +394,7 @@ export function SubTrackerPage() {
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+                    style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem' }}
                     onClick={() => setCompletedEditor({ mode: 'edit', id: b.id })}
                   >
                     Edit
@@ -551,11 +551,23 @@ export function SubTrackerPage() {
                 </div>
               </div>
             ) : null}
-            <div className="btn-row" style={{ marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
+            <div
+              className="btn-row"
+              style={{
+                marginTop: 10,
+                display: 'flex',
+                flexWrap: 'nowrap',
+                gap: 10,
+                alignItems: 'center',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                paddingBottom: 2,
+              }}
+            >
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+                style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem', flexShrink: 0 }}
                 onClick={() => {
                   // Open edit modal with this entry's values.
                   const ref = e.cardRef;
@@ -591,15 +603,15 @@ export function SubTrackerPage() {
               <button
                 type="button"
                 className="btn btn-danger"
-                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+                style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem', flexShrink: 0 }}
                 onClick={() => setConfirmDelete({ kind: 'entry', entryId: e.id, label: name })}
               >
                 Delete
               </button>
               <button
                 type="button"
-                className="btn btn-secondary"
-                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
+                className="btn btn-complete-green"
+                style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem', flexShrink: 0 }}
                 onClick={() => {
                   const achievedTier = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents).pop() || tiers[tiers.length - 1];
                   if (!achievedTier) return;

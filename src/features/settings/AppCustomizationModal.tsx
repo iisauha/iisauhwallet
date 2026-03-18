@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
 import { useAdvancedUIColors } from '../../theme/AdvancedUIColorsContext';
-import { normalizeHex } from '../../theme/themeUtils';
 import type { AdvancedUIColors } from '../../state/storage';
 
 const FONT_FAMILY_OPTIONS = [
@@ -27,63 +25,43 @@ const FONT_SCALE_OPTIONS = [
   { value: 1.06, label: 'Large' },
 ];
 
-const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helper: string }[] = [
-  { key: 'titleText', label: 'Title text', helper: 'Page titles and strong headings. Do not use green/red here.' },
-  { key: 'primaryText', label: 'Primary text', helper: 'Regular text inside cards and rows.' },
+const COLOR_SWATCH_STYLE = {
+  width: 44,
+  height: 44,
+  padding: 2,
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  cursor: 'pointer' as const,
+  flexShrink: 0 as const,
+};
+
+const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
+  { key: 'titleText', label: 'Title text' },
+  { key: 'primaryText', label: 'Primary text' },
 ];
 
-const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helper: string }[] = [
-  { key: 'cardBg', label: 'Card background', helper: 'Only changes cards.' },
-  { key: 'surfaceSecondary', label: 'Padding / secondary surface blocks', helper: 'Only changes summary and secondary blocks.' },
-  { key: 'sectionBg', label: 'Section background', helper: 'Only changes section headers.' },
-  { key: 'modalBg', label: 'Popup card background', helper: 'Background of modal/popup cards.' },
-  { key: 'tabBarBg', label: 'Bottom Tab Bar background', helper: 'The navigation bar at the bottom (Spending, Recurring, etc.).' },
-  { key: 'border', label: 'Border color', helper: 'Only changes borders.' },
+const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
+  { key: 'cardBg', label: 'Card background' },
+  { key: 'surfaceSecondary', label: 'Padding / secondary surface blocks' },
+  { key: 'sectionBg', label: 'Section background' },
+  { key: 'modalBg', label: 'Popup card background' },
+  { key: 'tabBarBg', label: 'Bottom Tab Bar background' },
+  { key: 'border', label: 'Border color' },
+  { key: 'outlineButton', label: 'Outline buttons (text + border)' },
 ];
 
-function ColorCustomize({
-  value,
-  onChange,
-  inputValue,
-  onInputChange,
-}: {
-  value: string;
-  onChange: (hex: string) => void;
-  inputValue: string;
-  onInputChange: (v: string) => void;
-}) {
+function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (hex: string) => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => {
-          const hex = e.target.value;
-          onChange(hex);
-          onInputChange(hex);
-        }}
-        style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
-      />
-      <input
-        type="text"
-        value={inputValue}
-        onChange={(e) => onInputChange(e.target.value)}
-        onBlur={() => {
-          const normalized = normalizeHex(inputValue);
-          if (normalized) onChange(normalized);
-        }}
-        placeholder="#000000"
-        style={{
-          flex: 1,
-          minWidth: 100,
-          padding: '8px 12px',
-          borderRadius: 8,
-          border: '1px solid var(--border)',
-          background: 'var(--bg)',
-          color: 'var(--text)',
-          fontSize: '0.9rem',
-        }}
-      />
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+      }}
+    >
+      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>{label}</span>
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={COLOR_SWATCH_STYLE} aria-label={label} />
     </div>
   );
 }
@@ -91,56 +69,18 @@ function ColorCustomize({
 function TextColorsSection() {
   const ctx = useAdvancedUIColors();
   if (!ctx) return null;
-  const { colors, setColor, clearColor } = ctx;
+  const { colors, setColor } = ctx;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {TEXT_COLOR_OPTIONS.map(({ key, label, helper }) => {
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {TEXT_COLOR_OPTIONS.map(({ key, label }) => {
         const value = colors[key] ?? '';
         return (
-          <div key={key}>
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 2px 0' }}>
-              {label}
-            </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
-              {helper}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <input
-                type="color"
-                value={value || '#f1f5f9'}
-                onChange={(e) => setColor(key, e.target.value)}
-                style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
-                aria-label={label}
-              />
-              <input
-                type="text"
-                key={`${key}-${value}`}
-                defaultValue={value}
-                onBlur={(e) => {
-                  const v = e.target.value.trim();
-                  const n = normalizeHex(v);
-                  if (n) setColor(key, n);
-                  else if (v === '') clearColor(key);
-                }}
-                placeholder="#f1f5f9"
-                style={{
-                  flex: 1,
-                  minWidth: 100,
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  fontSize: '0.9rem',
-                }}
-              />
-              {value ? (
-                <button type="button" className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => clearColor(key)}>
-                  Clear
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <ColorRow
+            key={key}
+            label={label}
+            value={value || '#f1f5f9'}
+            onChange={(hex) => setColor(key, hex)}
+          />
         );
       })}
     </div>
@@ -150,56 +90,19 @@ function TextColorsSection() {
 function SurfaceColorsSection() {
   const ctx = useAdvancedUIColors();
   if (!ctx) return null;
-  const { colors, setColor, clearColor } = ctx;
+  const { colors, setColor } = ctx;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {SURFACE_COLOR_OPTIONS.map(({ key, label, helper }) => {
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {SURFACE_COLOR_OPTIONS.map(({ key, label }) => {
         const value = colors[key] ?? '';
+        const pickerFallback = key === 'outlineButton' ? '#64748b' : '#1e293b';
         return (
-          <div key={key}>
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 2px 0' }}>
-              {label}
-            </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
-              {helper}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <input
-                type="color"
-                value={value || '#1e293b'}
-                onChange={(e) => setColor(key, e.target.value)}
-                style={{ width: 44, height: 44, padding: 2, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
-                aria-label={label}
-              />
-              <input
-                type="text"
-                key={`${key}-${value}`}
-                defaultValue={value}
-                onBlur={(e) => {
-                  const v = e.target.value.trim();
-                  const n = normalizeHex(v);
-                  if (n) setColor(key, n);
-                  else if (v === '') clearColor(key);
-                }}
-                placeholder="#000000"
-                style={{
-                  flex: 1,
-                  minWidth: 100,
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  fontSize: '0.9rem',
-                }}
-              />
-              {value ? (
-                <button type="button" className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={() => clearColor(key)}>
-                  Clear
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <ColorRow
+            key={key}
+            label={label}
+            value={value || pickerFallback}
+            onChange={(hex) => setColor(key, hex)}
+          />
         );
       })}
     </div>
@@ -209,15 +112,6 @@ function SurfaceColorsSection() {
 export function AppCustomizationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { themeColor, setThemeColor, accentColor, setAccentColor } = useTheme();
   const { fontFamily, fontScale, setFontFamily, setFontScale } = useAppearance();
-  const [themeHexInput, setThemeHexInput] = useState(themeColor);
-  const [accentHexInput, setAccentHexInput] = useState(accentColor);
-
-  useEffect(() => {
-    setThemeHexInput(themeColor);
-  }, [themeColor]);
-  useEffect(() => {
-    setAccentHexInput(accentColor);
-  }, [accentColor]);
 
   if (!open) return null;
 
@@ -226,65 +120,24 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
       <div className="modal modal-animate" onClick={(e) => e.stopPropagation()}>
         <h3>App Customization</h3>
 
-        <p className="section-title" style={{ marginTop: 16, marginBottom: 8 }}>Colors</p>
+        <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>
+          Colors
+        </p>
 
-        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
-          App background
-        </p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
-          Only changes the main page background.
-        </p>
-        <div style={{ marginBottom: 20 }}>
-          <ColorCustomize
-            value={themeColor}
-            onChange={(hex) => {
-              setThemeColor(hex);
-              setThemeHexInput(hex);
-            }}
-            inputValue={themeHexInput}
-            onInputChange={(v) => {
-              setThemeHexInput(v);
-              const n = normalizeHex(v);
-              if (n) setThemeColor(n);
-            }}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+          <ColorRow label="App background" value={themeColor} onChange={setThemeColor} />
+          <ColorRow label="Accent color" value={accentColor} onChange={setAccentColor} />
         </div>
 
-        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
-          Accent color
-        </p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
-          Buttons, active tabs, highlights, icons.
+        <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>
+          Text colors
         </p>
         <div style={{ marginBottom: 20 }}>
-          <ColorCustomize
-            value={accentColor}
-            onChange={(hex) => {
-              setAccentColor(hex);
-              setAccentHexInput(hex);
-            }}
-            inputValue={accentHexInput}
-            onInputChange={(v) => {
-              setAccentHexInput(v);
-              const n = normalizeHex(v);
-              if (n) setAccentColor(n);
-            }}
-          />
-        </div>
-
-        <p className="section-title" style={{ marginTop: 16, marginBottom: 8 }}>Text colors</p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 10 }}>
-          Title = section titles and headings; Primary = regular text. Leave empty for defaults. Green/red stay for amounts only.
-        </p>
-        <div style={{ marginBottom: 24 }}>
           <TextColorsSection />
         </div>
 
-        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 4 }}>
+        <p className="section-title" style={{ marginTop: 8, marginBottom: 10 }}>
           Surface colors / advanced
-        </p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 10 }}>
-          Each control affects one UI surface only. Leave empty to use defaults.
         </p>
         <div style={{ marginBottom: 24 }}>
           <SurfaceColorsSection />
@@ -292,7 +145,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
 
         <p className="section-title" style={{ marginTop: 8 }}>Typography</p>
 
-        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
+        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 12, marginBottom: 8 }}>
           Font family
         </p>
         <div style={{ marginBottom: 16 }}>
@@ -318,7 +171,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
           </select>
         </div>
 
-        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
+        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 8 }}>
           Font size
         </p>
         <div style={{ marginBottom: 8 }}>
@@ -346,9 +199,6 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
               );
             })}
           </div>
-          <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-            Keeps layout safe on mobile. Income/expense colors stay green/red.
-          </p>
         </div>
 
         <div className="btn-row" style={{ marginTop: 20 }}>

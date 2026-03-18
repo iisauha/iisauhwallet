@@ -159,7 +159,7 @@ export function RecurringPage() {
                 ) : (
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary btn-outline-neutral"
                     onClick={() => actions.updateRecurringItem(r.id, { isActive: false })}
                   >
                     Pause

@@ -723,6 +723,13 @@ export function InvestingPage() {
     inv: { type: string; acc: InvestingAccount };
   } | null>(null);
 
+  const [balanceModal, setBalanceModal] = useState<{
+    acc: InvestingAccount;
+    amount: string;
+    useSet: boolean;
+    hysaInterest: string;
+  } | null>(null);
+
   useEffect(() => {
     if (detected?.launchFlow?.flow === 'transfer') {
       setTransferOpen(true);
@@ -924,6 +931,71 @@ export function InvestingPage() {
     if (next !== investing) persist(next);
   }
 
+  function openInvestingBalanceModal(acc: InvestingAccount) {
+    const state = accrueHysaAccounts(investing);
+    if (state !== investing) persist(state);
+    const freshAcc = state.accounts.find((x) => x.id === acc.id);
+    if (!freshAcc) return;
+    setBalanceModal({
+      acc: freshAcc,
+      amount: '',
+      useSet: false,
+      hysaInterest: '',
+    });
+  }
+
+  function submitInvestingBalanceModal() {
+    if (!balanceModal) return;
+    const state = accrueHysaAccounts(investing);
+    const raw = state.accounts.find((x) => x.id === balanceModal.acc.id);
+    if (!raw) {
+      setBalanceModal(null);
+      return;
+    }
+    const { amount, useSet, hysaInterest } = balanceModal;
+    const cents = parseCents(amount);
+    const now = Date.now();
+    if (useSet) {
+      if (cents < 0) return;
+      const intCents = hysaInterest.trim() !== '' ? parseCents(hysaInterest) : null;
+      const accounts = state.accounts.map((a) => {
+        if (a.id !== raw.id) return a;
+        if (a.type === 'hysa') {
+          let next: HysaAccount = {
+            ...(recordHysaBalanceEvent(a as HysaAccount, now, cents) as HysaAccount),
+            lastAccruedAt: now,
+          };
+          if (intCents != null && intCents >= 0) {
+            next = {
+              ...next,
+              manualInterestBaselineThisMonth: intCents,
+              manualInterestBaselineSetAt: now,
+              manualInterestBaselineMonthKey: getMonthKeyFromTimestamp(now),
+            };
+          }
+          return next;
+        }
+        return { ...a, balanceCents: cents };
+      });
+      persist({ ...state, accounts });
+    } else {
+      if (cents <= 0) return;
+      const newBal = (raw.balanceCents || 0) + cents;
+      const accounts = state.accounts.map((a) => {
+        if (a.id !== raw.id) return a;
+        if (a.type === 'hysa') {
+          return {
+            ...(recordHysaBalanceEvent(a as HysaAccount, now, newBal) as HysaAccount),
+            lastAccruedAt: now,
+          };
+        }
+        return { ...a, balanceCents: newBal };
+      });
+      persist({ ...state, accounts });
+    }
+    setBalanceModal(null);
+  }
+
   function addAccount(type: 'hysa' | 'roth' | 'k401' | 'general') {
     const name = window.prompt('Account name?');
     if (!name) return;
@@ -1015,56 +1087,6 @@ export function InvestingPage() {
       balanceCents: 0
     } as any;
     persist({ ...investing, accounts: [...investing.accounts, base] });
-  }
-
-  function setBalance(acc: InvestingAccount) {
-    if (acc.type === 'hysa') accrueNow();
-    const val = window.prompt('Set balance ($)', (acc.balanceCents / 100).toFixed(2));
-    if (val == null) return;
-    const cents = parseCents(val);
-    if (cents < 0) return;
-    const now = Date.now();
-    const accounts = investing.accounts.map((a) => {
-      if (a.id !== acc.id) return a;
-      if (a.type === 'hysa') {
-        const updated = recordHysaBalanceEvent(a as HysaAccount, now, cents);
-        let next = { ...updated, lastAccruedAt: now };
-        const interestVal = window.prompt('Interest accrued this month so far ($, optional - leave blank to keep current)', '');
-        if (interestVal != null && interestVal.trim() !== '') {
-          const interestCents = parseCents(interestVal);
-          if (interestCents >= 0) {
-            next = {
-              ...next,
-              manualInterestBaselineThisMonth: interestCents,
-              manualInterestBaselineSetAt: now,
-              manualInterestBaselineMonthKey: getMonthKeyFromTimestamp(now)
-            };
-          }
-        }
-        return next;
-      }
-      return { ...a, balanceCents: cents };
-    });
-    persist({ ...investing, accounts });
-  }
-
-  function addBalance(acc: InvestingAccount) {
-    if (acc.type === 'hysa') accrueNow();
-    const val = window.prompt('Add amount ($)', '0.00');
-    if (val == null) return;
-    const cents = parseCents(val);
-    if (cents <= 0) return;
-    const now = Date.now();
-    const newBalanceCents = (acc.balanceCents || 0) + cents;
-    const accounts = investing.accounts.map((a) => {
-      if (a.id !== acc.id) return a;
-      if (a.type === 'hysa') {
-        const updated = recordHysaBalanceEvent(a as HysaAccount, now, newBalanceCents);
-        return { ...updated, lastAccruedAt: now };
-      }
-      return { ...a, balanceCents: newBalanceCents };
-    });
-    persist({ ...investing, accounts });
   }
 
   function deleteAccount(acc: InvestingAccount) {
@@ -1577,19 +1599,8 @@ export function InvestingPage() {
                     })()
                   ) : null}
                   <div className="btn-row" style={{ marginTop: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setBalance(a)}
-                    >
-                      Set
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => addBalance(a)}
-                    >
-                      Add
+                    <button type="button" className="btn btn-secondary" onClick={() => openInvestingBalanceModal(a)}>
+                      Add / Set
                     </button>
                     {a.type === 'hysa' ? (
                       <>
@@ -1637,6 +1648,52 @@ export function InvestingPage() {
   return (
     <div className="tab-panel active" id="investingContent">
       <p className="section-title page-title">Investing</p>
+
+      <Modal open={balanceModal != null} title="Balance" onClose={() => setBalanceModal(null)}>
+        {balanceModal ? (
+          <>
+            <div className="field">
+              <label>Amount ($)</label>
+              <input
+                className="ll-control"
+                value={balanceModal.amount}
+                onChange={(e) => setBalanceModal({ ...balanceModal, amount: e.target.value })}
+                inputMode="decimal"
+                placeholder={balanceModal.useSet ? (balanceModal.acc.balanceCents / 100).toFixed(2) : '0.00'}
+              />
+            </div>
+            <div className="toggle-row">
+              <input
+                type="checkbox"
+                id="inv-balance-use-set"
+                checked={balanceModal.useSet}
+                onChange={(e) => setBalanceModal({ ...balanceModal, useSet: e.target.checked })}
+              />
+              <label htmlFor="inv-balance-use-set">Set (replace balance)</label>
+            </div>
+            {balanceModal.acc.type === 'hysa' && balanceModal.useSet ? (
+              <div className="field">
+                <label>Interest accrued this month ($, optional)</label>
+                <input
+                  className="ll-control"
+                  value={balanceModal.hysaInterest}
+                  onChange={(e) => setBalanceModal({ ...balanceModal, hysaInterest: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="Leave blank to keep current"
+                />
+              </div>
+            ) : null}
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => setBalanceModal(null)}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={submitInvestingBalanceModal}>
+                OK
+              </button>
+            </div>
+          </>
+        ) : null}
+      </Modal>
 
       {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
       {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}

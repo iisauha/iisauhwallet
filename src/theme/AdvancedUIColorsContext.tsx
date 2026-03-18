@@ -22,6 +22,7 @@ const UI_VAR_KEYS: Record<keyof AdvancedUIColors, string> = {
   border: '--ui-border',
   titleText: '--ui-title-text',
   primaryText: '--ui-primary-text',
+  outlineButton: '--ui-outline-btn',
 };
 
 type AdvancedUIColorsContextValue = {

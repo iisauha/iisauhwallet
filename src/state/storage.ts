@@ -176,6 +176,8 @@ export type AdvancedUIColors = Partial<{
   titleText: string;
   /** Primary text = regular text in cards/rows */
   primaryText: string;
+  /** Outline buttons: same color for text + border (no fill). Pause / special buttons excluded in CSS. */
+  outlineButton: string;
 }>;
 
 export function loadAdvancedUIColors(): AdvancedUIColors {

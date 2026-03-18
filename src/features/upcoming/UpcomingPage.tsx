@@ -497,28 +497,30 @@ export function UpcomingPage() {
       ) : null}
 
       <div className="summary" style={{ marginTop: 24 }}>
-        <div className="summary-kv">
-          <span className="k">Final Net Cash</span>
-          <span className="v pos">{formatCents(displayedFinalNetCashCents)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected income in window</span>
-          <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
-        </div>
-        <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected costs in window</span>
-          <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
-        </div>
-        <div className="summary-kv amount-remaining-emphasis">
-          <span className="k">Amount remaining</span>
-          <span className={amountRemainingCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(amountRemainingCents)}</span>
-        </div>
-        <div style={{ marginTop: 10 }}>
-          {amountRemainingCents > 0 ? (
-            <span className="upcoming-status-ok">All expenses covered</span>
-          ) : (
-            <span className="upcoming-status-warn">May require additional funds</span>
-          )}
+        <div className="summary-compact">
+          <div className="summary-kv">
+            <span className="k">Final Net Cash</span>
+            <span className="v pos">{formatCents(displayedFinalNetCashCents)}</span>
+          </div>
+          <div className="summary-kv">
+            <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected income in window</span>
+            <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
+          </div>
+          <div className="summary-kv">
+            <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected costs in window</span>
+            <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
+          </div>
+          <div className="summary-kv amount-remaining-emphasis">
+            <span className="k">Amount remaining</span>
+            <span className={amountRemainingCents >= 0 ? 'v pos' : 'v neg'}>{formatCents(amountRemainingCents)}</span>
+          </div>
+          <div>
+            {amountRemainingCents > 0 ? (
+              <span className="upcoming-status-ok">All expenses covered</span>
+            ) : (
+              <span className="upcoming-status-warn">May require additional funds</span>
+            )}
+          </div>
         </div>
       </div>
 
