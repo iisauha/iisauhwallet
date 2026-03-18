@@ -47,7 +47,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   const [notesInput, setNotesInput] = useState('');
   const [balanceInput, setBalanceInput] = useState('');
   const [rateInput, setRateInput] = useState('');
-  const [showPaymentActions, setShowPaymentActions] = useState(true);
+  const [showPaymentActions, setShowPaymentActions] = useState(() => loadPublicLoanShowPaymentActions());
 
   useEffect(() => {
     const s = loadPublicLoanSummary();

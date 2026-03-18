@@ -1359,7 +1359,7 @@ export function LoansPage() {
                 }
               }}
               style={{
-                color: 'var(--ui-muted, var(--muted))',
+                color: 'var(--ui-primary-text, var(--text))',
                 fontWeight: 700,
                 cursor: 'pointer',
                 border: 'none',

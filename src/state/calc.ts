@@ -163,16 +163,29 @@ export type RecurringIncomeOccurrence = {
   recurringId: string;
 };
 
+/** Filters for Upcoming: past-due stays visible until pending move or dismiss. */
+export type UpcomingRecurringFilterOptions = {
+  pendingIn?: PendingInboundItem[];
+  pendingOut?: PendingOutboundItem[];
+  dismissedKeys?: Set<string>;
+  /** Past occurrences with dateKey >= today - maxPastDays; default 90 */
+  maxPastDays?: number;
+};
+
 export function getRecurringOccurrencesInWindow(
   data: LedgerData,
   windowDays: number,
   loanAmountMap?: Record<string, number | null>,
-  totalVisiblePaymentNowCents?: number | null
+  totalVisiblePaymentNowCents?: number | null,
+  filterOpts?: UpcomingRecurringFilterOptions
 ): RecurringExpenseOccurrence[] {
   const today = new Date();
-  const todayKey = toLocalDateKey(today);
   const endDate = addDaysLocal(today, windowDays);
   const endKey = toLocalDateKey(endDate);
+  const maxPastDays = filterOpts?.maxPastDays ?? 90;
+  const pastCutoffKey = toLocalDateKey(addDaysLocal(today, -maxPastDays));
+  const dismissed = filterOpts?.dismissedKeys ?? new Set();
+  const pendingOut = filterOpts?.pendingOut ?? [];
   const result: RecurringExpenseOccurrence[] = [];
   if (!Array.isArray((data as any).recurring)) return result;
   (data as any).recurring.forEach((r: any) => {
@@ -228,28 +241,40 @@ export function getRecurringOccurrencesInWindow(
         fullAmountCents: fullAmount
       });
     }
-    while (current < today && (!end || current <= end)) {
+    const rid = r.id || '';
+    let guard = 0;
+    while (guard < 5000) {
+      guard++;
+      if (end && current > end) break;
       const dateKey = toLocalDateKey(current);
-      const regKey = (r.id || '') + ':' + dateKey;
-      if (!r.autoPay && !(data as any).recurringPosted?.[regKey] && dateKey < todayKey) pushOccurrence(dateKey);
-      advance();
-    }
-    while (current <= endDate && (!end || current <= end)) {
-      const dateKey = toLocalDateKey(current);
-      const regKey = (r.id || '') + ':' + dateKey;
-      const handled = !!(data as any).recurringPosted?.[regKey];
-      if (!handled && dateKey >= todayKey && dateKey <= endKey) pushOccurrence(dateKey);
+      if (dateKey > endKey) break;
+      if (dateKey >= pastCutoffKey) {
+        const regKey = rid + ':' + dateKey;
+        const posted = !!(data as any).recurringPosted?.[regKey];
+        const isDismissed = dismissed.has(`exp:${rid}:${dateKey}`);
+        const hasPending = pendingOut.some(
+          (p) => p.recurringId === rid && p.recurringDateKey === dateKey
+        );
+        if (!posted && !isDismissed && !hasPending) pushOccurrence(dateKey);
+      }
       advance();
     }
   });
   return result;
 }
 
-export function getRecurringIncomeOccurrencesInWindow(data: LedgerData, windowDays: number): RecurringIncomeOccurrence[] {
+export function getRecurringIncomeOccurrencesInWindow(
+  data: LedgerData,
+  windowDays: number,
+  filterOpts?: UpcomingRecurringFilterOptions
+): RecurringIncomeOccurrence[] {
   const today = new Date();
-  const todayKey = toLocalDateKey(today);
   const endDate = addDaysLocal(today, windowDays);
   const endKey = toLocalDateKey(endDate);
+  const maxPastDays = filterOpts?.maxPastDays ?? 90;
+  const pastCutoffKey = toLocalDateKey(addDaysLocal(today, -maxPastDays));
+  const dismissed = filterOpts?.dismissedKeys ?? new Set();
+  const pendingIn = filterOpts?.pendingIn ?? [];
   const result: RecurringIncomeOccurrence[] = [];
   if (!Array.isArray((data as any).recurring)) return result;
   (data as any).recurring.forEach((r: any) => {
@@ -288,17 +313,22 @@ export function getRecurringIncomeOccurrencesInWindow(data: LedgerData, windowDa
         recurringId: r.id
       });
     }
-    while (current < today && (!end || current <= end)) {
+    const rid = r.id || '';
+    let guard = 0;
+    while (guard < 5000) {
+      guard++;
+      if (end && current > end) break;
       const dateKey = toLocalDateKey(current);
-      const regKey = (r.id || '') + ':' + dateKey;
-      if (!r.autoPay && !(data as any).recurringPosted?.[regKey] && dateKey < todayKey) pushIncome(dateKey);
-      advance();
-    }
-    while (current <= endDate && (!end || current <= end)) {
-      const dateKey = toLocalDateKey(current);
-      const regKey = (r.id || '') + ':' + dateKey;
-      const handled = !!(data as any).recurringPosted?.[regKey];
-      if (!handled && dateKey >= todayKey && dateKey <= endKey) pushIncome(dateKey);
+      if (dateKey > endKey) break;
+      if (dateKey >= pastCutoffKey) {
+        const regKey = rid + ':' + dateKey;
+        const posted = !!(data as any).recurringPosted?.[regKey];
+        const isDismissed = dismissed.has(`inc:${rid}:${dateKey}`);
+        const hasPending = pendingIn.some(
+          (p) => p.recurringId === rid && p.recurringDateKey === dateKey
+        );
+        if (!posted && !isDismissed && !hasPending) pushIncome(dateKey);
+      }
       advance();
     }
   });

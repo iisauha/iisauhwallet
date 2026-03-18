@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
@@ -27,7 +27,7 @@ function addMonths(d: Date, months: number) {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
-export function SpendingPage() {
+export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const detected = useDetectedActivityOptional();
@@ -252,6 +252,14 @@ export function SpendingPage() {
     );
   }, [byCategory, view]);
 
+  useLayoutEffect(() => {
+    if (!tabVisible || !canvasRef.current) return;
+    const ch = (canvasRef.current as { __chart?: { resize?: () => void } }).__chart;
+    if (ch?.resize) {
+      requestAnimationFrame(() => ch.resize!());
+    }
+  }, [tabVisible]);
+
   return (
     <div className="tab-panel active" id="spendingContent">
       <div
@@ -364,7 +372,7 @@ export function SpendingPage() {
                 if (cashbackCents <= 0 && travelCents <= 0) return '—';
                 const labelStyle = {
                   fontSize: '0.8rem',
-                  color: 'var(--ui-muted, var(--muted))',
+                  color: 'var(--ui-primary-text, var(--text))',
                   fontWeight: 400,
                 } as const;
                 return (
@@ -407,8 +415,8 @@ export function SpendingPage() {
               className="btn btn-secondary"
               style={{
                 position: 'absolute',
-                bottom: 10,
-                right: 10,
+                bottom: 6,
+                right: 6,
                 fontSize: '0.85rem',
                 padding: '6px 12px',
               }}
@@ -534,23 +542,30 @@ export function SpendingPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {byCategory.length === 0 ? (
               <p style={{ color: 'var(--muted)', margin: 0 }}>No spending in this period.</p>
-            ) : (
-              byCategory.map((c) => (
-                <div
-                  className="row"
-                  key={c.categoryId}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: 8,
-                    background: getCategoryColor(c.categoryId),
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
-                  <span className="amount">{formatCents(c.amountCents)}</span>
-                </div>
-              ))
-            )}
+            ) : (() => {
+              const totalCents = byCategory.reduce((s, c) => s + c.amountCents, 0);
+              return byCategory.map((c) => {
+                const pct = totalCents > 0 ? Math.round((c.amountCents / totalCents) * 100) : 0;
+                return (
+                  <div
+                    className="row"
+                    key={c.categoryId}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      background: getCategoryColor(c.categoryId),
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{pct}%</span>
+                      <span className="amount">{formatCents(c.amountCents)}</span>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </Modal>
       ) : null}

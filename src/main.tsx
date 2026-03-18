@@ -37,7 +37,6 @@ const uiVarMap: [key: string, varName: string][] = [
   ['modalBg', '--ui-modal-bg'],
   ['tabBarBg', '--ui-tabbar-bg'],
   ['border', '--ui-border'],
-  ['muted', '--ui-muted'],
 ];
 uiVarMap.forEach(([key, varName]) => {
   const v = uiColors[key as keyof typeof uiColors];

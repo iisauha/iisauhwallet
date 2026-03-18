@@ -20,7 +20,6 @@ const UI_VAR_KEYS: Record<keyof AdvancedUIColors, string> = {
   modalBg: '--ui-modal-bg',
   tabBarBg: '--ui-tabbar-bg',
   border: '--ui-border',
-  muted: '--ui-muted',
   titleText: '--ui-title-text',
   primaryText: '--ui-primary-text',
 };

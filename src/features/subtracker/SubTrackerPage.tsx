@@ -511,11 +511,11 @@ export function SubTrackerPage() {
               </span>
             </div>
             <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
-              <span style={{ color: 'var(--ui-muted, var(--muted))' }}>Required spend: </span>
+              <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>Required spend: </span>
               <span>{nextTarget ? formatCents(nextTarget) : '—'}</span>
             </div>
             <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
-              <span style={{ color: 'var(--ui-muted, var(--muted))' }}>Current spend: </span>
+              <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>Current spend: </span>
               <span>{formatCents(spendCents)}{nextTarget ? ` / ${formatCents(nextTarget)}` : ''}</span>
             </div>
             {ratio != null ? (
@@ -580,6 +580,8 @@ export function SubTrackerPage() {
                   const firstTier = (e.tiers || [])[0];
                   setTierTarget(firstTier ? (firstTier.spendTargetCents / 100).toFixed(2) : '');
                   setTierReward(firstTier?.rewardText || '');
+                  const currentSpendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
+                  setSpentInput((currentSpendCents / 100).toFixed(2));
                   setEditorEntryId(e.id);
                   setEditorOpen(true);
                 }}
@@ -609,39 +611,6 @@ export function SubTrackerPage() {
                 }}
               >
                 Complete
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' }}
-                onClick={() => {
-                  const current = (e.spendCents || 0) / 100;
-                  const v = window.prompt(
-                    'Spent so far ($): enter new total to set, or +amount to add (e.g. +50)',
-                    current.toFixed(2)
-                  );
-                  if (v == null || !v.trim()) return;
-                  const trimmed = v.trim();
-                  if (trimmed.startsWith('+')) {
-                    const delta = parseCents(trimmed.slice(1));
-                    if (!(delta > 0)) return;
-                    const updated = entries.map((x) => {
-                      if (x.id !== e.id) return x;
-                      const prev = typeof x.spendCents === 'number' ? x.spendCents : 0;
-                      return { ...x, spendCents: prev + delta, updatedAt: new Date().toISOString() };
-                    });
-                    persist({ version: 1, entries: updated });
-                  } else {
-                    const cents = parseCents(trimmed);
-                    if (!(cents >= 0)) return;
-                    const updated = entries.map((x) =>
-                      x.id === e.id ? { ...x, spendCents: cents, updatedAt: new Date().toISOString() } : x
-                    );
-                    persist({ version: 1, entries: updated });
-                  }
-                }}
-              >
-                Add/Set
               </button>
             </div>
             {requiredPace != null && currentPace != null ? (
@@ -794,7 +763,13 @@ export function SubTrackerPage() {
             value={spentInput}
             onChange={(ev) => setSpentInput(ev.target.value)}
             inputMode="decimal"
+            placeholder={editorEntryId ? 'e.g. 1500 or +50 to add' : '0'}
           />
+          {editorEntryId ? (
+            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', margin: '4px 0 0 0' }}>
+              Enter amount to set total, or +amount to add (e.g. +50).
+            </p>
+          ) : null}
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
@@ -830,8 +805,23 @@ export function SubTrackerPage() {
               const targetCents = parseCents(tierTarget);
               if (!(targetCents > 0)) return;
               const rewardText = (tierReward || '').trim() || 'Bonus';
-              const spentCents = parseCents(spentInput);
-              if (!(spentCents >= 0)) return;
+              let spentCents: number;
+              if (editorEntryId) {
+                const trimmed = (spentInput || '').trim();
+                const entry = entries.find((x) => x.id === editorEntryId);
+                const currentSpendCents = entry && typeof entry.spendCents === 'number' ? entry.spendCents : 0;
+                if (trimmed.startsWith('+')) {
+                  const delta = parseCents(trimmed.slice(1));
+                  if (!(delta > 0)) return;
+                  spentCents = currentSpendCents + delta;
+                } else {
+                  spentCents = parseCents(trimmed);
+                  if (!(spentCents >= 0)) return;
+                }
+              } else {
+                spentCents = parseCents(spentInput);
+                if (!(spentCents >= 0)) return;
+              }
               if (editorEntryId) {
                 // Editing top-level fields and first tier.
                 const updatedEntries = entries.map((x) => {

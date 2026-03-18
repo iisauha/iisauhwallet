@@ -65,7 +65,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
 
         {banks.length > 0 ? (
           <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-muted, var(--muted))', marginBottom: 8 }}>Bank / checking accounts</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Bank / checking accounts</p>
             {banks.map((b) => (
               <div key={b.id} style={{ marginBottom: 8 }}>
                 <label style={{ fontSize: '0.8rem', color: 'var(--muted)', display: 'block', marginBottom: 2 }}>
@@ -92,7 +92,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
 
         {cards.length > 0 ? (
           <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-muted, var(--muted))', marginBottom: 8 }}>Credit cards</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Credit cards</p>
             {cards.map((c) => (
               <div key={c.id} style={{ marginBottom: 8 }}>
                 <input
@@ -116,7 +116,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
 
         {accounts.length > 0 ? (
           <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-muted, var(--muted))', marginBottom: 8 }}>Investing accounts (HYSA, Roth IRA, etc.)</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Investing accounts (HYSA, Roth IRA, etc.)</p>
             {accounts.map((a) => (
               <div key={a.id} style={{ marginBottom: 8 }}>
                 <label style={{ fontSize: '0.8rem', color: 'var(--muted)', display: 'block', marginBottom: 2 }}>

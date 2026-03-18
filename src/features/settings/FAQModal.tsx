@@ -16,11 +16,11 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'How do I back up my data?',
-    a: 'Yes. Use Settings → Export JSON or Export Monthly Purchases CSV; Import JSON restores from a backup. Please reference the Security Policy.',
+    a: 'Use Settings → Export JSON or Export Monthly Purchases CSV; Import JSON restores from a backup. Please reference the Security Policy.',
   },
   {
     q: 'How does passcode setup work?',
-    a: 'Yes, you can set a passcode in Settings. Please reference the Security Policy.',
+    a: 'You can set a passcode in Settings. Please reference the Security Policy.',
   },
   {
     q: 'What is the recovery key?',
@@ -44,7 +44,7 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'How do I reset my passcode?',
-    a: 'Yes. From the lock screen tap "Forgot passcode?" or use Settings → Security & privacy → Reset passcode. Please reference the Security Policy.',
+    a: 'From the lock screen tap "Forgot passcode?" or use Settings → Security & privacy → Reset passcode. Please reference the Security Policy.',
   },
   {
     q: 'Does the app connect to my real bank automatically?',
@@ -86,6 +86,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
                 color: 'var(--ui-primary-text, var(--text))',
                 fontSize: '0.95rem',
                 fontWeight: 600,
+                fontFamily: 'var(--app-font-family)',
                 cursor: 'pointer',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -93,7 +94,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
               }}
             >
               {item.q}
-              <span style={{ fontSize: '1.2rem', color: 'var(--muted)' }}>{expandedIndex === i ? '−' : '+'}</span>
+              <span style={{ fontSize: '1.2rem', color: 'var(--ui-primary-text, var(--muted))' }}>{expandedIndex === i ? '−' : '+'}</span>
             </button>
             {expandedIndex === i && (
               <div
@@ -101,7 +102,8 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
                   padding: '0 16px 14px',
                   fontSize: '0.9rem',
                   lineHeight: 1.55,
-                  color: 'var(--ui-muted, var(--muted))',
+                  fontFamily: 'var(--app-font-family)',
+                  color: 'var(--ui-primary-text, var(--text))',
                 }}
               >
                 {item.a}

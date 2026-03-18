@@ -39,7 +39,6 @@ const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string; helpe
   { key: 'modalBg', label: 'Popup card background', helper: 'Background of modal/popup cards.' },
   { key: 'tabBarBg', label: 'Bottom Tab Bar background', helper: 'The navigation bar at the bottom (Spending, Recurring, etc.).' },
   { key: 'border', label: 'Border color', helper: 'Only changes borders.' },
-  { key: 'muted', label: 'General Text Color (Excluding Titles)', helper: 'Descriptors, subheaders, and body text. Also used for muted surfaces.' },
 ];
 
 function ColorCustomize({
@@ -102,7 +101,7 @@ function TextColorsSection() {
             <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 2px 0' }}>
               {label}
             </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
               {helper}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -161,7 +160,7 @@ function SurfaceColorsSection() {
             <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 2px 0' }}>
               {label}
             </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
               {helper}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -232,7 +231,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
         <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
           App background
         </p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
           Only changes the main page background.
         </p>
         <div style={{ marginBottom: 20 }}>
@@ -254,7 +253,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
         <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 2 }}>
           Accent color
         </p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
           Buttons, active tabs, highlights, icons.
         </p>
         <div style={{ marginBottom: 20 }}>
@@ -274,8 +273,8 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
         </div>
 
         <p className="section-title" style={{ marginTop: 16, marginBottom: 8 }}>Text colors</p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
-          Title = page headings; Primary = regular text. Use &quot;General Text Color&quot; below for descriptors and body text. Leave empty for defaults. Green/red stay for amounts only.
+        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 10 }}>
+          Title = section titles and headings; Primary = regular text. Leave empty for defaults. Green/red stay for amounts only.
         </p>
         <div style={{ marginBottom: 24 }}>
           <TextColorsSection />
@@ -284,7 +283,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
         <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 4 }}>
           Surface colors / advanced
         </p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 10 }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 10 }}>
           Each control affects one UI surface only. Leave empty to use defaults.
         </p>
         <div style={{ marginBottom: 24 }}>
@@ -347,7 +346,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
               );
             })}
           </div>
-          <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
             Keeps layout safe on mobile. Income/expense colors stay green/red.
           </p>
         </div>

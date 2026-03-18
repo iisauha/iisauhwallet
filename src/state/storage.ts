@@ -19,6 +19,7 @@ import {
   SUB_TRACKER_KEY,
   UI_DROPDOWN_STATE_KEY,
   UPCOMING_WINDOW_KEY,
+  UPCOMING_DISMISSED_OCCURRENCES_KEY,
   LOANS_KEY,
   BIRTHDATE_KEY,
   FEDERAL_REPAYMENT_CONFIG_KEY,
@@ -171,8 +172,6 @@ export type AdvancedUIColors = Partial<{
   modalBg: string;
   tabBarBg: string;
   border: string;
-  /** General text (excluding titles); also used for muted surfaces */
-  muted: string;
   /** Title text = page titles / strong headings */
   titleText: string;
   /** Primary text = regular text in cards/rows */
@@ -639,6 +638,31 @@ export function saveUpcomingWindowPreference(pref: { days: number }) {
     const merged = { ...loadUpcomingWindowPreference(), ...pref };
     localStorage.setItem(UPCOMING_WINDOW_KEY, JSON.stringify(merged));
   } catch (_) {}
+}
+
+/** Recurring expense occurrence hidden from Upcoming only. */
+export function loadUpcomingDismissedOccurrences(): Set<string> {
+  try {
+    const raw = localStorage.getItem(UPCOMING_DISMISSED_OCCURRENCES_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x) => typeof x === 'string'));
+  } catch (_) {
+    return new Set();
+  }
+}
+
+export function saveUpcomingDismissedOccurrences(keys: Set<string>) {
+  try {
+    localStorage.setItem(UPCOMING_DISMISSED_OCCURRENCES_KEY, JSON.stringify([...keys]));
+  } catch (_) {}
+}
+
+export function dismissUpcomingOccurrence(kind: 'exp' | 'inc', recurringId: string, dateKey: string) {
+  const set = loadUpcomingDismissedOccurrences();
+  set.add(`${kind}:${recurringId}:${dateKey}`);
+  saveUpcomingDismissedOccurrences(set);
 }
 
 export type LastAdjustmentsMap = Record<string, number>;

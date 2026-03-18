@@ -13,6 +13,8 @@ import {
   saveUpcomingWindowPreference,
   uid,
   loadInvesting,
+  loadUpcomingDismissedOccurrences,
+  dismissUpcomingOccurrence,
   type HysaAccount
 } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
@@ -37,6 +39,7 @@ export function UpcomingPage() {
   const [expectedCosts, setExpectedCosts] = useState(() => loadExpectedCosts());
   const [expectedIncome, setExpectedIncome] = useState(() => loadExpectedIncome());
   const [lastAdjustments, setLastAdjustments] = useState(() => loadLastAdjustments());
+  const [dismissedOccurrences, setDismissedOccurrences] = useState(() => loadUpcomingDismissedOccurrences());
   const [modal, setModal] = useState<
     | { type: 'none' }
     | {
@@ -65,6 +68,8 @@ export function UpcomingPage() {
       }
   >({ type: 'none' });
 
+  const today = todayKey();
+
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
 
   const loanPaymentMap = useMemo(() => {
@@ -80,11 +85,31 @@ export function UpcomingPage() {
     return getVisiblePaymentNowCents(derivedPrivate);
   }, [loanPaymentMap, data.recurring]);
 
-  const recurringCosts = useMemo(
-    () => getRecurringOccurrencesInWindow(data, windowDays, loanPaymentMap, totalVisiblePaymentNowCents),
-    [data, windowDays, loanPaymentMap, totalVisiblePaymentNowCents]
+  const recurringFilterOpts = useMemo(
+    () => ({
+      pendingIn: data.pendingIn || [],
+      pendingOut: data.pendingOut || [],
+      dismissedKeys: dismissedOccurrences,
+      maxPastDays: 90
+    }),
+    [data.pendingIn, data.pendingOut, dismissedOccurrences]
   );
-  const recurringIncome = useMemo(() => getRecurringIncomeOccurrencesInWindow(data, windowDays), [data, windowDays]);
+
+  const recurringCosts = useMemo(
+    () =>
+      getRecurringOccurrencesInWindow(
+        data,
+        windowDays,
+        loanPaymentMap,
+        totalVisiblePaymentNowCents,
+        recurringFilterOpts
+      ),
+    [data, windowDays, loanPaymentMap, totalVisiblePaymentNowCents, recurringFilterOpts]
+  );
+  const recurringIncome = useMemo(
+    () => getRecurringIncomeOccurrencesInWindow(data, windowDays, recurringFilterOpts),
+    [data, windowDays, recurringFilterOpts]
+  );
 
   const costsInWindow = useMemo(() => {
     return expectedCosts.filter((c) => (c.status === 'expected' || c.status == null) && c.expectedDate);
@@ -100,17 +125,26 @@ export function UpcomingPage() {
     };
     let total = 0;
     recurringCosts.forEach((o) => {
-      total += mid(o.minCents, o.maxCents, o.amountCents);
+      if ((o.dateKey || '') >= today) total += mid(o.minCents, o.maxCents, o.amountCents);
     });
     costsInWindow.forEach((c) => {
-      total += mid((c.minCents as any) ?? null, (c.maxCents as any) ?? null, c.amountCents || 0);
+      if ((c.expectedDate || '') >= today) {
+        total += mid((c.minCents as any) ?? null, (c.maxCents as any) ?? null, c.amountCents || 0);
+      }
     });
     return total;
-  }, [recurringCosts, costsInWindow]);
+  }, [recurringCosts, costsInWindow, today]);
 
   const totalExpectedIncomeCents = useMemo(() => {
-    return incomeInWindow.reduce((s, i) => s + (i.amountCents || 0), 0) + recurringIncome.reduce((s, i) => s + (i.amountCents || 0), 0);
-  }, [incomeInWindow, recurringIncome]);
+    let total = 0;
+    recurringIncome.forEach((i) => {
+      if ((i.expectedDate || '') >= today) total += i.amountCents || 0;
+    });
+    incomeInWindow.forEach((i) => {
+      if ((i.expectedDate || '') >= today) total += i.amountCents || 0;
+    });
+    return total;
+  }, [incomeInWindow, recurringIncome, today]);
 
   const linkedHysaLiquidTotalCents = useMemo(() => {
     try {
@@ -142,8 +176,6 @@ export function UpcomingPage() {
   const [incomeCollapsed, setIncomeCollapsed] = useDropdownCollapsed('upcoming_expected_income', true);
   const [costsCollapsed, setCostsCollapsed] = useDropdownCollapsed('upcoming_expected_costs', true);
 
-  const today = todayKey();
-
   function getDaysLeft(dateISO: string): number | null {
     if (!dateISO) return null;
     const d = new Date(dateISO + 'T00:00:00');
@@ -153,48 +185,37 @@ export function UpcomingPage() {
     return Math.round(diffMs / 86400000);
   }
 
-  function formatDaysLeft(dateISO: string) {
+  function formatExpectedTiming(dateISO: string) {
     const diffDays = getDaysLeft(dateISO);
     if (diffDays == null) return '';
-    if (diffDays >= 1) return `~${diffDays} days left`;
-    return 'Overdue / Due very soon!';
+    if (diffDays < 0) {
+      const n = -diffDays;
+      return n === 1 ? 'Expected 1 day ago' : `Expected ${n} days ago`;
+    }
+    if (diffDays === 0) return 'Due today';
+    return `~${diffDays} days left`;
   }
 
-  const sortedIncomeInWindow = [...incomeInWindow].sort((a, b) => {
-    const aDays = getDaysLeft(a.expectedDate || '') ?? 0;
-    const bDays = getDaysLeft(b.expectedDate || '') ?? 0;
-    const aVerySoon = aDays < 1;
-    const bVerySoon = bDays < 1;
-    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
-    return aDays - bDays;
-  });
+  function sortKeyForDate(dateISO: string): number {
+    const d = getDaysLeft(dateISO);
+    return d ?? 9999;
+  }
 
-  const sortedRecurringIncome = [...recurringIncome].sort((a, b) => {
-    const aDays = getDaysLeft(a.expectedDate || '') ?? 0;
-    const bDays = getDaysLeft(b.expectedDate || '') ?? 0;
-    const aVerySoon = aDays < 1;
-    const bVerySoon = bDays < 1;
-    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
-    return aDays - bDays;
-  });
+  const sortedIncomeInWindow = [...incomeInWindow].sort(
+    (a, b) => sortKeyForDate(a.expectedDate || '') - sortKeyForDate(b.expectedDate || '')
+  );
 
-  const sortedCostsInWindow = [...costsInWindow].sort((a, b) => {
-    const aDays = getDaysLeft(a.expectedDate || '') ?? 0;
-    const bDays = getDaysLeft(b.expectedDate || '') ?? 0;
-    const aVerySoon = aDays < 1;
-    const bVerySoon = bDays < 1;
-    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
-    return aDays - bDays;
-  });
+  const sortedRecurringIncome = [...recurringIncome].sort(
+    (a, b) => sortKeyForDate(a.expectedDate || '') - sortKeyForDate(b.expectedDate || '')
+  );
 
-  const sortedRecurringCosts = [...recurringCosts].sort((a, b) => {
-    const aDays = getDaysLeft(a.dateKey || '') ?? 0;
-    const bDays = getDaysLeft(b.dateKey || '') ?? 0;
-    const aVerySoon = aDays < 1;
-    const bVerySoon = bDays < 1;
-    if (aVerySoon !== bVerySoon) return aVerySoon ? -1 : 1;
-    return aDays - bDays;
-  });
+  const sortedCostsInWindow = [...costsInWindow].sort(
+    (a, b) => sortKeyForDate(a.expectedDate || '') - sortKeyForDate(b.expectedDate || '')
+  );
+
+  const sortedRecurringCosts = [...recurringCosts].sort(
+    (a, b) => sortKeyForDate(a.dateKey || '') - sortKeyForDate(b.dateKey || '')
+  );
 
   return (
     <div className="tab-panel active" id="upcomingContent">
@@ -237,8 +258,8 @@ export function UpcomingPage() {
                   {formatCents(i.amountCents || 0)}
                 </span>
               </div>
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(i.expectedDate)}</div>
-              <div className="btn-row">
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(i.expectedDate)}</div>
+              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -258,6 +279,19 @@ export function UpcomingPage() {
                 >
                   Move to Pending Inbound
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  style={{ minHeight: 44 }}
+                  onClick={() => {
+                    if (!confirm('Remove this expected income from Upcoming?')) return;
+                    const next = expectedIncome.filter((x) => x.id !== i.id);
+                    setExpectedIncome(next);
+                    saveExpectedIncome(next);
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}
@@ -270,31 +304,41 @@ export function UpcomingPage() {
                 </span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-                {formatDaysLeft(i.expectedDate)} • From recurring
+                {formatExpectedTiming(i.expectedDate)} • From recurring
               </div>
-              {!i.autoPay ? (
-                <div className="btn-row">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      const initialCents = i.amountCents || 0;
-                      const last = lastAdjustments[i.id];
-                      setModal({
-                        type: 'adjust-amount',
-                        direction: 'in',
-                        label: i.title,
-                        originalCents: initialCents,
-                        amount: (initialCents / 100).toFixed(2),
-                        error: null,
-                        source: { kind: 'recurring-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
-                      } as any);
-                    }}
-                  >
-                    Move to Pending Inbound
-                  </button>
-                </div>
-              ) : null}
+              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const initialCents = i.amountCents || 0;
+                    const last = lastAdjustments[i.id];
+                    setModal({
+                      type: 'adjust-amount',
+                      direction: 'in',
+                      label: i.title,
+                      originalCents: initialCents,
+                      amount: (initialCents / 100).toFixed(2),
+                      error: null,
+                      source: { kind: 'recurring-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
+                    } as any);
+                  }}
+                >
+                  Move to Pending Inbound
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  style={{ minHeight: 44 }}
+                  onClick={() => {
+                    if (!confirm('Remove this occurrence from Upcoming only? Your recurring income is not changed.')) return;
+                    dismissUpcomingOccurrence('inc', i.recurringId, i.expectedDate);
+                    setDismissedOccurrences(loadUpcomingDismissedOccurrences());
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
           <button
@@ -340,8 +384,8 @@ export function UpcomingPage() {
                   {formatCents(c.amountCents || 0)}
                 </span>
               </div>
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatDaysLeft(c.expectedDate)}</div>
-              <div className="btn-row">
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(c.expectedDate)}</div>
+              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -361,6 +405,19 @@ export function UpcomingPage() {
                 >
                   Move to Pending Outbound
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  style={{ minHeight: 44 }}
+                  onClick={() => {
+                    if (!confirm('Remove this expected cost from Upcoming?')) return;
+                    const next = expectedCosts.filter((x) => x.id !== c.id);
+                    setExpectedCosts(next);
+                    saveExpectedCosts(next);
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}
@@ -373,37 +430,47 @@ export function UpcomingPage() {
                 </span>
               </div>
               <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
-                {formatDaysLeft(c.dateKey)} • From recurring
+                {formatExpectedTiming(c.dateKey)} • From recurring
               </div>
-              {!c.autoPay ? (
-                <div className="btn-row">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      const initialCents = c.amountCents || 0;
-                      const key = `${c.recurringId}:${c.dateKey}`;
-                      const last = lastAdjustments[key];
-                      setModal({
-                        type: 'adjust-amount',
-                        direction: 'out',
-                        label: c.recurringName,
-                        originalCents: initialCents,
-                        amount: (initialCents / 100).toFixed(2),
-                        error: null,
-                        source: {
-                          kind: 'recurring-cost',
-                          recurringId: c.recurringId,
-                          dateKey: c.dateKey,
-                          lastCents: typeof last === 'number' ? last : undefined
-                        }
-                      } as any);
-                    }}
-                  >
-                    Move to Pending Outbound
-                  </button>
-                </div>
-              ) : null}
+              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const initialCents = c.amountCents || 0;
+                    const key = `${c.recurringId}:${c.dateKey}`;
+                    const last = lastAdjustments[key];
+                    setModal({
+                      type: 'adjust-amount',
+                      direction: 'out',
+                      label: c.recurringName,
+                      originalCents: initialCents,
+                      amount: (initialCents / 100).toFixed(2),
+                      error: null,
+                      source: {
+                        kind: 'recurring-cost',
+                        recurringId: c.recurringId,
+                        dateKey: c.dateKey,
+                        lastCents: typeof last === 'number' ? last : undefined
+                      }
+                    } as any);
+                  }}
+                >
+                  Move to Pending Outbound
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  style={{ minHeight: 44 }}
+                  onClick={() => {
+                    if (!confirm('Remove this occurrence from Upcoming only? Your recurring expense is not changed.')) return;
+                    dismissUpcomingOccurrence('exp', c.recurringId, c.dateKey);
+                    setDismissedOccurrences(loadUpcomingDismissedOccurrences());
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
           <button

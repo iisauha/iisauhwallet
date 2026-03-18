@@ -195,14 +195,14 @@ export function SettingsPage() {
           type="button"
           onClick={() => profileImageRef.current?.click()}
           style={{
-            width: 56,
-            height: 56,
+            width: 72,
+            height: 72,
             borderRadius: '50%',
             padding: 0,
-            border: '2px solid var(--border)',
+            border: 'none',
             background: profileImage ? `url(${profileImage}) center/cover` : 'var(--surface)',
-            color: 'var(--muted)',
-            fontSize: '1.25rem',
+            color: 'var(--ui-primary-text, var(--muted))',
+            fontSize: '1.5rem',
             fontWeight: 600,
             flexShrink: 0,
           }}
@@ -219,12 +219,12 @@ export function SettingsPage() {
             placeholder="Your name"
             style={{
               width: '100%',
-              padding: '10px 12px',
-              fontSize: '1.05rem',
+              padding: displayName ? '4px 0' : '10px 12px',
+              fontSize: '1.5rem',
               fontWeight: 600,
-              border: '1px solid var(--border)',
+              border: displayName ? 'none' : '1px solid var(--border)',
               borderRadius: 10,
-              background: 'var(--surface)',
+              background: displayName ? 'transparent' : 'var(--surface)',
               color: 'var(--text)',
             }}
           />
@@ -245,30 +245,23 @@ export function SettingsPage() {
       <AppCustomizationModal open={appCustomizationOpen} onClose={() => setAppCustomizationOpen(false)} />
 
       <p className="section-title" style={{ marginTop: 24 }}>Visible tabs</p>
-      <div className="settings-section" style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '0 0 10px 0' }}>
+      <div className="settings-section visible-tabs-section" style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 12px 0', fontFamily: 'var(--app-font-family)' }}>
           Hide tabs you don’t use from the bottom bar. Settings is always visible.
         </p>
-        {HIDEABLE_TAB_KEYS.map((tabKey) => (
-          <label
-            key={tabKey}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              marginBottom: 8,
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={!hiddenTabs.includes(tabKey)}
-              onChange={() => toggleTabHidden(tabKey)}
-            />
-            <span>{HIDEABLE_TAB_LABELS[tabKey]}</span>
-          </label>
-        ))}
+        <div className="visible-tabs-list">
+          {HIDEABLE_TAB_KEYS.map((tabKey) => (
+            <label key={tabKey} className="visible-tabs-row">
+              <input
+                type="checkbox"
+                checked={!hiddenTabs.includes(tabKey)}
+                onChange={() => toggleTabHidden(tabKey)}
+                className="visible-tabs-checkbox"
+              />
+              <span className="visible-tabs-label">{HIDEABLE_TAB_LABELS[tabKey]}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <p className="section-title" style={{ marginTop: 24 }}>Accounts</p>
@@ -287,7 +280,7 @@ export function SettingsPage() {
       <p className="section-title" style={{ marginTop: 24 }}>Security &amp; privacy</p>
       <div className="settings-section" style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {hasPasscode && (
-          <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {passcodePaused ? (
               <button
                 type="button"
@@ -307,6 +300,18 @@ export function SettingsPage() {
                 Pause passcode protection
               </button>
             )}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <button type="button" className="btn btn-secondary" onClick={() => setAppGuideOpen(true)}>
+            How This App Works
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => setFaqOpen(true)}>
+            FAQ
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {hasPasscode && (
             <button
               type="button"
               className="btn btn-secondary"
@@ -315,18 +320,10 @@ export function SettingsPage() {
             >
               Reset passcode
             </button>
-          </>
-        )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setAppGuideOpen(true)}>
-            How This App Works
-          </button>
+          )}
           <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
             Security Policy
           </Link>
-          <button type="button" className="btn btn-secondary" onClick={() => setFaqOpen(true)}>
-            FAQ
-          </button>
         </div>
       </div>
       {hasPasscode && (
@@ -415,7 +412,7 @@ export function SettingsPage() {
         >
           Export JSON
         </button>
-        <button type="button" className="btn btn-secondary" style={{ marginTop: 8 }} onClick={() => fileRef.current?.click()}>
+        <button type="button" className="btn btn-secondary" style={{ marginTop: 16 }} onClick={() => fileRef.current?.click()}>
           Import JSON
         </button>
         <input
@@ -463,12 +460,14 @@ export function SettingsPage() {
           type="button"
           className="btn btn-secondary"
           style={{ padding: '12px 18px', fontSize: '1rem' }}
-          onClick={() => setAboutCreatorOpen(!aboutCreatorOpen)}
+          onClick={() => setAboutCreatorOpen(true)}
         >
-          {aboutCreatorOpen ? 'Hide' : 'About the creator'}
+          About the creator
         </button>
-        {aboutCreatorOpen && (
-          <div style={{ marginTop: 12, fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))' }}>
+      </div>
+      {aboutCreatorOpen && (
+        <Modal open={true} title="About the creator" onClose={() => setAboutCreatorOpen(false)}>
+          <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
             <p style={{ margin: '0 0 12px 0' }}>
               I built this app because I wanted a simple way to track every dollar across my accounts. Many existing finance tools focus on subscriptions, automated categorization, or constantly reconnecting bank accounts, and I found that frustrating. I wanted something where I could manually track everything including transfers between accounts or money sitting in apps like Venmo.
             </p>
@@ -484,8 +483,8 @@ export function SettingsPage() {
               <a href="mailto:iisauhaguilar@gmail.com" style={{ color: 'var(--accent)' }}>iisauhaguilar@gmail.com</a>
             </p>
           </div>
-        )}
-      </div>
+        </Modal>
+      )}
 
       <p className="section-title" style={{ marginTop: 24 }}>Danger zone</p>
       <div className="settings-section">

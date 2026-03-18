@@ -22,8 +22,17 @@ export function Modal(props: { open: boolean; title?: string; children: ReactNod
     >
       <div className="modal" onClick={onClose ? (e) => e.stopPropagation() : undefined}>
         {(title || onClose) ? (
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: title ? 0 : 8 }}>
-            {title ? <h3 style={{ margin: 0, flex: 1 }}>{title}</h3> : null}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 8,
+              marginBottom: title ? 16 : 8,
+              minHeight: title ? 36 : undefined,
+            }}
+          >
+            {title ? <h3 style={{ margin: 0, flex: 1, paddingRight: 4 }}>{title}</h3> : null}
             {onClose ? (
               <button
                 type="button"
@@ -43,7 +52,9 @@ export function Modal(props: { open: boolean; title?: string; children: ReactNod
                   lineHeight: 1,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  alignSelf: 'flex-start',
+                  marginTop: -6,
                 }}
               >
                 ×

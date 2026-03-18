@@ -77,7 +77,12 @@ function saveTabOrder(order: TabKey[]): void {
 
 function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
+  const [spendingVisited, setSpendingVisited] = useState(false);
   const [tabOrder, setTabOrder] = useState<TabKey[]>(() => loadTabOrder());
+
+  useEffect(() => {
+    if (tab === 'spending') setSpendingVisited(true);
+  }, [tab]);
 
   const hiddenSet = useMemo(() => new Set(loadHiddenTabs()), [tab]);
   const visibleTabOrder = useMemo(
@@ -91,9 +96,9 @@ function MainApp() {
     }
   }, [tab, visibleTabOrder]);
 
-  const content = useMemo(() => {
+  const otherTabContent = useMemo(() => {
+    if (tab === 'spending') return null;
     if (tab === 'snapshot') return <SnapshotPage />;
-    if (tab === 'spending') return <SpendingPage />;
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'loans') return <LoansPage />;
     if (tab === 'investing') return <InvestingPage />;
@@ -135,7 +140,23 @@ function MainApp() {
 
   return (
     <>
-      <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>{content}</div>
+      {(spendingVisited || tab === 'spending') && (
+        <div
+          style={{
+            display: tab === 'spending' ? 'block' : 'none',
+            position: 'relative',
+            minHeight: '100%',
+          }}
+          aria-hidden={tab !== 'spending'}
+        >
+          <SpendingPage tabVisible={tab === 'spending'} />
+        </div>
+      )}
+      {tab !== 'spending' && (
+        <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>
+          {otherTabContent}
+        </div>
+      )}
       <nav className="tabs" aria-label="Sections">
         {visibleTabOrder.map((tabKey, index) => (
           <button

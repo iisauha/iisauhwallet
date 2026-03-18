@@ -1667,27 +1667,27 @@ export function InvestingPage() {
           borderColor: 'var(--ui-border, var(--border))',
         }}
       >
-        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-title-text, var(--text))' }}>
           Investing Summary
         </p>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total HYSA</span>
+          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total HYSA</span>
           <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Roth IRA</span>
+          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Roth IRA</span>
           <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Employer-Based Retirement</span>
+          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Employer-Based Retirement</span>
           <span className="v amount-pos">{formatCents(totals.total401k)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total General Investing</span>
+          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total General Investing</span>
           <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
         </div>
         <div className="summary-kv">
-          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Investing</span>
+          <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Investing</span>
           <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
         </div>
       </div>
@@ -1700,7 +1700,7 @@ export function InvestingPage() {
           borderColor: 'var(--ui-border, var(--border))',
         }}
       >
-        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-title-text, var(--text))' }}>
           Investing Contribution
         </p>
         {contribution.incomeMarkedCount === 0 || contribution.grossIncomeCents <= 0 ? (
@@ -1761,7 +1761,7 @@ export function InvestingPage() {
       <div style={{ marginTop: 16 }}>
         <button
           type="button"
-          className="btn btn-add"
+          className="btn btn-secondary"
           style={{ width: '100%' }}
           onClick={() => {
             const source = coastFireAssumptions || coastFireForm;

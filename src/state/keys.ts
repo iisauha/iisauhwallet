@@ -23,6 +23,8 @@ export const CATEGORY_COLOR_MAP_KEY = 'categoryColorMap_v1';
 export const EXPECTED_COSTS_KEY = 'expectedCosts_v1';
 export const EXPECTED_INCOME_KEY = 'expectedIncome_v1';
 export const UPCOMING_WINDOW_KEY = 'upcomingCashflow_window_v1';
+/** Upcoming tab only: dismissed recurring keys exp:id:YYYY-MM-DD / inc:id:YYYY-MM-DD */
+export const UPCOMING_DISMISSED_OCCURRENCES_KEY = 'iisauhwallet_upcoming_dismissed_occurrences_v1';
 export const LAST_ADJUSTMENTS_KEY = 'ledgerlite_lastAdjustments';
 export const INVESTING_KEY = 'ledgerlite_investing_v1';
 export const COASTFIRE_KEY = 'ledgerlite_coastfire_v1';
