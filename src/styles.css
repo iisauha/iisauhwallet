@@ -366,6 +366,13 @@ input[type="date"].ll-control {
   font-family: var(--app-font-family);
 }
 
+.ll-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: var(--ui-primary-text, var(--muted));
+  opacity: 0.75;
+}
+
 .ll-select {
   -webkit-appearance: none;
   -moz-appearance: none;

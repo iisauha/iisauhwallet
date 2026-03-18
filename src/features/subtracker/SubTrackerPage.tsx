@@ -823,7 +823,7 @@ export function SubTrackerPage() {
           ) : null}
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div className="field" style={{ flex: 1 }}>
             <label>Start date</label>
             <input className="ll-control" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -871,7 +871,7 @@ export function SubTrackerPage() {
             <div
               key={draft.id}
               style={{
-                border: '1px solid var(--border)',
+                border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
                 borderRadius: 10,
                 padding: 10,
                 background: 'var(--ui-modal-bg, var(--surface))'

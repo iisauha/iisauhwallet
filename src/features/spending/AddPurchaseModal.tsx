@@ -267,7 +267,7 @@ export function AddPurchaseModal(props: {
       <div className="modal">
         <h3>{isEditing ? 'Edit Purchase' : props.reimbursementExpected ? 'Add Card Purchase (Full reimbursement expected)' : 'Add Purchase'}</h3>
         {props.reimbursementExpected && !isEditing ? (
-          <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: -4, marginBottom: 12 }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: -4, marginBottom: 12 }}>
             A pending inbound entry will be created for this amount. When you receive reimbursement, post it from Pending Inbound and choose which bank to deposit into.
           </p>
         ) : null}

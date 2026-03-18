@@ -560,6 +560,12 @@ function CoastFireProjectionChart({
     const existing: Chart | undefined = (canvas as any).__coastFireChart;
     if (existing) existing.destroy();
 
+    const primaryTextColor = (() => {
+      // Use CSS variable so "All other text" customization applies to chart labels.
+      const v = getComputedStyle(document.documentElement).getPropertyValue('--ui-primary-text').trim();
+      return v || '#94a3b8';
+    })();
+
     const ages = projection.map((p) => p.age);
     const portfolios = projection.map((p) => p.portfolio);
     const coastLine = ages.map(() => coastFireNumber);
@@ -613,7 +619,7 @@ function CoastFireProjectionChart({
             display: true,
             position: 'top',
             labels: {
-              color: '#94a3b8',
+              color: primaryTextColor,
               font: { size: 11 },
               usePointStyle: true
             }
@@ -622,12 +628,12 @@ function CoastFireProjectionChart({
         scales: {
           x: {
             grid: { color: 'rgba(51, 65, 85, 0.5)' },
-            ticks: { color: '#94a3b8', maxTicksLimit: 8 }
+            ticks: { color: primaryTextColor, maxTicksLimit: 8 }
           },
           y: {
             grid: { color: 'rgba(51, 65, 85, 0.5)' },
             ticks: {
-              color: '#94a3b8',
+              color: primaryTextColor,
               callback: (v) => (typeof v === 'number' ? `$${(v / 1000).toFixed(0)}k` : v)
             }
           }
