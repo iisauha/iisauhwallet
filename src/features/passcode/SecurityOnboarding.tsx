@@ -86,13 +86,13 @@ export function SecurityOnboarding({ onPass }: { onPass: () => void }) {
         This app stores your data locally in your browser. The creator cannot access your data. There is no automatic connection to your bank. Only use the official site link. Save your recovery key and export JSON backups regularly.
       </p>
 
-      <p style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
+      <p style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>
         Please answer the following questions to continue. You must get all 5 correct.
       </p>
 
       {QUIZ.map((item, index) => (
         <div key={index} style={{ marginBottom: 20 }}>
-          <p style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)' }}>
+          <p style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>
             {index + 1}. {item.question}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

@@ -81,7 +81,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
                     borderRadius: 8,
                     border: '1px solid var(--border)',
                     background: 'var(--surface)',
-                    color: 'var(--text)',
+                    color: 'var(--ui-primary-text, var(--text))',
                     fontSize: '0.95rem',
                   }}
                 />
@@ -105,7 +105,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
                     borderRadius: 8,
                     border: '1px solid var(--border)',
                     background: 'var(--surface)',
-                    color: 'var(--text)',
+                    color: 'var(--ui-primary-text, var(--text))',
                     fontSize: '0.95rem',
                   }}
                 />
@@ -132,7 +132,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
                     borderRadius: 8,
                     border: '1px solid var(--border)',
                     background: 'var(--surface)',
-                    color: 'var(--text)',
+                    color: 'var(--ui-primary-text, var(--text))',
                     fontSize: '0.95rem',
                   }}
                 />

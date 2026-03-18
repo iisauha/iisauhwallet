@@ -25,6 +25,7 @@ import {
   type SecurityQA,
 } from '../../state/storage';
 import { SecurityOnboarding } from './SecurityOnboarding';
+import { Select } from '../../ui/Select';
 
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCKOUT_HOURS = 24;
@@ -388,11 +389,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   };
   const selectStyle: React.CSSProperties = {
     width: '100%',
-    padding: '10px 12px',
-    borderRadius: 10,
-    border: '1px solid var(--border)',
-    background: 'var(--bg)',
-    color: 'var(--text)',
     marginBottom: 12,
     fontSize: '0.95rem',
   };
@@ -556,7 +552,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             Answer two questions to recover your passcode later. You can skip; recovery will be limited without them.
           </p>
           <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 1</label>
-          <select
+          <Select
             value={securityQ1}
             onChange={(e) => setSecurityQ1(e.target.value)}
             style={selectStyle}
@@ -565,17 +561,17 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             {SECURITY_QUESTION_OPTIONS.map((q) => (
               <option key={q} value={q}>{q}</option>
             ))}
-          </select>
+          </Select>
           {securityQ1 && (
             <>
               <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={inputStyle} />
               <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 2</label>
-              <select value={securityQ2} onChange={(e) => setSecurityQ2(e.target.value)} style={selectStyle}>
+              <Select value={securityQ2} onChange={(e) => setSecurityQ2(e.target.value)} style={selectStyle}>
                 <option value="">— Select —</option>
                 {SECURITY_QUESTION_OPTIONS.filter((q) => q !== securityQ1).map((q) => (
                   <option key={q} value={q}>{q}</option>
                 ))}
-              </select>
+              </Select>
               {securityQ2 && (
                 <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={inputStyle} />
               )}
@@ -756,7 +752,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'hint-show' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Password hint</h1>
-          <p style={{ margin: '0 0 24px 0', padding: 16, background: 'var(--surface)', borderRadius: 10, color: 'var(--text)' }}>
+          <p style={{ margin: '0 0 24px 0', padding: 16, background: 'var(--surface)', borderRadius: 10, color: 'var(--ui-primary-text, var(--text))' }}>
             {loadPasscodeHint() || 'No hint set.'}
           </p>
           <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center' }}>
@@ -809,7 +805,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         justifyContent: 'center',
         padding: 24,
         background: 'var(--bg)',
-        color: 'var(--text)',
+        color: 'var(--ui-primary-text, var(--text))',
         boxSizing: 'border-box',
       }}
     >

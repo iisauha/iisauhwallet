@@ -29,6 +29,7 @@ import {
   type PilotStatus,
   type DetectedActivityRule,
 } from '../../api/detectedActivityApi';
+import { Select } from '../../ui/Select';
 
 type TabKey = 'snapshot' | 'spending' | 'recurring' | 'upcoming' | 'subtracker' | 'investing' | 'settings';
 
@@ -332,7 +333,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                   color: 'var(--muted)',
                 }}
               >
-                <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Pilot status</div>
+                <div style={{ fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>Pilot status</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px' }}>
                   <span>Mode: {pilotStatus.plaidMode === 'production' ? 'Real Pilot' : 'Sandbox'}</span>
                   <span>Last manual sync: {pilotStatus.lastManualSyncAt ? new Date(pilotStatus.lastManualSyncAt).toLocaleString() : '—'}</span>
@@ -429,7 +430,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
         </div>
         {items.some((i) => i.source === 'test') ? (
           <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }}>
-            <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Test items cleanup</div>
+            <div style={{ fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>Test items cleanup</div>
             <p style={{ color: 'var(--muted)', margin: '0 0 8px 0', fontSize: '0.85rem' }}>Only removes test items. Manual data is not affected.</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => setItems((prev) => prev.filter((i) => i.source !== 'test'))}>
@@ -621,7 +622,7 @@ function LinkToPurchaseModal({
           borderRadius: 6,
           border: '1px solid var(--border)',
           background: 'var(--surface)',
-          color: 'var(--text)',
+          color: 'var(--ui-primary-text, var(--text))',
         }}
       />
       <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -710,7 +711,7 @@ function PilotMaintenance({
         fontSize: '0.8rem',
       }}
     >
-      <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>Pilot maintenance (queue only)</div>
+      <div style={{ fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Pilot maintenance (queue only)</div>
       {pilotMaintenanceError ? <p style={{ color: 'var(--red)', margin: '0 0 8px 0' }}>{pilotMaintenanceError}</p> : null}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div>
@@ -864,7 +865,7 @@ function AddTestModal({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="e.g. Coffee shop"
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--ui-primary-text, var(--text))' }}
         />
       </div>
       <div className="field" style={{ marginBottom: 10 }}>
@@ -875,19 +876,19 @@ function AddTestModal({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.00"
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--ui-primary-text, var(--text))' }}
         />
       </div>
       <div className="field" style={{ marginBottom: 10 }}>
         <label>Direction</label>
-        <select
+        <Select
           value={direction}
           onChange={(e) => setDirection(e.target.value as 'inflow' | 'outflow')}
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ width: '100%' }}
         >
           <option value="inflow">Inflow</option>
           <option value="outflow">Outflow</option>
-        </select>
+        </Select>
       </div>
       <div className="field" style={{ marginBottom: 10 }}>
         <label>Date</label>
@@ -895,7 +896,7 @@ function AddTestModal({
           type="date"
           value={dateISO}
           onChange={(e) => setDateISO(e.target.value.slice(0, 10))}
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--ui-primary-text, var(--text))' }}
         />
       </div>
       <div className="field" style={{ marginBottom: 10 }}>
@@ -904,31 +905,31 @@ function AddTestModal({
           value={accountName}
           onChange={(e) => setAccountName(e.target.value)}
           placeholder="e.g. Chase Checking"
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--ui-primary-text, var(--text))' }}
         />
       </div>
       <div className="field" style={{ marginBottom: 10 }}>
         <label>Account type</label>
-        <select
+        <Select
           value={accountType}
           onChange={(e) => setAccountType(e.target.value as 'credit_card' | 'checking' | 'investing')}
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ width: '100%' }}
         >
           <option value="credit_card">Credit card</option>
           <option value="checking">Checking / bank</option>
           <option value="investing">Investing</option>
-        </select>
+        </Select>
       </div>
       <div className="field" style={{ marginBottom: 12 }}>
         <label>Status</label>
-        <select
+        <Select
           value={pending ? 'pending' : 'posted'}
           onChange={(e) => setPending(e.target.value === 'pending')}
-          style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          style={{ width: '100%' }}
         >
           <option value="pending">Pending</option>
           <option value="posted">Posted</option>
-        </select>
+        </Select>
       </div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
@@ -977,7 +978,7 @@ function DetailsModal({ item, onClose, onReopen, onRerunSuggestion }: DetailsMod
       {item.suggestionReason ? (
         <section style={{ marginBottom: 12 }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Why</div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text)' }}>{item.suggestionReason}</div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>{item.suggestionReason}</div>
         </section>
       ) : null}
 

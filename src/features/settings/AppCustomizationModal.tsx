@@ -11,6 +11,7 @@ import {
   DEFAULT_THEME_COLOR,
   DEFAULT_ACCENT_COLOR,
 } from '../../state/storage';
+import { Select } from '../../ui/Select';
 
 const FONT_FAMILY_OPTIONS = [
   { key: 'system', label: 'System default' },
@@ -60,9 +61,11 @@ const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = 
   { key: 'addButton', label: 'Adding an Item Buttons' },
 ];
 
-const SYSTEM_DEFAULT_THEME_ID = 'system-default';
+const SYSTEM_DEFAULT_LIGHT_THEME_ID = 'system-default';
+const SYSTEM_DEFAULT_DARK_THEME_ID = 'system-default-dark';
+const BUILT_IN_THEME_IDS = new Set([SYSTEM_DEFAULT_LIGHT_THEME_ID, SYSTEM_DEFAULT_DARK_THEME_ID]);
 
-const SYSTEM_DEFAULT_ADV_COLORS: AdvancedUIColors = {
+const SYSTEM_DEFAULT_LIGHT_ADV_COLORS: AdvancedUIColors = {
   cardBg: '#F1EFE4',
   surfaceSecondary: '#F1EFE4',
   sectionBg: '#F1EFE4',
@@ -75,13 +78,36 @@ const SYSTEM_DEFAULT_ADV_COLORS: AdvancedUIColors = {
   addButton: '#000000',
 };
 
-const SYSTEM_DEFAULT_THEME_PRESET: SavedThemePreset = {
-  id: SYSTEM_DEFAULT_THEME_ID,
-  name: 'System default',
+const SYSTEM_DEFAULT_DARK_ADV_COLORS: AdvancedUIColors = {
+  cardBg: '#1e293b',
+  surfaceSecondary: '#1e293b',
+  sectionBg: '#1e293b',
+  modalBg: '#1e293b',
+  tabBarBg: '#1e293b',
+  border: '#F1EFE4',
+  titleText: '#F1EFE4',
+  primaryText: '#F1EFE4',
+  outlineButton: '#F1EFE4',
+  addButton: '#F1EFE4',
+};
+
+const SYSTEM_DEFAULT_LIGHT_PRESET: SavedThemePreset = {
+  id: SYSTEM_DEFAULT_LIGHT_THEME_ID,
+  name: 'System Default: Light Mode',
   themeColor: DEFAULT_THEME_COLOR,
   accentColor: DEFAULT_ACCENT_COLOR,
-  advancedColors: SYSTEM_DEFAULT_ADV_COLORS,
+  advancedColors: SYSTEM_DEFAULT_LIGHT_ADV_COLORS,
 };
+
+const SYSTEM_DEFAULT_DARK_PRESET: SavedThemePreset = {
+  id: SYSTEM_DEFAULT_DARK_THEME_ID,
+  name: 'System Default: Dark Mode',
+  themeColor: '#1e293b',
+  accentColor: '#F1EFE4',
+  advancedColors: SYSTEM_DEFAULT_DARK_ADV_COLORS,
+};
+
+const BUILT_IN_THEME_PRESETS: SavedThemePreset[] = [SYSTEM_DEFAULT_LIGHT_PRESET, SYSTEM_DEFAULT_DARK_PRESET];
 
 function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (hex: string) => void }) {
   return (
@@ -146,7 +172,9 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
   const { themeColor, setThemeColor, accentColor, setAccentColor } = useTheme();
   const { fontFamily, fontScale, setFontFamily, setFontScale } = useAppearance();
   const advCtx = useAdvancedUIColors();
-  const [themePresets, setThemePresets] = useState<SavedThemePreset[]>(() => loadThemePresets());
+  const [themePresets, setThemePresets] = useState<SavedThemePreset[]>(() =>
+    loadThemePresets().filter((p) => !BUILT_IN_THEME_IDS.has(p.id))
+  );
   const [newThemeName, setNewThemeName] = useState('');
 
   if (!open) return null;
@@ -194,6 +222,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
   };
 
   const handleDeleteTheme = (id: string) => {
+    if (BUILT_IN_THEME_IDS.has(id)) return;
     const next = themePresets.filter((p) => p.id !== id);
     setThemePresets(next);
     saveThemePresets(next);
@@ -250,7 +279,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
           </div>
           {themePresets.length > 0 || true ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-              {[SYSTEM_DEFAULT_THEME_PRESET, ...themePresets].map((p: SavedThemePreset) => (
+              {[...BUILT_IN_THEME_PRESETS, ...themePresets].map((p: SavedThemePreset) => (
                 <div key={p.id} style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
@@ -261,7 +290,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                     <span>{p.name}</span>
                     <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Apply</span>
                   </button>
-                  {p.id !== SYSTEM_DEFAULT_THEME_ID ? (
+                  {!BUILT_IN_THEME_IDS.has(p.id) ? (
                     <button
                       type="button"
                       className="btn btn-secondary"
@@ -283,26 +312,17 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
           Font family
         </p>
         <div style={{ marginBottom: 16 }}>
-          <select
+          <Select
             value={fontFamily}
             onChange={(e) => setFontFamily(e.target.value)}
-            style={{
-              width: '100%',
-              maxWidth: 280,
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: 'var(--surface)',
-              color: 'var(--ui-primary-text, var(--text))',
-              fontSize: '0.95rem',
-            }}
+            style={{ width: '100%', maxWidth: 280, fontSize: '0.95rem' }}
           >
             {FONT_FAMILY_OPTIONS.map((opt) => (
               <option key={opt.key} value={opt.key}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>

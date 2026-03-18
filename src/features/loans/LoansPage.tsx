@@ -902,7 +902,7 @@ function LoanCard(props: {
           Next payment date: {l.nextPaymentDate}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--text)' }}>
+      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>
         Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
       </div>
       {l.category === 'private' ? (
@@ -1855,7 +1855,7 @@ function LoanEditorForm(props: {
                 borderRadius: 4,
                 border: '1px solid var(--border)',
                 background: 'var(--bg)',
-                color: 'var(--text)',
+                color: 'var(--ui-primary-text, var(--text))',
                 fontSize: '0.9rem',
                 width: '100%'
               }}

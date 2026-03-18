@@ -1663,8 +1663,7 @@ export function InvestingPage() {
                 </div>
                 <div className="field">
                   <label>When is this balance valid?</label>
-                  <select
-                    className="ll-select"
+                  <Select
                     value={newAccount.hysaWhen}
                     onChange={(e) =>
                       setNewAccount({
@@ -1672,11 +1671,12 @@ export function InvestingPage() {
                         hysaWhen: (e.target.value as '1' | '2' | '3') || '1',
                       })
                     }
+                    style={{ width: '100%' }}
                   >
                     <option value="1">Today (default)</option>
                     <option value="2">Start of this month</option>
                     <option value="3">Specific date…</option>
-                  </select>
+                  </Select>
                 </div>
                 {newAccount.hysaWhen === '3' ? (
                   <div className="field">

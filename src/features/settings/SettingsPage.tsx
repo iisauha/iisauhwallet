@@ -262,7 +262,7 @@ export function SettingsPage() {
                 gap: 12,
                 cursor: 'pointer',
                 fontSize: '1rem',
-                color: 'var(--text)',
+                color: 'var(--ui-primary-text, var(--text))',
                 fontFamily: 'var(--app-font-family)',
               }}
             >

@@ -231,7 +231,7 @@ export function PendingInboundList(props: {
                   borderRadius: 8,
                   border: '1px solid var(--border)',
                   background: 'var(--surface-hover)',
-                  color: 'var(--text)',
+                  color: 'var(--ui-primary-text, var(--text))',
                 }}
               />
             </label>
@@ -505,7 +505,7 @@ export function PendingOutboundList(props: {
                   borderRadius: 8,
                   border: '1px solid var(--border)',
                   background: 'var(--surface-hover)',
-                  color: 'var(--text)',
+                  color: 'var(--ui-primary-text, var(--text))',
                 }}
               />
             </label>

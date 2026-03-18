@@ -17,7 +17,7 @@ const inputStyle = {
   borderRadius: 10,
   border: '1px solid var(--border)',
   background: 'var(--surface)',
-  color: 'var(--text)',
+  color: 'var(--ui-primary-text, var(--text))',
   fontSize: '1rem'
 } as const;
 
@@ -303,7 +303,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             borderRadius: 10,
             border: '1px solid var(--border)',
             background: 'var(--surface)',
-            color: 'var(--text)',
+            color: 'var(--ui-primary-text, var(--text))',
             fontSize: '0.95rem',
             resize: 'vertical',
             minHeight: 80

@@ -7,7 +7,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <Modal open={open} title="How This App Works" onClose={onClose}>
-      <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--text)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <p style={{ margin: 0 }}>
           This app is a <strong>manual-entry, local-first</strong> finance tracker. You enter your own balances and transactions. There is no direct connection to your bank by default.
         </p>
