@@ -180,6 +180,14 @@ export type AdvancedUIColors = Partial<{
   outlineButton: string;
 }>;
 
+export type SavedThemePreset = {
+  id: string;
+  name: string;
+  themeColor: string;
+  accentColor: string;
+  advancedColors: AdvancedUIColors;
+};
+
 export function loadAdvancedUIColors(): AdvancedUIColors {
   try {
     const raw = localStorage.getItem(UI_ADVANCED_COLORS_KEY);
@@ -195,6 +203,26 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
 export function saveAdvancedUIColors(colors: AdvancedUIColors) {
   try {
     localStorage.setItem(UI_ADVANCED_COLORS_KEY, JSON.stringify(colors));
+  } catch (_) {}
+}
+
+export function loadThemePresets(): SavedThemePreset[] {
+  try {
+    const raw = localStorage.getItem('iisauhwallet_ui_theme_presets_v1');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((p) => p && typeof p === 'object' && typeof p.name === 'string');
+    }
+    return [];
+  } catch (_) {
+    return [];
+  }
+}
+
+export function saveThemePresets(list: SavedThemePreset[]): void {
+  try {
+    localStorage.setItem('iisauhwallet_ui_theme_presets_v1', JSON.stringify(list));
   } catch (_) {}
 }
 

@@ -226,7 +226,7 @@ export function SettingsPage() {
               border: displayName ? 'none' : '1px solid var(--border)',
               borderRadius: 10,
               background: displayName ? 'transparent' : 'var(--surface)',
-              color: 'var(--text)',
+              color: 'var(--ui-primary-text, var(--text))',
             }}
           />
         </div>
@@ -431,7 +431,12 @@ export function SettingsPage() {
         >
           Export JSON
         </button>
-        <button type="button" className="btn btn-secondary" style={{ marginTop: 16 }} onClick={() => fileRef.current?.click()}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ marginTop: 16, marginLeft: 8 }}
+          onClick={() => fileRef.current?.click()}
+        >
           Import JSON
         </button>
         <input

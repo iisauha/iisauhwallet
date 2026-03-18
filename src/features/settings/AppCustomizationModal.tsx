@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
 import { useAdvancedUIColors } from '../../theme/AdvancedUIColorsContext';
-import type { AdvancedUIColors } from '../../state/storage';
+import { loadThemePresets, saveThemePresets, type AdvancedUIColors, type SavedThemePreset, uid } from '../../state/storage';
 
 const FONT_FAMILY_OPTIONS = [
   { key: 'system', label: 'System default' },
@@ -36,18 +37,18 @@ const COLOR_SWATCH_STYLE = {
 };
 
 const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
-  { key: 'titleText', label: 'Title text' },
-  { key: 'primaryText', label: 'Primary text' },
+  { key: 'titleText', label: 'Titles / Headings' },
+  { key: 'primaryText', label: 'All Other Text' },
 ];
 
 const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
-  { key: 'cardBg', label: 'Card background' },
-  { key: 'surfaceSecondary', label: 'Padding / secondary surface blocks' },
-  { key: 'sectionBg', label: 'Section background' },
+  { key: 'cardBg', label: 'Main Cards' },
+  { key: 'surfaceSecondary', label: 'Summary Cards' },
+  { key: 'sectionBg', label: 'Dropdowns Card Color' },
   { key: 'modalBg', label: 'Popup card background' },
   { key: 'tabBarBg', label: 'Bottom Tab Bar background' },
-  { key: 'border', label: 'Border color' },
-  { key: 'outlineButton', label: 'Outline buttons (text + border)' },
+  { key: 'border', label: 'Border of Summary + Popups Cards' },
+  { key: 'outlineButton', label: 'Buttons (Text + Border)' },
 ];
 
 function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (hex: string) => void }) {
@@ -60,7 +61,7 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
         gap: 12,
       }}
     >
-      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>{label}</span>
+      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>{label}</span>
       <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={COLOR_SWATCH_STYLE} aria-label={label} />
     </div>
   );
@@ -112,8 +113,52 @@ function SurfaceColorsSection() {
 export function AppCustomizationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { themeColor, setThemeColor, accentColor, setAccentColor } = useTheme();
   const { fontFamily, fontScale, setFontFamily, setFontScale } = useAppearance();
+  const advCtx = useAdvancedUIColors();
+  const [themePresets, setThemePresets] = useState<SavedThemePreset[]>(() => loadThemePresets());
+  const [newThemeName, setNewThemeName] = useState('');
 
   if (!open) return null;
+
+  const handleSaveTheme = () => {
+    if (!advCtx) return;
+    const name = (newThemeName || '').trim() || 'Custom theme';
+    const preset: SavedThemePreset = {
+      id: uid(),
+      name,
+      themeColor,
+      accentColor,
+      advancedColors: advCtx.colors,
+    };
+    const next = [
+      ...themePresets.filter((p: SavedThemePreset) => p.name.toLowerCase() !== name.toLowerCase()),
+      preset,
+    ];
+    setThemePresets(next);
+    saveThemePresets(next);
+  };
+
+  const handleApplyTheme = (preset: SavedThemePreset) => {
+    setThemeColor(preset.themeColor);
+    setAccentColor(preset.accentColor);
+    if (!advCtx) return;
+    const keys: (keyof AdvancedUIColors)[] = [
+      'cardBg',
+      'surfaceSecondary',
+      'sectionBg',
+      'modalBg',
+      'tabBarBg',
+      'border',
+      'titleText',
+      'primaryText',
+      'outlineButton',
+    ];
+    const nextColors = preset.advancedColors || {};
+    keys.forEach((k) => {
+      const v = nextColors[k];
+      if (v && v.trim() !== '') advCtx.setColor(k, v);
+      else advCtx.clearColor(k);
+    });
+  };
 
   return (
     <div className="modal-overlay modal-overlay-animate" onClick={onClose}>
@@ -126,7 +171,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
           <ColorRow label="App background" value={themeColor} onChange={setThemeColor} />
-          <ColorRow label="Accent color" value={accentColor} onChange={setAccentColor} />
+          <ColorRow label="Navigation Buttons" value={accentColor} onChange={setAccentColor} />
         </div>
 
         <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>
@@ -143,9 +188,48 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
           <SurfaceColorsSection />
         </div>
 
+        <p className="section-title" style={{ marginTop: 8, marginBottom: 10 }}>
+          Saved themes
+        </p>
+        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              className="ll-control"
+              style={{ flex: 1, minWidth: 140, maxWidth: 260 }}
+              placeholder="Theme name (e.g. Forest)"
+              value={newThemeName}
+              onChange={(e) => setNewThemeName(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleSaveTheme}
+              style={{ flexShrink: 0 }}
+            >
+              Save theme
+            </button>
+          </div>
+          {themePresets.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+              {themePresets.map((p: SavedThemePreset) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ justifyContent: 'space-between', display: 'flex' }}
+                  onClick={() => handleApplyTheme(p)}
+                >
+                  <span>{p.name}</span>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Apply</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
         <p className="section-title" style={{ marginTop: 8 }}>Typography</p>
 
-        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 12, marginBottom: 8 }}>
+        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginTop: 12, marginBottom: 8 }}>
           Font family
         </p>
         <div style={{ marginBottom: 16 }}>
@@ -159,7 +243,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
               borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--surface)',
-              color: 'var(--text)',
+              color: 'var(--ui-primary-text, var(--text))',
               fontSize: '0.95rem',
             }}
           >
@@ -171,7 +255,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
           </select>
         </div>
 
-        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginTop: 0, marginBottom: 8 }}>
+        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
           Font size
         </p>
         <div style={{ marginBottom: 8 }}>
@@ -188,7 +272,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                     borderRadius: 8,
                     border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
                     background: isSelected ? 'var(--surface-hover)' : 'var(--surface)',
-                    color: 'var(--text)',
+                    color: 'var(--ui-primary-text, var(--text))',
                     fontSize: '0.9rem',
                     fontWeight: 600,
                     cursor: 'pointer',

@@ -69,14 +69,14 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1.5px solid var(--muted);
+  border: 1.5px solid var(--ui-outline-btn, var(--muted));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   line-height: 1;
   background: transparent;
-  color: var(--ui-primary-text, var(--text));
+  color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex-shrink: 0;
@@ -129,6 +129,7 @@ body {
   padding: 8px 8px;
   cursor: pointer;
   border-radius: 8px;
+  border: 1px solid var(--ui-outline-btn, transparent);
   background: var(--ui-section-bg, var(--ui-card-bg, var(--surface)));
   -webkit-tap-highlight-color: transparent;
 }
@@ -357,7 +358,7 @@ input[type="date"].ll-control {
   border-radius: 10px;
   border: 1px solid var(--ui-border, var(--border));
   background: var(--ui-card-bg, var(--surface));
-  color: var(--text);
+  color: var(--ui-primary-text, var(--text));
   font-size: 1rem;
   font-family: var(--app-font-family);
 }
@@ -385,7 +386,7 @@ input[type="date"].ll-control:focus {
 
 .ll-select option {
   background: var(--ui-card-bg, var(--surface));
-  color: var(--text);
+  color: var(--ui-primary-text, var(--text));
 }
 
 .modal-overlay {
