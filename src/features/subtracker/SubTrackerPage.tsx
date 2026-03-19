@@ -600,6 +600,12 @@ export function SubTrackerPage() {
                     const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
                     const clampedLeft = clamp(left, 2, 98);
                     const reward = (t.rewardText || '').trim() || 'Bonus';
+                    const rewardDisplay =
+                      idx === 0
+                        ? reward
+                        : reward.startsWith('+')
+                          ? reward
+                          : `+${reward}`;
                     return (
                       <div
                         key={t.id + ':label'}
@@ -618,7 +624,7 @@ export function SubTrackerPage() {
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        {reward}
+                        {rewardDisplay}
                       </div>
                     );
                   })}
@@ -627,6 +633,12 @@ export function SubTrackerPage() {
                     const lastIdx = tiers.length - 1;
                     const last = tiers[lastIdx];
                     const reward = (last.rewardText || '').trim() || 'Bonus';
+                    const rewardDisplay =
+                      lastIdx === 0
+                        ? reward
+                        : reward.startsWith('+')
+                          ? reward
+                          : `+${reward}`;
                     return (
                       <div
                         style={{
@@ -644,7 +656,7 @@ export function SubTrackerPage() {
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        {reward}
+                        {rewardDisplay}
                       </div>
                     );
                   })() : null}
