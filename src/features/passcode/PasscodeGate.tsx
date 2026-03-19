@@ -16,7 +16,6 @@ import {
   savePasscodeFailedAttempts,
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
-  loadSecurityQuizCompleted,
   loadPasscodePaused,
   loadPasscode6Digit,
   savePasscode6Digit,
@@ -24,14 +23,12 @@ import {
   wipeAllAppData,
   type SecurityQA,
 } from '../../state/storage';
-import { SecurityOnboarding } from './SecurityOnboarding';
 import { Select } from '../../ui/Select';
 
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCKOUT_HOURS = 24;
 
 type Step =
-  | 'security-onboarding'
   | 'enter'
   | 'create'
   | 'confirm'
@@ -81,7 +78,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
   const [step, setStep] = useState<Step>(() => {
-    if (!loadSecurityQuizCompleted()) return 'security-onboarding';
     const hash = loadPasscodeHash();
     if (hash !== null) {
       if (!loadPasscode6Digit()) return 'update-to-6digit';
@@ -119,13 +115,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   }, [failedAttempts]);
 
   useEffect(() => {
-    if (!loadSecurityQuizCompleted()) {
-      setStep('security-onboarding');
-      setInput('');
-      setConfirmInput('');
-      setError('');
-      return;
-    }
     if (!storedHash) {
       setStep('create');
       setInput('');
@@ -401,14 +390,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const lockoutMessage = lockoutEnd
     ? `Recovery attempts are disabled for 24 hours until ${lockoutEnd.toLocaleString()}.`
     : 'Recovery attempts are disabled for 24 hours.';
-
-  if (step === 'security-onboarding') {
-    return (
-      <div className="passcode-gate">
-        <SecurityOnboarding onPass={() => setStep(storedHash ? 'enter' : 'create')} />
-      </div>
-    );
-  }
 
   const content = (
     <div
