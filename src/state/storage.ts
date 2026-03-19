@@ -204,7 +204,7 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
         titleText: '#000000',
         primaryText: '#000000',
         outlineButton: '#000000',
-        addButton: '#000000',
+        addButton: '#3A87FE',
       };
     }
     const parsed = JSON.parse(raw);
@@ -1063,7 +1063,8 @@ export function savePublicLoanShowPaymentActions(value: boolean) {
 
 /** Default base for surface/border/muted when only app background is customized. Exported for theme init. */
 export const DEFAULT_THEME_COLOR = '#F1EFE4';
-export const DEFAULT_ACCENT_COLOR = '#000000';
+// System default accent used for navigation buttons and primary actions.
+export const DEFAULT_ACCENT_COLOR = '#3A87FE';
 
 function isValidHex(hex: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(hex);

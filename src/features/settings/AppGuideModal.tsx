@@ -9,46 +9,49 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
     <Modal open={open} title="How This App Works" onClose={onClose}>
       <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <p style={{ margin: 0 }}>
-          This app is a <strong>manual-entry, local-first</strong> finance tracker. You enter your own balances and transactions. There is no direct connection to your bank by default.
+          This app is a <strong>manual-entry, local-first</strong> finance tracker. You type your own numbers, and by default it does not connect to your bank.
         </p>
 
         <section>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Main tabs</h4>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>What each tab is for</h4>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
-            <li><strong>Snapshot</strong> — Cash, credit cards, pending in/out, and final net cash in one view. Add accounts and post pending here.</li>
-            <li><strong>Spending</strong> — Log purchases by category. View totals and export CSV. Cards can have a reward category so the app suggests categories when you log a purchase.</li>
-            <li><strong>Upcoming</strong> — Expected income and expenses from recurring items. Shows how much you have left after expected costs. Linked HYSA “bills” portion counts as liquid here.</li>
-            <li><strong>Recurring</strong> — Salary, rent, subscriptions, loan payments. Feeds into Upcoming and can apply to Snapshot. Includes the 457(b) optimizer (Run optimizer / View last result).</li>
-            <li><strong>Loans</strong> — Federal (with IDR/repayment estimates) and private loans. Payment modes and recompute for private balances.</li>
-            <li><strong>Investing</strong> — HYSA (reserved vs bills, link to checking), Roth IRA, 401k, general. Adjust HYSA Allocation to move between reserved and bills.</li>
-            <li><strong>Sign-up bonus tracker</strong> — Track credit card bonuses and spend targets.</li>
-            <li><strong>Settings</strong> — Backup, security, App Customization, FAQ, and this guide.</li>
+            <li><strong>Snapshot</strong> — Your “where you stand now” view: cash + cards + pending in/out.</li>
+            <li><strong>Spending</strong> — Log purchases, categorize them, and export monthly CSV.</li>
+            <li><strong>Upcoming</strong> — Forecast using recurring items (and HYSA “bills” if linked).</li>
+            <li><strong>Recurring</strong> — Repeating income/expenses that feed Upcoming; can also update Snapshot when configured.</li>
+            <li><strong>Loans</strong> — Track federal/private loans and payment progress.</li>
+            <li><strong>Investing</strong> — HYSA (reserved vs bills), Roth IRA/401k, general investing.</li>
+            <li><strong>Sign-up bonus tracker</strong> — Track bonus tiers and progress for your cards.</li>
+            <li><strong>Settings</strong> — Backup/import, passcode/security policy, FAQ, and customization.</li>
           </ul>
         </section>
 
         <section>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>How data is stored</h4>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>The big idea: “pending” and “posting”
+          </h4>
           <p style={{ margin: 0 }}>
-            All wallet data is stored <strong>locally in your browser</strong>. The creator does not have access to it.
+            “Pending inbound/outbound” is money in motion. When you <strong>post</strong> it (i.e. when it actually lands/leaves), the ledger updates and <strong>Snapshot changes</strong> right away.
           </p>
         </section>
 
         <section>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Backups and security</h4>
-          <p style={{ margin: 0 }}>
-            Use <strong>Export JSON</strong> (Settings) to save a full backup; <strong>Import JSON</strong> restores (and replaces current data). Set a passcode for the app; you can add a hint, security questions, and a recovery key. For full details see the <strong>Security Policy</strong> (Settings → Security Policy).
-          </p>
-        </section>
-
-        <section>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Useful features</h4>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Security and privacy (simple version)</h4>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
-            <li><strong>Pending in/out</strong> — Track money in motion; post to bank/card when it settles.</li>
-            <li><strong>Linked HYSA</strong> — Link an HYSA to a checking account so “money designated for bills” counts as liquid in Upcoming and when choosing HYSA as a payment source.</li>
-            <li><strong>Recurring → Upcoming</strong> — Recurring income and expenses drive expected income/costs in Upcoming; you can move items to pending from there.</li>
-            <li><strong>Reward category</strong> — In Snapshot, set a reward category per card; Spending will suggest it when you add a purchase on that card.</li>
-            <li><strong>App Customization</strong> — Settings → App Customization for colors, fonts, and theme.</li>
+            <li>Your wallet data is stored locally in your browser (local-first).</li>
+            <li>The passcode is an <strong>access gate</strong> for the app UI; it does not encrypt your browser storage.</li>
+            <li>You can set a display name and profile photo in Settings. Those are stored locally too.</li>
+            <li>If you enable optional backend features (for example, Plaid “Detected activity”), the app makes network requests only to your configured backend.</li>
           </ul>
+          <p style={{ margin: '8px 0 0 0' }}>
+            For exact wording, see the <strong>Security Policy</strong> (Settings → Security Policy).
+          </p>
+        </section>
+
+        <section>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Backups</h4>
+          <p style={{ margin: 0 }}>
+            Use <strong>Export JSON</strong> to back up your wallet/ledger data and <strong>Import JSON</strong> to restore (replaces current data on this device). Treat backups as sensitive files.
+          </p>
         </section>
 
         <p style={{ margin: 0, paddingTop: 8, borderTop: '1px solid var(--border)' }}>

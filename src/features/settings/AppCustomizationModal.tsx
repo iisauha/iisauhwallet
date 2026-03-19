@@ -75,7 +75,7 @@ const SYSTEM_DEFAULT_LIGHT_ADV_COLORS: AdvancedUIColors = {
   titleText: '#000000',
   primaryText: '#000000',
   outlineButton: '#000000',
-  addButton: '#000000',
+  addButton: '#3A87FE',
 };
 
 const SYSTEM_DEFAULT_DARK_ADV_COLORS: AdvancedUIColors = {
@@ -88,7 +88,7 @@ const SYSTEM_DEFAULT_DARK_ADV_COLORS: AdvancedUIColors = {
   titleText: '#F1EFE4',
   primaryText: '#F1EFE4',
   outlineButton: '#F1EFE4',
-  addButton: '#F1EFE4',
+  addButton: '#FDC700',
 };
 
 const SYSTEM_DEFAULT_LIGHT_PRESET: SavedThemePreset = {
@@ -103,7 +103,7 @@ const SYSTEM_DEFAULT_DARK_PRESET: SavedThemePreset = {
   id: SYSTEM_DEFAULT_DARK_THEME_ID,
   name: 'System Default: Dark Mode',
   themeColor: '#1e293b',
-  accentColor: '#F1EFE4',
+  accentColor: '#FDC700',
   advancedColors: SYSTEM_DEFAULT_DARK_ADV_COLORS,
 };
 

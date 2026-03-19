@@ -686,6 +686,14 @@ export function InvestingPage() {
     if (accrued !== base) saveInvesting(accrued);
     return accrued;
   });
+  // Keep HYSA balances in sync with other tabs/actions that persist changes to localStorage
+  // (e.g. posting pending inbound/outbound affects HYSA).
+  useEffect(() => {
+    const base = loadInvesting();
+    const accrued = accrueHysaAccounts(base);
+    if (accrued !== base) saveInvesting(accrued);
+    setInvesting(accrued);
+  }, [data.pendingIn, data.pendingOut]);
 
   const dropdownState = useDropdownState();
   const getCollapsed = (key: 'hysa' | 'roth' | 'k401' | 'general') =>

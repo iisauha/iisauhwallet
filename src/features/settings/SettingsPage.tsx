@@ -494,17 +494,16 @@ export function SettingsPage() {
         <Modal open={true} title="About the creator" onClose={() => setAboutCreatorOpen(false)}>
           <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
             <p style={{ margin: '0 0 12px 0' }}>
-              I built this app because I wanted a simple way to track every dollar across my accounts. Many existing finance tools focus on subscriptions, automated categorization, or constantly reconnecting bank accounts, and I found that frustrating. I wanted something where I could manually track everything including transfers between accounts or money sitting in apps like Venmo.
+              I built iisauh wallet because I wanted a simple, manual-entry tool where your financial data stays under your control. I did not want “always-on” bank connections, forced categories, or reconnect flows.
             </p>
             <p style={{ margin: '0 0 12px 0' }}>
-              So I decided to build my own tool. I created this over the course of about three weeks as a personal project. My goal was to make something simple, transparent, and flexible for tracking finances.
+              The app is local-first: your balances, transactions, and settings are stored in your browser. You can also set a display name and profile photo in Settings; those are stored locally too.
             </p>
             <p style={{ margin: '0 0 12px 0' }}>
-              I hope you enjoy using it.
+              Passcode protection helps keep the app UI locked, but it does not replace device/browser security. For the exact threat model, backups, and optional backend features (like detected activity), please read the Security Policy.
             </p>
             <p style={{ margin: 0 }}>
-              For security details, please see the Security Policy.<br />
-              If you have questions or feedback you can contact me at:<br />
+              If you have questions or feedback, you can contact me at:<br />
               <a href="mailto:iisauhaguilar@gmail.com" style={{ color: 'var(--accent)' }}>iisauhaguilar@gmail.com</a>
             </p>
           </div>

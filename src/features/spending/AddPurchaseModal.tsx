@@ -929,7 +929,10 @@ export function AddPurchaseModal(props: {
 
                 actions.updatePurchase(currentPurchase.id, purchase);
 
-                if (oldLeg.delta > 0 || newLeg.delta > 0) {
+                // Only prompt when rewards would actually need to change.
+                // Editing title/notes should not trigger a rewards popup when payment method/amount/rules are unchanged.
+                const rewardsNeedUpdate = oldLeg.cardId !== newLeg.cardId || oldLeg.rewardType !== newLeg.rewardType || oldLeg.delta !== newLeg.delta;
+                if (rewardsNeedUpdate) {
                   setEditRewardPopup({
                     oldCardId: oldLeg.cardId,
                     oldCardName: oldLeg.cardName,

@@ -3,56 +3,56 @@ import { Modal } from '../../ui/Modal';
 
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
-    q: 'What does this app track?',
-    a: 'You track your own accounts (banks, credit cards, cash), balances, pending money moving between accounts, purchases, recurring bills, loans, and investing/HYSA. Everything is entered by you; the app does not connect to your real bank to pull data automatically.',
+    q: 'Does the passcode encrypt my data in storage?',
+    a: 'No. The passcode is an access gate for the app UI. Your wallet ledger and settings are stored locally in your browser storage. Anyone who can access your browser storage (or who can bypass/skip the gate) may be able to view your data.',
   },
   {
-    q: 'How does pending inbound/outbound work?',
-    a: 'Pending inbound is money you expect to receive (e.g. a paycheck or transfer) that you have not yet posted to an account. Pending outbound is money you plan to move out (e.g. paying a card from checking). You post them when the money actually lands or leaves so your balances stay accurate.',
+    q: 'If someone gets my phone/laptop, how much can they see?',
+    a: 'With the passcode gate enabled, they still may be blocked from using the app UI. However, if they can read your browser storage or you have paused protection, your data could be visible. This is why the Security Policy also emphasizes backups and device access.',
   },
   {
-    q: 'What does "Money in HYSA Designated for Bills" mean?',
-    a: 'It is the part of your HYSA balance that you treat as available for bills and checking-linked spending. The rest can be "reserved savings." You can move money between these two portions using Adjust HYSA Allocation in the Investing section.',
+    q: 'What changes when I “Pause passcode protection”?',
+    a: 'Pausing removes the passcode requirement until you resume protection. That makes the app easier to open for anyone with access to the device.',
   },
   {
-    q: 'How do I back up my data?',
-    a: 'Use Settings → Export JSON or Export Monthly Purchases CSV; Import JSON restores from a backup. Please reference the Security Policy.',
+    q: 'Where do my profile name and profile picture live?',
+    a: 'They are stored locally in your browser. The display name is stored as plain text; the profile picture is resized and stored as a small JPEG data URL. See the Security Policy for the exact storage and backup implications.',
   },
   {
-    q: 'How does passcode setup work?',
-    a: 'You can set a passcode in Settings. Please reference the Security Policy.',
+    q: 'Is my profile picture/name included in “Export JSON” backups?',
+    a: 'Not necessarily. The current JSON export primarily backs up the wallet ledger/storage keys. The Security Policy explains which parts are included, and you should treat any exported/imported file as sensitive.',
   },
   {
-    q: 'What is the recovery key?',
-    a: 'It is a key you create to recover access if you forget your passcode. Please reference the Security Policy.',
+    q: 'What happens if I import JSON from another device?',
+    a: 'Import can replace the current ledger state on this device. Only import files you trust. Untrusted JSON can also bloat local storage or change behavior unexpectedly (for example, via large embedded strings like profile images).',
   },
   {
-    q: 'What do security questions do?',
-    a: 'They help you recover access if you forget your passcode. Please reference the Security Policy.',
+    q: 'Does the app send anything to a server by default?',
+    a: 'By default, no. The app is manual-entry and local-first. If you configure an optional backend (for “Detected activity”), network calls can happen only to your configured backend URL.',
   },
   {
-    q: 'What does the password hint do?',
-    a: 'It reminds you of your passcode without revealing it. Please reference the Security Policy.',
+    q: 'If I enable “Detected activity” (Plaid), what kind of data could be sent?',
+    a: 'The frontend can request link tokens/health checks and load detected activity items from your backend. The exact data shape is controlled by your backend implementation. Review the Security Policy and only enable backend features you understand.',
   },
   {
-    q: 'What happens after too many wrong passcode attempts?',
-    a: 'The app may temporarily lock. Please reference the Security Policy.',
+    q: 'Can browser extensions read my wallet data?',
+    a: 'Potentially. Since data is stored in browser storage, any script running under your site context, or extensions with appropriate permissions, may be able to read it. The app cannot fully protect against that threat model.',
   },
   {
-    q: 'Can the creator access my passcode or recovery key?',
-    a: 'No. Please reference the Security Policy.',
+    q: 'Does the creator/admin have access to my recovery key or passcode?',
+    a: 'No. The passcode hash and recovery-related security values are stored locally for your device. The creator is not intended to have access to them.',
   },
   {
-    q: 'How do I reset my passcode?',
-    a: 'From the lock screen tap "Forgot passcode?" or use Settings → Security & privacy → Reset passcode. Please reference the Security Policy.',
+    q: 'What does “Reset all data” actually do?',
+    a: 'It clears this site’s `localStorage` and reloads the app, wiping your locally stored ledger data (and also your locally stored profile data). If you still have an export, you can re-import afterward.',
   },
   {
-    q: 'Does the app connect to my real bank automatically?',
-    a: 'No. Please reference the Security Policy.',
+    q: 'Are my backups safe to upload to cloud or email?',
+    a: 'Only if you accept the risk. Backup JSON and CSV files can contain sensitive financial information. This app does not encrypt backup files on export; treat them as sensitive documents.',
   },
   {
-    q: 'How do I edit account names or categories?',
-    a: 'Account names: Settings → Edit Account Names. Categories: Settings → Manage Categories. You can rename banks, cards, and investing accounts, and add or edit spending categories and subcategories.',
+    q: 'Does the app require the “official link” to work?',
+    a: 'You should only use the official site. The Security Policy warns against using alternate/unofficial links. A different domain could potentially run a tampered version.',
   },
 ];
 

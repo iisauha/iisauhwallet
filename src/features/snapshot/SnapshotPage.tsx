@@ -130,7 +130,9 @@ export function SnapshotPage() {
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
 
-  const investingState = useMemo(() => loadInvesting(), []);
+  // Snapshot needs to stay in sync with HYSA updates (pending inbound/outbound postings),
+  // which are persisted to localStorage but may not update investingState automatically.
+  const investingState = useMemo(() => loadInvesting(), [data.pendingIn, data.pendingOut]);
   const banksSortedByBalance = useMemo(
     () => [...(data.banks || [])].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0)),
     [data.banks]
@@ -151,29 +153,22 @@ export function SnapshotPage() {
   const pendingOutNonCcCents = totals.pendingOutNonCcCents ?? totals.pendingOutCents;
 
   const linkedHysaLiquidByBankId = useMemo(() => {
-    try {
-      const inv = loadInvesting();
-      const map: Record<string, number> = {};
-      (inv.accounts || []).forEach((acc: any) => {
-        if (!acc || acc.type !== 'hysa') return;
-        const h = acc as HysaAccount;
-        const bankId = h.linkedCheckingBankId || null;
-        if (!bankId) return;
-        const balance = typeof h.balanceCents === 'number' ? h.balanceCents : 0;
-        const reservedRaw =
-          typeof h.reservedSavingsCents === 'number' && h.reservedSavingsCents >= 0
-            ? h.reservedSavingsCents
-            : 0;
-        const reserved = Math.min(reservedRaw, balance);
-        const liquid = Math.max(0, balance - reserved);
-        if (liquid <= 0) return;
-        map[bankId] = (map[bankId] || 0) + liquid;
-      });
-      return map;
-    } catch {
-      return {};
-    }
-  }, []);
+    const map: Record<string, number> = {};
+    (investingState.accounts || []).forEach((acc: any) => {
+      if (!acc || acc.type !== 'hysa') return;
+      const h = acc as HysaAccount;
+      const bankId = h.linkedCheckingBankId || null;
+      if (!bankId) return;
+      const balance = typeof h.balanceCents === 'number' ? h.balanceCents : 0;
+      const reservedRaw =
+        typeof h.reservedSavingsCents === 'number' && h.reservedSavingsCents >= 0 ? h.reservedSavingsCents : 0;
+      const reserved = Math.min(reservedRaw, balance);
+      const liquid = Math.max(0, balance - reserved);
+      if (liquid <= 0) return;
+      map[bankId] = (map[bankId] || 0) + liquid;
+    });
+    return map;
+  }, [investingState]);
 
   const totalLinkedHysaCents = useMemo(
     () => Object.values(linkedHysaLiquidByBankId).reduce((a, b) => a + b, 0),
