@@ -66,13 +66,9 @@ function formatTierRewardQtyPlain(qty: number, unitType: CompletedBonusUnitType)
   return Math.round(qty).toLocaleString();
 }
 
-function formatTierRewardHashLabel(parsed: { quantity: number; unitType: CompletedBonusUnitType }): string {
-  if (!(parsed.quantity > 0)) return 'Bonus';
-  const qtyStr = formatTierRewardQtyPlain(parsed.quantity, parsed.unitType);
-  if (parsed.unitType === 'cash') return `#${qtyStr}$`;
-  if (parsed.unitType === 'points') return `#${qtyStr} pts`;
-  if (parsed.unitType === 'miles') return `#${qtyStr} mi`;
-  return `#${qtyStr}`;
+function formatTierRewardHashNumeric(parsed: { quantity: number; unitType: CompletedBonusUnitType }): string {
+  if (!(parsed.quantity > 0)) return '';
+  return formatTierRewardQtyPlain(parsed.quantity, parsed.unitType);
 }
 
 function entryToCompletedBonus(
@@ -621,7 +617,9 @@ export function SubTrackerPage() {
                     const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
                     const clampedLeft = clamp(left, 2, 98);
                     const parsed = parseRewardText(t.rewardText || '');
-                    const label = formatTierRewardHashLabel(parsed);
+                    const numeric = formatTierRewardHashNumeric(parsed);
+                    const label =
+                      parsed.unitType === 'cash' ? `#${numeric}$` : `#${numeric}`;
                     const rewardDisplay = idx === 0 ? label : `+${label}`;
                     return (
                       <div
@@ -650,7 +648,9 @@ export function SubTrackerPage() {
                     const lastIdx = tiers.length - 1;
                     const last = tiers[lastIdx];
                     const parsed = parseRewardText(last.rewardText || '');
-                    const label = formatTierRewardHashLabel(parsed);
+                    const numeric = formatTierRewardHashNumeric(parsed);
+                    const label =
+                      parsed.unitType === 'cash' ? `#${numeric}$` : `#${numeric}`;
                     const rewardDisplay = lastIdx === 0 ? label : `+${label}`;
                     return (
                       <div
