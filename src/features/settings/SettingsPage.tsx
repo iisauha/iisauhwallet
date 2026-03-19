@@ -349,7 +349,7 @@ export function SettingsPage() {
         <>
           {pausePasscodeStep === 1 ? (
             <Modal open={true} title="Pause passcode?" onClose={() => setPausePasscodeStep(0)}>
-              <p style={{ margin: '0 0 16px 0', color: 'var(--muted)' }}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
                 This reduces app security. Anyone with access to this device could open the app without a passcode. Your data will still be stored locally on this device.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -359,7 +359,7 @@ export function SettingsPage() {
             </Modal>
           ) : pausePasscodeStep === 2 ? (
             <Modal open={true} title="Confirm pause" onClose={() => setPausePasscodeStep(0)}>
-              <p style={{ margin: '0 0 16px 0', color: 'var(--muted)' }}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
                 Confirm again: the passcode will not be required when opening the app until you tap &quot;Resume passcode protection&quot; in Settings.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>

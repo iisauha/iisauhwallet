@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { parseCents } from '../../state/calc';
+import { formatCents, parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadSubTracker } from '../../state/storage';
 import type { SubTrackerEntry } from '../../state/storage';
-import { suggestAllCardsForPurchase, type SuggestResult } from '../rewards/rewardMatching';
+import { computeRewardDeltaForPurchase, suggestAllCardsForPurchase, type RewardDelta, type SuggestResult } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 
 function todayKey() {
@@ -67,6 +67,52 @@ export function AddPurchaseModal(props: {
   const [hasSelectedCategory, setHasSelectedCategory] = useState(false);
   const [showSubTrackerPopup, setShowSubTrackerPopup] = useState(false);
   const [suggestedSubTrackerCardId, setSuggestedSubTrackerCardId] = useState<string | null>(null);
+  const [rewardAdjustPopup, setRewardAdjustPopup] = useState<null | {
+    rewardType: 'cashback' | 'miles' | 'points';
+    cardId: string;
+    cardName: string;
+    deltaLabel: string;
+    computedDelta: number; // cents for cashback, raw count for points/miles
+    newBalanceLabel: string;
+    newBalance: number; // cents for cashback, raw count for points/miles
+    currentBalance: number; // cents for cashback, raw count for points/miles
+  }>(null);
+  const [rewardAdjustMode, setRewardAdjustMode] = useState<'computed' | 'manual'>('computed');
+  const [rewardAdjustManualStr, setRewardAdjustManualStr] = useState<string>('');
+
+  useEffect(() => {
+    if (!rewardAdjustPopup) return;
+    setRewardAdjustMode('computed');
+    setRewardAdjustManualStr('');
+  }, [rewardAdjustPopup]);
+
+  const [editRewardPopup, setEditRewardPopup] = useState<
+    | null
+    | {
+        oldCardId: string | null;
+        oldCardName: string;
+        oldRewardType: 'cashback' | 'miles' | 'points';
+        oldDelta: number; // cents for cashback, raw count for points/miles
+        oldCurrentBalance: number; // cents for cashback, raw count for points/miles
+
+        newCardId: string | null;
+        newCardName: string;
+        newRewardType: 'cashback' | 'miles' | 'points';
+        newDelta: number; // cents for cashback, raw count for points/miles
+        newCurrentBalance: number; // cents for cashback, raw count for points/miles
+      }
+  >(null);
+
+  const [editRewardMode, setEditRewardMode] = useState<'computed' | 'manual'>('computed');
+  const [editManualSubtractStr, setEditManualSubtractStr] = useState<string>('');
+  const [editManualAddStr, setEditManualAddStr] = useState<string>('');
+
+  useEffect(() => {
+    if (!editRewardPopup) return;
+    setEditRewardMode('computed');
+    setEditManualSubtractStr('');
+    setEditManualAddStr('');
+  }, [editRewardPopup]);
 
   useEffect(() => {
     if (props.open) setSuggestionAccepted(false);
@@ -259,6 +305,351 @@ export function AddPurchaseModal(props: {
                 }}
               >
                 Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {rewardAdjustPopup ? (
+        <div className="modal-overlay" style={{ zIndex: 10002 }}>
+          <div className="modal">
+            <h3 style={{ marginBottom: 10 }}>Update rewards?</h3>
+            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+              Would you like to add {rewardAdjustPopup.deltaLabel} to your {rewardAdjustPopup.cardName} rewards? Your new balance will be {rewardAdjustPopup.newBalanceLabel}.
+            </p>
+            {rewardAdjustMode === 'manual' ? (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                  Specify how much {rewardAdjustPopup.rewardType === 'cashback' ? 'cash back ($)' : rewardAdjustPopup.rewardType} to add
+                </label>
+                <input
+                  className="ll-control"
+                  value={rewardAdjustManualStr}
+                  onChange={(e) => setRewardAdjustManualStr(e.target.value)}
+                  inputMode={rewardAdjustPopup.rewardType === 'cashback' ? 'decimal' : 'numeric'}
+                  placeholder={rewardAdjustPopup.rewardType === 'cashback' ? 'e.g. 20' : 'e.g. 40000'}
+                />
+              </div>
+            ) : null}
+            <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setRewardAdjustPopup(null);
+                  props.onSave?.();
+                  props.onClose();
+                  setTitle('');
+                  setAmount('');
+                  setNotes('');
+                  setIsSplit(false);
+                  setMyPortion('');
+                  setApplyToSnapshot(false);
+                  setPaymentSource('');
+                  setPaymentTargetId('');
+                  setShowSuggestionPopup(false);
+                  setSuggestedCardsOrder([]);
+                  setHasSelectedCategory(false);
+                  setShowSubTrackerPopup(false);
+                  setSuggestedSubTrackerCardId(null);
+                }}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                className="btn btn-add"
+                onClick={() => {
+                  if (rewardAdjustMode === 'computed') {
+                    if (rewardAdjustPopup.rewardType === 'cashback') {
+                      actions.updateCardRewardTotals(rewardAdjustPopup.cardId, { rewardCashbackCents: rewardAdjustPopup.newBalance });
+                    } else if (rewardAdjustPopup.rewardType === 'points') {
+                      actions.updateCardRewardTotals(rewardAdjustPopup.cardId, { rewardPoints: rewardAdjustPopup.newBalance });
+                    } else {
+                      actions.updateCardRewardTotals(rewardAdjustPopup.cardId, { rewardMiles: rewardAdjustPopup.newBalance });
+                    }
+                  } else {
+                    // Manual delta. We treat the input as "how much to add" (not the final balance).
+                    const cleaned = (rewardAdjustManualStr || '0').replace(/,/g, '');
+                    const deltaInput =
+                      rewardAdjustPopup.rewardType === 'cashback'
+                        ? parseCents(rewardAdjustManualStr)
+                        : Math.round(parseFloat(cleaned));
+                    const delta = Number.isFinite(deltaInput) ? deltaInput : 0;
+                    if (!(delta > 0)) return;
+                    const nextBalance = Math.max(0, rewardAdjustPopup.currentBalance + delta);
+                    if (rewardAdjustPopup.rewardType === 'cashback') {
+                      actions.updateCardRewardTotals(rewardAdjustPopup.cardId, { rewardCashbackCents: nextBalance });
+                    } else if (rewardAdjustPopup.rewardType === 'points') {
+                      actions.updateCardRewardTotals(rewardAdjustPopup.cardId, { rewardPoints: nextBalance });
+                    } else {
+                      actions.updateCardRewardTotals(rewardAdjustPopup.cardId, { rewardMiles: nextBalance });
+                    }
+                  }
+
+                  setRewardAdjustPopup(null);
+                  setRewardAdjustMode('computed');
+                  setRewardAdjustManualStr('');
+                  props.onSave?.();
+                  props.onClose();
+                  setTitle('');
+                  setAmount('');
+                  setNotes('');
+                  setIsSplit(false);
+                  setMyPortion('');
+                  setApplyToSnapshot(false);
+                  setPaymentSource('');
+                  setPaymentTargetId('');
+                  setShowSuggestionPopup(false);
+                  setSuggestedCardsOrder([]);
+                  setHasSelectedCategory(false);
+                  setShowSubTrackerPopup(false);
+                  setSuggestedSubTrackerCardId(null);
+                }}
+              >
+                {rewardAdjustMode === 'computed' ? 'Yes' : 'Apply manual'}
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setRewardAdjustMode((m) => (m === 'computed' ? 'manual' : 'computed'));
+                  setRewardAdjustManualStr('');
+                }}
+                style={{ padding: '12px 16px' }}
+              >
+                {rewardAdjustMode === 'computed' ? 'Manual…' : 'Use computed'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editRewardPopup ? (
+        <div className="modal-overlay" style={{ zIndex: 10003 }}>
+          <div className="modal">
+            <h3 style={{ marginBottom: 10 }}>Update rewards?</h3>
+            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+              Since the payment method changed, rewards will be updated by subtracting your previous amount from <strong>{editRewardPopup.oldCardName}</strong> and adding your new amount to <strong>{editRewardPopup.newCardName}</strong>.
+            </p>
+
+            <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.95rem', lineHeight: 1.8, marginBottom: 8 }}>
+              <div>
+                Subtract:{' '}
+                <strong>
+                  {editRewardPopup.oldRewardType === 'cashback'
+                    ? `${formatCents(editRewardPopup.oldDelta)} cash back`
+                    : `${editRewardPopup.oldDelta.toLocaleString()} ${editRewardPopup.oldRewardType}`}
+                </strong>{' '}
+                from {editRewardPopup.oldCardName}
+              </div>
+              <div>
+                Add:{' '}
+                <strong>
+                  {editRewardPopup.newRewardType === 'cashback'
+                    ? `${formatCents(editRewardPopup.newDelta)} cash back`
+                    : `${editRewardPopup.newDelta.toLocaleString()} ${editRewardPopup.newRewardType}`}
+                </strong>{' '}
+                to {editRewardPopup.newCardName}
+              </div>
+            </div>
+
+            {editRewardMode === 'manual' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="field">
+                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                    Subtract how much from {editRewardPopup.oldCardName}
+                  </label>
+                  <input
+                    className="ll-control"
+                    disabled={!editRewardPopup.oldCardId}
+                    value={editManualSubtractStr}
+                    onChange={(e) => setEditManualSubtractStr(e.target.value)}
+                    inputMode={editRewardPopup.oldRewardType === 'cashback' ? 'decimal' : 'numeric'}
+                    placeholder={editRewardPopup.oldRewardType === 'cashback' ? 'e.g. 20' : 'e.g. 40000'}
+                  />
+                </div>
+                <div className="field">
+                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                    Add how much to {editRewardPopup.newCardName}
+                  </label>
+                  <input
+                    className="ll-control"
+                    disabled={!editRewardPopup.newCardId}
+                    value={editManualAddStr}
+                    onChange={(e) => setEditManualAddStr(e.target.value)}
+                    inputMode={editRewardPopup.newRewardType === 'cashback' ? 'decimal' : 'numeric'}
+                    placeholder={editRewardPopup.newRewardType === 'cashback' ? 'e.g. 20' : 'e.g. 40000'}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => {
+                setEditRewardPopup(null);
+                props.onSave?.();
+                props.onClose();
+                setTitle('');
+                setAmount('');
+                setNotes('');
+                setIsSplit(false);
+                setMyPortion('');
+                setApplyToSnapshot(false);
+                setPaymentSource('');
+                setPaymentTargetId('');
+                setShowSuggestionPopup(false);
+                setSuggestedCardsOrder([]);
+                setHasSelectedCategory(false);
+                setShowSubTrackerPopup(false);
+                setSuggestedSubTrackerCardId(null);
+              }}>
+                No
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-add"
+                onClick={() => {
+                  if (editRewardMode === 'computed') {
+                    const sameCard = !!editRewardPopup.oldCardId && !!editRewardPopup.newCardId && editRewardPopup.oldCardId === editRewardPopup.newCardId;
+                    const sameType = editRewardPopup.oldRewardType === editRewardPopup.newRewardType;
+
+                    if (sameCard && sameType && editRewardPopup.oldCardId) {
+                      const finalBalance = Math.max(0, editRewardPopup.oldCurrentBalance - editRewardPopup.oldDelta + editRewardPopup.newDelta);
+                      if (editRewardPopup.oldRewardType === 'cashback') {
+                        actions.updateCardRewardTotals(editRewardPopup.oldCardId, { rewardCashbackCents: finalBalance });
+                      } else if (editRewardPopup.oldRewardType === 'points') {
+                        actions.updateCardRewardTotals(editRewardPopup.oldCardId, { rewardPoints: finalBalance });
+                      } else {
+                        actions.updateCardRewardTotals(editRewardPopup.oldCardId, { rewardMiles: finalBalance });
+                      }
+                    } else {
+                      if (editRewardPopup.oldCardId) {
+                        if (editRewardPopup.oldRewardType === 'cashback') {
+                          actions.updateCardRewardTotals(editRewardPopup.oldCardId, {
+                            rewardCashbackCents: Math.max(0, editRewardPopup.oldCurrentBalance - editRewardPopup.oldDelta)
+                          });
+                        } else if (editRewardPopup.oldRewardType === 'points') {
+                          actions.updateCardRewardTotals(editRewardPopup.oldCardId, {
+                            rewardPoints: Math.max(0, editRewardPopup.oldCurrentBalance - editRewardPopup.oldDelta)
+                          });
+                        } else {
+                          actions.updateCardRewardTotals(editRewardPopup.oldCardId, {
+                            rewardMiles: Math.max(0, editRewardPopup.oldCurrentBalance - editRewardPopup.oldDelta)
+                          });
+                        }
+                      }
+
+                      if (editRewardPopup.newCardId) {
+                        if (editRewardPopup.newRewardType === 'cashback') {
+                          actions.updateCardRewardTotals(editRewardPopup.newCardId, {
+                            rewardCashbackCents: editRewardPopup.newCurrentBalance + editRewardPopup.newDelta
+                          });
+                        } else if (editRewardPopup.newRewardType === 'points') {
+                          actions.updateCardRewardTotals(editRewardPopup.newCardId, {
+                            rewardPoints: editRewardPopup.newCurrentBalance + editRewardPopup.newDelta
+                          });
+                        } else {
+                          actions.updateCardRewardTotals(editRewardPopup.newCardId, {
+                            rewardMiles: editRewardPopup.newCurrentBalance + editRewardPopup.newDelta
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    const manualOld = editRewardPopup.oldRewardType === 'cashback'
+                      ? parseCents((editManualSubtractStr || '0').replace(/,/g, ''))
+                      : Math.round(parseFloat((editManualSubtractStr || '0').replace(/,/g, '')));
+                    const manualNew = editRewardPopup.newRewardType === 'cashback'
+                      ? parseCents((editManualAddStr || '0').replace(/,/g, ''))
+                      : Math.round(parseFloat((editManualAddStr || '0').replace(/,/g, '')));
+                    const oldDeltaToApply = Number.isFinite(manualOld) ? manualOld : 0;
+                    const newDeltaToApply = Number.isFinite(manualNew) ? manualNew : 0;
+
+                    const sameCard = !!editRewardPopup.oldCardId && !!editRewardPopup.newCardId && editRewardPopup.oldCardId === editRewardPopup.newCardId;
+                    const sameType = editRewardPopup.oldRewardType === editRewardPopup.newRewardType;
+
+                    if (sameCard && sameType && editRewardPopup.oldCardId && (oldDeltaToApply > 0 || newDeltaToApply > 0)) {
+                      const finalBalance = Math.max(0, editRewardPopup.oldCurrentBalance - oldDeltaToApply + newDeltaToApply);
+                      if (editRewardPopup.oldRewardType === 'cashback') {
+                        actions.updateCardRewardTotals(editRewardPopup.oldCardId, { rewardCashbackCents: finalBalance });
+                      } else if (editRewardPopup.oldRewardType === 'points') {
+                        actions.updateCardRewardTotals(editRewardPopup.oldCardId, { rewardPoints: finalBalance });
+                      } else {
+                        actions.updateCardRewardTotals(editRewardPopup.oldCardId, { rewardMiles: finalBalance });
+                      }
+                    } else {
+                      if (editRewardPopup.oldCardId && oldDeltaToApply > 0) {
+                        if (editRewardPopup.oldRewardType === 'cashback') {
+                          actions.updateCardRewardTotals(editRewardPopup.oldCardId, {
+                            rewardCashbackCents: Math.max(0, editRewardPopup.oldCurrentBalance - oldDeltaToApply)
+                          });
+                        } else if (editRewardPopup.oldRewardType === 'points') {
+                          actions.updateCardRewardTotals(editRewardPopup.oldCardId, {
+                            rewardPoints: Math.max(0, editRewardPopup.oldCurrentBalance - oldDeltaToApply)
+                          });
+                        } else {
+                          actions.updateCardRewardTotals(editRewardPopup.oldCardId, {
+                            rewardMiles: Math.max(0, editRewardPopup.oldCurrentBalance - oldDeltaToApply)
+                          });
+                        }
+                      }
+                      if (editRewardPopup.newCardId && newDeltaToApply > 0) {
+                        if (editRewardPopup.newRewardType === 'cashback') {
+                          actions.updateCardRewardTotals(editRewardPopup.newCardId, {
+                            rewardCashbackCents: editRewardPopup.newCurrentBalance + newDeltaToApply
+                          });
+                        } else if (editRewardPopup.newRewardType === 'points') {
+                          actions.updateCardRewardTotals(editRewardPopup.newCardId, {
+                            rewardPoints: editRewardPopup.newCurrentBalance + newDeltaToApply
+                          });
+                        } else {
+                          actions.updateCardRewardTotals(editRewardPopup.newCardId, {
+                            rewardMiles: editRewardPopup.newCurrentBalance + newDeltaToApply
+                          });
+                        }
+                      }
+                    }
+                  }
+
+                  setEditRewardPopup(null);
+                  setEditRewardMode('computed');
+                  setEditManualSubtractStr('');
+                  setEditManualAddStr('');
+                  props.onSave?.();
+                  props.onClose();
+                  setTitle('');
+                  setAmount('');
+                  setNotes('');
+                  setIsSplit(false);
+                  setMyPortion('');
+                  setApplyToSnapshot(false);
+                  setPaymentSource('');
+                  setPaymentTargetId('');
+                  setShowSuggestionPopup(false);
+                  setSuggestedCardsOrder([]);
+                  setHasSelectedCategory(false);
+                  setShowSubTrackerPopup(false);
+                  setSuggestedSubTrackerCardId(null);
+                }}
+              >
+                {editRewardMode === 'computed' ? 'Yes' : 'Apply manual'}
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setEditRewardMode((m) => (m === 'computed' ? 'manual' : 'computed'));
+                  setEditManualSubtractStr('');
+                  setEditManualAddStr('');
+                }}
+                style={{ padding: '12px 16px' }}
+              >
+                {editRewardMode === 'computed' ? 'Manual…' : 'Use computed'}
               </button>
             </div>
           </div>
@@ -465,22 +856,196 @@ export function AddPurchaseModal(props: {
                 purchase.fullReimbursementExpected = true;
               }
               if (isEditing && currentPurchase && currentPurchase.id) {
-                actions.updatePurchase(currentPurchase.id, purchase);
-              } else {
-                actions.addPurchase(purchase);
-                if (props.reimbursementExpected && applyToSnapshot && paymentSource === 'card' && paymentTargetId) {
-                  const reimbursementCents = isSplit && purchase.splitSnapshot && typeof purchase.splitSnapshot.amountCents === 'number'
-                    ? purchase.splitSnapshot.amountCents
-                    : myPortionCents;
-                  if (reimbursementCents > 0) {
-                    actions.addPendingInbound({
-                      label: `Reimbursement: ${title.trim() || 'Purchase'}`,
-                      amountCents: reimbursementCents,
-                      depositTo: 'bank'
-                    });
+                const oldPurchase: any = currentPurchase;
+
+                const computeLeg = (p: any) => {
+                  const result = {
+                    cardId: null as string | null,
+                    cardName: 'No card',
+                    rewardType: (p?.paymentSource === 'card' || p?.paymentSource === 'credit_card' ? 'points' : 'points') as
+                      | 'cashback'
+                      | 'miles'
+                      | 'points',
+                    delta: 0,
+                    currentBalance: 0
+                  };
+
+                  const isSplitApplied = !!p?.isSplit && !!p?.splitSnapshot && typeof p?.splitSnapshot.amountCents === 'number';
+                  const src = isSplitApplied && p.splitSnapshot?.paymentSource ? p.splitSnapshot.paymentSource : p?.paymentSource;
+                  const targetId = isSplitApplied && p.splitSnapshot?.paymentTargetId ? p.splitSnapshot.paymentTargetId : p?.paymentTargetId;
+                  const amountCents = isSplitApplied
+                    ? p.splitSnapshot.amountCents
+                    : typeof p?.amountCents === 'number'
+                      ? p.amountCents
+                      : 0;
+
+                  if (!p?.applyToSnapshot || (src !== 'card' && src !== 'credit_card') || !targetId) return result;
+
+                  const card = (data.cards || []).find((c) => c.id === targetId) || null;
+                  if (!card) return result;
+
+                  result.cardId = card.id;
+                  result.cardName = card.name || 'Card';
+                  result.currentBalance =
+                    card.rewardCashbackCents ?? 0; // default overwritten after rewardType is decided
+
+                  // Try compute from rules matched to category/subcategory.
+                  const rewardDelta =
+                    p?.category
+                      ? computeRewardDeltaForPurchase({
+                          card,
+                          amountCents,
+                          category: p.category,
+                          subcategory: p.subcategory
+                        })
+                      : null;
+
+                  if (rewardDelta) {
+                    result.rewardType = rewardDelta.rewardType;
+                    if (rewardDelta.rewardType === 'cashback') {
+                      result.delta = rewardDelta.deltaCashbackCents;
+                      result.currentBalance = card.rewardCashbackCents ?? 0;
+                    } else if (rewardDelta.rewardType === 'points') {
+                      result.delta = rewardDelta.deltaPoints;
+                      result.currentBalance = card.rewardPoints ?? 0;
+                    } else {
+                      result.delta = rewardDelta.deltaMiles;
+                      result.currentBalance = card.rewardMiles ?? 0;
+                    }
+                  } else {
+                    // No matched rule => treat as zero delta but keep unit aligned to what this card tracks.
+                    result.rewardType = (card.rewardType || 'points') as any;
+                    if (result.rewardType === 'cashback') result.currentBalance = card.rewardCashbackCents ?? 0;
+                    else if (result.rewardType === 'points') result.currentBalance = card.rewardPoints ?? 0;
+                    else result.currentBalance = card.rewardMiles ?? 0;
+                    result.delta = 0;
                   }
+                  return result;
+                };
+
+                // Compute old/new legs based on the pre-save purchase vs the new edited purchase.
+                const oldLeg = computeLeg(oldPurchase);
+                const newLeg = computeLeg(purchase);
+
+                actions.updatePurchase(currentPurchase.id, purchase);
+
+                if (oldLeg.delta > 0 || newLeg.delta > 0) {
+                  setEditRewardPopup({
+                    oldCardId: oldLeg.cardId,
+                    oldCardName: oldLeg.cardName,
+                    oldRewardType: oldLeg.rewardType,
+                    oldDelta: oldLeg.delta,
+                    oldCurrentBalance: oldLeg.currentBalance,
+
+                    newCardId: newLeg.cardId,
+                    newCardName: newLeg.cardName,
+                    newRewardType: newLeg.rewardType,
+                    newDelta: newLeg.delta,
+                    newCurrentBalance: newLeg.currentBalance
+                  });
+                  return;
+                }
+
+                props.onSave?.();
+                props.onClose();
+                setTitle('');
+                setAmount('');
+                setNotes('');
+                setIsSplit(false);
+                setMyPortion('');
+                setApplyToSnapshot(false);
+                setPaymentSource('');
+                setPaymentTargetId('');
+                setShowSuggestionPopup(false);
+                setSuggestedCardsOrder([]);
+                setHasSelectedCategory(false);
+                setShowSubTrackerPopup(false);
+                setSuggestedSubTrackerCardId(null);
+                return;
+              }
+
+              // Add purchase first (required), then optionally adjust rewards via popup.
+              actions.addPurchase(purchase);
+              if (props.reimbursementExpected && applyToSnapshot && paymentSource === 'card' && paymentTargetId) {
+                const reimbursementCents = isSplit && purchase.splitSnapshot && typeof purchase.splitSnapshot.amountCents === 'number'
+                  ? purchase.splitSnapshot.amountCents
+                  : myPortionCents;
+                if (reimbursementCents > 0) {
+                  actions.addPendingInbound({
+                    label: `Reimbursement: ${title.trim() || 'Purchase'}`,
+                    amountCents: reimbursementCents,
+                    depositTo: 'bank'
+                  });
                 }
               }
+
+              const getAppliedCard = () => {
+                if (!purchase.applyToSnapshot) return null;
+                const isSplitApplied = !!purchase.isSplit && !!purchase.splitSnapshot && typeof purchase.splitSnapshot.amountCents === 'number';
+                const src = isSplitApplied && purchase.splitSnapshot?.paymentSource ? purchase.splitSnapshot.paymentSource : purchase.paymentSource;
+                const targetId = isSplitApplied && purchase.splitSnapshot?.paymentTargetId ? purchase.splitSnapshot.paymentTargetId : purchase.paymentTargetId;
+                if (!targetId) return null;
+                if (src !== 'card' && src !== 'credit_card') return null;
+                const card = (data.cards || []).find((c) => c.id === targetId);
+                return card || null;
+              };
+
+              const card = getAppliedCard();
+              const appliedAmountCents = (() => {
+                const isSplitApplied = !!purchase.isSplit && !!purchase.splitSnapshot && typeof purchase.splitSnapshot.amountCents === 'number';
+                if (isSplitApplied) return purchase.splitSnapshot.amountCents;
+                return typeof purchase.amountCents === 'number' ? purchase.amountCents : 0;
+              })();
+
+              const rewardDelta: RewardDelta | null =
+                card && purchase.category ? computeRewardDeltaForPurchase({ card, amountCents: appliedAmountCents, category: purchase.category, subcategory: purchase.subcategory }) : null;
+
+              if (rewardDelta) {
+                if (!card) return;
+                const current = card.rewardCashbackCents ?? 0;
+                const pointsCurrent = card.rewardPoints ?? 0;
+                const milesCurrent = card.rewardMiles ?? 0;
+
+                if (rewardDelta.rewardType === 'cashback') {
+                  const newBalance = current + rewardDelta.deltaCashbackCents;
+                  setRewardAdjustPopup({
+                    rewardType: 'cashback',
+                    cardId: card.id,
+                    cardName: card.name || 'Card',
+                    deltaLabel: `${formatCents(rewardDelta.deltaCashbackCents)} cash back`,
+                    computedDelta: rewardDelta.deltaCashbackCents,
+                    newBalanceLabel: `${formatCents(newBalance)} cash back`,
+                    newBalance,
+                    currentBalance: current
+                  });
+                } else if (rewardDelta.rewardType === 'points') {
+                  const newBalance = pointsCurrent + rewardDelta.deltaPoints;
+                  setRewardAdjustPopup({
+                    rewardType: 'points',
+                    cardId: card.id,
+                    cardName: card.name || 'Card',
+                    deltaLabel: `${rewardDelta.deltaPoints.toLocaleString()} points`,
+                    computedDelta: rewardDelta.deltaPoints,
+                    newBalanceLabel: `${newBalance.toLocaleString()} points`,
+                    newBalance,
+                    currentBalance: pointsCurrent
+                  });
+                } else {
+                  const newBalance = milesCurrent + rewardDelta.deltaMiles;
+                  setRewardAdjustPopup({
+                    rewardType: 'miles',
+                    cardId: card.id,
+                    cardName: card.name || 'Card',
+                    deltaLabel: `${rewardDelta.deltaMiles.toLocaleString()} miles`,
+                    computedDelta: rewardDelta.deltaMiles,
+                    newBalanceLabel: `${newBalance.toLocaleString()} miles`,
+                    newBalance,
+                    currentBalance: milesCurrent
+                  });
+                }
+                return;
+              }
+
               props.onSave?.();
               props.onClose();
               setTitle('');

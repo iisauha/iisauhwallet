@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { formatCents, formatLongLocalDate } from '../../state/calc';
+import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import { getCategoryName, loadCategoryConfig } from '../../state/storage';
@@ -8,6 +8,7 @@ import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
 import { AddPurchaseModal } from './AddPurchaseModal';
 import { getCategoryColor, renderSpendingPieChart } from './charts';
+import { computeRewardDeltaForPurchase, type RewardDelta } from '../rewards/rewardMatching';
 
 type FilterKey = 'this_month' | 'last_month' | 'all_time' | 'custom';
 type BreakdownView = 'category' | 'rewards' | 'card';
@@ -46,6 +47,24 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
+  const [rewardSubtractPopup, setRewardSubtractPopup] = useState<null | {
+    rewardType: 'cashback' | 'miles' | 'points';
+    cardId: string;
+    cardName: string;
+    deltaLabel: string;
+    computedDelta: number; // cents for cashback, raw count for points/miles
+    newBalanceLabel: string;
+    newBalance: number; // cents for cashback, raw count for points/miles
+    currentBalance: number; // before subtracting
+  }>(null);
+  const [rewardSubtractMode, setRewardSubtractMode] = useState<'computed' | 'manual'>('computed');
+  const [rewardSubtractManualStr, setRewardSubtractManualStr] = useState<string>('');
+
+  useEffect(() => {
+    if (!rewardSubtractPopup) return;
+    setRewardSubtractMode('computed');
+    setRewardSubtractManualStr('');
+  }, [rewardSubtractPopup]);
   const [purchasesCollapsed, setPurchasesCollapsed] = useDropdownCollapsed('spending_purchases', true);
   const [legendOpen, setLegendOpen] = useState(false);
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
@@ -125,6 +144,37 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
   const periodTotalCents = useMemo(() => {
     return filteredPurchases.reduce((s, p) => s + (p.amountCents || 0), 0);
   }, [filteredPurchases]);
+
+  const getRewardDeltaAndCardForPurchase = (
+    p: any
+  ): { card: any; rewardDelta: RewardDelta } | null => {
+    if (!p) return null;
+    if (!p.applyToSnapshot || !p.paymentSource) return null;
+
+    const isSplitApplied = !!p.isSplit && !!p.splitSnapshot && typeof p.splitSnapshot.amountCents === 'number';
+    const amountCents = isSplitApplied
+      ? p.splitSnapshot.amountCents
+      : typeof p.amountCents === 'number'
+        ? p.amountCents
+        : 0;
+
+    const src = isSplitApplied && p.splitSnapshot?.paymentSource ? p.splitSnapshot.paymentSource : p.paymentSource;
+    const targetId = isSplitApplied && p.splitSnapshot?.paymentTargetId ? p.splitSnapshot.paymentTargetId : p.paymentTargetId;
+    if (!targetId) return null;
+    if (src !== 'card' && src !== 'credit_card') return null;
+
+    const card = (data.cards || []).find((c: any) => c.id === targetId);
+    if (!card || !p.category) return null;
+
+    const rewardDelta = computeRewardDeltaForPurchase({
+      card,
+      amountCents,
+      category: p.category,
+      subcategory: p.subcategory
+    });
+
+    return rewardDelta ? { card, rewardDelta } : null;
+  };
 
   const totalRewards = useMemo(() => {
     let totalCashback = 0;
@@ -782,11 +832,138 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                 type="button"
                 className="btn btn-danger"
                 onClick={() => {
+                  const purchase = (data.purchases || []).find((x: any) => x.id === confirmDelete.id);
+                  const rewardInfo = getRewardDeltaAndCardForPurchase(purchase);
                   actions.deletePurchase(confirmDelete.id);
                   setConfirmDelete(null);
+
+                  if (!rewardInfo) return;
+                  const { card, rewardDelta } = rewardInfo;
+                  const cardName = card?.name || 'Card';
+
+                  if (rewardDelta.rewardType === 'cashback') {
+                    const current = card.rewardCashbackCents ?? 0;
+                    const newBalance = Math.max(0, current - rewardDelta.deltaCashbackCents);
+                    setRewardSubtractPopup({
+                      rewardType: 'cashback',
+                      cardId: card.id,
+                      cardName,
+                      deltaLabel: `${formatCents(rewardDelta.deltaCashbackCents)} cash back`,
+                      computedDelta: rewardDelta.deltaCashbackCents,
+                      newBalanceLabel: `${formatCents(newBalance)} cash back`,
+                      newBalance,
+                      currentBalance: current
+                    });
+                  } else if (rewardDelta.rewardType === 'points') {
+                    const current = card.rewardPoints ?? 0;
+                    const newBalance = Math.max(0, current - rewardDelta.deltaPoints);
+                    setRewardSubtractPopup({
+                      rewardType: 'points',
+                      cardId: card.id,
+                      cardName,
+                      deltaLabel: `${rewardDelta.deltaPoints.toLocaleString()} points`,
+                      computedDelta: rewardDelta.deltaPoints,
+                      newBalanceLabel: `${newBalance.toLocaleString()} points`,
+                      newBalance,
+                      currentBalance: current
+                    });
+                  } else {
+                    const current = card.rewardMiles ?? 0;
+                    const newBalance = Math.max(0, current - rewardDelta.deltaMiles);
+                    setRewardSubtractPopup({
+                      rewardType: 'miles',
+                      cardId: card.id,
+                      cardName,
+                      deltaLabel: `${rewardDelta.deltaMiles.toLocaleString()} miles`,
+                      computedDelta: rewardDelta.deltaMiles,
+                      newBalanceLabel: `${newBalance.toLocaleString()} miles`,
+                      newBalance,
+                      currentBalance: current
+                    });
+                  }
                 }}
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {rewardSubtractPopup ? (
+        <div className="modal-overlay" style={{ zIndex: 10002 }}>
+          <div className="modal">
+            <h3 style={{ marginBottom: 10 }}>Update rewards?</h3>
+            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+              You just deleted a purchase. Would you like to subtract {rewardSubtractPopup.deltaLabel} from your {rewardSubtractPopup.cardName} rewards? Your new balance will be {rewardSubtractPopup.newBalanceLabel}.
+            </p>
+            {rewardSubtractMode === 'manual' ? (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                  Specify how much {rewardSubtractPopup.rewardType === 'cashback' ? 'cash back ($)' : rewardSubtractPopup.rewardType} to subtract
+                </label>
+                <input
+                  className="ll-control"
+                  value={rewardSubtractManualStr}
+                  onChange={(e) => setRewardSubtractManualStr(e.target.value)}
+                  inputMode={rewardSubtractPopup.rewardType === 'cashback' ? 'decimal' : 'numeric'}
+                  placeholder={rewardSubtractPopup.rewardType === 'cashback' ? 'e.g. 20' : 'e.g. 40000'}
+                />
+              </div>
+            ) : null}
+            <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setRewardSubtractPopup(null)}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                className="btn btn-add"
+                onClick={() => {
+                  if (rewardSubtractMode === 'computed') {
+                    if (rewardSubtractPopup.rewardType === 'cashback') {
+                      actions.updateCardRewardTotals(rewardSubtractPopup.cardId, { rewardCashbackCents: rewardSubtractPopup.newBalance });
+                    } else if (rewardSubtractPopup.rewardType === 'points') {
+                      actions.updateCardRewardTotals(rewardSubtractPopup.cardId, { rewardPoints: rewardSubtractPopup.newBalance });
+                    } else {
+                      actions.updateCardRewardTotals(rewardSubtractPopup.cardId, { rewardMiles: rewardSubtractPopup.newBalance });
+                    }
+                  } else {
+                    // Manual delta to subtract.
+                    const deltaInput =
+                      rewardSubtractPopup.rewardType === 'cashback'
+                        ? parseCents(rewardSubtractManualStr)
+                        : Math.round(parseFloat((rewardSubtractManualStr || '0').replace(/,/g, '')));
+                    const delta = Number.isFinite(deltaInput) ? deltaInput : 0;
+                    if (!(delta > 0)) return;
+                    const nextBalance = Math.max(0, rewardSubtractPopup.currentBalance - delta);
+                    if (rewardSubtractPopup.rewardType === 'cashback') {
+                      actions.updateCardRewardTotals(rewardSubtractPopup.cardId, { rewardCashbackCents: nextBalance });
+                    } else if (rewardSubtractPopup.rewardType === 'points') {
+                      actions.updateCardRewardTotals(rewardSubtractPopup.cardId, { rewardPoints: nextBalance });
+                    } else {
+                      actions.updateCardRewardTotals(rewardSubtractPopup.cardId, { rewardMiles: nextBalance });
+                    }
+                  }
+                  setRewardSubtractPopup(null);
+                }}
+              >
+                {rewardSubtractMode === 'computed' ? 'Yes' : 'Apply manual'}
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setRewardSubtractMode((m) => (m === 'computed' ? 'manual' : 'computed'));
+                  setRewardSubtractManualStr('');
+                }}
+                style={{ padding: '12px 16px' }}
+              >
+                {rewardSubtractMode === 'computed' ? 'Manual…' : 'Use computed'}
               </button>
             </div>
           </div>

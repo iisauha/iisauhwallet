@@ -563,7 +563,7 @@ export function SubTrackerPage() {
                       overflow: 'hidden'
                     }}
                   >
-                    {tiers.map((t, idx) => {
+                    {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t) => {
                       const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
                       return (
                         <div
@@ -589,41 +589,65 @@ export function SubTrackerPage() {
                         borderRadius: 999,
                         position: 'relative',
                         zIndex: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#0b1b33',
-                        fontSize: '0.75rem',
-                        fontWeight: 600
+                        display: 'flex'
                       }}
                     >
-                      <span>{Math.round(ratio * 100)}%</span>
+                      {/* Intentionally no percent text here; milestones are labeled externally below. */}
                     </div>
                   </div>
 
-                  {tiers.map((t, idx) => {
-                    const prevSpend = idx === 0 ? 0 : tiers[idx - 1].spendTargetCents || 0;
-                    const segmentPercent = finalTarget > 0 ? ((t.spendTargetCents - prevSpend) / finalTarget) * 100 : 0;
+                  {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t, idx) => {
                     const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
+                    const clampedLeft = clamp(left, 2, 98);
+                    const reward = (t.rewardText || '').trim() || 'Bonus';
                     return (
                       <div
                         key={t.id + ':label'}
                         style={{
                           position: 'absolute',
-                          left: `${left}%`,
+                          left: `${clampedLeft}%`,
                           top: 0,
                           transform: 'translateX(-50%)',
-                          fontSize: '0.7rem',
+                          fontSize: '0.68rem',
                           fontWeight: 600,
                           color: 'var(--ui-primary-text, var(--text))',
                           whiteSpace: 'nowrap',
-                          zIndex: 4
+                          zIndex: 4,
+                          maxWidth: 140,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
                         }}
                       >
-                        {Math.round(segmentPercent)}%
+                        Milestone {idx + 1}: {reward}
                       </div>
                     );
                   })}
+
+                  {tiers.length > 0 ? (() => {
+                    const lastIdx = tiers.length - 1;
+                    const last = tiers[lastIdx];
+                    const reward = (last.rewardText || '').trim() || 'Bonus';
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: '100%',
+                          top: 0,
+                          transform: 'translateX(-100%)',
+                          fontSize: '0.68rem',
+                          fontWeight: 600,
+                          color: 'var(--ui-primary-text, var(--text))',
+                          whiteSpace: 'nowrap',
+                          zIndex: 4,
+                          maxWidth: 170,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {reward}
+                      </div>
+                    );
+                  })() : null}
                 </div>
               </div>
             ) : null}

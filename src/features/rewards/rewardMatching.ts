@@ -147,3 +147,43 @@ export function getRewardRuleUnitLabel(unit: string): string {
       return unit;
   }
 }
+
+export type RewardDelta =
+  | { rewardType: 'cashback'; deltaCashbackCents: number }
+  | { rewardType: 'points'; deltaPoints: number }
+  | { rewardType: 'miles'; deltaMiles: number };
+
+export function computeRewardDeltaForPurchase(params: {
+  card: CreditCard;
+  amountCents: number;
+  category: string;
+  subcategory?: string;
+}): RewardDelta | null {
+  const { card, amountCents, category, subcategory } = params;
+  if (!card) return null;
+  const cents = typeof amountCents === 'number' ? amountCents : 0;
+  if (!(cents > 0)) return null;
+
+  const rules = getEffectiveRules(card);
+  const rule = matchRule(rules, category, subcategory || '');
+  if (!rule) return null;
+
+  switch (rule.unit) {
+    case 'cashback_percent': {
+      const delta = Math.round(cents * (rule.value / 100));
+      return delta > 0 ? { rewardType: 'cashback', deltaCashbackCents: delta } : null;
+    }
+    case 'points_multiplier': {
+      const dollars = cents / 100;
+      const delta = Math.round(dollars * rule.value);
+      return delta > 0 ? { rewardType: 'points', deltaPoints: delta } : null;
+    }
+    case 'miles_multiplier': {
+      const dollars = cents / 100;
+      const delta = Math.round(dollars * rule.value);
+      return delta > 0 ? { rewardType: 'miles', deltaMiles: delta } : null;
+    }
+    default:
+      return null;
+  }
+}
