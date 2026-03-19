@@ -618,7 +618,7 @@ export function SubTrackerPage() {
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        Milestone {idx + 1}: {reward}
+                        {reward}
                       </div>
                     );
                   })}
