@@ -49,18 +49,37 @@ function parseRewardText(text: string): { quantity: number; unitType: CompletedB
   const numStr = t.replace(/[^0-9.]/g, '');
   let quantity = parseFloat(numStr) || 0;
   if (kMatch && quantity > 0) quantity = quantity * 1000;
-  if (/\$|dollar|cash|back\s*$/.test(t) || t.includes('cash back')) {
+  if (t.includes('cash back') || /\$|dollar|cash|back\s*$/.test(t)) {
     return { quantity: quantity || 0, unitType: 'cash' };
   }
-  if (/miles?/.test(t)) return { quantity, unitType: 'miles' };
-  if (/points?/.test(t)) return { quantity, unitType: 'points' };
+  if (/miles?|mi\b/.test(t)) return { quantity, unitType: 'miles' };
+  if (/points?|pts?\b/.test(t)) return { quantity, unitType: 'points' };
   return { quantity, unitType: 'other' };
+}
+
+function formatTierRewardQtyPlain(qty: number, unitType: CompletedBonusUnitType): string {
+  if (!Number.isFinite(qty)) return '0';
+  if (unitType === 'cash') {
+    const rounded2 = Math.round(qty * 100) / 100;
+    return Number.isInteger(rounded2) ? String(rounded2.toFixed(0)) : String(rounded2.toFixed(2)).replace(/\.00$/, '');
+  }
+  return Math.round(qty).toLocaleString();
+}
+
+function formatTierRewardHashLabel(parsed: { quantity: number; unitType: CompletedBonusUnitType }): string {
+  if (!(parsed.quantity > 0)) return 'Bonus';
+  const qtyStr = formatTierRewardQtyPlain(parsed.quantity, parsed.unitType);
+  if (parsed.unitType === 'cash') return `#${qtyStr}$`;
+  if (parsed.unitType === 'points') return `#${qtyStr} pts`;
+  if (parsed.unitType === 'miles') return `#${qtyStr} mi`;
+  return `#${qtyStr}`;
 }
 
 function entryToCompletedBonus(
   e: SubTrackerEntry,
   cardName: string,
-  achievedTiers: SubTrackerTier[]
+  achievedTiers: SubTrackerTier[],
+  centsPerUnitOverride?: number
 ): CompletedBonus {
   const parsedTiers = achievedTiers
     .filter((t) => t && typeof t.rewardText === 'string')
@@ -98,8 +117,13 @@ function entryToCompletedBonus(
     unitType,
     rewardQuantity: totalQuantity,
     rewardLabel,
-    centsPerUnit: unitType === 'points' || unitType === 'miles' ? 1 : undefined,
-    completedAt: todayKey(),
+    centsPerUnit:
+      unitType === 'points' || unitType === 'miles'
+        ? typeof centsPerUnitOverride === 'number' && centsPerUnitOverride >= 0
+          ? centsPerUnitOverride
+          : 1
+        : undefined,
+    completedAt: e.startDate || todayKey(),
     notes: undefined
   };
 }
@@ -315,6 +339,7 @@ function CompletedBonusEditorModal({
 
 export function SubTrackerPage() {
   const data = useLedgerStore((s) => s.data);
+  const actions = useLedgerStore((s) => s.actions);
   const cards = data.cards || [];
   const banks = (data.banks || []).map((b: any) => ({ id: b.id, name: b.name || 'Bank' }));
 
@@ -333,15 +358,25 @@ export function SubTrackerPage() {
   const [useDeadlineDate, setUseDeadlineDate] = useState(true);
   const [deadlineDate, setDeadlineDate] = useState(todayKey());
   const [monthsWindow, setMonthsWindow] = useState('3');
-  type TierDraft = { id: string; spendTarget: string; rewardText: string };
-  const [tierDrafts, setTierDrafts] = useState<TierDraft[]>(() => [
-    { id: uid(), spendTarget: '', rewardText: '' }
-  ]);
+  type RewardUnitDraft = 'cash' | 'points' | 'miles';
+  type TierDraft = { id: string; spendTarget: string; rewardAmount: string; rewardUnit: RewardUnitDraft };
+  const [tierDrafts, setTierDrafts] = useState<TierDraft[]>(() => [{ id: uid(), spendTarget: '', rewardAmount: '', rewardUnit: 'points' }]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
   const [spentInput, setSpentInput] = useState<string>('0.00');
   const [completedEditor, setCompletedEditor] = useState<null | { mode: 'add' } | { mode: 'edit'; id: string }>(null);
   const [completedBonusesCollapsed, setCompletedBonusesCollapsed] = useDropdownCollapsed('sub_tracker_completed_bonuses', false);
+  const [rewardAddPrompt, setRewardAddPrompt] = useState<null | {
+    cardId: string;
+    cardName: string;
+    unitType: 'cash' | 'points' | 'miles';
+    earnedQuantity: number;
+    currentRewardBalance: number;
+    newRewardBalance: number;
+    newCashbackCents?: number;
+    estimatedCashCents: number;
+    centsPerUnitUsed?: number;
+  }>(null);
 
   const cardNameById = useMemo(() => new Map(cards.map((c) => [c.id, c.name || 'Card'])), [cards]);
 
@@ -360,24 +395,10 @@ export function SubTrackerPage() {
   }
 
   useEffect(() => {
-    const stillActive: SubTrackerEntry[] = [];
-    const toAdd: CompletedBonus[] = [];
-    for (const e of entries) {
-      const tiers = (e.tiers || []).slice().sort((a, b) => (a.spendTargetCents || 0) - (b.spendTargetCents || 0));
-      const maxTarget = tiers.length ? Math.max(...tiers.map((t) => t.spendTargetCents || 0)) : 0;
-      const spendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
-      if (maxTarget > 0 && spendCents >= maxTarget) {
-        const name = entryDisplayName(e);
-        const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
-        toAdd.push(entryToCompletedBonus(e, name, achievedTiers));
-      } else {
-        stillActive.push(e);
-      }
-    }
-    if (toAdd.length > 0) {
-      persist({ entries: stillActive, completedBonuses: [...completedBonuses, ...toAdd] });
-    }
-  }, [tracker]);
+    // Auto-complete is intentionally disabled.
+    // A completed sign-up bonus is created only when the user clicks "Complete"
+    // so we can show a rewards-addition confirmation prompt.
+  }, []);
 
   function entryDisplayName(e: SubTrackerEntry) {
     return e.cardRef.type === 'card' ? cardNameById.get(e.cardRef.cardId) || 'Card' : e.cardRef.name || 'Card';
@@ -599,13 +620,9 @@ export function SubTrackerPage() {
                   {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t, idx) => {
                     const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
                     const clampedLeft = clamp(left, 2, 98);
-                    const reward = (t.rewardText || '').trim() || 'Bonus';
-                    const rewardDisplay =
-                      idx === 0
-                        ? reward
-                        : reward.startsWith('+')
-                          ? reward
-                          : `+${reward}`;
+                    const parsed = parseRewardText(t.rewardText || '');
+                    const label = formatTierRewardHashLabel(parsed);
+                    const rewardDisplay = idx === 0 ? label : `+${label}`;
                     return (
                       <div
                         key={t.id + ':label'}
@@ -632,13 +649,9 @@ export function SubTrackerPage() {
                   {tiers.length > 0 ? (() => {
                     const lastIdx = tiers.length - 1;
                     const last = tiers[lastIdx];
-                    const reward = (last.rewardText || '').trim() || 'Bonus';
-                    const rewardDisplay =
-                      lastIdx === 0
-                        ? reward
-                        : reward.startsWith('+')
-                          ? reward
-                          : `+${reward}`;
+                    const parsed = parseRewardText(last.rewardText || '');
+                    const label = formatTierRewardHashLabel(parsed);
+                    const rewardDisplay = lastIdx === 0 ? label : `+${label}`;
                     return (
                       <div
                         style={{
@@ -708,7 +721,18 @@ export function SubTrackerPage() {
                     sortedTiers.map((t) => ({
                       id: t.id,
                       spendTarget: (t.spendTargetCents / 100).toFixed(2),
-                      rewardText: t.rewardText || ''
+                      rewardAmount: (() => {
+                        const parsed = parseRewardText(t.rewardText || '');
+                        if (parsed.unitType === 'cash') return formatTierRewardQtyPlain(parsed.quantity, 'cash');
+                        if (parsed.unitType === 'miles') return String(Math.round(parsed.quantity));
+                        return String(Math.round(parsed.quantity)); // default points
+                      })(),
+                      rewardUnit: (() => {
+                        const parsed = parseRewardText(t.rewardText || '');
+                        if (parsed.unitType === 'cash') return 'cash';
+                        if (parsed.unitType === 'miles') return 'miles';
+                        return 'points';
+                      })()
                     }))
                   );
                   const currentSpendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
@@ -734,11 +758,76 @@ export function SubTrackerPage() {
                 onClick={() => {
                   const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
                   if (!achievedTiers.length) return;
-                  const bonus = entryToCompletedBonus(e, name, achievedTiers);
+                  const parsed = achievedTiers
+                    .map((t) => parseRewardText(t.rewardText || ''))
+                    .filter((p) => p.unitType !== 'other' && p.quantity > 0);
+                  const unitTypes = Array.from(new Set(parsed.map((p) => p.unitType)));
+                  if (unitTypes.length !== 1) {
+                    alert('All milestone rewards must use the same unit type (cash back, points, or miles) to complete.');
+                    return;
+                  }
+                  const unitType = unitTypes[0] as 'cash' | 'points' | 'miles';
+                  const linkedCardId = e.cardRef.type === 'card' ? e.cardRef.cardId : undefined;
+                  const card = linkedCardId ? cards.find((c) => c.id === linkedCardId) : undefined;
+                  const centsPerUnitOverride =
+                    unitType === 'points'
+                      ? card?.avgCentsPerPoint
+                      : unitType === 'miles'
+                        ? card?.avgCentsPerMile
+                        : undefined;
+
+                  const bonus = entryToCompletedBonus(e, name, achievedTiers, centsPerUnitOverride);
                   persist({
                     entries: entries.filter((x) => x.id !== e.id),
                     completedBonuses: [...completedBonuses, bonus]
                   });
+
+                  // Optional: offer to add the earned rewards to the card's rewards overview.
+                  if (e.cardRef.type === 'card' && card) {
+                    const earnedCashCents = completedBonusCashValueCents(bonus);
+                    const currentCashbackCents = card.rewardCashbackCents ?? 0;
+                    const currentPoints = card.rewardPoints ?? 0;
+                    const currentMiles = card.rewardMiles ?? 0;
+
+                    if (unitType === 'cash') {
+                      const earnedCents = Math.round(bonus.rewardQuantity * 100);
+                      const newCashbackCents = currentCashbackCents + earnedCents;
+                      setRewardAddPrompt({
+                        cardId: card.id,
+                        cardName: card.name || name,
+                        unitType,
+                        earnedQuantity: bonus.rewardQuantity,
+                        currentRewardBalance: currentCashbackCents / 100,
+                        newRewardBalance: newCashbackCents / 100,
+                        newCashbackCents,
+                        estimatedCashCents: earnedCashCents
+                      });
+                    } else if (unitType === 'points') {
+                      const newPoints = currentPoints + bonus.rewardQuantity;
+                      setRewardAddPrompt({
+                        cardId: card.id,
+                        cardName: card.name || name,
+                        unitType,
+                        earnedQuantity: bonus.rewardQuantity,
+                        currentRewardBalance: currentPoints,
+                        newRewardBalance: newPoints,
+                        estimatedCashCents: earnedCashCents,
+                        centsPerUnitUsed: centsPerUnitOverride
+                      });
+                    } else if (unitType === 'miles') {
+                      const newMiles = currentMiles + bonus.rewardQuantity;
+                      setRewardAddPrompt({
+                        cardId: card.id,
+                        cardName: card.name || name,
+                        unitType,
+                        earnedQuantity: bonus.rewardQuantity,
+                        currentRewardBalance: currentMiles,
+                        newRewardBalance: newMiles,
+                        estimatedCashCents: earnedCashCents,
+                        centsPerUnitUsed: centsPerUnitOverride
+                      });
+                    }
+                  }
                 }}
               >
                 Complete
@@ -788,6 +877,85 @@ export function SubTrackerPage() {
         </div>
       ) : null}
 
+      {rewardAddPrompt ? (
+        <Modal
+          open={true}
+          title="Add earned rewards to Rewards overview?"
+          onClose={() => setRewardAddPrompt(null)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
+              You completed this sign-up bonus and earned{" "}
+              <strong>
+                {rewardAddPrompt.unitType === 'cash'
+                  ? formatCents(Math.round(rewardAddPrompt.earnedQuantity * 100))
+                  : rewardAddPrompt.earnedQuantity.toLocaleString()}{' '}
+                {rewardAddPrompt.unitType === 'cash'
+                  ? 'cash back'
+                  : rewardAddPrompt.unitType === 'points'
+                    ? 'points'
+                    : 'miles'}
+              </strong>
+              .
+            </p>
+            <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
+              New rewards balance for <strong>{rewardAddPrompt.cardName}</strong> will be{' '}
+              <strong>
+                {rewardAddPrompt.unitType === 'cash'
+                  ? formatCents(rewardAddPrompt.newCashbackCents ?? 0)
+                  : `${rewardAddPrompt.newRewardBalance.toLocaleString()} ${rewardAddPrompt.unitType === 'points' ? 'points' : 'miles'}`}
+              </strong>
+              .
+            </p>
+            {rewardAddPrompt.unitType !== 'cash' ? (
+              <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                Estimated cash value (based on your card cents-per-point/mile):{' '}
+                <strong style={{ color: 'var(--green)' }}>{formatCents(rewardAddPrompt.estimatedCashCents)}</strong>
+              </p>
+            ) : null}
+
+            <div className="btn-row" style={{ marginTop: 6 }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setRewardAddPrompt(null)}>
+                Not now
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  const p = rewardAddPrompt;
+                  if (!p) return;
+                  if (p.unitType === 'cash') {
+                    actions.updateCardRewardTotals(p.cardId, {
+                      rewardType: 'cashback',
+                      rewardCashbackCents: p.newCashbackCents ?? 0
+                    });
+                  } else if (p.unitType === 'points') {
+                    actions.updateCardRewardTotals(p.cardId, {
+                      rewardType: 'points',
+                      rewardPoints: p.newRewardBalance
+                    });
+                    if (typeof p.centsPerUnitUsed === 'number') {
+                      actions.updateCardRewardCpp(p.cardId, { avgCentsPerPoint: p.centsPerUnitUsed });
+                    }
+                  } else if (p.unitType === 'miles') {
+                    actions.updateCardRewardTotals(p.cardId, {
+                      rewardType: 'miles',
+                      rewardMiles: p.newRewardBalance
+                    });
+                    if (typeof p.centsPerUnitUsed === 'number') {
+                      actions.updateCardRewardCpp(p.cardId, { avgCentsPerMile: p.centsPerUnitUsed });
+                    }
+                  }
+                  setRewardAddPrompt(null);
+                }}
+              >
+                Add rewards
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
       <button
         type="button"
         className="btn btn-add"
@@ -800,7 +968,7 @@ export function SubTrackerPage() {
           setUseDeadlineDate(true);
           setDeadlineDate(todayKey());
           setMonthsWindow('3');
-          setTierDrafts([{ id: uid(), spendTarget: '', rewardText: '' }]);
+          setTierDrafts([{ id: uid(), spendTarget: '', rewardAmount: '', rewardUnit: 'points' }]);
           setSpentInput('0.00');
           setConfirmDelete(null);
           setEditorEntryId(null);
@@ -927,15 +1095,53 @@ export function SubTrackerPage() {
                   />
                 </div>
                 <div className="field" style={{ flex: 1, minWidth: 180 }}>
-                  <label>Milestone {idx + 1} reward text</label>
-                  <input
-                    className="ll-control"
-                    value={draft.rewardText}
-                    onChange={(e) =>
-                      setTierDrafts((prev) => prev.map((x) => (x.id === draft.id ? { ...x, rewardText: e.target.value } : x)))
-                    }
-                    placeholder="e.g. 90k miles"
-                  />
+                  <label>Milestone {idx + 1} reward</label>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                    <input
+                      className="ll-control"
+                      type="number"
+                      min={0}
+                      step={draft.rewardUnit === 'cash' ? '0.01' : '1'}
+                      inputMode="decimal"
+                      value={draft.rewardAmount}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setTierDrafts((prev) =>
+                          prev.map((x) => {
+                            if (x.id !== draft.id) return x;
+                            const unit = x.rewardUnit;
+                            if (unit === 'cash') {
+                              // Keep digits + at most one decimal point (max 2 decimals).
+                              const cleaned = raw.replace(/[^0-9.]/g, '');
+                              const firstDot = cleaned.indexOf('.');
+                              let normalized = cleaned;
+                              if (firstDot !== -1) {
+                                normalized = `${cleaned.slice(0, firstDot)}.${cleaned.slice(firstDot + 1).replace(/\./g, '')}`;
+                                const parts = normalized.split('.');
+                                normalized =
+                                  parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
+                              }
+                              return { ...x, rewardAmount: normalized };
+                            }
+                            return { ...x, rewardAmount: raw.replace(/\D/g, '') };
+                          })
+                        );
+                      }}
+                      placeholder={draft.rewardUnit === 'cash' ? 'e.g. 200' : 'e.g. 70000'}
+                    />
+                    <Select
+                      value={draft.rewardUnit}
+                      onChange={(e) => {
+                        const v = e.target.value as RewardUnitDraft;
+                        setTierDrafts((prev) => prev.map((x) => (x.id === draft.id ? { ...x, rewardUnit: v } : x)));
+                      }}
+                      style={{ minWidth: 128, marginBottom: 0 }}
+                    >
+                      <option value="cash">Cash back ($)</option>
+                      <option value="points">Points</option>
+                      <option value="miles">Miles</option>
+                    </Select>
+                  </div>
                 </div>
               </div>
               <div className="btn-row" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
@@ -957,7 +1163,9 @@ export function SubTrackerPage() {
             type="button"
             className="btn btn-secondary"
             style={{ padding: '6px 12px', fontSize: '0.85rem', width: 'fit-content' }}
-            onClick={() => setTierDrafts((prev) => [...prev, { id: uid(), spendTarget: '', rewardText: '' }])}
+            onClick={() =>
+              setTierDrafts((prev) => [...prev, { id: uid(), spendTarget: '', rewardAmount: '', rewardUnit: 'points' }])
+            }
           >
             Add milestone
           </button>
@@ -975,9 +1183,13 @@ export function SubTrackerPage() {
                 .map((d) => ({
                   id: d.id,
                   spendTargetCents: parseCents(d.spendTarget),
-                  rewardText: (d.rewardText || '').trim() || 'Bonus'
+                  rewardQuantity: parseFloat(d.rewardAmount || ''),
+                  rewardText:
+                    d.rewardUnit === 'cash'
+                      ? `${parseFloat(d.rewardAmount || '')} cash back`
+                      : `${parseFloat(d.rewardAmount || '')} ${d.rewardUnit}`
                 }))
-                .filter((t) => t.spendTargetCents > 0)
+                .filter((t) => t.spendTargetCents > 0 && Number.isFinite(t.rewardQuantity) && t.rewardQuantity > 0)
                 .sort((a, b) => a.spendTargetCents - b.spendTargetCents);
               if (!parsedDraftTiers.length) return;
 

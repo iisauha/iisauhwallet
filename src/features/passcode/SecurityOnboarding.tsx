@@ -11,27 +11,27 @@ type QuizItem = {
 
 const QUIZ: QuizItem[] = [
   {
-    question: 'Does this app automatically connect to your bank account by default?',
+    question: 'Does the app auto-connect to your bank by default?',
     options: ['Yes', 'No'],
     correctIndex: 1,
   },
   {
-    question: 'Where is your wallet data stored by default?',
+    question: 'Where is wallet data stored by default?',
     options: ['On a central server', 'Locally in your browser', "The creator's computer"],
     correctIndex: 1,
   },
   {
-    question: 'Will the creator ever ask you for your passcode or recovery key?',
+    question: 'Will the creator ask for your passcode/key?',
     options: ['Yes', 'No'],
     correctIndex: 1,
   },
   {
-    question: 'What should you save in case you forget your passcode?',
+    question: 'What should you save to recover access?',
     options: ['Email the creator', 'Recovery key and JSON backup', 'Nothing; the creator can reset it'],
     correctIndex: 1,
   },
   {
-    question: 'What is the official website where this app is hosted?',
+    question: 'What is the official site URL?',
     options: [
       'https://iisauha.github.io/iisauhwallet/',
       'https://iisauhwallet.github.io/',
@@ -81,22 +81,31 @@ export function SecurityOnboarding({ onPass }: { onPass: () => void }) {
         background: 'transparent', // keep the passcode gate background (app background)
       }}
     >
-      <div className="modal" style={{ width: '100%', maxWidth: 760, animation: 'passcodeFadeIn 0.3s ease-out' }}>
-        <h3 style={{ marginBottom: 12, fontSize: '1.4rem', fontWeight: 700 }}>Important Security Information — Please Read</h3>
-        <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', lineHeight: 1.55, textAlign: 'center' }}>
+      <div className="modal" style={{ width: '100%', maxWidth: 560, animation: 'passcodeFadeIn 0.3s ease-out' }}>
+        <h3 style={{ marginBottom: 10, fontSize: '1.15rem', fontWeight: 700 }}>Important Security Information</h3>
+        <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', lineHeight: 1.55 }}>
           This app stores your data locally in your browser. The creator cannot access your data. There is no automatic connection to your bank. Only use the official site link. Save your recovery key and export JSON backups regularly.
         </p>
 
-        <p style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600, textAlign: 'center' }}>
-          Please answer the following questions to continue. You must get all 5 correct.
+        <p style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 600 }}>
+          Answer all 5 questions correctly to continue.
         </p>
 
         {QUIZ.map((item, index) => (
-          <div key={index} style={{ marginBottom: 18 }}>
-            <p style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700 }}>
+          <div
+            key={index}
+            style={{
+              marginBottom: 14,
+              padding: 12,
+              border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
+              borderRadius: 12,
+              background: 'var(--ui-modal-bg, var(--surface))'
+            }}
+          >
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.88rem', fontWeight: 700, lineHeight: 1.4 }}>
               {index + 1}. {item.question}
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {item.options.map((opt, optIndex) => {
                 const checked = answers[index] === optIndex;
                 return (
@@ -106,12 +115,14 @@ export function SecurityOnboarding({ onPass }: { onPass: () => void }) {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 10,
+                      width: '100%',
                       padding: '10px 12px',
                       borderRadius: 10,
-                      border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`,
+                      border: `1px solid ${checked ? 'var(--accent)' : 'var(--ui-border, var(--border))'}`,
                       background: checked ? 'var(--surface-hover)' : 'var(--surface)',
                       cursor: 'pointer',
-                      fontSize: '0.9rem',
+                      fontSize: '0.88rem',
+                      boxSizing: 'border-box'
                     }}
                   >
                     <input
@@ -124,15 +135,15 @@ export function SecurityOnboarding({ onPass }: { onPass: () => void }) {
                         setAnswers(next);
                       }}
                       disabled={submitted && wrongIndices.length > 0}
-                      style={{ accentColor: 'var(--accent)' }}
+                      style={{ accentColor: 'var(--accent)', margin: 0, flexShrink: 0 }}
                     />
-                    <span style={{ wordBreak: 'break-word' }}>{opt}</span>
+                    <span style={{ wordBreak: 'break-word', lineHeight: 1.35 }}>{opt}</span>
                   </label>
                 );
               })}
             </div>
             {submitted && wrongIndices.includes(index) && (
-              <p style={{ margin: '6px 0 0 0', fontSize: '0.85rem', color: 'var(--red)' }}>
+              <p style={{ margin: '10px 0 0 0', fontSize: '0.82rem', color: 'var(--red)' }}>
                 Incorrect. The correct answer is: {item.options[item.correctIndex]}
               </p>
             )}
