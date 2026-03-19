@@ -67,8 +67,25 @@ function formatTierRewardQtyPlain(qty: number, unitType: CompletedBonusUnitType)
 }
 
 function formatTierRewardHashNumeric(parsed: { quantity: number; unitType: CompletedBonusUnitType }): string {
-  if (!(parsed.quantity > 0)) return '';
-  return formatTierRewardQtyPlain(parsed.quantity, parsed.unitType);
+  const qty = Number.isFinite(parsed.quantity) ? Math.max(0, parsed.quantity) : 0;
+  if (!(qty > 0)) return 'Bonus';
+
+  if (parsed.unitType === 'cash') {
+    const dollars = formatTierRewardQtyPlain(qty, 'cash');
+    return `$${dollars}`;
+  }
+
+  if (parsed.unitType === 'points' || parsed.unitType === 'miles') {
+    const unit = parsed.unitType === 'points' ? 'points' : 'miles';
+    if (qty >= 1000) {
+      const k = qty / 1000;
+      const kStr = Number.isInteger(k) ? String(k) : k.toFixed(1).replace(/\.0$/, '');
+      return `${kStr}k ${unit}`;
+    }
+    return `${Math.round(qty).toLocaleString()} ${unit}`;
+  }
+
+  return formatTierRewardQtyPlain(qty, parsed.unitType);
 }
 
 function entryToCompletedBonus(
@@ -617,9 +634,7 @@ export function SubTrackerPage() {
                     const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
                     const clampedLeft = clamp(left, 2, 98);
                     const parsed = parseRewardText(t.rewardText || '');
-                    const numeric = formatTierRewardHashNumeric(parsed);
-                    const label =
-                      parsed.unitType === 'cash' ? `#${numeric}$` : `#${numeric}`;
+                    const label = formatTierRewardHashNumeric(parsed);
                     const rewardDisplay = idx === 0 ? label : `+${label}`;
                     return (
                       <div
@@ -648,9 +663,7 @@ export function SubTrackerPage() {
                     const lastIdx = tiers.length - 1;
                     const last = tiers[lastIdx];
                     const parsed = parseRewardText(last.rewardText || '');
-                    const numeric = formatTierRewardHashNumeric(parsed);
-                    const label =
-                      parsed.unitType === 'cash' ? `#${numeric}$` : `#${numeric}`;
+                    const label = formatTierRewardHashNumeric(parsed);
                     const rewardDisplay = lastIdx === 0 ? label : `+${label}`;
                     return (
                       <div
