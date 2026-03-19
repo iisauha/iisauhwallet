@@ -777,10 +777,10 @@ export function AddPurchaseModal(props: {
               <div className="field">
                 <label>Select Card</label>
                 <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
-                  <option value="">— Select —</option>
+                  <option value="">Select</option>
                   {(data.cards || []).map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.name}: {formatCents(c.balanceCents || 0)}
                     </option>
                   ))}
                 </Select>
@@ -790,10 +790,10 @@ export function AddPurchaseModal(props: {
               <div className="field">
                 <label>Select Bank</label>
                 <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
-                  <option value="">— Select —</option>
+                  <option value="">Select</option>
                   {(data.banks || []).map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name}
+                      {b.name}: {formatCents(b.balanceCents || 0)}
                     </option>
                   ))}
                 </Select>

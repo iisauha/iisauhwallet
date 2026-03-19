@@ -405,7 +405,8 @@ export function SettingsPage() {
               const nav: any = navigator as any;
               if (nav.share) {
                 const file = new File([text], fileName, { type: 'application/json' });
-                await nav.share({ files: [file], title: 'Backup', text: 'iisauhwallet backup' });
+                // Only share the JSON file to avoid some platforms creating an extra .txt artifact.
+                await nav.share({ files: [file], title: 'Backup' });
                 return;
               }
             } catch (_) {}

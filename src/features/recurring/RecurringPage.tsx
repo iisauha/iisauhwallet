@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatLongLocalDate, parseCents } from '../../state/calc';
+import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
@@ -936,11 +936,11 @@ export function RecurringPage() {
                       setPaymentTargetId(v);
                     }}
                   >
-                    <option value="">— Select —</option>
+                    <option value="">Select</option>
                     {paymentSource === 'card'
                       ? (data.cards || []).map((x: any) => (
                           <option key={x.id} value={x.id}>
-                            {x.name}
+                            {x.name}: {formatCents(x.balanceCents || 0)}
                           </option>
                         ))
                       : paymentSource === 'hysa'
@@ -948,12 +948,12 @@ export function RecurringPage() {
                             .filter((a: any) => a.type === 'hysa')
                             .map((a: any) => (
                               <option key={a.id} value={`hysa:${a.id}`}>
-                                {a.name}
+                                {a.name}: {formatCents(a.balanceCents || 0)}
                               </option>
                             ))
                         : (data.banks || []).map((x: any) => (
                             <option key={x.id} value={x.id}>
-                              {x.name}
+                              {x.name}: {formatCents(x.balanceCents || 0)}
                             </option>
                           ))}
                   </Select>
@@ -991,10 +991,10 @@ export function RecurringPage() {
                             value={investingFromBankId}
                             onChange={(e) => setInvestingFromBankId(e.target.value)}
                           >
-                            <option value="">— Select —</option>
+                      <option value="">Select</option>
                             {(data.banks || []).map((b: any) => (
                               <option key={b.id} value={b.id}>
-                                {b.name}
+                          {b.name}: {formatCents(b.balanceCents || 0)}
                               </option>
                             ))}
                           </Select>

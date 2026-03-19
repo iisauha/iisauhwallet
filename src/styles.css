@@ -347,10 +347,13 @@ body {
   min-height: 44px;
   padding: 10px 12px;
   border-radius: 10px;
+  border-width: 1px !important;
+  border-style: solid;
 }
 .ll-toggle.active {
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
   color: var(--ui-primary-text, var(--text));
+  border-width: 1px !important;
 }
 
 .ll-control,
