@@ -8,6 +8,7 @@ import { loadPublicPaymentNowAdded, savePublicPaymentNowAdded } from '../../stat
 import { formatCents } from '../../state/calc';
 
 const LOAN_SIMULATOR_URL = 'https://studentaid.gov/loan-simulator/';
+const PAYMENT_ACTIONS_OPEN_KEY = 'iisauhwallet:loans:publicLoan:paymentActionsOpen';
 
 const inputStyle = {
   width: '100%',
@@ -15,9 +16,9 @@ const inputStyle = {
   minHeight: 44,
   padding: '10px 14px',
   borderRadius: 10,
-  border: '1px solid var(--border)',
-  background: 'var(--surface)',
-  color: 'var(--text)',
+  border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
+  background: 'var(--ui-card-bg, var(--surface))',
+  color: 'var(--ui-primary-text, var(--text))',
   fontSize: '1rem'
 } as const;
 
@@ -70,7 +71,20 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
     );
     setFirstPaymentDateInput(s.firstPaymentDate ?? '');
     setShowFirstPaymentDetails(s.paymentMode === 'first_payment_date');
+
+    // Restore dropdown open/closed state across tab switches.
+    try {
+      const raw = localStorage.getItem(PAYMENT_ACTIONS_OPEN_KEY);
+      if (raw != null) setShowPaymentActions(raw === 'true');
+    } catch (_) {}
   }, []);
+
+  const persistPaymentActionsOpen = (open: boolean) => {
+    setShowPaymentActions(open);
+    try {
+      localStorage.setItem(PAYMENT_ACTIONS_OPEN_KEY, String(open));
+    } catch (_) {}
+  };
 
   const persist = (next: PublicLoanSummary) => {
     savePublicLoanSummary(next);
@@ -139,8 +153,8 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
         href={LOAN_SIMULATOR_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn btn-add"
-        style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none', color: 'inherit' }}
+        className="btn btn-secondary"
+        style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none' }}
       >
         Estimate your public loan payment
       </a>
@@ -166,7 +180,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
           type="button"
           className="btn btn-secondary"
           style={{ marginBottom: showPaymentActions ? 8 : 0, fontSize: '0.85rem', padding: '4px 10px' }}
-          onClick={() => setShowPaymentActions((v) => !v)}
+          onClick={() => persistPaymentActionsOpen(!showPaymentActions)}
         >
           {showPaymentActions ? 'Hide payment actions' : 'Show payment actions'}
         </button>
@@ -295,9 +309,9 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             width: '100%',
             padding: '10px 14px',
             borderRadius: 10,
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            color: 'var(--text)',
+            border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
+            background: 'var(--ui-card-bg, var(--surface))',
+            color: 'var(--ui-primary-text, var(--text))',
             fontSize: '0.95rem',
             resize: 'vertical',
             minHeight: 80

@@ -98,6 +98,7 @@ export function PublicLoanEstimatorCard() {
           <label>Total Public Loan Balance ($)</label>
           <input
             type="text"
+            className="ll-control"
             inputMode="decimal"
             value={totalBalance}
             onChange={(e) => setTotalBalance(e.target.value)}
@@ -109,6 +110,7 @@ export function PublicLoanEstimatorCard() {
           <label>Current Average Interest Rate (%)</label>
           <input
             type="text"
+            className="ll-control"
             inputMode="decimal"
             value={avgRate}
             onChange={(e) => setAvgRate(e.target.value)}
@@ -120,6 +122,7 @@ export function PublicLoanEstimatorCard() {
           <label>Adjusted Gross Income (AGI) ($)</label>
           <input
             type="text"
+            className="ll-control"
             inputMode="decimal"
             value={agi}
             onChange={(e) => setAgi(e.target.value)}
@@ -159,6 +162,7 @@ export function PublicLoanEstimatorCard() {
           <label>Number of Dependents</label>
           <input
             type="text"
+            className="ll-control"
             inputMode="numeric"
             value={dependents}
             onChange={(e) => setDependents(e.target.value)}
@@ -170,6 +174,7 @@ export function PublicLoanEstimatorCard() {
           <label>Poverty Level for Current Year ($)</label>
           <input
             type="text"
+            className="ll-control"
             inputMode="decimal"
             value={povertyLevel}
             onChange={(e) => setPovertyLevel(e.target.value)}
@@ -208,6 +213,7 @@ export function PublicLoanEstimatorCard() {
         <label>Actual Total Monthly Payment Override ($) — optional</label>
         <input
           type="text"
+          className="ll-control"
           inputMode="decimal"
           value={actualOverride}
           onChange={(e) => setActualOverride(e.target.value)}
@@ -221,7 +227,7 @@ export function PublicLoanEstimatorCard() {
         )}
       </div>
 
-      <button type="button" className="btn btn-add" style={{ marginTop: 12 }} onClick={save}>
+      <button type="button" className="btn btn-secondary" style={{ marginTop: 12 }} onClick={save}>
         Save
       </button>
     </div>
