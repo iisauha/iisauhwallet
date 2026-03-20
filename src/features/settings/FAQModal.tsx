@@ -4,7 +4,7 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data in storage?',
-    a: 'No. The passcode acts like a screen lock: it hides the app until you enter your code. We store only a one-way check of your passcode (not the passcode itself), while your balances and settings stay in normal browser storage on your device.',
+    a: 'Yes. Your saved wallet data is stored in encrypted form in your browser storage, so it does not show up as readable numbers until you unlock. When you enter your passcode, the app decrypts it so it can load your tabs. Export JSON backups also include the encrypted wallet data, and your passcode is needed to restore it.',
   },
   {
     q: 'If someone gets my phone/laptop, how much can they see?',

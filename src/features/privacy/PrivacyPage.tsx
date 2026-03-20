@@ -73,7 +73,7 @@ export function PrivacyPage() {
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           You can set a <strong>six digit passcode</strong> so the app asks for it before showing your tabs. That is a{' '}
           <strong>lock on the app screen</strong>. It helps when someone picks up your unlocked phone, because they still
-          need your code to use the app.
+          need your code to use the app. While the app is locked, your main saved ledger data is stored as encrypted text in your browser storage, not as readable numbers.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           During setup you can also save a <strong>hint</strong>, answer <strong>two security questions</strong>, and write
@@ -82,10 +82,10 @@ export function PrivacyPage() {
           passcode in readable form), so a quick glance at storage does not reveal your exact code.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          <strong>Important:</strong> that lock is <strong>not full-disk encryption</strong> of everything in the browser.
-          The goal is to <strong>stop casual use</strong> of the app, so someone can&rsquo;t just open your tabs and see
-          everything immediately. If someone has full access to your unlocked device or can read your browser storage,
-          they can still view what&rsquo;s saved.
+          <strong>Important:</strong> this is <strong>not full-disk encryption</strong> of everything on your device.
+          The goal is to protect your wallet data from casual/local inspection and to make sure only someone who knows your passcode can
+          unlock and view it in the app. If someone has access to your unlocked device or knows your passcode, they can still see your data while it is unlocked.
+          Choose a passcode that is hard to guess and keep it to yourself.
         </p>
       </section>
 
@@ -103,7 +103,8 @@ export function PrivacyPage() {
           </li>
           <li style={{ marginBottom: 8 }}>
             <strong>Getting past the lock you use</strong>, which usually means guessing or knowing your passcode, or them
-            using technical tools to read browser storage or open a JSON backup. That second path takes more know-how than simply opening the app.
+            using technical tools to view what&rsquo;s saved in your browser storage or opening a JSON backup. While locked, the main ledger data is encrypted, so it does not show as readable numbers.
+            That second path takes more know-how than simply opening the app.
           </li>
           <li style={{ marginBottom: 8 }}>
             <strong>Even then</strong>, what they see is mostly what <strong>you manually entered</strong>: nicknames for
@@ -124,16 +125,17 @@ export function PrivacyPage() {
           Backups and exports (treat as sensitive)
         </h2>
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          <strong>Export JSON</strong> saves a backup of what the export includes from your local data (balances, purchases,
-          settings keys, and similar). It can still feel very personal. Treat exports like a private document.
+          <strong>Export JSON</strong> saves a backup of what the export includes from your local data. The saved wallet data is
+          encrypted in the file, and your passcode is needed to decrypt it when you import. Treat export files like a private document.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          Profile name and photo live locally, but the JSON export may not bundle every profile field. If you rely on them,
-          assume you might need to set them again after a restore.
+          Profile name and photo live locally, but the JSON export may not bundle every profile field. If you rely on them, assume
+          you might need to set them again after a restore.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           <strong>Import JSON</strong> replaces the app’s saved data on this device with the file you pick. Only import files
-          you trust.
+          you trust. If the encrypted wallet data in the file does not match your passcode, the import will fail instead of replacing
+          your data.
         </p>
       </section>
 

@@ -52,6 +52,14 @@ import {
   USER_PROFILE_IMAGE_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
+import {
+  decryptAndLoadEncryptedLedgerBlob,
+  encryptAndPersistLedgerData,
+  getDecryptedLedgerData,
+  isEncryptedLedgerBlobV1,
+  isUnlocked,
+  lockSecureStorage
+} from './secureStorage';
 
 function now(): string {
   return new Date().toISOString();
@@ -379,35 +387,36 @@ function migrateLegacyCashIntoBanksInMemory(d: LedgerData) {
 }
 
 export function loadData(): LedgerData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultData();
-    const d = JSON.parse(raw) as LedgerData;
+  // If secure storage is not unlocked yet, do not read/decrypt sensitive local data.
+  if (!isUnlocked()) return defaultData();
 
-    const defaults = defaultData();
-    if (!Array.isArray(d.banks) || d.banks.length === 0) d.banks = defaults.banks;
-    if (!Array.isArray(d.cards) || d.cards.length === 0) d.cards = defaults.cards;
-    (d.banks || []).forEach((b) => {
-      if (b && !(b as any).type) (b as any).type = 'bank';
-    });
+  const d = getDecryptedLedgerData();
+  if (!d) return defaultData();
 
-    migrateLegacyCashIntoBanksInMemory(d);
+  const defaults = defaultData();
+  if (!Array.isArray(d.banks) || d.banks.length === 0) d.banks = defaults.banks;
+  if (!Array.isArray(d.cards) || d.cards.length === 0) d.cards = defaults.cards;
+  (d.banks || []).forEach((b) => {
+    if (b && !(b as any).type) (b as any).type = 'bank';
+  });
 
-    if (!Array.isArray(d.pendingIn)) d.pendingIn = [];
-    if (!Array.isArray(d.pendingOut)) d.pendingOut = [];
-    if (!Array.isArray(d.purchases)) d.purchases = [];
-    if (!Array.isArray(d.recurring)) d.recurring = [];
-    if (!d.recurringPosted || typeof d.recurringPosted !== 'object') d.recurringPosted = {};
+  migrateLegacyCashIntoBanksInMemory(d);
 
-    return d;
-  } catch (_) {
-    return defaultData();
-  }
+  if (!Array.isArray(d.pendingIn)) d.pendingIn = [];
+  if (!Array.isArray(d.pendingOut)) d.pendingOut = [];
+  if (!Array.isArray(d.purchases)) d.purchases = [];
+  if (!Array.isArray(d.recurring)) d.recurring = [];
+  if (!d.recurringPosted || typeof d.recurringPosted !== 'object') d.recurringPosted = {};
+
+  return d;
 }
 
 export function saveData(data: LedgerData) {
-  // Save uses the same main storage key as legacy.
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // Save uses the same main storage key as legacy, but stores an encrypted blob.
+  // Encryption is async; we fire-and-forget because callers are sync. Save ordering is handled in secureStorage.
+  void encryptAndPersistLedgerData(data).catch(() => {
+    // If encryption fails, keep app running with in-memory state.
+  });
 }
 
 function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {
@@ -419,7 +428,11 @@ function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {
   }
 }
 
-export function exportJSON(): string {
+export async function exportJSON(): Promise<string> {
+  if (!isUnlocked()) {
+    throw new Error('Unlock the app to export a backup.');
+  }
+
   // Mirrors legacy buildLocalStorageExportPayload() exactly (structure + allow list).
   const payload: { version: string; exportedAt: string; data: Record<string, unknown> } = {
     version: 'iisauhwallet-backup-v1',
@@ -446,47 +459,83 @@ export function exportJSON(): string {
     UPCOMING_WINDOW_KEY
   ]);
 
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k) continue;
-      if (k.startsWith('ledgerlite') || allow.has(k) || k.includes('snapshot_') || k.includes('expected') || k.includes('upcoming')) {
-        const v = localStorage.getItem(k);
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    if (k.startsWith('ledgerlite') || allow.has(k) || k.includes('snapshot_') || k.includes('expected') || k.includes('upcoming')) {
+      const v = localStorage.getItem(k);
+      if (k === STORAGE_KEY) {
+        const parsed = safeJsonParse(v).value;
+        if (!isEncryptedLedgerBlobV1(parsed)) {
+          throw new Error('Wallet data is not encrypted yet. Try unlocking again.');
+        }
+        payload.data[k] = parsed;
+      } else {
         payload.data[k] = safeJsonParse(v).value;
       }
     }
-  } catch (_) {
-    allow.forEach((k) => {
-      try {
-        const v = localStorage.getItem(k);
-        if (v !== null) payload.data[k] = safeJsonParse(v).value;
-      } catch (_) {
-        // ignore
-      }
-    });
   }
 
   return JSON.stringify(payload, null, 2);
 }
 
-export function importJSON(jsonText: string) {
+export async function importJSON(jsonText: string): Promise<void> {
+  if (!isUnlocked()) {
+    throw new Error('Unlock the app to import a backup.');
+  }
+
   const parsed = JSON.parse(jsonText) as any;
 
   // Format A: full localStorage export payload (exportJSON()).
   if (parsed && parsed.version === 'iisauhwallet-backup-v1' && parsed.data && typeof parsed.data === 'object') {
     const data = parsed.data as Record<string, unknown>;
+
+    // Restore main encrypted ledger first, so we can avoid overwriting anything if decryption/encryption fails.
+    const storageValue = data[STORAGE_KEY];
+
+    if (storageValue && typeof storageValue === 'string') {
+      // Handle case where STORAGE_KEY is stored as a JSON string inside the backup file.
+      const parsedStorage = safeJsonParse(storageValue).value;
+      if (isEncryptedLedgerBlobV1(parsedStorage)) {
+        await decryptAndLoadEncryptedLedgerBlob(parsedStorage);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedStorage));
+      } else if (parsedStorage && typeof parsedStorage === 'object') {
+        await encryptAndPersistLedgerData(parsedStorage as LedgerData);
+      } else {
+        throw new Error('Invalid backup format (wallet data is missing or unreadable).');
+      }
+    } else if (isEncryptedLedgerBlobV1(storageValue)) {
+      await decryptAndLoadEncryptedLedgerBlob(storageValue);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageValue));
+    } else if (storageValue && typeof storageValue === 'object') {
+      // Legacy plaintext ledger: encrypt it before storing.
+      await encryptAndPersistLedgerData(storageValue as LedgerData);
+    } else {
+      throw new Error('Invalid backup format (missing wallet data).');
+    }
+
+    // Now that the secure ledger restore succeeded, restore the remaining keys.
     Object.entries(data).forEach(([k, v]) => {
-      // Restore strings verbatim; everything else JSON-stringified (matching localStorage storage format).
+      if (k === STORAGE_KEY) return;
       if (typeof v === 'string') localStorage.setItem(k, v);
       else localStorage.setItem(k, JSON.stringify(v));
     });
+
     return;
   }
 
   // Format B: legacy importFile handler expects a plain "data" object (banks/cards/pending/purchases/recurring...).
   // We merge into STORAGE_KEY only, preserving any other keys.
   if (parsed && typeof parsed === 'object') {
-    const current = loadData();
+    if (isEncryptedLedgerBlobV1(parsed)) {
+      await decryptAndLoadEncryptedLedgerBlob(parsed);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      return;
+    }
+
+    const current = getDecryptedLedgerData();
+    if (!current) throw new Error('Unlock the app to import a backup.');
+
     const next: LedgerData = { ...current };
     if (Array.isArray(parsed.banks)) (next as any).banks = parsed.banks;
     if (Array.isArray(parsed.cards)) (next as any).cards = parsed.cards;
@@ -495,7 +544,8 @@ export function importJSON(jsonText: string) {
     if (Array.isArray(parsed.purchases)) (next as any).purchases = parsed.purchases;
     if (Array.isArray(parsed.recurring)) (next as any).recurring = parsed.recurring;
     if (parsed.recurringPosted && typeof parsed.recurringPosted === 'object') (next as any).recurringPosted = parsed.recurringPosted;
-    saveData(next);
+
+    await encryptAndPersistLedgerData(next);
     return;
   }
 
@@ -1834,6 +1884,8 @@ export function generateRecoveryKey(): string {
 /** Wipe all app data from localStorage (passcode, recovery, and wallet keys). */
 export function wipeAllAppData(): void {
   try {
+    // Also clear any decrypted/in-memory key material.
+    lockSecureStorage();
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);

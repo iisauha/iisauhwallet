@@ -81,7 +81,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
         <div style={{ marginBottom: 4 }}>
           <B>
             <Li>
-              You enter your own numbers. Everything is saved in this browser on this device.
+              You enter your own numbers. Everything is saved in this browser on this device, encrypted, and unlocked when you enter your passcode.
             </Li>
             <Li>
               Three ideas work together: balances you update (Snapshot and Investing), money that is on the way but not
@@ -113,6 +113,9 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
             </Li>
             <Li>
               In Settings you manage your passcode and recovery options, and the app will require your code to open.
+            </Li>
+            <Li>
+              When the app is locked, it keeps your saved wallet data unreadable in your browser storage until you enter your passcode.
             </Li>
           </B>
         </GuideDropdown>
@@ -404,7 +407,8 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               policy (Privacy screen).
             </Li>
             <Li>
-              Backup: export monthly purchases CSV; export full data as JSON; import JSON replaces data on this device.
+              Backup: export monthly purchases CSV; export full data as JSON; import JSON replaces data on this device. The encrypted
+              wallet part in the backup needs your passcode to restore.
               Import only files you trust.
             </Li>
             <Li>

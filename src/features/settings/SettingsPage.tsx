@@ -336,7 +336,14 @@ export function SettingsPage() {
           type="button"
           className="btn btn-secondary"
           onClick={async () => {
-            const text = exportJSON();
+            let text: string;
+            try {
+              text = await exportJSON();
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : 'Export failed.';
+              alert(msg);
+              return;
+            }
             const fileName = getExportFileName();
 
             // Attempt share sheet first (best for iOS PWA).
@@ -388,13 +395,14 @@ export function SettingsPage() {
             const f = e.target.files && e.target.files[0];
             if (!f) return;
             const r = new FileReader();
-            r.onload = () => {
+            r.onload = async () => {
               try {
-                importJSON(String(r.result || ''));
+                await importJSON(String(r.result || ''));
                 actions.reload();
                 alert('Import done.');
-              } catch (_) {
-                alert('Invalid JSON.');
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Import failed.';
+                alert(msg);
               }
               e.target.value = '';
             };

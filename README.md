@@ -27,7 +27,7 @@ A personal finance dashboard that helps you track **every dollar**: bank balance
 
 - **Local-first:** All wallet data is stored locally in your browser (e.g. localStorage). The creator does not have access to your financial data. Data is not stored on a central server.
 - **Manual input:** There is no direct connection to your bank by default. Users manually enter balances and transactions.
-- **Security model (important):** The app uses a passcode gate to control *access to the UI*, but it does **not** encrypt your data in `localStorage`. That means anyone who can read your browser storage (or has access to your unlocked device) can potentially view your data. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
+- **Security model (important):** The app keeps your main wallet data encrypted in your browser storage. When you unlock with your passcode, the app decrypts it so you can view and edit it. The passcode is required to access the saved data after refresh. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
 - **Profile (name + photo):** In Settings you can set a display name and profile picture. Both are stored locally in your browser (profile picture is resized and stored as a small JPEG data URL). They are not automatically shared anywhere unless you export/share your device data.
 - **Backend features:** No backend is required for normal use.
 
@@ -178,7 +178,7 @@ This is a high-level guide to the most common “types” of buttons you will se
 
 ### What the passcode does (and does not do)
 - It blocks access to the app UI until you enter the correct passcode (or finish recovery).
-- It does **not** encrypt the contents stored in your browser. The passcode is an access gate, not “encryption at rest.”
+- It unlocks the encrypted saved data so the app can show your tabs. When the app is locked, the saved wallet data is kept unreadable in your browser storage.
 - The app always requires your passcode to open after refresh.
 
 See the in-app **Security Policy** for exact wording and official site URL.
@@ -234,7 +234,7 @@ This feature is not included in the current app build. The app works fully with 
 
 ## Backup and export
 
-- **Export JSON** — A backup of wallet/ledger-related data (accounts, balances, pending, purchases, recurring, loans, investing, categories, settings/UI prefs, etc.). The export is allow-listed; your profile name/photo are stored locally but may not be included.  
+- **Export JSON** — A backup of wallet/ledger-related data (accounts, balances, pending, purchases, recurring, loans, investing, categories, settings/UI prefs, etc.). Wallet data in the backup is encrypted; your passcode is needed to restore it.  
 - **Import JSON** — Restores from a previously exported file and **replaces** current data on the device. Only import backups you trust. Treat backups as sensitive files (balances and transactions).
 - **Export monthly purchases CSV** — Current month’s purchases as CSV.  
 - Backing up regularly is recommended so you don’t lose data if the browser or device is cleared. After a wipe (e.g. too many failed passcode attempts), you can re-import a JSON backup.
