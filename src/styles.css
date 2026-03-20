@@ -369,6 +369,14 @@ input[type="date"].ll-control {
   font-family: var(--app-font-family);
 }
 
+/* Ensure typed text color defaults to "All other text" even for fields
+   that don't use the `.ll-control` class (but aren't checkboxes/radios). */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  color: var(--ui-primary-text, var(--text));
+}
+
 .ll-control::placeholder,
 input::placeholder,
 textarea::placeholder {

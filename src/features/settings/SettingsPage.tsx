@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
@@ -22,8 +21,6 @@ import {
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
-import { FAQModal } from './FAQModal';
-import { AppGuideModal } from './AppGuideModal';
 import { ResetPasscodeModal } from './ResetPasscodeModal';
 import { Modal } from '../../ui/Modal';
 
@@ -146,8 +143,6 @@ export function SettingsPage() {
   const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
-  const [faqOpen, setFaqOpen] = useState(false);
-  const [appGuideOpen, setAppGuideOpen] = useState(false);
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
   const [pausePasscodeStep, setPausePasscodeStep] = useState<0 | 1 | 2>(0);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
@@ -322,14 +317,6 @@ export function SettingsPage() {
           </div>
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setAppGuideOpen(true)}>
-            How This App Works
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setFaqOpen(true)}>
-            FAQ
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {hasPasscode && (
             <button
               type="button"
@@ -340,9 +327,6 @@ export function SettingsPage() {
               Reset passcode
             </button>
           )}
-          <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-            Security Policy
-          </Link>
         </div>
       </div>
       {hasPasscode && (
@@ -380,8 +364,6 @@ export function SettingsPage() {
           <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
         </>
       )}
-      <AppGuideModal open={appGuideOpen} onClose={() => setAppGuideOpen(false)} />
-      <FAQModal open={faqOpen} onClose={() => setFaqOpen(false)} />
 
       <p className="section-title" style={{ marginTop: 24 }}>Backup</p>
       <div className="settings-section">
@@ -504,9 +486,6 @@ export function SettingsPage() {
             </p>
             <p style={{ margin: '0 0 12px 0' }}>
               So I decided to build my own app focused on solving that. The goal is simple: always know exactly where your money is. I also wanted to include features for tracking credit card points and bonuses, loans, investing accounts, and more.
-            </p>
-            <p style={{ margin: '0 0 12px 0' }}>
-              You can check out the &quot;How This App Works&quot; section for a more detailed explanation.
             </p>
             <p style={{ margin: 0 }}>
               I hope you enjoy it.

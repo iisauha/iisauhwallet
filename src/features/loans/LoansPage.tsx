@@ -1111,6 +1111,16 @@ export function LoansPage() {
   const [state, setState] = useState<LoansState>(() => loadLoans());
   const [showPublic, setShowPublic] = useState(loadLoansSectionShowPublic);
   const [showPrivate, setShowPrivate] = useState(loadLoansSectionShowPrivate);
+  useEffect(() => {
+    // Ensure only one section is visible even if persisted settings are inconsistent.
+    if (showPublic && showPrivate) {
+      setShowPrivate(false);
+      saveLoansSectionShowPrivate(false);
+    } else if (!showPublic && !showPrivate) {
+      setShowPublic(true);
+      saveLoansSectionShowPublic(true);
+    }
+  }, []);
   const [showConsolidationModal, setShowConsolidationModal] = useState(false);
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<LoanWithDerived | null>(null);
@@ -1313,19 +1323,19 @@ export function LoansPage() {
         <div className="summary-compact" style={{ marginBottom: 0 }}>
         <div className="summary-kv" style={{ marginTop: 0 }}>
           <span className="k">Total balance</span>
-          <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
+          <span className="v" style={{ color: 'var(--red)', fontWeight: 500 }}>
             <AnimatedNumber value={summary.totalBalance} format={formatCents} />
           </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
           <span className="k">Public</span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 500 }}>
             <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
           </span>
         </div>
         <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           <span className="k">Private</span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 500 }}>
             <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
           </span>
         </div>
@@ -1367,7 +1377,7 @@ export function LoansPage() {
               i
             </button>
           </span>
-          <span className="v" style={{ color: 'var(--red)' }}>
+          <span className="v" style={{ color: 'var(--red)', fontWeight: 700 }}>
             {summary.totalMonthlyNow > 0 ? (
               <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
             ) : (
@@ -1378,13 +1388,13 @@ export function LoansPage() {
         {summary.avgPrivateRate != null ? (
           <div className="summary-kv" style={{ marginTop: 2 }}>
             <span className="k">Avg private rate</span>
-            <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+            <span className="v" style={{ fontWeight: 500 }}>{summary.avgPrivateRate.toFixed(2)}%</span>
           </div>
         ) : null}
         {summary.avgPublicRate != null ? (
           <div className="summary-kv" style={{ marginTop: 2 }}>
             <span className="k">Avg public rate</span>
-            <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+            <span className="v" style={{ fontWeight: 500 }}>{summary.avgPublicRate.toFixed(2)}%</span>
           </div>
         ) : null}
         </div>
@@ -1416,17 +1426,18 @@ export function LoansPage() {
             fontWeight: showPublic ? 600 : 500,
             border: 'none',
             borderRadius: 999,
-            background: showPublic ? 'var(--accent)' : 'transparent',
-            color: showPublic ? '#ffffff' : 'var(--ui-primary-text, var(--text))',
+            background: showPublic
+              ? 'var(--accent)'
+              : 'color-mix(in srgb, var(--accent) 16%, transparent)',
+            color: showPublic ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-primary-text, var(--text))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
-            setShowPublic((s) => {
-              const next = !s;
-              saveLoansSectionShowPublic(next);
-              return next;
-            });
+            setShowPublic(true);
+            setShowPrivate(false);
+            saveLoansSectionShowPublic(true);
+            saveLoansSectionShowPrivate(false);
           }}
         >
           Public
@@ -1442,17 +1453,18 @@ export function LoansPage() {
             fontWeight: showPrivate ? 600 : 500,
             border: 'none',
             borderRadius: 999,
-            background: showPrivate ? 'var(--accent)' : 'transparent',
-            color: showPrivate ? '#ffffff' : 'var(--ui-primary-text, var(--text))',
+            background: showPrivate
+              ? 'var(--accent)'
+              : 'color-mix(in srgb, var(--accent) 16%, transparent)',
+            color: showPrivate ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-primary-text, var(--text))',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
-            setShowPrivate((s) => {
-              const next = !s;
-              saveLoansSectionShowPrivate(next);
-              return next;
-            });
+            setShowPublic(false);
+            setShowPrivate(true);
+            saveLoansSectionShowPublic(false);
+            saveLoansSectionShowPrivate(true);
           }}
         >
           Private
