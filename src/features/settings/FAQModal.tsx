@@ -4,11 +4,15 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data in storage?',
-    a: 'Yes. Your saved wallet data is stored in encrypted form in your browser storage, so it does not show up as readable numbers until you unlock. When you enter your passcode, the app decrypts it so it can load your tabs. Export JSON backups also include the encrypted wallet data, and your passcode is needed to restore it.',
+    a: 'No, it does not encrypt the saved files. It works like a lock on the app: it hides the screens until you enter the code, while balances and settings stay in normal browser storage on your device.',
   },
   {
     q: 'If someone gets my phone/laptop, how much can they see?',
-    a: 'Usually they need your device unlock and your app passcode. Keeping a device PIN and your app passcode on is the simple habit that helps most people.',
+    a: 'Usually they need your device unlock and either your app passcode or for protection to be paused. Keeping a device PIN and the app passcode on is the simple habit that helps most people.',
+  },
+  {
+    q: 'What changes when I “Pause passcode protection”?',
+    a: 'The app stops asking for your code until you turn protection back on. Use that when you are the only one using the device and you want quicker access.',
   },
   {
     q: 'Where do my profile name and profile picture live?',

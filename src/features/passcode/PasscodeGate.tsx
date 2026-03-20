@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   loadPasscodeHash,
   savePasscodeHash,
@@ -16,14 +16,13 @@ import {
   savePasscodeFailedAttempts,
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
+  loadPasscodePaused,
   loadPasscode6Digit,
   savePasscode6Digit,
   generateRecoveryKey,
   wipeAllAppData,
   type SecurityQA,
 } from '../../state/storage';
-import { useLedgerStore } from '../../state/store';
-import { lockSecureStorage, unlockWithPasscode, reencryptLedgerData } from '../../state/secureStorage';
 import { Select } from '../../ui/Select';
 
 const MAX_FAILED_ATTEMPTS = 10;
@@ -78,8 +77,6 @@ function isLockedOut(): boolean {
 export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
-  const setupPasscodeRef = useRef<string | null>(null);
-  const updateTo6DigitOldPasscodeRef = useRef<string | null>(null);
   const [step, setStep] = useState<Step>(() => {
     const hash = loadPasscodeHash();
     if (hash !== null) {
@@ -171,7 +168,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     savePasscodeHash(hash);
     savePasscode6Digit(true);
     setStoredHash(hash);
-    setupPasscodeRef.current = input;
     setStep('hint');
     setHintInput('');
   }, [input, confirmInput]);
@@ -201,22 +197,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     setStep('recovery-key-show');
   }, [securityQ1, securityQ2, securityA1, securityA2]);
 
-  const handleRecoveryKeyShowDone = useCallback(async () => {
-    const pass = setupPasscodeRef.current;
-    if (!pass) {
-      setError('Data corrupted or invalid.');
-      return;
-    }
-    try {
-      await unlockWithPasscode(pass);
-      useLedgerStore.getState().actions.reload();
-      setupPasscodeRef.current = null;
-      saveRecoverySetupDone(true);
-      setAuthenticated(true);
-      setGeneratedRecoveryKey('');
-    } catch (_) {
-      setError('Data corrupted or invalid.');
-    }
+  const handleRecoveryKeyShowDone = useCallback(() => {
+    saveRecoverySetupDone(true);
+    setAuthenticated(true);
+    setGeneratedRecoveryKey('');
   }, []);
 
   const handleEnter = useCallback(async () => {
@@ -233,14 +217,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       return;
     }
     resetFailedAttempts();
-    try {
-      await unlockWithPasscode(input);
-      useLedgerStore.getState().actions.reload();
-      setAuthenticated(true);
-    } catch (_) {
-      setError('Data corrupted or invalid.');
-      return;
-    }
+    setAuthenticated(true);
     setInput('');
   }, [input, storedHash, failedAttempts, recordFailedAttempt, resetFailedAttempts]);
 
@@ -314,7 +291,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setInput('');
       return;
     }
-    updateTo6DigitOldPasscodeRef.current = input;
     setStep('update-to-6digit-confirm');
     setInput('');
     setConfirmInput('');
@@ -332,29 +308,13 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       return;
     }
     const hash = await hashPasscode(input);
-    const oldPass = updateTo6DigitOldPasscodeRef.current;
-    if (!oldPass) {
-      setError('Data corrupted or invalid.');
-      return;
-    }
-
-    try {
-      // Re-encrypt existing ledger under the new passcode so refresh persistence stays correct.
-      await reencryptLedgerData(oldPass, input);
-
-      // Only update stored passcode hash after the re-encryption succeeds.
-      savePasscodeHash(hash);
-      savePasscode6Digit(true);
-      setStoredHash(hash);
-      useLedgerStore.getState().actions.reload();
-      setAuthenticated(true);
-      updateTo6DigitOldPasscodeRef.current = null;
-      setInput('');
-      setConfirmInput('');
-      setError('');
-    } catch (_) {
-      setError('Data corrupted or invalid.');
-    }
+    savePasscodeHash(hash);
+    savePasscode6Digit(true);
+    setStoredHash(hash);
+    setAuthenticated(true);
+    setInput('');
+    setConfirmInput('');
+    setError('');
   }, [input, confirmInput]);
 
   const handleResetNewPasscode = useCallback(async () => {
@@ -368,35 +328,17 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       return;
     }
     const hash = await hashPasscode(input);
-    try {
-      // If the stored data is already encrypted, this will only succeed with the correct passcode.
-      // If we cannot decrypt, we wipe local data so the app can continue.
-      await unlockWithPasscode(input);
-      useLedgerStore.getState().actions.reload();
-
-      savePasscodeHash(hash);
-      savePasscode6Digit(true);
-      setStoredHash(hash);
-      setAuthenticated(true);
-      setInput('');
-      setConfirmInput('');
-      setStep('enter');
-    } catch (_) {
-      wipeAllAppData();
-      lockSecureStorage();
-      savePasscodeHash(hash);
-      savePasscode6Digit(true);
-      setStoredHash(hash);
-      setAuthenticated(true);
-      setInput('');
-      setConfirmInput('');
-      setStep('enter');
-    }
+    savePasscodeHash(hash);
+    savePasscode6Digit(true);
+    setStoredHash(hash);
+    setAuthenticated(true);
+    setInput('');
+    setConfirmInput('');
+    setStep('enter');
   }, [input, confirmInput]);
 
   const handleWipeConfirm = useCallback(() => {
     wipeAllAppData();
-    lockSecureStorage();
     setStoredHash(null);
     setStep('create');
     setFailedAttempts(0);
@@ -440,7 +382,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     fontSize: '0.95rem',
   };
 
-  if (authenticated) return <>{children}</>;
+  if (loadPasscodePaused() || authenticated) {
+    return <>{children}</>;
+  }
 
   const lockoutEnd = getLockoutEnd();
   const lockoutMessage = lockoutEnd

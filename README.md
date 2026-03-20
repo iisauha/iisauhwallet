@@ -19,17 +19,17 @@ A personal finance dashboard that helps you track **every dollar**: bank balance
 - **Investing** — HYSA, Roth IRA, 401k, general investing; transfers between cash and investing  
 - **Sign-up bonus tracker** — Credit card bonuses and progress toward spend targets  
 
-**Philosophy:** Track every dollar, including money moving between accounts and money in apps like Venmo. You stay in control; the app does not pull data from your bank by default.
+**Philosophy:** Track every dollar, including money moving between accounts and money in apps like Venmo. You stay in control; the app does not pull data from your bank unless you explicitly use an optional backend/Plaid feature.
 
 ---
 
 ## Architecture and data storage
 
 - **Local-first:** All wallet data is stored locally in your browser (e.g. localStorage). The creator does not have access to your financial data. Data is not stored on a central server.
-- **Manual input:** There is no direct connection to your bank by default. Users manually enter balances and transactions.
-- **Security model (important):** The app keeps your main wallet data encrypted in your browser storage. When you unlock with your passcode, the app decrypts it so you can view and edit it. The passcode is required to access the saved data after refresh. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
+- **Manual input:** There is no direct connection to your bank by default. Users manually enter balances and transactions. Optional features (e.g. Plaid-based detected activity) require a separate backend you configure.
+- **Security model (important):** The app uses a passcode gate to control *access to the UI*, but it does **not** encrypt your data in `localStorage`. That means anyone who can read your browser storage (or unlock/skip passcode protection) can potentially view your data. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
 - **Profile (name + photo):** In Settings you can set a display name and profile picture. Both are stored locally in your browser (profile picture is resized and stored as a small JPEG data URL). They are not automatically shared anywhere unless you export/share your device data.
-- **Backend features:** No backend is required for normal use.
+- **Optional backend features:** If you enable a backend (e.g. for Plaid-based “Detected activity”), the app will make network requests to your configured backend URL. See “Detected activity” and the Security Policy for what is sent and when.
 
 ---
 
@@ -163,14 +163,14 @@ This is a high-level guide to the most common “types” of buttons you will se
 - The SUB tracker does not automatically rewrite your Spending purchase categories; it is its own progress/valuation view.
 
 ### Security/onboarding UI
-- On first setup you create a six digit passcode.
-- Optionally, during setup you can add a hint, security questions, and save a recovery key so you can get back in if you forget your passcode.
+- First-run security quiz is shown as a blocking modal-style experience with checkbox answers (single-choice UX).
+- It requires all questions to be correct before passcode setup can continue.
 
 
 ## Passcode and recovery (local-only)
 
-- Set a 6-digit passcode to open the app. The app stores only a SHA-256 hash (a one-way check) of your passcode on your device, so the exact code is never stored in readable form. The creator cannot access it.  
-- **First-run setup:** Before setting a passcode for the first time, you create the passcode and can optionally set recovery options (hint, security questions, recovery key).  
+- Set a 6-digit passcode to open the app. Stored as a SHA-256 hash on your device only; the creator cannot access it.  
+- **First-run security onboarding:** Before setting a passcode for the first time, users complete a short required security quiz (5 questions). Must score 5/5 to proceed to passcode setup. Completion is stored locally so existing users are unaffected.  
 - **Optional during setup:** Password hint, two security questions (hashed locally), and a one-time **recovery key** (save it when shown; only a hash is stored).  
 - **Reset passcode:** Settings → Security → Reset passcode (current passcode then new one).  
 - **Forgot passcode:** On the lock screen, “Forgot passcode?” then use recovery key or security questions to reset. The hint alone does not allow reset.  
@@ -178,8 +178,8 @@ This is a high-level guide to the most common “types” of buttons you will se
 
 ### What the passcode does (and does not do)
 - It blocks access to the app UI until you enter the correct passcode (or finish recovery).
-- It unlocks the encrypted saved data so the app can show your tabs. When the app is locked, the saved wallet data is kept unreadable in your browser storage.
-- The app always requires your passcode to open after refresh.
+- It does **not** encrypt the contents stored in your browser. The passcode is an access gate, not “encryption at rest.”
+- If you use “Pause passcode protection,” anyone with access to the device can open the app without the passcode until you resume protection.
 
 See the in-app **Security Policy** for exact wording and official site URL.
 
@@ -227,14 +227,17 @@ See the in-app **Security Policy** for exact wording and official site URL.
 
 ---
 
-## Detected activity
-This feature is not included in the current app build. The app works fully with manual entry.
+## Detected activity (optional, backend-dependent)
+
+- If your deployment has a backend that supports it, the app can show a “Detected activity” inbox: suggested transactions (e.g. from Plaid) to link to purchases or pending.  
+- This is optional and requires a configured API/backend URL. Without it, the app works fully with manual entry only.  
+- Local ledger data and manual entry are not dependent on detected activity; it only adds suggestion/linking assistance.
 
 ---
 
 ## Backup and export
 
-- **Export JSON** — A backup of wallet/ledger-related data (accounts, balances, pending, purchases, recurring, loans, investing, categories, settings/UI prefs, etc.). Wallet data in the backup is encrypted; your passcode is needed to restore it.  
+- **Export JSON** — A backup of wallet/ledger-related data (accounts, balances, pending, purchases, recurring, loans, investing, categories, settings/UI prefs, etc.). The export is allow-listed; your profile name/photo are stored locally but may not be included.  
 - **Import JSON** — Restores from a previously exported file and **replaces** current data on the device. Only import backups you trust. Treat backups as sensitive files (balances and transactions).
 - **Export monthly purchases CSV** — Current month’s purchases as CSV.  
 - Backing up regularly is recommended so you don’t lose data if the browser or device is cleared. After a wipe (e.g. too many failed passcode attempts), you can re-import a JSON backup.
@@ -252,7 +255,7 @@ This feature is not included in the current app build. The app works fully with 
 
 ## Limitations and assumptions
 
-- **Manual entry:** The app does not connect to your bank by default. All balances and transactions are entered by you.  
+- **Manual entry:** The app does not connect to your bank by default. All balances and transactions are entered by you. Optional Plaid/detected activity depends on a backend you configure.  
 - **Local-first:** Data lives in your browser. The creator cannot access your data, passcode, or recovery key.  
 - **Single wallet per device:** One wallet per device.  
 - **No financial advice:** The app is for tracking and planning only. Loan and tax numbers (e.g. optimizer, federal loan estimates) are illustrative and may not match your actual situation.  
@@ -263,7 +266,7 @@ This feature is not included in the current app build. The app works fully with 
 ## Getting started
 
 1. Open the app in your browser.  
-2. Set your **passcode**. Optionally add a hint, security questions, and save the **recovery key**.
+2. Complete the first-run **security quiz** if shown (5/5 required), then set a **passcode**. Optionally add a hint, security questions, and save the **recovery key**.  
 3. In **Snapshot**, add bank accounts and credit cards and enter current balances.  
 4. Add **pending** items when money is in motion; **post** them when it settles.  
 5. In **Recurring**, add salary, rent, subscriptions, and other repeating income or expenses.  

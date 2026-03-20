@@ -10,6 +10,8 @@ import {
   saveBirthdateISO,
   getCategoryName,
   loadPasscodeHash,
+  loadPasscodePaused,
+  savePasscodePaused,
   loadUserDisplayName,
   saveUserDisplayName,
   loadUserProfileImage,
@@ -21,7 +23,6 @@ import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
 import { FAQModal } from './FAQModal';
-import { AppGuideModal } from './AppGuideModal';
 import { ResetPasscodeModal } from './ResetPasscodeModal';
 import { Modal } from '../../ui/Modal';
 
@@ -145,8 +146,8 @@ export function SettingsPage() {
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
-  const [appGuideOpen, setAppGuideOpen] = useState(false);
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
+  const [pausePasscodeStep, setPausePasscodeStep] = useState<0 | 1 | 2>(0);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
@@ -154,6 +155,7 @@ export function SettingsPage() {
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
 
   const hasPasscode = loadPasscodeHash() !== null;
+  const passcodePaused = loadPasscodePaused();
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -294,10 +296,30 @@ export function SettingsPage() {
 
       <p className="section-title" style={{ marginTop: 24 }}>Security &amp; privacy</p>
       <div className="settings-section" style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {hasPasscode && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {passcodePaused ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '12px 18px', fontSize: '1rem' }}
+                onClick={() => savePasscodePaused(false)}
+              >
+                Resume passcode protection
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-secondary btn-outline-neutral"
+                style={{ padding: '12px 18px', fontSize: '1rem' }}
+                onClick={() => setPausePasscodeStep(1)}
+              >
+                Pause passcode protection
+              </button>
+            )}
+          </div>
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setAppGuideOpen(true)}>
-            How This App Works
-          </button>
           <button type="button" className="btn btn-secondary" onClick={() => setFaqOpen(true)}>
             FAQ
           </button>
@@ -318,8 +340,41 @@ export function SettingsPage() {
           </Link>
         </div>
       </div>
-      {hasPasscode && <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />}
-      <AppGuideModal open={appGuideOpen} onClose={() => setAppGuideOpen(false)} />
+      {hasPasscode && (
+        <>
+          {pausePasscodeStep === 1 ? (
+            <Modal open={true} title="Pause passcode?" onClose={() => setPausePasscodeStep(0)}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
+                This reduces app security. Anyone with access to this device could open the app without a passcode. Your data will still be stored locally on this device.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
+                <button type="button" className="btn btn-primary" onClick={() => setPausePasscodeStep(2)}>Continue</button>
+              </div>
+            </Modal>
+          ) : pausePasscodeStep === 2 ? (
+            <Modal open={true} title="Confirm pause" onClose={() => setPausePasscodeStep(0)}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
+                Confirm again: the passcode will not be required when opening the app until you tap &quot;Resume passcode protection&quot; in Settings.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    savePasscodePaused(true);
+                    setPausePasscodeStep(0);
+                  }}
+                >
+                  Pause passcode
+                </button>
+              </div>
+            </Modal>
+          ) : null}
+          <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
+        </>
+      )}
       <FAQModal open={faqOpen} onClose={() => setFaqOpen(false)} />
 
       <p className="section-title" style={{ marginTop: 24 }}>Backup</p>
@@ -336,14 +391,7 @@ export function SettingsPage() {
           type="button"
           className="btn btn-secondary"
           onClick={async () => {
-            let text: string;
-            try {
-              text = await exportJSON();
-            } catch (e) {
-              const msg = e instanceof Error ? e.message : 'Export failed.';
-              alert(msg);
-              return;
-            }
+            const text = exportJSON();
             const fileName = getExportFileName();
 
             // Attempt share sheet first (best for iOS PWA).
@@ -395,14 +443,13 @@ export function SettingsPage() {
             const f = e.target.files && e.target.files[0];
             if (!f) return;
             const r = new FileReader();
-            r.onload = async () => {
+            r.onload = () => {
               try {
-                await importJSON(String(r.result || ''));
+                importJSON(String(r.result || ''));
                 actions.reload();
                 alert('Import done.');
-              } catch (err) {
-                const msg = err instanceof Error ? err.message : 'Import failed.';
-                alert(msg);
+              } catch (_) {
+                alert('Invalid JSON.');
               }
               e.target.value = '';
             };
@@ -453,7 +500,7 @@ export function SettingsPage() {
               So I decided to build my own app focused on solving that. The goal is simple: always know exactly where your money is. I also wanted to include features for tracking credit card points and bonuses, loans, investing accounts, and more.
             </p>
             <p style={{ margin: '0 0 12px 0' }}>
-              You can check out the &quot;How This App Works&quot; section for a more detailed explanation.
+              This app keeps your data on your device, and protects access with a passcode.
             </p>
             <p style={{ margin: 0 }}>
               I built this over about three weeks using Cursor while balancing school and other commitments. I hope you enjoy it.

@@ -48,6 +48,9 @@ export const PRIVATE_PAYMENT_NOW_BASE_KEY = 'iisauhwallet_private_payment_now_ba
 export const LAST_RECOMPUTE_DATE_KEY = 'iisauhwallet_last_recompute_date_v1';
 export const PAYMENT_NOW_MANUAL_OVERRIDE_KEY = 'iisauhwallet_payment_now_manual_override_v1';
 
+// Detected activity inbox (optional backend when configured).
+export const DETECTED_ACTIVITY_KEY = 'iisauhwallet_detected_activity_v1';
+
 // UI-only: theme color (hex) for surfaces, backgrounds, borders.
 export const APP_THEME_COLOR_KEY = 'iisauhwallet_app_theme_color_v1';
 // UI-only: accent color (hex) for buttons, tabs, highlights.
@@ -88,6 +91,8 @@ export const PASSCODE_LOCKOUT_UNTIL_KEY = 'iisauhwallet_passcode_lockout_until_v
 
 // First-run security onboarding: quiz must be passed before passcode can be set.
 export const SECURITY_QUIZ_COMPLETED_KEY = 'iisauhwallet_security_quiz_completed_v1';
+// Passcode: when true, gate is skipped (user paused protection). Local-only.
+export const PASSCODE_PAUSED_KEY = 'iisauhwallet_passcode_paused_v1';
 // Passcode: when true, stored passcode is 6-digit (required for new/updated passcodes).
 export const PASSCODE_6DIGIT_KEY = 'iisauhwallet_passcode_6digit_v1';
 

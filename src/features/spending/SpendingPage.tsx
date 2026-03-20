@@ -772,7 +772,6 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
       </div>
       </>
       ) : null}
-
       <AddPurchaseModal
         open={openAdd}
         onClose={() => {
@@ -780,8 +779,6 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
           setReimbursementMode(false);
         }}
         purchaseKey={editingPurchase ? getPurchaseUiId(editingPurchase) : null}
-        prefill={null}
-        onSave={undefined}
         reimbursementExpected={reimbursementMode}
       />
 

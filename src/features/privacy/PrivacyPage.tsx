@@ -73,19 +73,24 @@ export function PrivacyPage() {
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           You can set a <strong>six digit passcode</strong> so the app asks for it before showing your tabs. That is a{' '}
           <strong>lock on the app screen</strong>. It helps when someone picks up your unlocked phone, because they still
-          need your code to use the app. While the app is locked, your main saved ledger data is stored as encrypted text in your browser storage, not as readable numbers.
+          need your code to use the app.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           During setup you can also save a <strong>hint</strong>, answer <strong>two security questions</strong>, and write
           down a <strong>recovery key</strong> the app shows once. Those exist so you can get back in if you forget the
-          passcode, using the flows the app gives you. The app keeps only a scrambled one-way check (not your raw
-          passcode in readable form), so a quick glance at storage does not reveal your exact code.
+          passcode, using the flows the app gives you. The app keeps only scrambled checks (not your raw passcode in
+          readable form) so a quick glance at storage does not print your exact code in plain text.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          <strong>Important:</strong> this is <strong>not full-disk encryption</strong> of everything on your device.
-          The goal is to protect your wallet data from casual/local inspection and to make sure only someone who knows your passcode can
-          unlock and view it in the app. If someone has access to your unlocked device or knows your passcode, they can still see your data while it is unlocked.
-          Choose a passcode that is hard to guess and keep it to yourself.
+          <strong>Important:</strong> that lock is <strong>not full-disk encryption</strong> of everything in the browser.
+          Someone with deep access to the device and enough skill could still try to read what the browser saved, the same
+          way they might dig through any other local app data. The passcode is there to <strong>stop casual use</strong> of
+          the app and to match how people expect a finance screen to behave, not to promise military-grade secrecy of every
+          byte on the phone.
+        </p>
+        <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
+          You can <strong>pause</strong> passcode protection in Settings. While paused, anyone who opens the app on that
+          device can see it without the code. Turn protection back on when you are done.
         </p>
       </section>
 
@@ -102,9 +107,9 @@ export function PrivacyPage() {
             for example the phone itself, a shared computer, or a backup you emailed to yourself.
           </li>
           <li style={{ marginBottom: 8 }}>
-            <strong>Getting past the lock you use</strong>, which usually means guessing or knowing your passcode, or them
-            using technical tools to view what&rsquo;s saved in your browser storage or opening a JSON backup. While locked, the main ledger data is encrypted, so it does not show as readable numbers.
-            That second path takes more know-how than simply opening the app.
+            <strong>Getting past the lock you use</strong>, which usually means guessing or knowing your passcode, or you
+            having paused protection, or them using technical tools to read browser storage or open a JSON backup. That second
+            path takes more know-how than simply opening the app.
           </li>
           <li style={{ marginBottom: 8 }}>
             <strong>Even then</strong>, what they see is mostly what <strong>you manually entered</strong>: nicknames for
@@ -125,17 +130,16 @@ export function PrivacyPage() {
           Backups and exports (treat as sensitive)
         </h2>
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          <strong>Export JSON</strong> saves a backup of what the export includes from your local data. The saved wallet data is
-          encrypted in the file, and your passcode is needed to decrypt it when you import. Treat export files like a private document.
+          <strong>Export JSON</strong> saves a backup of what the export includes from your local data (balances, purchases,
+          settings keys, and similar). It can still feel very personal. Treat exports like a private document.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          Profile name and photo live locally, but the JSON export may not bundle every profile field. If you rely on them, assume
-          you might need to set them again after a restore.
+          Profile name and photo live locally, but the JSON export may not bundle every profile field. If you rely on them,
+          assume you might need to set them again after a restore.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           <strong>Import JSON</strong> replaces the app’s saved data on this device with the file you pick. Only import files
-          you trust. If the encrypted wallet data in the file does not match your passcode, the import will fail instead of replacing
-          your data.
+          you trust.
         </p>
       </section>
 
@@ -165,7 +169,7 @@ export function PrivacyPage() {
           Security tips
         </h2>
         <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.7 }}>
-          <li>Use a passcode and avoid leaving your device unlocked on a shared device.</li>
+          <li>Use a passcode and avoid leaving protection paused on a shared device.</li>
           <li>Save your recovery key when the app shows it. It is not shown in full again the same way.</li>
           <li>Export JSON backups if you care about not losing data, and store those files somewhere safe.</li>
           <li>Only import backups you trust.</li>

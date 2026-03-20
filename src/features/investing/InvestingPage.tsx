@@ -703,6 +703,7 @@ export function InvestingPage() {
   const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
     loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
   );
+
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
