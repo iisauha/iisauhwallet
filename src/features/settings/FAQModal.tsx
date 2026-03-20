@@ -4,55 +4,55 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data in storage?',
-    a: 'No. The passcode is an access gate for the app UI. Your wallet ledger and settings are stored locally in your browser storage. Anyone who can access your browser storage (or who can bypass/skip the gate) may be able to view your data.',
+    a: 'No. Think of the passcode as a lock on the app screens: it stops people from opening the app until they type it in. It does not scramble or hide your data where it is saved. Your balances, transactions, and settings are stored in your browser like ordinary website data. Anyone who can read that saved data—or who opens the app while passcode protection is off—may still see your information.',
   },
   {
     q: 'If someone gets my phone/laptop, how much can they see?',
-    a: 'With the passcode gate enabled, they still may be blocked from using the app UI. However, if they can read your browser storage or you have paused protection, your data could be visible. This is why the Security Policy also emphasizes backups and device access.',
+    a: 'With passcode protection on, they may not be able to get past the lock screen of the app. But if they can read what your browser has saved, or you paused protection, your data could still show up. The Security Policy explains more about backups and keeping your device safe.',
   },
   {
     q: 'What changes when I “Pause passcode protection”?',
-    a: 'Pausing removes the passcode requirement until you resume protection. That makes the app easier to open for anyone with access to the device.',
+    a: 'Pausing turns off the passcode until you turn protection back on. Anyone who picks up your device can open the app without entering a code.',
   },
   {
     q: 'Where do my profile name and profile picture live?',
-    a: 'They are stored locally in your browser. The display name is stored as plain text; the profile picture is resized and stored as a small JPEG data URL. See the Security Policy for the exact storage and backup implications.',
+    a: 'Only on your device, inside your browser’s saved data for this app. Your name is stored as regular text. Your photo is shrunk down and saved as a small image. The Security Policy has details on what that means for backups.',
   },
   {
-    q: 'Is my profile picture/name included in “Export JSON” backups?',
-    a: 'Not necessarily. The current JSON export primarily backs up the wallet ledger/storage keys. The Security Policy explains which parts are included, and you should treat any exported/imported file as sensitive.',
+    q: 'Is my profile picture/name included in backup exports?',
+    a: 'Not always. The backup file mainly covers the core money-tracking data the app uses. It may not include everything. The Security Policy spells out what is included—treat any file you export or import as private.',
   },
   {
-    q: 'What happens if I import JSON from another device?',
-    a: 'Import can replace the current ledger state on this device. Only import files you trust. Untrusted JSON can also bloat local storage or change behavior unexpectedly (for example, via large embedded strings like profile images).',
+    q: 'What happens if I import a backup file from another device?',
+    a: 'Import replaces whatever the app had saved on this device with what is in that file. Only import files you trust. A sketchy or oversized file can cause problems (for example, filling up storage or slowing things down).',
   },
   {
     q: 'Does the app send anything to a server by default?',
-    a: 'By default, no. The app is manual-entry and local-first. If you configure an optional backend (for “Detected activity”), network calls can happen only to your configured backend URL.',
+    a: 'No. Out of the box you enter information yourself and it stays on your device. If you turn on the optional “Detected activity” feature and point the app at a service you run or trust, then the app may connect to the internet for that—but only toward the address you set.',
   },
   {
     q: 'If I enable “Detected activity” (Plaid), what kind of data could be sent?',
-    a: 'The frontend can request link tokens/health checks and load detected activity items from your backend. The exact data shape is controlled by your backend implementation. Review the Security Policy and only enable backend features you understand.',
+    a: 'That feature talks to a separate service (often your own setup) to link accounts and pull in suggested transactions. Exactly what gets sent depends on how that service is built. Read the Security Policy and only enable it if you’re comfortable with what you’re connecting to.',
   },
   {
     q: 'Can browser extensions read my wallet data?',
-    a: 'Potentially. Since data is stored in browser storage, any script running under your site context, or extensions with appropriate permissions, may be able to read it. The app cannot fully protect against that threat model.',
+    a: 'Possibly. The app saves your data in your browser, so add-ons that are allowed to peek at that kind of storage might see it. The app cannot block every scenario.',
   },
   {
-    q: 'Does the creator/admin have access to my recovery key or passcode?',
-    a: 'No. The passcode hash and recovery-related security values are stored locally for your device. The creator is not intended to have access to them.',
+    q: 'Does the app developer have access to my recovery key or passcode?',
+    a: 'No. Your passcode and recovery information stay on your device only. The person who built the app does not receive them.',
   },
   {
     q: 'What does “Reset all data” actually do?',
-    a: 'It clears this site’s `localStorage` and reloads the app, wiping your locally stored ledger data (and also your locally stored profile data). If you still have an export, you can re-import afterward.',
+    a: 'It deletes everything this website has stored in your browser for the app, then reloads. That includes your balances and transactions and your profile on this device. If you saved a backup file first, you can import it again afterward.',
   },
   {
     q: 'Are my backups safe to upload to cloud or email?',
-    a: 'Only if you accept the risk. Backup JSON and CSV files can contain sensitive financial information. This app does not encrypt backup files on export; treat them as sensitive documents.',
+    a: 'Only if you accept the risk. Backup files can hold real financial details. The app does not password-protect or scramble those files when you export them—handle them like any sensitive document.',
   },
   {
     q: 'Does the app require the “official link” to work?',
-    a: 'You should only use the official site. The Security Policy warns against using alternate/unofficial links. A different domain could potentially run a tampered version.',
+    a: 'You should only use the official website link. The Security Policy explains why random or copycat links are risky—a different site could be a fake or modified version of the app.',
   },
 ];
 

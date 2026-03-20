@@ -479,7 +479,7 @@ export function SettingsPage() {
         save={(cfg) => saveCategoryConfig(cfg)}
       />
 
-      <p className="section-title" style={{ marginTop: 24 }}>About the creator</p>
+      <p className="section-title" style={{ marginTop: 24 }}>About me</p>
       <div className="settings-section" style={{ marginBottom: 24 }}>
         <button
           type="button"
@@ -491,20 +491,25 @@ export function SettingsPage() {
         </button>
       </div>
       {aboutCreatorOpen && (
-        <Modal open={true} title="About the creator" onClose={() => setAboutCreatorOpen(false)}>
+        <Modal open={true} title="About me" onClose={() => setAboutCreatorOpen(false)}>
           <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
             <p style={{ margin: '0 0 12px 0' }}>
-              I built iisauh wallet because I wanted a simple, manual-entry tool where your financial data stays under your control. I did not want “always-on” bank connections, forced categories, or reconnect flows.
+              Hi, my name is Isaiah. I built this app, iisauhwallet, because I am really into credit cards, points, and personal finance tracking.
             </p>
             <p style={{ margin: '0 0 12px 0' }}>
-              The app is local-first: your balances, transactions, and settings are stored in your browser. You can also set a display name and profile photo in Settings; those are stored locally too.
+              Recently, I was trying to find an app that could do everything in one place. There are some really good options out there, but each has its drawbacks. From my experience, automatic bank syncing can get frustrating because of repeated login verifications and connection issues. A lot of apps also push subscriptions when they are supposed to help you budget, which feels counterproductive.
             </p>
             <p style={{ margin: '0 0 12px 0' }}>
-              Passcode protection helps keep the app UI locked, but it does not replace device/browser security. For the exact threat model, backups, and optional backend features (like detected activity), please read the Security Policy.
+              Another gap I noticed is that most apps do not properly track money in transit, like when you are moving funds between banks or from Venmo to your account. That is an important part of understanding where your money actually is at any given time.
+            </p>
+            <p style={{ margin: '0 0 12px 0' }}>
+              So I decided to build my own app focused on solving that. The goal is simple: always know exactly where your money is. I also wanted to include features for tracking credit card points and bonuses, loans, investing accounts, and more.
+            </p>
+            <p style={{ margin: '0 0 12px 0' }}>
+              You can check out the &quot;How This App Works&quot; section for a more detailed explanation.
             </p>
             <p style={{ margin: 0 }}>
-              If you have questions or feedback, you can contact me at:<br />
-              <a href="mailto:iisauhaguilar@gmail.com" style={{ color: 'var(--accent)' }}>iisauhaguilar@gmail.com</a>
+              I built this over about three weeks using Cursor while balancing school and other commitments. I hope you enjoy it.
             </p>
           </div>
         </Modal>

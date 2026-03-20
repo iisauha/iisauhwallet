@@ -307,7 +307,7 @@ export function SnapshotPage() {
                     <BankAccountCard bank={b} />
                   </button>
                   {linkedLiquid > 0 ? (
-                    <div style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    <div style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
                       Includes {formatCents(linkedLiquid)} available instantly from linked HYSA
                     </div>
                   ) : null}
