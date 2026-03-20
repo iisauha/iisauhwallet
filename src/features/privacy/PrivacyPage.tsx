@@ -185,6 +185,10 @@ export function PrivacyPage() {
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           This application is a personal finance tracking tool. It does not provide financial advice and is not a financial institution.
         </p>
+        <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
+          The creator does not earn money from this app and built it for fun. There is no subscription, ads, or sale of your
+          data through the app itself.
+        </p>
       </section>
 
       <section className="card" style={{ padding: 20, marginBottom: 24 }}>

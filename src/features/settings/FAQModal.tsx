@@ -4,55 +4,51 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data in storage?',
-    a: 'No. Think of the passcode as a lock on the app screens: it stops people from opening the app until they type it in. It does not scramble or hide your data where it is saved. Your balances, transactions, and settings are stored in your browser like ordinary website data. Anyone who can read that saved data—or who opens the app while passcode protection is off—may still see your information.',
+    a: 'No, it does not encrypt the saved files. It works like a lock on the app: it hides the screens until you enter the code, while balances and settings stay in normal browser storage on your device.',
   },
   {
     q: 'If someone gets my phone/laptop, how much can they see?',
-    a: 'With passcode protection on, they may not be able to get past the lock screen of the app. But if they can read what your browser has saved, or you paused protection, your data could still show up. The Security Policy explains more about backups and keeping your device safe.',
+    a: 'Usually they need your device unlock and either your app passcode or for protection to be paused. Keeping a device PIN and the app passcode on is the simple habit that helps most people.',
   },
   {
     q: 'What changes when I “Pause passcode protection”?',
-    a: 'Pausing turns off the passcode until you turn protection back on. Anyone who picks up your device can open the app without entering a code.',
+    a: 'The app stops asking for your code until you turn protection back on. Use that when you are the only one using the device and you want quicker access.',
   },
   {
     q: 'Where do my profile name and profile picture live?',
-    a: 'Only on your device, inside your browser’s saved data for this app. Your name is stored as regular text. Your photo is shrunk down and saved as a small image. The Security Policy has details on what that means for backups.',
+    a: 'Only on this device, in this site’s browser storage. The photo is stored small so it loads fast and does not fill storage.',
   },
   {
     q: 'Is my profile picture/name included in backup exports?',
-    a: 'Not always. The backup file mainly covers the core money-tracking data the app uses. It may not include everything. The Security Policy spells out what is included—treat any file you export or import as private.',
+    a: 'Not always. Export JSON is built around money-tracking data, so name or photo may be missing and you can re-add them after a restore if needed.',
   },
   {
     q: 'What happens if I import a backup file from another device?',
-    a: 'Import replaces whatever the app had saved on this device with what is in that file. Only import files you trust. A sketchy or oversized file can cause problems (for example, filling up storage or slowing things down).',
+    a: 'This device’s app data is replaced by what is in the file. Pick files you created yourself or fully trust so your numbers stay accurate.',
   },
   {
-    q: 'Does the app send anything to a server by default?',
-    a: 'No. Out of the box you enter information yourself and it stays on your device. If you turn on the optional “Detected activity” feature and point the app at a service you run or trust, then the app may connect to the internet for that—but only toward the address you set.',
-  },
-  {
-    q: 'If I enable “Detected activity” (Plaid), what kind of data could be sent?',
-    a: 'That feature talks to a separate service (often your own setup) to link accounts and pull in suggested transactions. Exactly what gets sent depends on how that service is built. Read the Security Policy and only enable it if you’re comfortable with what you’re connecting to.',
+    q: 'Does the app upload my data to the internet?',
+    a: 'No, not for normal use. What you enter stays in your browser on this device until you export a backup or clear the site data.',
   },
   {
     q: 'Can browser extensions read my wallet data?',
-    a: 'Possibly. The app saves your data in your browser, so add-ons that are allowed to peek at that kind of storage might see it. The app cannot block every scenario.',
+    a: 'Only if a browser extension is allowed to read this site’s storage. Most people never need to worry about that.',
   },
   {
     q: 'Does the app developer have access to my recovery key or passcode?',
-    a: 'No. Your passcode and recovery information stay on your device only. The person who built the app does not receive them.',
+    a: 'No. Those stay on your device and are not sent to the developer.',
   },
   {
     q: 'What does “Reset all data” actually do?',
-    a: 'It deletes everything this website has stored in your browser for the app, then reloads. That includes your balances and transactions and your profile on this device. If you saved a backup file first, you can import it again afterward.',
+    a: 'It clears this site’s data in the browser and reloads. Export JSON first if you want to keep a copy.',
   },
   {
     q: 'Are my backups safe to upload to cloud or email?',
-    a: 'Only if you accept the risk. Backup files can hold real financial details. The app does not password-protect or scramble those files when you export them—handle them like any sensitive document.',
+    a: 'You can if you want a copy off the device. Treat the file like any private document because the app does not add a separate password on export.',
   },
   {
     q: 'Does the app require the “official link” to work?',
-    a: 'You should only use the official website link. The Security Policy explains why random or copycat links are risky—a different site could be a fake or modified version of the app.',
+    a: 'You should use the official link so you know you are on the real app. The Security Policy lists the recommended URL.',
   },
 ];
 
