@@ -1,7 +1,14 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 
-export function Modal(props: { open: boolean; title?: string; children: ReactNode; onClose?: () => void }) {
-  const { open, title, children, onClose } = props;
+export function Modal(props: {
+  open: boolean;
+  title?: string;
+  children: ReactNode;
+  onClose?: () => void;
+  /** Optional styles for the title heading (e.g. match App Customization “All Other Text”). */
+  titleStyle?: CSSProperties;
+}) {
+  const { open, title, children, onClose, titleStyle } = props;
 
   useEffect(() => {
     if (!open || !onClose) return;
@@ -32,7 +39,9 @@ export function Modal(props: { open: boolean; title?: string; children: ReactNod
               minHeight: title ? 36 : undefined,
             }}
           >
-            {title ? <h3 style={{ margin: 0, flex: 1, paddingRight: 4 }}>{title}</h3> : null}
+            {title ? (
+              <h3 style={{ margin: 0, flex: 1, paddingRight: 4, ...titleStyle }}>{title}</h3>
+            ) : null}
             {onClose ? (
               <button
                 type="button"
