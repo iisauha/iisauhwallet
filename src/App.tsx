@@ -11,7 +11,6 @@ import { SettingsPage } from './features/settings/SettingsPage';
 import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { PasscodeGate } from './features/passcode/PasscodeGate';
 import { DropdownStateProvider } from './state/DropdownStateContext';
-import { DetectedActivityProvider } from './state/DetectedActivityContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AppearanceProvider } from './theme/AppearanceContext';
 import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
@@ -185,14 +184,12 @@ export function App() {
         <AdvancedUIColorsProvider>
           <ReminderProvider>
             <DropdownStateProvider>
-              <DetectedActivityProvider>
-                <PasscodeGate>
-                  <Routes>
-                    <Route path="/" element={<MainApp />} />
-                    <Route path="/privacy" element={<PrivacyPage />} />
-                  </Routes>
-                </PasscodeGate>
-              </DetectedActivityProvider>
+              <PasscodeGate>
+                <Routes>
+                  <Route path="/" element={<MainApp />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                </Routes>
+              </PasscodeGate>
             </DropdownStateProvider>
           </ReminderProvider>
         </AdvancedUIColorsProvider>

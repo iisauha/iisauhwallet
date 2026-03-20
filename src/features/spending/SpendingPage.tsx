@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
-import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import { getCategoryName, loadCategoryConfig } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
@@ -31,17 +30,12 @@ function addMonths(d: Date, months: number) {
 export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
-  const detected = useDetectedActivityOptional();
   const cfg = useMemo(() => loadCategoryConfig(), []);
   const [filter, setFilter] = useState<FilterKey>('this_month');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [openAdd, setOpenAdd] = useState(false);
   const [reimbursementMode, setReimbursementMode] = useState(false);
-
-  useEffect(() => {
-    if (detected?.launchFlow?.flow === 'add_purchase') setOpenAdd(true);
-  }, [detected?.launchFlow?.flow]);
   const [view, setView] = useState<BreakdownView>('category');
   const [lastRewardsSubView, setLastRewardsSubView] = useState<'rewards' | 'card'>('rewards');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -778,27 +772,13 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
       </div>
       </>
       ) : null}
-
-      {openAdd && detected?.launchFlow?.flow === 'add_purchase' && detected.launchFlow.item ? (
-        <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
-          <div>Merchant: {detected.launchFlow.item.title}</div>
-          <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
-          <div>Account: {detected.launchFlow.item.accountName}</div>
-          <div>Date: {detected.launchFlow.item.dateISO}</div>
-          <div>Status: {detected.launchFlow.item.pending ? 'Pending' : 'Posted'}</div>
-        </div>
-      ) : null}
       <AddPurchaseModal
         open={openAdd}
         onClose={() => {
           setOpenAdd(false);
           setReimbursementMode(false);
-          if (detected?.launchFlow?.flow === 'add_purchase') detected.setLaunchFlow(null);
         }}
         purchaseKey={editingPurchase ? getPurchaseUiId(editingPurchase) : null}
-        prefill={detected?.launchFlow?.flow === 'add_purchase' && detected.launchFlow.item ? { title: detected.launchFlow.item.title, amountCents: Math.abs(detected.launchFlow.item.amountCents), dateISO: detected.launchFlow.item.dateISO } : null}
-        onSave={detected?.launchFlow?.flow === 'add_purchase' ? () => { detected.markResolved(detected.launchFlow!.detectedId, 'add_purchase'); detected.setLaunchFlow(null); setOpenAdd(false); } : undefined}
         reimbursementExpected={reimbursementMode}
       />
 

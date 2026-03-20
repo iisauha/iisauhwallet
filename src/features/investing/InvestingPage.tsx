@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
-import { useDetectedActivityOptional } from '../../state/DetectedActivityContext';
 import {
   loadInvesting,
   saveInvesting,
@@ -704,8 +703,6 @@ export function InvestingPage() {
   const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
     loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
   );
-
-  const detected = useDetectedActivityOptional();
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
@@ -752,13 +749,6 @@ export function InvestingPage() {
     useSet: boolean;
     hysaInterest: string;
   } | null>(null);
-
-  useEffect(() => {
-    if (detected?.launchFlow?.flow === 'transfer') {
-      setTransferOpen(true);
-      if (detected.launchFlow.item?.amountCents) setTransferAmount((Math.abs(detected.launchFlow.item.amountCents) / 100).toFixed(2));
-    }
-  }, [detected?.launchFlow?.flow, detected?.launchFlow?.item?.amountCents]);
 
   const [coastFireOpen, setCoastFireOpen] = useState(false);
   const [coastFireEditForm, setCoastFireEditForm] = useState(false);
@@ -1251,10 +1241,6 @@ export function InvestingPage() {
           return { ...a, balanceCents: (a.balanceCents || 0) + amountCents };
         });
         persist({ ...investing, accounts });
-        if (detected?.launchFlow?.flow === 'transfer') {
-          detected.markResolved(detected.launchFlow.detectedId, 'transfer');
-          detected.setLaunchFlow(null);
-        }
         setTransferOpen(false);
         return;
       }
@@ -1270,10 +1256,6 @@ export function InvestingPage() {
           investingAccountId: inv.acc.id
         }
       } as any);
-      if (detected?.launchFlow?.flow === 'transfer') {
-        detected.markResolved(detected.launchFlow.detectedId, 'transfer');
-        detected.setLaunchFlow(null);
-      }
       setTransferOpen(false);
       return;
     }
@@ -1309,10 +1291,6 @@ export function InvestingPage() {
         });
         persist({ ...investing, accounts });
         actions.updateBankBalance(toId, amountCents, 'add');
-        if (detected?.launchFlow?.flow === 'transfer') {
-          detected.markResolved(detected.launchFlow.detectedId, 'transfer');
-          detected.setLaunchFlow(null);
-        }
         setTransferOpen(false);
         return;
       }
@@ -1330,10 +1308,6 @@ export function InvestingPage() {
           investingAccountId: inv.acc.id
         }
       } as any);
-      if (detected?.launchFlow?.flow === 'transfer') {
-        detected.markResolved(detected.launchFlow.detectedId, 'transfer');
-        detected.setLaunchFlow(null);
-      }
       setTransferOpen(false);
       return;
     }
@@ -1416,10 +1390,6 @@ export function InvestingPage() {
     }
     setTransferHysaStep(null);
     setTransferOpen(false);
-    if (detected?.launchFlow?.flow === 'transfer') {
-      detected.markResolved(detected.launchFlow.detectedId, 'transfer');
-      detected.setLaunchFlow(null);
-    }
   }
 
   function renderSection(
@@ -2222,16 +2192,6 @@ export function InvestingPage() {
               </>
             ) : (
               <>
-                {detected?.launchFlow?.flow === 'transfer' && detected.launchFlow.item ? (
-                  <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }}>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
-                    <div>Merchant: {detected.launchFlow.item.title}</div>
-                    <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
-                    <div>Account: {detected.launchFlow.item.accountName}</div>
-                    <div>Date: {detected.launchFlow.item.dateISO}</div>
-                    <div>Status: {detected.launchFlow.item.pending ? 'Pending' : 'Posted'}</div>
-                  </div>
-                ) : null}
                 <h3>Transfer between accounts</h3>
                 <div className="field">
                   <label>From</label>
@@ -2303,7 +2263,6 @@ export function InvestingPage() {
                     onClick={() => {
                       setTransferOpen(false);
                       setTransferHysaStep(null);
-                      if (detected?.launchFlow?.flow === 'transfer') detected?.setLaunchFlow(null);
                     }}
                   >
                     Cancel
