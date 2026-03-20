@@ -119,6 +119,27 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loadSecurityQuizCompleted()) {
+      // #region agent log
+      try {
+        fetch('http://127.0.0.1:7727/ingest/00741c85-8e68-4158-889a-205b27f8db72', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Debug-Session-Id': 'e62d08',
+          },
+          body: JSON.stringify({
+            sessionId: 'e62d08',
+            runId: 'fix_security_onboarding_module_pre',
+            hypothesisId: 'H1_passcodegate_sets_security_onboarding_step',
+            location: 'src/features/passcode/PasscodeGate.tsx',
+            message: 'Security quiz not completed; switching to security-onboarding step',
+            data: { storedHashPresent: !!storedHash },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+      } catch (_) {}
+      // #endregion
+
       setStep('security-onboarding');
       setInput('');
       setConfirmInput('');
