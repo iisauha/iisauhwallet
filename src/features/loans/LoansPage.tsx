@@ -902,7 +902,7 @@ function LoanCard(props: {
           Next payment date: {l.nextPaymentDate}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--text)' }}>
+      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>
         Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
       </div>
       {l.category === 'private' ? (
@@ -1698,7 +1698,15 @@ export function LoansPage() {
             step={0.01}
             value={editPaymentInput}
             onChange={(e) => setEditPaymentInput(e.target.value)}
-            style={{ width: '100%', padding: 8, fontSize: '1rem', borderRadius: 6, border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: 8,
+              fontSize: '1rem',
+              borderRadius: 6,
+              border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
+              background: 'var(--ui-modal-bg, var(--surface))',
+              color: 'var(--ui-primary-text, var(--text))'
+            }}
           />
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1947,7 +1955,7 @@ function LoanEditorForm(props: {
                   padding: '8px 10px',
                   border: '1px solid var(--border)',
                   borderRadius: 6,
-                  background: 'var(--bg-secondary)'
+                  background: 'var(--ui-modal-bg, var(--surface))'
                 }}
               >
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 6 }}>

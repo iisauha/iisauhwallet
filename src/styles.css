@@ -281,7 +281,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
-.btn-primary { background: var(--accent); color: white; }
+.btn-primary { background: var(--accent); color: var(--ui-outline-btn, var(--ui-primary-text, var(--text))); }
 .btn-secondary {
   background: transparent;
   color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
