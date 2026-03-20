@@ -1313,7 +1313,7 @@ export function LoansPage() {
   const hasRecurringIncome = detectedAgi.grossCents > 0;
   const paymentNowDisplayClass =
     summary.totalMonthlyNow >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
-  const paymentNowAmountColor = summary.totalMonthlyNow >= 0 ? 'var(--green)' : 'var(--red)';
+  const paymentNowAmountColor = summary.totalMonthlyNow > 0 ? 'var(--red)' : 'var(--green)';
 
   return (
     <div className="tab-panel active" id="loansContent">
@@ -1340,7 +1340,7 @@ export function LoansPage() {
             </span>
           </div>
 
-          <div className={paymentNowDisplayClass} style={{ marginTop: 4, alignItems: 'center' }}>
+          <div className={paymentNowDisplayClass} style={{ marginTop: 2, alignItems: 'center' }}>
             <span
               className="k"
               style={{
@@ -1383,13 +1383,13 @@ export function LoansPage() {
           </div>
 
           {summary.avgPrivateRate != null ? (
-            <div className="summary-kv" style={{ marginTop: 2 }}>
+            <div className="summary-kv" style={{ marginTop: 1 }}>
               <span className="k">Avg private rate</span>
               <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
             </div>
           ) : null}
           {summary.avgPublicRate != null ? (
-            <div className="summary-kv" style={{ marginTop: 2 }}>
+            <div className="summary-kv" style={{ marginTop: 1 }}>
               <span className="k">Avg public rate</span>
               <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
             </div>
