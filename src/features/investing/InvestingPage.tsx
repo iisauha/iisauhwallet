@@ -384,7 +384,7 @@ function CoastFireResultView({
           onClick={() => setCoastFireTooltipId(null)}
         />
       ) : null}
-      <p style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem', marginTop: 0 }}>
+      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
         Coast FIRE means you already have enough invested today that, even if you stop making new
         retirement contributions, your investments could still grow to your retirement target by
         retirement age. Values are in today&apos;s dollars.
@@ -414,7 +414,7 @@ function CoastFireResultView({
               : 'YOU HAVE NOT YET REACHED COAST FIRE'}
           </p>
           {!result.coastReached && coastFireAge != null ? (
-            <p style={{ fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 8 }}>
+            <p style={{ fontSize: '0.95rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
               Estimated Coast FIRE age: {coastFireAge}
             </p>
           ) : null}
@@ -476,7 +476,7 @@ function CoastFireResultView({
         </div>
       </div>
 
-      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--muted))', marginTop: 20, marginBottom: 4 }}>
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', marginTop: 20, marginBottom: 4 }}>
         If you continue contributing
       </p>
       <div className="summary-compact" style={{ marginTop: 4 }}>
@@ -559,12 +559,6 @@ function CoastFireProjectionChart({
     const existing: Chart | undefined = (canvas as any).__coastFireChart;
     if (existing) existing.destroy();
 
-    const primaryTextColor = (() => {
-      // Use CSS variable so "All other text" customization applies to chart labels.
-      const v = getComputedStyle(document.documentElement).getPropertyValue('--ui-primary-text').trim();
-      return v || '#94a3b8';
-    })();
-
     const ages = projection.map((p) => p.age);
     const portfolios = projection.map((p) => p.portfolio);
     const coastLine = ages.map(() => coastFireNumber);
@@ -618,7 +612,7 @@ function CoastFireProjectionChart({
             display: true,
             position: 'top',
             labels: {
-              color: primaryTextColor,
+              color: '#94a3b8',
               font: { size: 11 },
               usePointStyle: true
             }
@@ -627,12 +621,12 @@ function CoastFireProjectionChart({
         scales: {
           x: {
             grid: { color: 'rgba(51, 65, 85, 0.5)' },
-            ticks: { color: primaryTextColor, maxTicksLimit: 8 }
+            ticks: { color: '#94a3b8', maxTicksLimit: 8 }
           },
           y: {
             grid: { color: 'rgba(51, 65, 85, 0.5)' },
             ticks: {
-              color: primaryTextColor,
+              color: '#94a3b8',
               callback: (v) => (typeof v === 'number' ? `$${(v / 1000).toFixed(0)}k` : v)
             }
           }
@@ -649,7 +643,7 @@ function CoastFireProjectionChart({
 
   return (
     <div style={{ marginTop: 20, marginBottom: 0 }}>
-      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--muted))', marginBottom: 8 }}>
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>
         Portfolio projection
       </p>
       <div style={{ position: 'relative', width: '100%', height: 200, background: 'var(--surface)', borderRadius: 8, padding: 12 }}>
@@ -685,14 +679,6 @@ export function InvestingPage() {
     if (accrued !== base) saveInvesting(accrued);
     return accrued;
   });
-  // Keep HYSA balances in sync with other tabs/actions that persist changes to localStorage
-  // (e.g. posting pending inbound/outbound affects HYSA).
-  useEffect(() => {
-    const base = loadInvesting();
-    const accrued = accrueHysaAccounts(base);
-    if (accrued !== base) saveInvesting(accrued);
-    setInvesting(accrued);
-  }, [data.pendingIn, data.pendingOut]);
 
   const dropdownState = useDropdownState();
   const getCollapsed = (key: 'hysa' | 'roth' | 'k401' | 'general') =>
@@ -703,7 +689,6 @@ export function InvestingPage() {
   const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
     loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
   );
-
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
@@ -733,22 +718,6 @@ export function InvestingPage() {
     amountCents: number;
     useInstantSameBank: boolean;
     inv: { type: string; acc: InvestingAccount };
-  } | null>(null);
-  const [newAccount, setNewAccount] = useState<{
-    id: string;
-    type: 'hysa' | 'roth' | 'k401' | 'general';
-    name: string;
-    hysaStartingBalance: string;
-    hysaRatePercent: string;
-    hysaWhen: '1' | '2' | '3';
-    hysaInterestThisMonth: string;
-  } | null>(null);
-
-  const [balanceModal, setBalanceModal] = useState<{
-    acc: InvestingAccount;
-    amount: string;
-    useSet: boolean;
-    hysaInterest: string;
   } | null>(null);
 
   const [coastFireOpen, setCoastFireOpen] = useState(false);
@@ -945,81 +914,147 @@ export function InvestingPage() {
     if (next !== investing) persist(next);
   }
 
-  function openInvestingBalanceModal(acc: InvestingAccount) {
-    const state = accrueHysaAccounts(investing);
-    if (state !== investing) persist(state);
-    const freshAcc = state.accounts.find((x) => x.id === acc.id);
-    if (!freshAcc) return;
-    setBalanceModal({
-      acc: freshAcc,
-      amount: '',
-      useSet: false,
-      hysaInterest: '',
-    });
-  }
+  function addAccount(type: 'hysa' | 'roth' | 'k401' | 'general') {
+    const name = window.prompt('Account name?');
+    if (!name) return;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-  function submitInvestingBalanceModal() {
-    if (!balanceModal) return;
-    const state = accrueHysaAccounts(investing);
-    const raw = state.accounts.find((x) => x.id === balanceModal.acc.id);
-    if (!raw) {
-      setBalanceModal(null);
+    if (type === 'hysa') {
+      const now = Date.now();
+      const nowDate = new Date(now);
+      const monthStartMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
+
+      const balanceInput = window.prompt('Starting balance ($)', '0.00');
+      let balanceCents = 0;
+      if (balanceInput != null && balanceInput.trim() !== '') {
+        const parsed = parseCents(balanceInput);
+        if (parsed >= 0) balanceCents = parsed;
+      }
+
+      const aprInput = window.prompt('APR / interest rate (%)', '4');
+      let interestRate = 4;
+      if (aprInput != null && aprInput.trim() !== '') {
+        const parsed = parseFloat(aprInput);
+        if (Number.isFinite(parsed) && parsed >= 0) interestRate = parsed;
+      }
+
+      const whenInput = window.prompt(
+        'When is this balance valid?\n1) Today (default)\n2) Start of this month\n3) Specific date',
+        '1'
+      );
+      let lastAccruedAt: number;
+      if (whenInput === '3') {
+        const dateStr = window.prompt('Date (YYYY-MM-DD)', nowDate.toISOString().slice(0, 10));
+        if (dateStr != null && dateStr.trim() !== '') {
+          const d = new Date(dateStr + 'T12:00:00');
+          lastAccruedAt = Number.isFinite(d.getTime()) ? d.getTime() : now;
+        } else {
+          lastAccruedAt = now;
+        }
+      } else if (whenInput === '2') {
+        lastAccruedAt = monthStartMs;
+      } else {
+        lastAccruedAt = now;
+      }
+
+      const interestInput = window.prompt('Interest this month so far ($, optional)', '');
+      let interestThisMonth = 0;
+      let manualInterestBaselineThisMonth: number | undefined;
+      let manualInterestBaselineSetAt: number | undefined;
+      let manualInterestBaselineMonthKey: string | undefined;
+      if (interestInput != null && interestInput.trim() !== '') {
+        const parsed = parseCents(interestInput);
+        if (parsed >= 0) {
+          interestThisMonth = parsed;
+          manualInterestBaselineThisMonth = parsed;
+          manualInterestBaselineSetAt = now;
+          manualInterestBaselineMonthKey = getMonthKeyFromTimestamp(now);
+        }
+      }
+
+      const monthKey = getMonthKeyFromTimestamp(now);
+      const monthlyBalanceEvents: { timestamp: number; balanceAfterCents: number }[] = [
+        { timestamp: getStartOfMonthMs(now), balanceAfterCents: balanceCents }
+      ];
+
+      const acc: InvestingAccount = {
+        id,
+        type: 'hysa',
+        name: name.trim(),
+        balanceCents: balanceCents,
+        interestRate,
+        lastAccruedAt,
+        monthKey,
+        interestThisMonth,
+        monthlyBalanceEvents,
+        ...(manualInterestBaselineThisMonth !== undefined && {
+          manualInterestBaselineThisMonth,
+          manualInterestBaselineSetAt: manualInterestBaselineSetAt!,
+          manualInterestBaselineMonthKey: manualInterestBaselineMonthKey!
+        })
+      } as any as HysaAccount;
+
+      persist({ ...investing, accounts: [...investing.accounts, acc] });
       return;
     }
-    const { amount, useSet, hysaInterest } = balanceModal;
-    const cents = parseCents(amount);
-    const now = Date.now();
-    if (useSet) {
-      if (cents < 0) return;
-      const intCents = hysaInterest.trim() !== '' ? parseCents(hysaInterest) : null;
-      const accounts = state.accounts.map((a) => {
-        if (a.id !== raw.id) return a;
-        if (a.type === 'hysa') {
-          let next: HysaAccount = {
-            ...(recordHysaBalanceEvent(a as HysaAccount, now, cents) as HysaAccount),
-            lastAccruedAt: now,
-          };
-          if (intCents != null && intCents >= 0) {
-            next = {
-              ...next,
-              manualInterestBaselineThisMonth: intCents,
-              manualInterestBaselineSetAt: now,
-              manualInterestBaselineMonthKey: getMonthKeyFromTimestamp(now),
-            };
-          }
-          return next;
-        }
-        return { ...a, balanceCents: cents };
-      });
-      persist({ ...state, accounts });
-    } else {
-      if (cents <= 0) return;
-      const newBal = (raw.balanceCents || 0) + cents;
-      const accounts = state.accounts.map((a) => {
-        if (a.id !== raw.id) return a;
-        if (a.type === 'hysa') {
-          return {
-            ...(recordHysaBalanceEvent(a as HysaAccount, now, newBal) as HysaAccount),
-            lastAccruedAt: now,
-          };
-        }
-        return { ...a, balanceCents: newBal };
-      });
-      persist({ ...state, accounts });
-    }
-    setBalanceModal(null);
+
+    const base: InvestingAccount = {
+      id,
+      type,
+      name: name.trim(),
+      balanceCents: 0
+    } as any;
+    persist({ ...investing, accounts: [...investing.accounts, base] });
   }
 
-  function addAccount(type: 'hysa' | 'roth' | 'k401' | 'general') {
-    setNewAccount({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      type,
-      name: '',
-      hysaStartingBalance: '',
-      hysaRatePercent: '',
-      hysaWhen: '1',
-      hysaInterestThisMonth: '',
+  function setBalance(acc: InvestingAccount) {
+    if (acc.type === 'hysa') accrueNow();
+    const val = window.prompt('Set balance ($)', (acc.balanceCents / 100).toFixed(2));
+    if (val == null) return;
+    const cents = parseCents(val);
+    if (cents < 0) return;
+    const now = Date.now();
+    const accounts = investing.accounts.map((a) => {
+      if (a.id !== acc.id) return a;
+      if (a.type === 'hysa') {
+        const updated = recordHysaBalanceEvent(a as HysaAccount, now, cents);
+        let next = { ...updated, lastAccruedAt: now };
+        const interestVal = window.prompt('Interest accrued this month so far ($, optional - leave blank to keep current)', '');
+        if (interestVal != null && interestVal.trim() !== '') {
+          const interestCents = parseCents(interestVal);
+          if (interestCents >= 0) {
+            next = {
+              ...next,
+              manualInterestBaselineThisMonth: interestCents,
+              manualInterestBaselineSetAt: now,
+              manualInterestBaselineMonthKey: getMonthKeyFromTimestamp(now)
+            };
+          }
+        }
+        return next;
+      }
+      return { ...a, balanceCents: cents };
     });
+    persist({ ...investing, accounts });
+  }
+
+  function addBalance(acc: InvestingAccount) {
+    if (acc.type === 'hysa') accrueNow();
+    const val = window.prompt('Add amount ($)', '0.00');
+    if (val == null) return;
+    const cents = parseCents(val);
+    if (cents <= 0) return;
+    const now = Date.now();
+    const newBalanceCents = (acc.balanceCents || 0) + cents;
+    const accounts = investing.accounts.map((a) => {
+      if (a.id !== acc.id) return a;
+      if (a.type === 'hysa') {
+        const updated = recordHysaBalanceEvent(a as HysaAccount, now, newBalanceCents);
+        return { ...updated, lastAccruedAt: now };
+      }
+      return { ...a, balanceCents: newBalanceCents };
+    });
+    persist({ ...investing, accounts });
   }
 
   function deleteAccount(acc: InvestingAccount) {
@@ -1448,7 +1483,7 @@ export function InvestingPage() {
                     <span className="amount amount-pos">{formatCents(a.balanceCents || 0)}</span>
                   </div>
                   {(a.type === 'roth' || a.type === 'k401') && accountContributionsFromRecurring[a.id] ? (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 4 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
                       <div>Employee contrib: {formatCents(accountContributionsFromRecurring[a.id].employeeCents)}</div>
                       {accountContributionsFromRecurring[a.id].employerMatchCents > 0 ? (
                         <div>Employer match: {formatCents(accountContributionsFromRecurring[a.id].employerMatchCents)}</div>
@@ -1468,7 +1503,7 @@ export function InvestingPage() {
                       const reservedCents = Math.min(reservedRaw, balance);
                       const liquidCents = Math.max(0, balance - reservedCents);
                       return (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 4 }}>
                           <div>APY {h.interestRate.toFixed(2)}%</div>
                           <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
                           <div style={{ marginTop: 4 }}>
@@ -1512,8 +1547,19 @@ export function InvestingPage() {
                     })()
                   ) : null}
                   <div className="btn-row" style={{ marginTop: 8 }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => openInvestingBalanceModal(a)}>
-                      Add / Set
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setBalance(a)}
+                    >
+                      Set
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => addBalance(a)}
+                    >
+                      Add
                     </button>
                     {a.type === 'hysa' ? (
                       <>
@@ -1550,7 +1596,7 @@ export function InvestingPage() {
               style={{ marginTop: 8, width: '100%' }}
               onClick={() => addAccount(type)}
             >
-              Add {label} account
+              + Add {label} account
             </button>
           </>
         ) : null}
@@ -1561,219 +1607,6 @@ export function InvestingPage() {
   return (
     <div className="tab-panel active" id="investingContent">
       <p className="section-title page-title">Investing</p>
-
-      <Modal open={balanceModal != null} title="Balance" onClose={() => setBalanceModal(null)}>
-        {balanceModal ? (
-          <>
-            <div className="field">
-              <label>Amount ($)</label>
-              <input
-                className="ll-control"
-                value={balanceModal.amount}
-                onChange={(e) => setBalanceModal({ ...balanceModal, amount: e.target.value })}
-                inputMode="decimal"
-                placeholder={balanceModal.useSet ? (balanceModal.acc.balanceCents / 100).toFixed(2) : '0.00'}
-              />
-            </div>
-            <div className="toggle-row">
-              <input
-                type="checkbox"
-                id="inv-balance-use-set"
-                checked={balanceModal.useSet}
-                onChange={(e) => setBalanceModal({ ...balanceModal, useSet: e.target.checked })}
-              />
-              <label htmlFor="inv-balance-use-set">Set (replace balance)</label>
-            </div>
-            {balanceModal.acc.type === 'hysa' && balanceModal.useSet ? (
-              <div className="field">
-                <label>Interest accrued this month ($, optional)</label>
-                <input
-                  className="ll-control"
-                  value={balanceModal.hysaInterest}
-                  onChange={(e) => setBalanceModal({ ...balanceModal, hysaInterest: e.target.value })}
-                  inputMode="decimal"
-                  placeholder="Leave blank to keep current"
-                />
-              </div>
-            ) : null}
-            <div className="btn-row">
-              <button type="button" className="btn btn-secondary" onClick={() => setBalanceModal(null)}>
-                Cancel
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={submitInvestingBalanceModal}>
-                OK
-              </button>
-            </div>
-          </>
-        ) : null}
-      </Modal>
-
-      <Modal
-        open={newAccount != null}
-        title="Add account"
-        onClose={() => setNewAccount(null)}
-      >
-        {newAccount ? (
-          <>
-            <div className="field">
-              <label>Name</label>
-              <input
-                className="ll-control"
-                value={newAccount.name}
-                onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
-                placeholder="Account name"
-              />
-            </div>
-            {newAccount.type === 'hysa' ? (
-              <>
-                <div className="field">
-                  <label>Starting balance ($)</label>
-                  <input
-                    className="ll-control"
-                    value={newAccount.hysaStartingBalance}
-                    onChange={(e) => setNewAccount({ ...newAccount, hysaStartingBalance: e.target.value })}
-                    inputMode="decimal"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="field">
-                  <label>APR / interest rate (%)</label>
-                  <input
-                    className="ll-control"
-                    value={newAccount.hysaRatePercent}
-                    onChange={(e) => setNewAccount({ ...newAccount, hysaRatePercent: e.target.value })}
-                    inputMode="decimal"
-                    placeholder="e.g. 4"
-                  />
-                </div>
-                <div className="field">
-                  <label>When is this balance valid?</label>
-                  <Select
-                    value={newAccount.hysaWhen}
-                    onChange={(e) =>
-                      setNewAccount({
-                        ...newAccount,
-                        hysaWhen: (e.target.value as '1' | '2' | '3') || '1',
-                      })
-                    }
-                    style={{ width: '100%' }}
-                  >
-                    <option value="1">Today (default)</option>
-                    <option value="2">Start of this month</option>
-                    <option value="3">Specific date…</option>
-                  </Select>
-                </div>
-                {newAccount.hysaWhen === '3' ? (
-                  <div className="field">
-                    <label>Date (YYYY-MM-DD)</label>
-                    <input
-                      className="ll-control"
-                      value={newAccount.hysaInterestThisMonth}
-                      onChange={(e) => setNewAccount({ ...newAccount, hysaInterestThisMonth: e.target.value })}
-                      placeholder={new Date().toISOString().slice(0, 10)}
-                    />
-                  </div>
-                ) : null}
-                <div className="field">
-                  <label>Interest this month so far ($, optional)</label>
-                  <input
-                    className="ll-control"
-                    value={newAccount.hysaInterestThisMonth}
-                    onChange={(e) => setNewAccount({ ...newAccount, hysaInterestThisMonth: e.target.value })}
-                    inputMode="decimal"
-                    placeholder="Leave blank to skip"
-                  />
-                </div>
-              </>
-            ) : null}
-            <div className="btn-row">
-              <button type="button" className="btn btn-secondary" onClick={() => setNewAccount(null)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  if (!newAccount.name.trim()) {
-                    return;
-                  }
-                  const id = newAccount.id;
-                  if (newAccount.type === 'hysa') {
-                    const now = Date.now();
-                    const nowDate = new Date(now);
-                    const monthStartMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
-                    let balanceCents = 0;
-                    if (newAccount.hysaStartingBalance.trim() !== '') {
-                      const parsed = parseCents(newAccount.hysaStartingBalance);
-                      if (parsed >= 0) balanceCents = parsed;
-                    }
-                    let interestRate = 4;
-                    if (newAccount.hysaRatePercent.trim() !== '') {
-                      const parsed = parseFloat(newAccount.hysaRatePercent);
-                      if (Number.isFinite(parsed) && parsed >= 0) interestRate = parsed;
-                    }
-                    let lastAccruedAt: number;
-                    if (newAccount.hysaWhen === '3') {
-                      const dateStr = newAccount.hysaInterestThisMonth || new Date().toISOString().slice(0, 10);
-                      const d = new Date(dateStr + 'T12:00:00');
-                      lastAccruedAt = Number.isFinite(d.getTime()) ? d.getTime() : now;
-                    } else if (newAccount.hysaWhen === '2') {
-                      lastAccruedAt = monthStartMs;
-                    } else {
-                      lastAccruedAt = now;
-                    }
-                    let interestThisMonth = 0;
-                    let manualInterestBaselineThisMonth: number | undefined;
-                    let manualInterestBaselineSetAt: number | undefined;
-                    let manualInterestBaselineMonthKey: string | undefined;
-                    if (newAccount.hysaInterestThisMonth.trim() !== '') {
-                      const parsed = parseCents(newAccount.hysaInterestThisMonth);
-                      if (parsed >= 0) {
-                        interestThisMonth = parsed;
-                        manualInterestBaselineThisMonth = parsed;
-                        manualInterestBaselineSetAt = now;
-                        manualInterestBaselineMonthKey = getMonthKeyFromTimestamp(now);
-                      }
-                    }
-                    const monthKey = getMonthKeyFromTimestamp(now);
-                    const monthlyBalanceEvents: { timestamp: number; balanceAfterCents: number }[] = [
-                      { timestamp: getStartOfMonthMs(now), balanceAfterCents: balanceCents },
-                    ];
-                    const acc: InvestingAccount = {
-                      id,
-                      type: 'hysa',
-                      name: newAccount.name.trim(),
-                      balanceCents,
-                      interestRate,
-                      lastAccruedAt,
-                      monthKey,
-                      interestThisMonth,
-                      monthlyBalanceEvents,
-                      ...(manualInterestBaselineThisMonth !== undefined && {
-                        manualInterestBaselineThisMonth,
-                        manualInterestBaselineSetAt: manualInterestBaselineSetAt!,
-                        manualInterestBaselineMonthKey: manualInterestBaselineMonthKey!,
-                      }),
-                    } as any as HysaAccount;
-                    persist({ ...investing, accounts: [...investing.accounts, acc] });
-                  } else {
-                    const base: InvestingAccount = {
-                      id,
-                      type: newAccount.type,
-                      name: newAccount.name.trim(),
-                      balanceCents: 0,
-                    } as any;
-                    persist({ ...investing, accounts: [...investing.accounts, base] });
-                  }
-                  setNewAccount(null);
-                }}
-              >
-                Add account
-              </button>
-            </div>
-          </>
-        ) : null}
-      </Modal>
 
       {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
       {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
@@ -1804,30 +1637,28 @@ export function InvestingPage() {
           borderColor: 'var(--ui-border, var(--border))',
         }}
       >
-        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-title-text, var(--text))' }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
           Investing Summary
         </p>
-        <div className="summary-compact">
-          <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total HYSA</span>
-            <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
-          </div>
-          <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Roth IRA</span>
-            <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
-          </div>
-          <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Employer-Based Retirement</span>
-            <span className="v amount-pos">{formatCents(totals.total401k)}</span>
-          </div>
-          <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total General Investing</span>
-            <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
-          </div>
-          <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-primary-text, var(--text))' }}>Total Investing</span>
-            <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
-          </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total HYSA</span>
+          <span className="v amount-pos">{formatCents(totals.totalHYSA)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Roth IRA</span>
+          <span className="v amount-pos">{formatCents(totals.totalRoth)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Employer-Based Retirement</span>
+          <span className="v amount-pos">{formatCents(totals.total401k)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total General Investing</span>
+          <span className="v amount-pos">{formatCents(totals.totalGeneral)}</span>
+        </div>
+        <div className="summary-kv">
+          <span className="k" style={{ color: 'var(--ui-muted, var(--muted))' }}>Total Investing</span>
+          <span className="v amount-pos">{formatCents(totals.totalAll)}</span>
         </div>
       </div>
 
@@ -1839,11 +1670,11 @@ export function InvestingPage() {
           borderColor: 'var(--ui-border, var(--border))',
         }}
       >
-        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-title-text, var(--text))' }}>
+        <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-muted, var(--muted))' }}>
           Investing Contribution
         </p>
         {contribution.incomeMarkedCount === 0 || contribution.grossIncomeCents <= 0 ? (
-          <p style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
             No full-time job income with pre-tax deductions. Add recurring income marked as Full-time job in the Recurring tab.
           </p>
         ) : (
@@ -1860,7 +1691,7 @@ export function InvestingPage() {
               <span className="k">Pre-tax employee contributions</span>
               <span className="v">
                 {formatCents(contribution.preTaxInvestCents)}{' '}
-                <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
                   ({contribution.preTaxPctGross.toFixed(1)}% of gross)
                 </span>
               </span>
@@ -1879,7 +1710,7 @@ export function InvestingPage() {
               <span className="k">Post-tax investing contributions</span>
               <span className="v">
                 {formatCents(contribution.postTaxInvestCents)}{' '}
-                <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
                   ({contribution.postTaxPctNet.toFixed(1)}% of net)
                 </span>
               </span>
@@ -1888,7 +1719,7 @@ export function InvestingPage() {
               <span className="k">Total investing contributions</span>
               <span className="v">
                 {formatCents(contribution.totalInvestCents)}{' '}
-                <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem', display: 'block' }}>
+                <span style={{ color: 'var(--muted)', fontSize: '0.85rem', display: 'block' }}>
                   {(contribution.preTaxPctGross + contribution.postTaxPctNet).toFixed(1)}%
                 </span>
               </span>
@@ -1900,7 +1731,7 @@ export function InvestingPage() {
       <div style={{ marginTop: 16 }}>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn btn-add"
           style={{ width: '100%' }}
           onClick={() => {
             const source = coastFireAssumptions || coastFireForm;
@@ -1919,7 +1750,7 @@ export function InvestingPage() {
             <h3>Coast FIRE</h3>
             {!coastFireAssumptions || coastFireEditForm ? (
               <>
-                <p style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem', marginTop: 0 }}>
+                <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0 }}>
                   Coast FIRE means you already have enough invested today that, even if you stop making new
                   retirement contributions, your investments could still grow to your retirement target. Uses
                   inflation-adjusted returns so values are in today&apos;s dollars.
@@ -2003,7 +1834,7 @@ export function InvestingPage() {
                   />
                 </div>
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem' }}>Include in retirement portfolio</label>
+                  <label style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>Include in retirement portfolio</label>
                   <div className="toggle-row">
                     <input
                       type="checkbox"
@@ -2160,7 +1991,7 @@ export function InvestingPage() {
                     ? `Where should this transfer go inside ${transferHysaStep.accountName}?`
                     : `Which portion should this transfer come from?`}
                 </h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 16 }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 16 }}>
                   {transferHysaStep.direction === 'in'
                     ? 'Choose which portion of the HYSA this transfer is going into.'
                     : 'Choose which portion of the HYSA this transfer is being pulled from.'}
@@ -2293,7 +2124,7 @@ export function InvestingPage() {
             const billsDollars = (billsCents / 100).toFixed(2);
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
                   Move money between reserved savings and money designated for bills. Total HYSA balance stays the same.
                 </p>
                 <div>

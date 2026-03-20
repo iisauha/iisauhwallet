@@ -876,8 +876,8 @@ function LoanCard(props: {
             fontSize: '0.7rem',
             padding: '2px 6px',
             borderRadius: 999,
-            background: 'color-mix(in srgb, var(--ui-outline-btn, var(--muted)) 15%, transparent)',
-            color: 'var(--ui-outline-btn, var(--muted))'
+            background: l.category === 'public' ? 'rgba(59,130,246,0.15)' : 'rgba(234,179,8,0.15)',
+            color: l.category === 'public' ? 'var(--blue)' : 'var(--yellow)'
           }}
         >
           {l.category === 'public' ? 'Public' : 'Private'}
@@ -891,18 +891,18 @@ function LoanCard(props: {
       </div>
       {l.category === 'public' ? (
         <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
-          <span style={{ color: 'var(--ui-primary-text, var(--muted))' }}>{statusLabel(l.repaymentStatus)}</span>
+          <span style={{ color: 'var(--muted)' }}>{statusLabel(l.repaymentStatus)}</span>
           {l.subsidyType ? (
-            <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.8rem' }}> · {l.subsidyType}</span>
+            <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}> · {l.subsidyType}</span>
           ) : null}
         </div>
       ) : null}
       {l.category === 'public' && l.nextPaymentDate ? (
-        <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 4 }}>
+        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
           Next payment date: {l.nextPaymentDate}
         </div>
       ) : null}
-      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--text)' }}>
         Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
       </div>
       {l.category === 'private' ? (
@@ -913,10 +913,10 @@ function LoanCard(props: {
           {l.activePrivateRangeMode === 'deferred' && l.deferredDailyInterestCents != null && l.deferredDaysInRange != null && l.deferredInterestTotalCents != null && l.deferredProjectedBalanceCents != null ? (
             <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
               <div style={{ marginBottom: 2 }}>Deferred / Forbearance</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', marginBottom: 2 }}>Daily interest: {formatCents(Math.floor(l.deferredDailyInterestCents))}</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', marginBottom: 2 }}>Days across deferred range: {l.deferredDaysInRange} days</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', marginBottom: 2 }}>Interest accrued across deferment: {formatCents(l.deferredInterestTotalCents)}</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))' }}>Balance after deferment ends: {formatCents(l.deferredProjectedBalanceCents)}</div>
+              <div style={{ color: 'var(--muted)', marginBottom: 2 }}>Daily interest: {formatCents(Math.floor(l.deferredDailyInterestCents))}</div>
+              <div style={{ color: 'var(--muted)', marginBottom: 2 }}>Days across deferred range: {l.deferredDaysInRange} days</div>
+              <div style={{ color: 'var(--muted)', marginBottom: 2 }}>Interest accrued across deferment: {formatCents(l.deferredInterestTotalCents)}</div>
+              <div style={{ color: 'var(--muted)' }}>Balance after deferment ends: {formatCents(l.deferredProjectedBalanceCents)}</div>
             </div>
           ) : (
             <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
@@ -933,11 +933,11 @@ function LoanCard(props: {
             {l.payoffMonths != null && l.payoffMonths > 0 ? (
               <>Estimated payoff: {addMonths(new Date(), l.payoffMonths).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>
             ) : (
-              <span style={{ color: 'var(--ui-primary-text, var(--muted))' }}>Payment may be too low to reduce balance.</span>
+              <span style={{ color: 'var(--muted)' }}>Payment may be too low to reduce balance.</span>
             )}
           </div>
           {l.lender ? (
-            <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 4 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
               Servicer: {l.lender}
             </div>
           ) : null}
@@ -948,13 +948,13 @@ function LoanCard(props: {
           <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 2 }}>
             Total federal payment (after grace): {l.totalFederalPaymentCents != null ? formatCents(l.totalFederalPaymentCents) : '—'}
           </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 4 }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 4 }}>
             Approximate share of total: {l.approximateShareCents != null ? formatCents(l.approximateShareCents) : '—'} (not separately calculated)
           </div>
         </>
       ) : null}
       {l.category === 'public' ? (
-        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 4 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>
           {l.lender ? `Servicer: ${l.lender} · ` : null}
           Interest accrual ≈ {formatCents(l.dailyInterestCents)}/day · {formatCents(l.monthlyInterestCents)}/mo
         </div>
@@ -999,7 +999,7 @@ function LoanCard(props: {
                             {p.planId === lowestId ? ' (lowest)' : ''}
                             {!p.eligible ? ' (not eligible)' : ''}
                             {p.note ? (
-                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 2 }}>
+                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
                                 {p.note}
                               </span>
                             ) : null}
@@ -1022,7 +1022,7 @@ function LoanCard(props: {
       ) : null}
       <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onEdit}>Edit</button>
-        <button type="button" className="btn btn-private-loan-delete" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onDelete}>Delete</button>
       </div>
     </div>
   );
@@ -1054,7 +1054,7 @@ function ConsolidatedLoanSimulatorModal(props: {
 
   return (
     <Modal open title="Consolidated loan (simulator)" onClose={onClose}>
-      <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 12 }}>
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
         Simulate one consolidated private loan using your total private balance. This does not change any real loan data.
       </p>
       <div className="summary-compact" style={{ marginBottom: 12 }}>
@@ -1310,83 +1310,83 @@ export function LoansPage() {
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
       <div className="summary">
-        <div className="summary-compact">
-          <div className="summary-kv">
-            <span className="k">Total balance</span>
-            <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-              <AnimatedNumber value={summary.totalBalance} format={formatCents} />
-            </span>
-          </div>
-          <div className="summary-kv">
-            <span className="k" style={{ paddingLeft: 20 }}>Public</span>
-            <span className="v" style={{ color: 'var(--red)' }}>
-              <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
-            </span>
-          </div>
-          <div className="summary-kv">
-            <span className="k" style={{ paddingLeft: 20 }}>Private</span>
-            <span className="v" style={{ color: 'var(--red)' }}>
-              <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
-            </span>
-          </div>
-          {summary.avgPrivateRate != null ? (
-            <div className="summary-kv">
-              <span className="k">Avg private rate</span>
-              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
-            </div>
-          ) : null}
-          {summary.avgPublicRate != null ? (
-            <div className="summary-kv">
-              <span className="k">Avg public rate</span>
-              <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
-            </div>
-          ) : null}
-          <div className="summary-kv payment-now-emphasis" style={{ alignItems: 'center' }}>
-            <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label="Edit Payment(now)"
-                onClick={() => {
+        <div className="summary-compact" style={{ marginBottom: 0 }}>
+        <div className="summary-kv" style={{ marginTop: 0 }}>
+          <span className="k">Total balance</span>
+          <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
+            <AnimatedNumber value={summary.totalBalance} format={formatCents} />
+          </span>
+        </div>
+        <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
+          <span className="k">Public</span>
+          <span className="v" style={{ color: 'var(--muted)' }}>
+            <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
+          </span>
+        </div>
+        <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          <span className="k">Private</span>
+          <span className="v" style={{ color: 'var(--muted)' }}>
+            <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
+          </span>
+        </div>
+        <div className="summary-kv" style={{ marginTop: 4, alignItems: 'center' }}>
+          <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label="Edit Payment(now)"
+              onClick={() => {
+                setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
+                setShowEditPaymentNow(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
                   setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
                   setShowEditPaymentNow(true);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
-                    setShowEditPaymentNow(true);
-                  }
-                }}
-                style={{
-                  color: 'var(--ui-primary-text, var(--text))',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: 'none',
-                  background: 'none',
-                  padding: 0,
-                  WebkitTapHighlightColor: 'transparent'
-                }}
-              >
-                Payment (now)
-              </span>
-              <button
-                type="button"
-                className="info-icon"
-                aria-label="Future payment breakdown"
-                onClick={() => setShowAfterGraceBreakdown(true)}
-              >
-                i
-              </button>
+                }
+              }}
+              style={{
+                color: 'var(--muted)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                WebkitTapHighlightColor: 'transparent'
+              }}
+            >
+              Payment (now)
             </span>
-            <span className="v" style={{ color: 'var(--red)' }}>
-              {summary.totalMonthlyNow > 0 ? (
-                <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
-              ) : (
-                '—'
-              )}
-            </span>
+            <button
+              type="button"
+              className="info-icon"
+              aria-label="Future payment breakdown"
+              onClick={() => setShowAfterGraceBreakdown(true)}
+            >
+              i
+            </button>
+          </span>
+          <span className="v" style={{ color: 'var(--red)' }}>
+            {summary.totalMonthlyNow > 0 ? (
+              <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
+            ) : (
+              '—'
+            )}
+          </span>
+        </div>
+        {summary.avgPrivateRate != null ? (
+          <div className="summary-kv" style={{ marginTop: 2 }}>
+            <span className="k">Avg private rate</span>
+            <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
           </div>
+        ) : null}
+        {summary.avgPublicRate != null ? (
+          <div className="summary-kv" style={{ marginTop: 2 }}>
+            <span className="k">Avg public rate</span>
+            <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+          </div>
+        ) : null}
         </div>
       </div>
 
@@ -1416,19 +1416,17 @@ export function LoansPage() {
             fontWeight: showPublic ? 600 : 500,
             border: 'none',
             borderRadius: 999,
-            background: showPublic ? 'color-mix(in srgb, var(--accent) 14%, transparent)' : 'transparent',
-            color: 'var(--ui-primary-text, var(--text))',
+            background: showPublic ? 'var(--accent)' : 'transparent',
+            color: showPublic ? '#ffffff' : 'var(--muted)',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
-            const nextPublic = !showPublic;
-            setShowPublic(nextPublic);
-            saveLoansSectionShowPublic(nextPublic);
-            if (showPrivate) {
-              setShowPrivate(false);
-              saveLoansSectionShowPrivate(false);
-            }
+            setShowPublic((s) => {
+              const next = !s;
+              saveLoansSectionShowPublic(next);
+              return next;
+            });
           }}
         >
           Public
@@ -1444,19 +1442,17 @@ export function LoansPage() {
             fontWeight: showPrivate ? 600 : 500,
             border: 'none',
             borderRadius: 999,
-            background: showPrivate ? 'color-mix(in srgb, var(--accent) 14%, transparent)' : 'transparent',
-            color: 'var(--ui-primary-text, var(--text))',
+            background: showPrivate ? 'var(--accent)' : 'transparent',
+            color: showPrivate ? '#ffffff' : 'var(--muted)',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
-            const nextPrivate = !showPrivate;
-            setShowPrivate(nextPrivate);
-            saveLoansSectionShowPrivate(nextPrivate);
-            if (showPublic) {
-              setShowPublic(false);
-              saveLoansSectionShowPublic(false);
-            }
+            setShowPrivate((s) => {
+              const next = !s;
+              saveLoansSectionShowPrivate(next);
+              return next;
+            });
           }}
         >
           Private
@@ -1474,7 +1470,7 @@ export function LoansPage() {
       {showPrivate ? (
         <>
           {loansWithDerived.length === 0 ? (
-            <p style={{ marginTop: 0, marginBottom: 12, color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem' }}>
+            <p style={{ marginTop: 0, marginBottom: 12, color: 'var(--muted)', fontSize: '0.9rem' }}>
               No private loans. Track student and other private loans here. All values are manual and for estimates only.
             </p>
           ) : null}
@@ -1502,7 +1498,7 @@ export function LoansPage() {
               >
                 Recompute your Payment(now)
               </button>
-              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
                 Re-run current balances, rates, and ranges to refresh the Payment(now) total.
               </p>
             </div>
@@ -1521,7 +1517,7 @@ export function LoansPage() {
               >
                 Add current private loan payments to Payment(now)
               </button>
-              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
                 Add the sum of each private loan&apos;s current Payment(now) into the general Payment(now) field. Does not change balances or loan data.
               </p>
             </div>
@@ -1534,7 +1530,7 @@ export function LoansPage() {
               >
                 See consolidated loan
               </button>
-              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
                 Simulate one consolidated private loan (rate and term). Does not change any real loan data.
               </p>
             </div>
@@ -1550,7 +1546,7 @@ export function LoansPage() {
               })
             }
           >
-            Add Private Loan
+            + Add Private Loan
           </button>
         </>
       ) : null}
@@ -1677,7 +1673,7 @@ export function LoansPage() {
         title="Edit Payment(now)"
         onClose={() => setShowEditPaymentNow(false)}
       >
-        <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 12 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
           Set the visible Payment(now) to any value (e.g. 0). This is a display override only; it does not change balances or other calculations.
         </p>
         <div style={{ marginBottom: 12 }}>
@@ -1688,7 +1684,7 @@ export function LoansPage() {
             step={0.01}
             value={editPaymentInput}
             onChange={(e) => setEditPaymentInput(e.target.value)}
-            style={{ width: '100%', padding: 8, fontSize: '1rem', borderRadius: 6, border: '1px solid var(--ui-outline-btn, var(--border))' }}
+            style={{ width: '100%', padding: 8, fontSize: '1rem', borderRadius: 6, border: '1px solid var(--border)' }}
           />
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1717,7 +1713,7 @@ export function LoansPage() {
         title="Future Estimated Payments"
         onClose={() => setShowAfterGraceBreakdown(false)}
       >
-        <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 12 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
           If all private loans moved to full repayment, total monthly would be below. Public = estimated monthly payment.
         </p>
         <div className="summary-compact" style={{ gap: 8 }}>
@@ -1731,11 +1727,11 @@ export function LoansPage() {
                     <span className="v" style={{ color: 'var(--red)' }}>{formatCents(row.afterGraceCents)}</span>
                   </div>
                   {row.fromCustom ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', marginLeft: 8, marginTop: 2 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8, marginTop: 2 }}>
                       Manual input override: {formatCents(row.afterGraceCents)}
                     </div>
                   ) : row.interestCents != null && row.principalCents != null ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', marginLeft: 8, marginTop: 2 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: 8, marginTop: 2 }}>
                       Interest: {formatCents(row.interestCents)} · Principal: {formatCents(row.principalCents)} · Full: {formatCents(row.afterGraceCents)}
                     </div>
                   ) : null}
@@ -1840,7 +1836,7 @@ function LoanEditorForm(props: {
               <option value="subsidized">Subsidized</option>
               <option value="unsubsidized">Unsubsidized</option>
             </Select>
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
               Subsidized: no interest during school/grace. Unsubsidized: interest from disbursement.
             </p>
           </div>
@@ -1853,14 +1849,14 @@ function LoanEditorForm(props: {
               style={{
                 padding: '6px 8px',
                 borderRadius: 4,
-                border: '1px solid var(--ui-outline-btn, var(--border))',
+                border: '1px solid var(--border)',
                 background: 'var(--bg)',
-                color: 'var(--ui-primary-text, var(--text))',
+                color: 'var(--text)',
                 fontSize: '0.9rem',
                 width: '100%'
               }}
             />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
               {state.subsidyType === 'unsubsidized'
                 ? 'Date interest started accruing. Also used for plan eligibility.'
                 : 'Used for federal plan eligibility.'}
@@ -1880,11 +1876,11 @@ function LoanEditorForm(props: {
               <option value="student">Student</option>
               <option value="parent">Parent (Parent PLUS)</option>
             </Select>
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
               Parent PLUS is eligible only for Standard repayment unless consolidated.
             </p>
           </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 8 }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
             Household size, AGI, repayment plan, and poverty level are set in Public Loan Parameters (above).
           </p>
         </>
@@ -1926,7 +1922,7 @@ function LoanEditorForm(props: {
         <>
           <div className="field">
             <label style={{ display: 'block', marginBottom: 6 }}>Payment date ranges</label>
-            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 8 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 0, marginBottom: 8 }}>
               Define when each payment mode applies. First matching range for today sets Payment(now).
             </p>
             {state.privatePaymentRanges.map((r, idx) => (
@@ -1935,9 +1931,9 @@ function LoanEditorForm(props: {
                 style={{
                   marginBottom: 10,
                   padding: '8px 10px',
-                  border: '1px solid var(--ui-outline-btn, var(--border))',
+                  border: '1px solid var(--border)',
                   borderRadius: 6,
-                  background: 'var(--ui-section-bg, var(--bg-secondary))'
+                  background: 'var(--bg-secondary)'
                 }}
               >
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 6 }}>
@@ -1954,7 +1950,7 @@ function LoanEditorForm(props: {
                     }
                     style={{ maxWidth: 140 }}
                   />
-                  <span style={{ color: 'var(--ui-primary-text, var(--muted))' }}>to</span>
+                  <span style={{ color: 'var(--muted)' }}>to</span>
                   <input
                     type="date"
                     value={r.endDate}
@@ -2052,7 +2048,7 @@ function LoanEditorForm(props: {
               onChange={(e) => onChange({ ...state, unpaidInterestOverride: e.target.value })}
               placeholder="Leave blank to use accrual estimate"
             />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
               Manual unpaid interest; overrides accrual-from-anchor estimate when set.
             </p>
           </div>
@@ -2065,13 +2061,13 @@ function LoanEditorForm(props: {
             />
             <label htmlFor="excludeFromPayment">Exclude from Payment(now)</label>
           </div>
-          <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+          <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--muted)' }}>
             If checked, this loan&apos;s payment is not added to the Payment(now) total; it is still included in grace period / after-grace estimates.
           </p>
         </>
       ) : null}
       {state.category === 'public' ? (
-        <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+        <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
           Federal plan estimates use discretionary income (AGI − 150% of poverty guideline). IBR/PAYE/ICR/RAP eligibility depends on disbursement dates.
         </p>
       ) : null}
@@ -2114,7 +2110,7 @@ function PayoffDetails(props: { loan: LoanWithDerived; birthdateISO: string | nu
 
   return (
     <>
-      <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0 }}>
         This estimate assumes your current interest rate and estimated monthly payment stay
         constant until the loan is paid off.
       </p>
@@ -2207,7 +2203,7 @@ function RefinanceSimulator(props: { loan: LoanWithDerived }) {
 
   return (
     <>
-      <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>
+      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: 0 }}>
         Refinance this loan&apos;s after-grace repayment value with new rate and term. All values
         are estimates only and do not reflect lender-specific terms.
       </p>
@@ -2219,7 +2215,7 @@ function RefinanceSimulator(props: { loan: LoanWithDerived }) {
           </span>
         </div>
         {currentAfterGraceCents === 0 ? (
-          <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', margin: 0 }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>
             No after-grace value for this loan; set ranges or full repayment to see a value.
           </p>
         ) : null}

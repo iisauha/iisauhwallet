@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
@@ -22,7 +21,6 @@ import {
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
-import { FAQModal } from './FAQModal';
 import { ResetPasscodeModal } from './ResetPasscodeModal';
 import { Modal } from '../../ui/Modal';
 
@@ -145,7 +143,6 @@ export function SettingsPage() {
   const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
-  const [faqOpen, setFaqOpen] = useState(false);
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
   const [pausePasscodeStep, setPausePasscodeStep] = useState<0 | 1 | 2>(0);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
@@ -320,11 +317,6 @@ export function SettingsPage() {
           </div>
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setFaqOpen(true)}>
-            FAQ
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {hasPasscode && (
             <button
               type="button"
@@ -335,9 +327,6 @@ export function SettingsPage() {
               Reset passcode
             </button>
           )}
-          <Link to="/privacy" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-            Security Policy
-          </Link>
         </div>
       </div>
       {hasPasscode && (
@@ -375,7 +364,6 @@ export function SettingsPage() {
           <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
         </>
       )}
-      <FAQModal open={faqOpen} onClose={() => setFaqOpen(false)} />
 
       <p className="section-title" style={{ marginTop: 24 }}>Backup</p>
       <div className="settings-section">

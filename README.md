@@ -27,9 +27,7 @@ A personal finance dashboard that helps you track **every dollar**: bank balance
 
 - **Local-first:** All wallet data is stored locally in your browser (e.g. localStorage). The creator does not have access to your financial data. Data is not stored on a central server.
 - **Manual input:** There is no direct connection to your bank by default. Users manually enter balances and transactions. Optional features (e.g. Plaid-based detected activity) require a separate backend you configure.
-- **Security model (important):** The app uses a passcode gate to control *access to the UI*, but it does **not** encrypt your data in `localStorage`. That means anyone who can read your browser storage (or unlock/skip passcode protection) can potentially view your data. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
-- **Profile (name + photo):** In Settings you can set a display name and profile picture. Both are stored locally in your browser (profile picture is resized and stored as a small JPEG data URL). They are not automatically shared anywhere unless you export/share your device data.
-- **Optional backend features:** If you enable a backend (e.g. for Plaid-based “Detected activity”), the app will make network requests to your configured backend URL. See “Detected activity” and the Security Policy for what is sent and when.
+- **Security:** Passcode protection, optional hint, security questions, and recovery key are stored only on your device. See “Passcode and recovery” and the in-app **Security Policy** (Settings → Security Policy) for full details.
 
 ---
 
@@ -96,90 +94,17 @@ Track credit card sign-up bonuses and progress toward spend targets. Add cards, 
 - **Export JSON / Import JSON** — Full backup and restore of app data.  
 - **Export monthly purchases CSV** — Current month’s purchases as CSV.  
 - **App Guide** — Short in-app guide to tabs, data storage, and main features; link to full documentation on GitHub.  
+
 ---
- 
-## Routing between modules (how the app “moves money”)
-The app keeps multiple screens in sync by connecting the same underlying objects (accounts, pending items, recurring items, and purchases). The most important “routing” rules are:
-
-### Snapshot: your “where you stand right now”
-- Snapshot sums cash/bank balances and credit card balances into your current totals.
-- Pending inbound/outbound is included so your “final net cash” reflects money that is expected to settle soon.
-- When you post a pending item, Snapshot updates at the same time because the underlying ledger balances change.
-
-### Pending inbound / Pending outbound: money “in motion”
-- Pending inbound = money you expect but have not posted to an account yet.
-- Pending outbound = money you plan to send/transfer but it has not cleared yet.
-- When you post pending inbound/outbound, you choose the destination/source account (bank/card/HYSA), and the app applies the ledger updates.
-
-### Upcoming: projections from recurring
-- Upcoming projects recurring income/expenses into a time window.
-- If you link an HYSA to a checking account, the “money designated for bills” portion counts as liquid in Upcoming.
-- Recurring items can optionally be moved into pending; posting later can generate spending entries depending on your configuration.
-
-### Recurring: the planner
-- Recurring items feed Upcoming.
-- If you run “process recurring up to today” with “apply to snapshot,” the app can update balances (income) or create purchases (expenses) so Snapshot stays current.
-
-### Spending: purchases and suggestions
-- Spending is where you log purchases manually.
-- Categories/subcategories drive the Spending breakdown and totals.
-- If a card has a configured reward category/subcategory, Snapshot can suggest it when you log a purchase for that card.
-
-### Investing / HYSA
-- HYSA supports two buckets: reserved savings vs money designated for bills.
-- Adjust HYSA Allocation moves between buckets without changing total HYSA balance.
-- HYSA linkage affects which bucket is treated as liquid (Upcoming and pending outbound flows).
-
-### Sign-up bonus tracker (Sub Tracker)
-- Sub Tracker tracks bonus tiers and progress toward a spend goal.
-- Marking tiers as complete creates completed bonus entries inside the tracker.
-- This tracker is informational/track-focused; it does not rewrite your Spending purchase categories automatically.
-- Reward values are derived from the reward text you enter (the app parses the quantity and unit from that text). To keep valuations accurate, enter clear numeric quantities and specify whether it is cash, points, or miles.
-
-## Button/action glossary (what the main controls generally do)
-This is a high-level guide to the most common “types” of buttons you will see:
-
-### `Add` / `Create`
-- Creates a new object in that module (a bank account, credit card, pending item, recurring item, loan, investing account, or SUB tier/card).
-
-### `Edit`
-- Changes the object you selected.
-- For items that affect totals (balances or pending), editing will typically change what Snapshot/Upcoming shows after you save.
-
-### `Delete` / remove
-- Removes the object from local storage.
-- If you delete something that participates in totals (for example, a pending item or a posted recurring effect), the computed views will adjust accordingly.
-
-### `Post` (pending) / `Process recurring`
-- `Post` is what moves money from the “in motion” layer into actual ledger balances and/or spending/loan adjustments.
-- “Process recurring” moves recurring items into a posted state (and optionally updates Snapshot) so your “current where you stand” view stays correct.
-
-### HYSA allocation + HYSA linkage
-- `Adjust HYSA Allocation` moves money between “reserved savings” and “money designated for bills” without changing the HYSA total balance.
-- HYSA linkage changes which bucket is treated as liquid in Upcoming and when HYSA is used as a payment source.
-
-### SUB tracker completion
-- Marking a tier as complete adds a completed bonus entry inside the SUB tracker.
-- The SUB tracker does not automatically rewrite your Spending purchase categories; it is its own progress/valuation view.
-
-### Security/onboarding UI
-- First-run security quiz is shown as a blocking modal-style experience with checkbox answers (single-choice UX).
-- It requires all questions to be correct before passcode setup can continue.
-
 
 ## Passcode and recovery (local-only)
 
-- Set a 6-digit passcode to open the app. Stored as a SHA-256 hash on your device only; the creator cannot access it.  
+- Set a 4-digit passcode to open the app. Stored in hashed form on your device only; the creator cannot access it.  
 - **First-run security onboarding:** Before setting a passcode for the first time, users complete a short required security quiz (5 questions). Must score 5/5 to proceed to passcode setup. Completion is stored locally so existing users are unaffected.  
 - **Optional during setup:** Password hint, two security questions (hashed locally), and a one-time **recovery key** (save it when shown; only a hash is stored).  
 - **Reset passcode:** Settings → Security → Reset passcode (current passcode then new one).  
 - **Forgot passcode:** On the lock screen, “Forgot passcode?” then use recovery key or security questions to reset. The hint alone does not allow reset.  
 - **Too many failed attempts:** After 10 incorrect attempts you can (1) **Confirm wipe** — clear all local app data and start fresh (you can re-import a JSON backup), or (2) **Don’t wipe** — lock recovery for 24 hours. All local; no credentials sent to any server.
-
-### What the passcode does (and does not do)
-- It blocks access to the app UI until you enter the correct passcode (or finish recovery).
-- It does **not** encrypt the contents stored in your browser. The passcode is an access gate, not “encryption at rest.”
-- If you use “Pause passcode protection,” anyone with access to the device can open the app without the passcode until you resume protection.
 
 See the in-app **Security Policy** for exact wording and official site URL.
 
@@ -230,15 +155,15 @@ See the in-app **Security Policy** for exact wording and official site URL.
 ## Detected activity (optional, backend-dependent)
 
 - If your deployment has a backend that supports it, the app can show a “Detected activity” inbox: suggested transactions (e.g. from Plaid) to link to purchases or pending.  
-- This is optional and requires a configured API/backend URL. Without it, the app works fully with manual entry only.  
-- Local ledger data and manual entry are not dependent on detected activity; it only adds suggestion/linking assistance.
+- This is optional and requires a configured API. Without it, the app works fully with manual entry only.  
+- Local ledger data and manual entry are not dependent on detected activity.
 
 ---
 
 ## Backup and export
 
-- **Export JSON** — A backup of wallet/ledger-related data (accounts, balances, pending, purchases, recurring, loans, investing, categories, settings/UI prefs, etc.). The export is allow-listed; your profile name/photo are stored locally but may not be included.  
-- **Import JSON** — Restores from a previously exported file and **replaces** current data on the device. Only import backups you trust. Treat backups as sensitive files (balances and transactions).
+- **Export JSON** — Full copy of app data (accounts, balances, pending, recurring, loans, investing, categories, settings, etc.). Use for backup or moving to another device.  
+- **Import JSON** — Restores from a previously exported file. **Replaces** current data on the device.  
 - **Export monthly purchases CSV** — Current month’s purchases as CSV.  
 - Backing up regularly is recommended so you don’t lose data if the browser or device is cleared. After a wipe (e.g. too many failed passcode attempts), you can re-import a JSON backup.
 

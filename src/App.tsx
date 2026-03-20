@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { SnapshotPage } from './features/snapshot/SnapshotPage';
 import { SpendingPage } from './features/spending/SpendingPage';
@@ -8,7 +8,6 @@ import { InvestingPage } from './features/investing/InvestingPage';
 import { RecurringPage } from './features/recurring/RecurringPage';
 import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
 import { SettingsPage } from './features/settings/SettingsPage';
-import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { PasscodeGate } from './features/passcode/PasscodeGate';
 import { DropdownStateProvider } from './state/DropdownStateContext';
 import { ThemeProvider } from './theme/ThemeContext';
@@ -16,7 +15,6 @@ import { AppearanceProvider } from './theme/AppearanceContext';
 import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
 import { ReminderProvider } from './state/ReminderContext';
 import { TAB_ORDER_KEY } from './state/keys';
-import { loadHiddenTabs } from './state/storage';
 
 export type TabKey =
   | 'snapshot'
@@ -76,28 +74,11 @@ function saveTabOrder(order: TabKey[]): void {
 
 function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
-  const [spendingVisited, setSpendingVisited] = useState(false);
   const [tabOrder, setTabOrder] = useState<TabKey[]>(() => loadTabOrder());
 
-  useEffect(() => {
-    if (tab === 'spending') setSpendingVisited(true);
-  }, [tab]);
-
-  const hiddenSet = useMemo(() => new Set(loadHiddenTabs()), [tab]);
-  const visibleTabOrder = useMemo(
-    () => tabOrder.filter((k) => !hiddenSet.has(k)),
-    [tabOrder, hiddenSet]
-  );
-
-  useEffect(() => {
-    if (visibleTabOrder.length > 0 && !visibleTabOrder.includes(tab)) {
-      setTab(visibleTabOrder[0]);
-    }
-  }, [tab, visibleTabOrder]);
-
-  const otherTabContent = useMemo(() => {
-    if (tab === 'spending') return null;
+  const content = useMemo(() => {
     if (tab === 'snapshot') return <SnapshotPage />;
+    if (tab === 'spending') return <SpendingPage />;
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'loans') return <LoansPage />;
     if (tab === 'investing') return <InvestingPage />;
@@ -121,43 +102,20 @@ function MainApp() {
       e.preventDefault();
       const dragIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
       if (!Number.isFinite(dragIndex) || dragIndex === dropIndex) return;
-      const draggedKey = visibleTabOrder[dragIndex];
-      const dropKey = visibleTabOrder[dropIndex];
-      if (!draggedKey || !dropKey || draggedKey === dropKey) return;
       const next = [...tabOrder];
-      const fromIdx = next.indexOf(draggedKey);
-      const toIdx = next.indexOf(dropKey);
-      if (fromIdx === -1 || toIdx === -1) return;
-      next.splice(fromIdx, 1);
-      const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
-      next.splice(insertIdx, 0, draggedKey);
+      const [removed] = next.splice(dragIndex, 1);
+      next.splice(dropIndex, 0, removed);
       setTabOrder(next);
       saveTabOrder(next);
     },
-    [tabOrder, visibleTabOrder]
+    [tabOrder]
   );
 
   return (
     <>
-      {(spendingVisited || tab === 'spending') && (
-        <div
-          style={{
-            display: tab === 'spending' ? 'block' : 'none',
-            position: 'relative',
-            minHeight: '100%',
-          }}
-          aria-hidden={tab !== 'spending'}
-        >
-          <SpendingPage tabVisible={tab === 'spending'} />
-        </div>
-      )}
-      {tab !== 'spending' && (
-        <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>
-          {otherTabContent}
-        </div>
-      )}
+      <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>{content}</div>
       <nav className="tabs" aria-label="Sections">
-        {visibleTabOrder.map((tabKey, index) => (
+        {tabOrder.map((tabKey, index) => (
           <button
             key={tabKey}
             type="button"
@@ -187,7 +145,6 @@ export function App() {
               <PasscodeGate>
                 <Routes>
                   <Route path="/" element={<MainApp />} />
-                  <Route path="/privacy" element={<PrivacyPage />} />
                 </Routes>
               </PasscodeGate>
             </DropdownStateProvider>
