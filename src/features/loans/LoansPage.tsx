@@ -1340,7 +1340,20 @@ export function LoansPage() {
             </span>
           </div>
 
-          <div className={paymentNowDisplayClass} style={{ marginTop: 2, alignItems: 'center' }}>
+          {summary.avgPrivateRate != null ? (
+            <div className="summary-kv" style={{ marginTop: 0 }}>
+              <span className="k">Avg private rate</span>
+              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+            </div>
+          ) : null}
+          {summary.avgPublicRate != null ? (
+            <div className="summary-kv" style={{ marginTop: 0 }}>
+              <span className="k">Avg public rate</span>
+              <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+            </div>
+          ) : null}
+
+          <div className={paymentNowDisplayClass} style={{ marginTop: 0, alignItems: 'center' }}>
             <span
               className="k"
               style={{
@@ -1381,19 +1394,6 @@ export function LoansPage() {
               {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} /> : '—'}
             </span>
           </div>
-
-          {summary.avgPrivateRate != null ? (
-            <div className="summary-kv" style={{ marginTop: 1 }}>
-              <span className="k">Avg private rate</span>
-              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
-            </div>
-          ) : null}
-          {summary.avgPublicRate != null ? (
-            <div className="summary-kv" style={{ marginTop: 1 }}>
-              <span className="k">Avg public rate</span>
-              <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
-            </div>
-          ) : null}
         </div>
       </div>
 
