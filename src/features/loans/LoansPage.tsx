@@ -1340,16 +1340,16 @@ export function LoansPage() {
             </span>
           </div>
 
-          {summary.avgPrivateRate != null ? (
-            <div className="summary-kv" style={{ marginTop: 0 }}>
-              <span className="k">Avg private rate</span>
-              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
-            </div>
-          ) : null}
           {summary.avgPublicRate != null ? (
             <div className="summary-kv" style={{ marginTop: 0 }}>
               <span className="k">Avg public rate</span>
               <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+            </div>
+          ) : null}
+          {summary.avgPrivateRate != null ? (
+            <div className="summary-kv" style={{ marginTop: 0 }}>
+              <span className="k">Avg private rate</span>
+              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
             </div>
           ) : null}
 
