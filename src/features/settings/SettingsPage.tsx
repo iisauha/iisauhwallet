@@ -10,8 +10,6 @@ import {
   saveBirthdateISO,
   getCategoryName,
   loadPasscodeHash,
-  loadPasscodePaused,
-  savePasscodePaused,
   loadUserDisplayName,
   saveUserDisplayName,
   loadUserProfileImage,
@@ -149,7 +147,6 @@ export function SettingsPage() {
   const [faqOpen, setFaqOpen] = useState(false);
   const [appGuideOpen, setAppGuideOpen] = useState(false);
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
-  const [pausePasscodeStep, setPausePasscodeStep] = useState<0 | 1 | 2>(0);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
@@ -157,7 +154,6 @@ export function SettingsPage() {
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
 
   const hasPasscode = loadPasscodeHash() !== null;
-  const passcodePaused = loadPasscodePaused();
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -298,29 +294,6 @@ export function SettingsPage() {
 
       <p className="section-title" style={{ marginTop: 24 }}>Security &amp; privacy</p>
       <div className="settings-section" style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {hasPasscode && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {passcodePaused ? (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '12px 18px', fontSize: '1rem' }}
-                onClick={() => savePasscodePaused(false)}
-              >
-                Resume passcode protection
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-secondary btn-outline-neutral"
-                style={{ padding: '12px 18px', fontSize: '1rem' }}
-                onClick={() => setPausePasscodeStep(1)}
-              >
-                Pause passcode protection
-              </button>
-            )}
-          </div>
-        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           <button type="button" className="btn btn-secondary" onClick={() => setAppGuideOpen(true)}>
             How This App Works
@@ -345,41 +318,7 @@ export function SettingsPage() {
           </Link>
         </div>
       </div>
-      {hasPasscode && (
-        <>
-          {pausePasscodeStep === 1 ? (
-            <Modal open={true} title="Pause passcode?" onClose={() => setPausePasscodeStep(0)}>
-              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
-                This reduces app security. Anyone with access to this device could open the app without a passcode. Your data will still be stored locally on this device.
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
-                <button type="button" className="btn btn-primary" onClick={() => setPausePasscodeStep(2)}>Continue</button>
-              </div>
-            </Modal>
-          ) : pausePasscodeStep === 2 ? (
-            <Modal open={true} title="Confirm pause" onClose={() => setPausePasscodeStep(0)}>
-              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
-                Confirm again: the passcode will not be required when opening the app until you tap &quot;Resume passcode protection&quot; in Settings.
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    savePasscodePaused(true);
-                    setPausePasscodeStep(0);
-                  }}
-                >
-                  Pause passcode
-                </button>
-              </div>
-            </Modal>
-          ) : null}
-          <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
-        </>
-      )}
+      {hasPasscode && <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />}
       <AppGuideModal open={appGuideOpen} onClose={() => setAppGuideOpen(false)} />
       <FAQModal open={faqOpen} onClose={() => setFaqOpen(false)} />
 

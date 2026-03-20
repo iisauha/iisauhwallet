@@ -43,7 +43,6 @@ import {
   PASSCODE_FAILED_ATTEMPTS_KEY,
   PASSCODE_LOCKOUT_UNTIL_KEY,
   SECURITY_QUIZ_COMPLETED_KEY,
-  PASSCODE_PAUSED_KEY,
   PASSCODE_6DIGIT_KEY,
   CARD_REWARD_ADJUSTMENTS_KEY,
   CARD_REWARD_ONLY_ENTRIES_KEY,
@@ -1800,21 +1799,6 @@ export function saveSecurityQuizCompleted(completed: boolean) {
   try {
     if (completed) localStorage.setItem(SECURITY_QUIZ_COMPLETED_KEY, 'true');
     else localStorage.removeItem(SECURITY_QUIZ_COMPLETED_KEY);
-  } catch (_) {}
-}
-
-export function loadPasscodePaused(): boolean {
-  try {
-    return localStorage.getItem(PASSCODE_PAUSED_KEY) === 'true';
-  } catch (_) {
-    return false;
-  }
-}
-
-export function savePasscodePaused(paused: boolean) {
-  try {
-    if (paused) localStorage.setItem(PASSCODE_PAUSED_KEY, 'true');
-    else localStorage.removeItem(PASSCODE_PAUSED_KEY);
   } catch (_) {}
 }
 

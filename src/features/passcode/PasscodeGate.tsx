@@ -16,7 +16,6 @@ import {
   savePasscodeFailedAttempts,
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
-  loadPasscodePaused,
   loadPasscode6Digit,
   savePasscode6Digit,
   generateRecoveryKey,
@@ -382,9 +381,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     fontSize: '0.95rem',
   };
 
-  if (loadPasscodePaused() || authenticated) {
-    return <>{children}</>;
-  }
+  if (authenticated) return <>{children}</>;
 
   const lockoutEnd = getLockoutEnd();
   const lockoutMessage = lockoutEnd

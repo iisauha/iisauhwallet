@@ -112,8 +112,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               The app may prompt you to update an older passcode setup to the current format; follow the on-screen steps.
             </Li>
             <Li>
-              In Settings you can pause passcode protection so the app opens without a code until you turn protection back
-              on. Use pause only on devices you trust.
+              In Settings you manage your passcode and recovery options, and the app will require your code to open.
             </Li>
           </B>
         </GuideDropdown>
@@ -401,8 +400,8 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               Edit account names updates labels for banks and cards across the app.
             </Li>
             <Li>
-              Security: pause or resume passcode, open this guide, FAQ, reset passcode, and Security policy (Privacy
-              screen).
+              Security: manage your passcode and recovery options, open this guide, FAQ, reset passcode, and Security
+              policy (Privacy screen).
             </Li>
             <Li>
               Backup: export monthly purchases CSV; export full data as JSON; import JSON replaces data on this device.

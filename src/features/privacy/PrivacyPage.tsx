@@ -78,19 +78,14 @@ export function PrivacyPage() {
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           During setup you can also save a <strong>hint</strong>, answer <strong>two security questions</strong>, and write
           down a <strong>recovery key</strong> the app shows once. Those exist so you can get back in if you forget the
-          passcode, using the flows the app gives you. The app keeps only scrambled checks (not your raw passcode in
-          readable form) so a quick glance at storage does not print your exact code in plain text.
+          passcode, using the flows the app gives you. The app keeps only a scrambled one-way check (not your raw
+          passcode in readable form), so a quick glance at storage does not reveal your exact code.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           <strong>Important:</strong> that lock is <strong>not full-disk encryption</strong> of everything in the browser.
-          Someone with deep access to the device and enough skill could still try to read what the browser saved, the same
-          way they might dig through any other local app data. The passcode is there to <strong>stop casual use</strong> of
-          the app and to match how people expect a finance screen to behave, not to promise military-grade secrecy of every
-          byte on the phone.
-        </p>
-        <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          You can <strong>pause</strong> passcode protection in Settings. While paused, anyone who opens the app on that
-          device can see it without the code. Turn protection back on when you are done.
+          The goal is to <strong>stop casual use</strong> of the app, so someone can&rsquo;t just open your tabs and see
+          everything immediately. If someone has full access to your unlocked device or can read your browser storage,
+          they can still view what&rsquo;s saved.
         </p>
       </section>
 
@@ -107,9 +102,8 @@ export function PrivacyPage() {
             for example the phone itself, a shared computer, or a backup you emailed to yourself.
           </li>
           <li style={{ marginBottom: 8 }}>
-            <strong>Getting past the lock you use</strong>, which usually means guessing or knowing your passcode, or you
-            having paused protection, or them using technical tools to read browser storage or open a JSON backup. That second
-            path takes more know-how than simply opening the app.
+            <strong>Getting past the lock you use</strong>, which usually means guessing or knowing your passcode, or them
+            using technical tools to read browser storage or open a JSON backup. That second path takes more know-how than simply opening the app.
           </li>
           <li style={{ marginBottom: 8 }}>
             <strong>Even then</strong>, what they see is mostly what <strong>you manually entered</strong>: nicknames for
@@ -169,7 +163,7 @@ export function PrivacyPage() {
           Security tips
         </h2>
         <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.7 }}>
-          <li>Use a passcode and avoid leaving protection paused on a shared device.</li>
+          <li>Use a passcode and avoid leaving your device unlocked on a shared device.</li>
           <li>Save your recovery key when the app shows it. It is not shown in full again the same way.</li>
           <li>Export JSON backups if you care about not losing data, and store those files somewhere safe.</li>
           <li>Only import backups you trust.</li>

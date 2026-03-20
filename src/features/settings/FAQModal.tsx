@@ -4,15 +4,11 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data in storage?',
-    a: 'No, it does not encrypt the saved files. It works like a lock on the app: it hides the screens until you enter the code, while balances and settings stay in normal browser storage on your device.',
+    a: 'No. The passcode acts like a screen lock: it hides the app until you enter your code. We store only a one-way check of your passcode (not the passcode itself), while your balances and settings stay in normal browser storage on your device.',
   },
   {
     q: 'If someone gets my phone/laptop, how much can they see?',
-    a: 'Usually they need your device unlock and either your app passcode or for protection to be paused. Keeping a device PIN and the app passcode on is the simple habit that helps most people.',
-  },
-  {
-    q: 'What changes when I “Pause passcode protection”?',
-    a: 'The app stops asking for your code until you turn protection back on. Use that when you are the only one using the device and you want quicker access.',
+    a: 'Usually they need your device unlock and your app passcode. Keeping a device PIN and your app passcode on is the simple habit that helps most people.',
   },
   {
     q: 'Where do my profile name and profile picture live?',
