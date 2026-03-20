@@ -490,12 +490,12 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                 <span className="amount">{formatCents(c.amountCents)}</span>
               </div>
             ))}
-            {!byCard.length ? <div style={{ color: 'var(--ui-primary-text, var(--muted))' }}>No purchases in this period.</div> : null}
+            {!byCard.length ? <div style={{ color: 'var(--ui-primary-text, var(--text))' }}>No purchases in this period.</div> : null}
           </div>
         ) : (
           <div>
             {(data.cards || []).length === 0 ? (
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
             ) : (
               <>
                 {(data.cards || []).map((c: any) => {
@@ -545,7 +545,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                           {type === 'points' && `${balance.toLocaleString()} pts`}
                           {type === 'miles' && `${balance.toLocaleString()} mi`}
                           {cpp != null && cpp > 0 && (type === 'points' || type === 'miles') && approxCents != null && (
-                            <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontWeight: 400 }}> · ~{formatCents(approxCents)}</span>
+                            <span style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 400 }}> · ~{formatCents(approxCents)}</span>
                           )}
                         </div>
                       </div>
@@ -581,7 +581,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                   };
                   return (
                     <div style={{ paddingTop: 12, marginTop: 8, borderTop: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 4 }}>Total current</div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Total current</div>
                       {(totalCashback || 0) > 0 ? (
                         <div style={lineStyle}>
                           <span style={{ color: 'var(--green)' }}>{formatCents(totalCashback)}</span> cash back
@@ -591,7 +591,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                         <div style={lineStyle}>
                           <span style={{ color: 'var(--green)' }}>{totalPoints.toLocaleString()}</span> points
                           {pointsApproxCents != null && pointsApproxCents > 0 ? (
-                            <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontWeight: 400 }}> (~{formatCents(pointsApproxCents)})</span>
+                            <span style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 400 }}> (~{formatCents(pointsApproxCents)})</span>
                           ) : null}
                         </div>
                       ) : null}
@@ -613,7 +613,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
         <Modal open={legendOpen} title="Legend" onClose={() => setLegendOpen(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {byCategory.length === 0 ? (
-              <p style={{ color: 'var(--ui-primary-text, var(--muted))', margin: 0 }}>No spending in this period.</p>
+              <p style={{ color: 'var(--ui-primary-text, var(--text))', margin: 0 }}>No spending in this period.</p>
             ) : (() => {
               const totalCents = byCategory.reduce((s, c) => s + c.amountCents, 0);
               return byCategory.map((c) => {
@@ -664,7 +664,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
         >
           <span className="section-header-left">Purchases</span>
           {drilldownCategoryId ? (
-            <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginLeft: 8 }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8 }}>
               (showing: {getCategoryName(cfg, drilldownCategoryId)})
             </span>
           ) : null}
@@ -707,7 +707,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                 <span className="name">{p.title || 'Purchase'}</span>
                 <span className="amount">{formatCents(p.amountCents || 0)}</span>
               </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                 {formatLongLocalDate(p.dateISO || '')} •{' '}
                 <span style={{ color: getCategoryColor(p.category || 'uncategorized'), fontWeight: 600 }}>
                   {getCategoryName(cfg, p.category || 'uncategorized')}
@@ -780,7 +780,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
       ) : null}
 
       {openAdd && detected?.launchFlow?.flow === 'add_purchase' && detected.launchFlow.item ? (
-        <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', border: '1px solid var(--border)' }}>
+        <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
           <div>Merchant: {detected.launchFlow.item.title}</div>
           <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
@@ -823,7 +823,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
         <div className="modal-overlay">
           <div className="modal">
             <h3>Are you sure you want to delete this?</h3>
-            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>{confirmDelete.label}</p>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>{confirmDelete.label}</p>
             <div className="btn-row">
               <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
                 Cancel
@@ -894,12 +894,12 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
         <div className="modal-overlay" style={{ zIndex: 10002 }}>
           <div className="modal">
             <h3 style={{ marginBottom: 10 }}>Update rewards?</h3>
-            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
               You just deleted a purchase. Would you like to subtract {rewardSubtractPopup.deltaLabel} from your {rewardSubtractPopup.cardName} rewards? Your new balance will be {rewardSubtractPopup.newBalanceLabel}.
             </p>
             {rewardSubtractMode === 'manual' ? (
               <div className="field" style={{ marginTop: 8 }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                   Specify how much {rewardSubtractPopup.rewardType === 'cashback' ? 'cash back ($)' : rewardSubtractPopup.rewardType} to subtract
                 </label>
                 <input
@@ -1001,7 +1001,7 @@ function EditBalanceModal({
     <div className="modal-overlay">
       <div className="modal">
         <h3>Edit rewards balance</h3>
-        <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>Card: <strong>{modal.cardName}</strong></p>
+        <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>Card: <strong>{modal.cardName}</strong></p>
         <div style={{ marginTop: 12 }}>
           <label style={{ display: 'block', marginBottom: 8 }}>
             Rewards type:

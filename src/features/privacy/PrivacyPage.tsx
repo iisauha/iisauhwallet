@@ -9,7 +9,7 @@ export function PrivacyPage() {
         <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 700, color: 'var(--ui-title-text, var(--text))' }}>
           Security &amp; Privacy Policy — iisauh wallet
         </h1>
-        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))' }}>Last updated: March 2026</p>
+        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Last updated: March 2026</p>
       </div>
 
       <section className="card" style={{ padding: 20, marginBottom: 16 }}>

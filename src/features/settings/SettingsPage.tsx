@@ -202,7 +202,7 @@ export function SettingsPage() {
             padding: 0,
             border: 'none',
             background: profileImage ? `url(${profileImage}) center/cover` : 'var(--surface)',
-            color: 'var(--ui-primary-text, var(--muted))',
+            color: 'var(--ui-primary-text, var(--text))',
             fontSize: '1.5rem',
             fontWeight: 600,
             flexShrink: 0,
@@ -349,7 +349,7 @@ export function SettingsPage() {
         <>
           {pausePasscodeStep === 1 ? (
             <Modal open={true} title="Pause passcode?" onClose={() => setPausePasscodeStep(0)}>
-              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--text))' }}>
                 This reduces app security. Anyone with access to this device could open the app without a passcode. Your data will still be stored locally on this device.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -359,7 +359,7 @@ export function SettingsPage() {
             </Modal>
           ) : pausePasscodeStep === 2 ? (
             <Modal open={true} title="Confirm pause" onClose={() => setPausePasscodeStep(0)}>
-              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--muted))' }}>
+              <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--text))' }}>
                 Confirm again: the passcode will not be required when opening the app until you tap &quot;Resume passcode protection&quot; in Settings.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -509,7 +509,7 @@ export function SettingsPage() {
               You can check out the &quot;How This App Works&quot; section for a more detailed explanation.
             </p>
             <p style={{ margin: 0 }}>
-              I built this over about three weeks using Cursor while balancing school and other commitments. I hope you enjoy it.
+              I hope you enjoy it.
             </p>
           </div>
         </Modal>

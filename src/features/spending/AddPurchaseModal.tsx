@@ -273,7 +273,7 @@ export function AddPurchaseModal(props: {
           <div className="modal">
             <h3>Use {suggestedCardName}?</h3>
             {currentSuggestion.rule ? (
-              <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: -4, marginBottom: 12 }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 12 }}>
                 {currentSuggestion.rule.isCatchAll ? 'Catch-all' : (currentSuggestion.rule.subcategory || currentSuggestion.rule.category)}: {currentSuggestion.rule.value}%
               </p>
             ) : null}
@@ -315,12 +315,12 @@ export function AddPurchaseModal(props: {
         <div className="modal-overlay" style={{ zIndex: 10002 }}>
           <div className="modal">
             <h3 style={{ marginBottom: 10 }}>Update rewards?</h3>
-            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
               Would you like to add {rewardAdjustPopup.deltaLabel} to your {rewardAdjustPopup.cardName} rewards? Your new balance will be {rewardAdjustPopup.newBalanceLabel}.
             </p>
             {rewardAdjustMode === 'manual' ? (
               <div className="field" style={{ marginTop: 8 }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                   Specify how much {rewardAdjustPopup.rewardType === 'cashback' ? 'cash back ($)' : rewardAdjustPopup.rewardType} to add
                 </label>
                 <input
@@ -431,11 +431,11 @@ export function AddPurchaseModal(props: {
         <div className="modal-overlay" style={{ zIndex: 10003 }}>
           <div className="modal">
             <h3 style={{ marginBottom: 10 }}>Update rewards?</h3>
-            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
               Since the payment method changed, rewards will be updated by subtracting your previous amount from <strong>{editRewardPopup.oldCardName}</strong> and adding your new amount to <strong>{editRewardPopup.newCardName}</strong>.
             </p>
 
-            <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.95rem', lineHeight: 1.8, marginBottom: 8 }}>
+            <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.95rem', lineHeight: 1.8, marginBottom: 8 }}>
               <div>
                 Subtract:{' '}
                 <strong>
@@ -459,7 +459,7 @@ export function AddPurchaseModal(props: {
             {editRewardMode === 'manual' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div className="field">
-                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                     Subtract how much from {editRewardPopup.oldCardName}
                   </label>
                   <input
@@ -472,7 +472,7 @@ export function AddPurchaseModal(props: {
                   />
                 </div>
                 <div className="field">
-                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--muted))' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                     Add how much to {editRewardPopup.newCardName}
                   </label>
                   <input
@@ -658,7 +658,7 @@ export function AddPurchaseModal(props: {
       <div className="modal">
         <h3>{isEditing ? 'Edit Purchase' : props.reimbursementExpected ? 'Add Card Purchase (Full reimbursement expected)' : 'Add Purchase'}</h3>
         {props.reimbursementExpected && !isEditing ? (
-          <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: -4, marginBottom: 12 }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 12 }}>
             A pending inbound entry will be created for this amount. When you receive reimbursement, post it from Pending Inbound and choose which bank to deposit into.
           </p>
         ) : null}
@@ -741,7 +741,7 @@ export function AddPurchaseModal(props: {
               <div className="field">
                 <label>My Portion ($)</label>
                 <input value={myPortion} onChange={(e) => setMyPortion(e.target.value)} inputMode="decimal" placeholder="0.00" />
-                <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 6 }}>
+                <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                   Reimbursement (Inbound): {inboundCents > 0 ? `$${(inboundCents / 100).toFixed(2)}` : '$0.00'}
                 </div>
                 {splitError ? <div style={{ color: 'var(--danger)', marginTop: 6 }}>{splitError}</div> : null}
@@ -800,7 +800,7 @@ export function AddPurchaseModal(props: {
               </div>
             ) : null}
             {paymentSource === 'cash' ? (
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: -6, marginBottom: 10 }}>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: -6, marginBottom: 10 }}>
                 Will apply against Physical Cash ({PHYSICAL_CASH_ID}).
               </div>
             ) : null}

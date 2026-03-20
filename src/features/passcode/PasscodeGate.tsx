@@ -409,7 +409,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <h1 style={{ margin: '0 0 12px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>
             Too many failed attempts
           </h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', lineHeight: 1.5, textAlign: 'center' }}>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5, textAlign: 'center' }}>
             {lockoutMessage}
           </p>
         </>
@@ -421,7 +421,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <h1 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>
             Unable to recover passcode
           </h1>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: 'var(--muted)', lineHeight: 1.5, textAlign: 'center' }}>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5, textAlign: 'center' }}>
             Since you cannot remember your passcode or recovery details, the app may need to wipe all locally stored data on this device. In the future, please save your recovery key and choose a passcode you will remember. If you have previous JSON backups, you can import them after wiping.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -432,7 +432,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
               Don&apos;t wipe
             </button>
           </div>
-          <p style={{ marginTop: 16, fontSize: '0.85rem', color: 'var(--muted)', textAlign: 'center' }}>
+          <p style={{ marginTop: 16, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center' }}>
             Choosing &quot;Don&apos;t wipe&quot; will lock recovery attempts for 24 hours.
           </p>
         </>
@@ -444,7 +444,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <h1 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>
             Finish security setup
           </h1>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: 'var(--muted)', lineHeight: 1.5, textAlign: 'center' }}>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5, textAlign: 'center' }}>
             Add a recovery key and optional security questions so you can recover your passcode if you forget it. If you skip, forgetting your passcode may require wiping local data.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -511,7 +511,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'hint' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Password hint (optional)</h1>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             A hint can be shown if you forget your passcode. It does not allow reset by itself. Leave blank to skip.
           </p>
           <input
@@ -529,7 +529,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'security-questions' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Security questions (optional)</h1>
-          <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             Answer two questions to recover your passcode later. You can skip; recovery will be limited without them.
           </p>
           <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 1</label>
@@ -567,7 +567,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'recovery-key-show' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Recovery key</h1>
-          <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             This is the best way to recover your passcode. Save it somewhere safe; it will not be shown again in full. You can regenerate it later in Settings after entering your passcode.
           </p>
           <div style={{ padding: 16, background: 'var(--surface)', borderRadius: 10, fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: 2, textAlign: 'center', marginBottom: 12 }}>
@@ -672,7 +672,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'forgot-options' && (
         <>
           <h1 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Recover passcode</h1>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             Use your recovery key or security questions to reset your passcode. The hint alone does not allow reset.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -686,7 +686,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
               <button type="button" className="btn btn-secondary" onClick={() => setStep('hint-show')}>View password hint</button>
             )}
             {!loadRecoveryKeyHash() && !loadSecurityQA() && !loadPasscodeHint() && (
-              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center' }}>No recovery options were set up. You may need to wipe local data.</p>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center' }}>No recovery options were set up. You may need to wipe local data.</p>
             )}
             <button type="button" className="btn btn-secondary" onClick={() => setStep('enter')}>Back</button>
           </div>
@@ -696,7 +696,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'recovery-key-enter' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Enter recovery key</h1>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             Paste or type the recovery key you saved during setup.
           </p>
           <input
@@ -719,9 +719,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         return (
           <>
             <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Security questions</h1>
-            <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.5 }}>{qa.q1}</p>
+            <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5 }}>{qa.q1}</p>
             <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={inputStyle} />
-            <p style={{ margin: '12px 0 4px 0', fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.5 }}>{qa.q2}</p>
+            <p style={{ margin: '12px 0 4px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5 }}>{qa.q2}</p>
             <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={inputStyle} />
             {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
             <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={handleSecurityAnswersSubmit}>Verify and reset passcode</button>
@@ -736,7 +736,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <p style={{ margin: '0 0 24px 0', padding: 16, background: 'var(--surface)', borderRadius: 10, color: 'var(--ui-primary-text, var(--text))' }}>
             {loadPasscodeHint() || 'No hint set.'}
           </p>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center' }}>
             The hint alone does not allow passcode reset. Use recovery key or security questions if you set them up.
           </p>
           <button type="button" className="btn btn-secondary" onClick={() => setStep('forgot-options')}>Back</button>

@@ -131,7 +131,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   return (
     <div className="card" style={{ marginBottom: 16, padding: '14px 16px' }}>
       <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loans</h4>
-      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 14 }}>
+      <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 14 }}>
         Use the official Federal Student Aid simulator to estimate your public loan payment, then enter your monthly amount here.
       </p>
 
@@ -146,7 +146,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
       </a>
 
       <div className="field" style={{ marginBottom: 10 }}>
-        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
           My estimated monthly public loan payment ($)
         </label>
         <input
@@ -203,7 +203,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             </div>
             {showFirstPaymentDetails && (
           <div style={{ marginTop: 12, padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-            <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
               First payment date
             </label>
             <input
@@ -214,11 +214,11 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
               onBlur={handleSaveFirstPaymentDate}
               style={inputStyle}
             />
-            <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--muted)' }}>
+            <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
               When this date is reached, your estimated public loan payment can be automatically added to Payment(now).
             </p>
             <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>Auto-add when date reached:</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Auto-add when date reached:</span>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -229,14 +229,14 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
               </button>
             </div>
             {summary.firstPaymentDateAutoAddPaused ? (
-              <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
                 Paused. Use &quot;Add to Payment(now)&quot; manually if you want to include public in Payment(now).
               </p>
             ) : null}
           </div>
         )}
         {summary.paymentMode === 'current_payment' && currentCents != null && currentCents > 0 ? (
-          <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 0 }}>
             Current payment (now): {formatCents(currentCents)}/mo
           </p>
         ) : null}
@@ -245,11 +245,11 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
       </div>
 
       <div style={{ marginBottom: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 10 }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 10 }}>
           Optional summary (for dashboard totals)
         </p>
         <div className="field" style={{ marginBottom: 10 }}>
-          <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+          <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
             Total public loan balance ($)
           </label>
           <input
@@ -264,7 +264,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
           />
         </div>
         <div className="field" style={{ marginBottom: 0 }}>
-          <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+          <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
             Average public interest rate (%)
           </label>
           <input
@@ -281,7 +281,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
       </div>
 
       <div className="field" style={{ marginTop: 4 }}>
-        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 4 }}>
+        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
           Notes
         </label>
         <textarea

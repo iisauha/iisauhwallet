@@ -69,7 +69,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1.5px solid var(--ui-outline-btn, var(--muted));
+  border: 1.5px solid var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -92,7 +92,7 @@ body {
   background: transparent;
   border-radius: 999px;
   border: 1px solid transparent;
-  color: var(--ui-primary-text, var(--muted));
+  color: var(--ui-primary-text, var(--text));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   scroll-snap-align: start;
@@ -143,7 +143,7 @@ body {
   min-width: 28px;
   flex-shrink: 0;
   text-align: center;
-  color: var(--ui-primary-text, var(--muted));
+  color: var(--ui-primary-text, var(--text));
 }
 .card {
   background: var(--ui-card-bg, var(--surface));
@@ -188,7 +188,7 @@ body {
 }
 .summary-compact { display: grid; gap: 12px; }
 .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.summary-kv .k { color: var(--ui-primary-text, var(--muted)); font-size: 0.9rem; font-weight: 600; }
+.summary-kv .k { color: var(--ui-primary-text, var(--text)); font-size: 0.9rem; font-weight: 600; }
 .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; }
 .summary-kv .v.pos { color: var(--green); }
 .summary-kv .v.neg { color: var(--red); }
@@ -284,7 +284,7 @@ body {
 .btn-primary { background: var(--accent); color: white; }
 .btn-secondary {
   background: transparent;
-  color: var(--ui-outline-btn, var(--ui-primary-text, var(--muted)));
+  color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
   border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
 }
 /* Pause: orange outline (ignores custom outline-button color) */
@@ -334,7 +334,7 @@ body {
 .icon-btn {
   border: none;
   background: transparent;
-  color: var(--ui-primary-text, var(--muted));
+  color: var(--ui-primary-text, var(--text));
   font-size: 0.8rem;
   padding: 4px 8px;
   border-radius: 999px;
@@ -372,7 +372,7 @@ input[type="date"].ll-control {
 .ll-control::placeholder,
 input::placeholder,
 textarea::placeholder {
-  color: var(--ui-primary-text, var(--muted));
+  color: var(--ui-primary-text, var(--text));
   opacity: 0.75;
 }
 
@@ -391,7 +391,7 @@ textarea::placeholder {
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  color: var(--ui-outline-btn, var(--ui-primary-text, var(--muted)));
+  color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
   font-size: 0.9rem;
 }
 
@@ -484,7 +484,7 @@ input[type="date"].ll-control:focus {
 }
 .modal h3 { margin: 0 0 16px 0; font-size: 1.25rem; color: var(--ui-title-text, var(--text)); font-weight: 600; }
 .modal .field { margin-bottom: 14px; }
-.modal label { display: block; font-size: 0.9rem; color: var(--ui-primary-text, var(--muted)); margin-bottom: 4px; }
+.modal label { display: block; font-size: 0.9rem; color: var(--ui-primary-text, var(--text)); margin-bottom: 4px; }
 .modal input, .modal select, .modal textarea {
   width: 100%;
   min-height: 48px;
@@ -538,7 +538,7 @@ input[type="date"].ll-control:focus {
   border-radius: var(--radius-control);
   -webkit-tap-highlight-color: transparent;
   background: transparent;
-  color: var(--ui-outline-btn, var(--muted));
+  color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
   border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
 }
 .settings-outline-trigger:hover {

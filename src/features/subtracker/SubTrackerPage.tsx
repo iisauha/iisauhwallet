@@ -463,7 +463,7 @@ export function SubTrackerPage() {
                     Edit
                   </button>
                 </div>
-                <div style={{ fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+                <div style={{ fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))' }}>
                   <div><strong>Bonus:</strong> {b.rewardLabel}</div>
                   <div><strong>Date completed:</strong> {formatLongLocalDate(b.completedAt)}</div>
                   {b.cardId && bankLabel ? <div><strong>Checking / bank:</strong> {bankLabel}</div> : null}
@@ -510,7 +510,7 @@ export function SubTrackerPage() {
               </span>
             </div>
             {completedBonuses.some((b) => (b.unitType === 'points' || b.unitType === 'miles') && (b.centsPerUnit == null || b.centsPerUnit === 1)) ? (
-              <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 6, marginBottom: 0 }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 0 }}>
                 Estimated value based on current valuation (cents per point/mile).
               </p>
             ) : null}
@@ -608,7 +608,7 @@ export function SubTrackerPage() {
                             top: 0,
                             bottom: 0,
                             width: 2,
-                            background: 'var(--ui-outline-btn, var(--muted))',
+                            background: 'var(--ui-outline-btn, var(--ui-primary-text, var(--text)))',
                             transform: 'translateX(-1px)',
                             zIndex: 3
                           }}
@@ -861,7 +861,7 @@ export function SubTrackerPage() {
         <div className="modal-overlay">
           <div className="modal">
             <h3>Are you sure you want to delete this?</h3>
-            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>{confirmDelete.label}</p>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>{confirmDelete.label}</p>
             <div className="btn-row">
               <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
                 Cancel
@@ -1077,7 +1077,7 @@ export function SubTrackerPage() {
             placeholder={editorEntryId ? 'e.g. 1500 or +50 to add' : '0'}
           />
           {editorEntryId ? (
-            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', margin: '4px 0 0 0' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '4px 0 0 0' }}>
               Enter amount to set total, or +amount to add (e.g. +50).
             </p>
           ) : null}

@@ -139,10 +139,10 @@ export function OptimizerForm({ values, onChange, onSubmit, isRunning, error }: 
         />
       </div>
       <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', margin: 0 }}>
-        <legend style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted)' }}>
+        <legend style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>
           Additional fixed expenses (optional)
         </legend>
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 10px 0' }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 10px 0' }}>
           Add any other monthly fixed expenses to include in the optimization.
         </p>
         {values.extraFixedExpenses.map((row) => (

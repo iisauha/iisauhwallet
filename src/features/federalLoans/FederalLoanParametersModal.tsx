@@ -197,7 +197,7 @@ export function FederalLoanParametersModal({
             </div>
           )}
           {params.useRecurringIncome && detectedAgiCents > 0 && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: 0 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: 0 }}>
               AGI from recurring: ${(detectedAgiCents / 100).toLocaleString()}
             </p>
           )}

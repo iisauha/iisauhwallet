@@ -90,7 +90,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
               }}
             >
               {item.q}
-              <span style={{ fontSize: '1.2rem', color: 'var(--ui-primary-text, var(--muted))' }}>{expandedIndex === i ? '−' : '+'}</span>
+              <span style={{ fontSize: '1.2rem', color: 'var(--ui-primary-text, var(--text))' }}>{expandedIndex === i ? '−' : '+'}</span>
             </button>
             {expandedIndex === i && (
               <div

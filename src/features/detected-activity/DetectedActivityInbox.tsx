@@ -330,7 +330,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                   border: '1px solid var(--border)',
                   background: 'var(--surface)',
                   fontSize: '0.8rem',
-                  color: 'var(--muted)',
+                  color: 'var(--ui-primary-text, var(--text))',
                 }}
               >
                 <div style={{ fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>Pilot status</div>
@@ -350,19 +350,19 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
                 </div>
               </div>
             ) : plaidMode != null ? (
-              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0', fontWeight: 500 }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0', fontWeight: 500 }}>
                 Plaid Mode: {plaidMode === 'production' ? 'Real Pilot' : 'Sandbox'}
               </p>
             ) : null}
             {plaidMode === 'production' ? (
-              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
                 Pilot: one real account only. To link another, disconnect the current one first.
               </p>
             ) : null}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }} />
             {linkError ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{linkError}</p> : null}
             {syncMessage ? (
-              <p style={{ color: syncStatus === 'error' ? 'var(--red)' : 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
+              <p style={{ color: syncStatus === 'error' ? 'var(--red)' : 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', margin: 0 }}>
                 {syncMessage}
               </p>
             ) : null}
@@ -415,7 +415,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
             );
           })}
         </div>
-        <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 0, marginBottom: 12 }}>
+        <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', marginTop: 0, marginBottom: 12 }}>
           {apiConfigured ? 'Review items below. What do you want to do with each?' : 'Add test items to try the classification flow and rules.'}
         </p>
         {apiConfigured ? (
@@ -431,7 +431,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
         {items.some((i) => i.source === 'test') ? (
           <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '0.8rem' }}>
             <div style={{ fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>Test items cleanup</div>
-            <p style={{ color: 'var(--muted)', margin: '0 0 8px 0', fontSize: '0.85rem' }}>Only removes test items. Manual data is not affected.</p>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0', fontSize: '0.85rem' }}>Only removes test items. Manual data is not affected.</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => setItems((prev) => prev.filter((i) => i.source !== 'test'))}>
                 Clear all test items
@@ -446,7 +446,7 @@ export function DetectedActivityInbox({ onClose, onLaunchFlow }: Props) {
           </div>
         ) : null}
         {filteredItems.length === 0 ? (
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', padding: '24px 0', textAlign: 'center' }}>
+          <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', padding: '24px 0', textAlign: 'center' }}>
             {filter === 'new' && (items.length === 0 ? 'No detected activity yet. Add a test item to try the flow.' : 'No new detected activity.')}
             {filter === 'ignored' && 'No ignored items.'}
             {filter === 'resolved' && 'No resolved items.'}
@@ -607,7 +607,7 @@ function LinkToPurchaseModal({
   return (
     <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420, position: 'relative', zIndex: 10 }}>
       <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Link to original purchase</h3>
-      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0 0 10px 0' }}>
+      <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', margin: '0 0 10px 0' }}>
         Refund: {detectedItem.title} · {formatCents(refundAmount)}
       </p>
       <input
@@ -627,7 +627,7 @@ function LinkToPurchaseModal({
       />
       <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {sorted.length === 0 ? (
-          <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>No purchases to show. Add purchases in Spending first.</p>
+          <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem' }}>No purchases to show. Add purchases in Spending first.</p>
         ) : (
           sorted.map((p) => (
             <button
@@ -638,7 +638,7 @@ function LinkToPurchaseModal({
               onClick={() => onSelect(p)}
             >
               <span style={{ fontWeight: 600 }}>{p.title}</span>
-              <span style={{ color: 'var(--muted)', fontSize: '0.85rem', marginLeft: 8 }}>
+              <span style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', marginLeft: 8 }}>
                 {p.dateISO} · {formatCents(p.amountCents)}
               </span>
             </button>
@@ -715,7 +715,7 @@ function PilotMaintenance({
       {pilotMaintenanceError ? <p style={{ color: 'var(--red)', margin: '0 0 8px 0' }}>{pilotMaintenanceError}</p> : null}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Sandbox</div>
+          <div style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Sandbox</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} disabled={pilotMaintenanceBusy} onClick={() => run(() => pilotClearSandboxDetected())}>
               Clear sandbox detected items
@@ -726,7 +726,7 @@ function PilotMaintenance({
           </div>
         </div>
         <div>
-          <div style={{ color: 'var(--muted)', marginBottom: 4 }}>Real pilot</div>
+          <div style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Real pilot</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} disabled={pilotMaintenanceBusy} onClick={() => run(() => pilotResync())}>
               Re-sync (manual sync)
@@ -744,7 +744,7 @@ function PilotMaintenance({
               Disconnect linked Plaid account
             </button>
           </div>
-          <p style={{ color: 'var(--muted)', marginTop: 4, fontSize: '0.75rem' }}>
+          <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 4, fontSize: '0.75rem' }}>
             Pilot-only: clears the stored real Plaid access token and its detected items. Manual ledger data is not affected.
           </p>
         </div>
@@ -857,7 +857,7 @@ function AddTestModal({
   return (
     <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, position: 'relative', zIndex: 10 }}>
       <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Add Test Item</h3>
-      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0 0 12px 0' }}>Test items use the same suggestion and rules flow as real items.</p>
+      <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', margin: '0 0 12px 0' }}>Test items use the same suggestion and rules flow as real items.</p>
       {error ? <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{error}</p> : null}
       <div className="field" style={{ marginBottom: 10 }}>
         <label>Description / merchant</label>
@@ -963,40 +963,40 @@ function DetailsModal({ item, onClose, onReopen, onRerunSuggestion }: DetailsMod
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px' }} onClick={onClose}>Close</button>
       </div>
       <div style={{ fontSize: '0.9rem', marginBottom: 8, fontWeight: 600 }}>{item.title}</div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 12 }}>{item.accountName} · {formatCents(item.amountCents)} · {item.dateISO}</div>
+      <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 12 }}>{item.accountName} · {formatCents(item.amountCents)} · {item.dateISO}</div>
 
       <section style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Suggested action</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Suggested action</div>
         <div style={{ fontSize: '0.9rem' }}>{suggestedLabel}</div>
       </section>
 
       <section style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Source</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Source</div>
         <div style={{ fontSize: '0.85rem' }}>{suggestionSourceLabel(item.suggestionSource)}</div>
       </section>
 
       {item.suggestionReason ? (
         <section style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Why</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Why</div>
           <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>{item.suggestionReason}</div>
         </section>
       ) : null}
 
       {item.matchedRuleSummary ? (
         <section style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Matched rule</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Matched rule</div>
           <div style={{ fontSize: '0.85rem' }}>{item.matchedRuleSummary}</div>
         </section>
       ) : null}
 
       <section style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>State</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>State</div>
         <div style={{ fontSize: '0.85rem' }}>{item.pending ? 'Pending' : 'Posted'}</div>
       </section>
 
       {item.updatedFromPending ? (
         <section style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Pending → Posted</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Pending → Posted</div>
           <div style={{ fontSize: '0.85rem' }}>Originally detected as pending.</div>
           {lastUpdated ? <div style={{ fontSize: '0.85rem' }}>Updated to posted on {new Date(lastUpdated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}.</div> : null}
         </section>
@@ -1004,28 +1004,28 @@ function DetailsModal({ item, onClose, onReopen, onRerunSuggestion }: DetailsMod
 
       {firstSeen ? (
         <section style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>First seen</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>First seen</div>
           <div style={{ fontSize: '0.85rem' }}>{new Date(firstSeen).toLocaleString()}</div>
         </section>
       ) : null}
 
       {lastUpdated ? (
         <section style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Last updated</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Last updated</div>
           <div style={{ fontSize: '0.85rem' }}>{new Date(lastUpdated).toLocaleString()}</div>
         </section>
       ) : null}
 
       {item.status === 'resolved' && item.resolvedAs ? (
         <section style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Resolved as</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Resolved as</div>
           <div style={{ fontSize: '0.85rem' }}>{getSuggestedActionLabel(item.resolvedAs as DetectedSuggestedAction) || item.resolvedAs}</div>
-          {item.resolvedAt ? <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>{new Date(item.resolvedAt).toLocaleString()}</div> : null}
+          {item.resolvedAt ? <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>{new Date(item.resolvedAt).toLocaleString()}</div> : null}
         </section>
       ) : null}
 
       <section style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>Debug</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>Debug</div>
         <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div>Transaction id: {item.plaidTransactionId || (item.id.startsWith('plaid_') ? item.id : '—')}</div>
           <div>Account: {item.accountName}</div>
@@ -1041,7 +1041,7 @@ function DetailsModal({ item, onClose, onReopen, onRerunSuggestion }: DetailsMod
 
       {isPlaidItem && (onReopen || onRerunSuggestion) ? (
         <section style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>Recovery (queue only)</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>Recovery (queue only)</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {onReopen ? (
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={() => { onReopen(); onClose(); }}>
@@ -1148,13 +1148,13 @@ function ManageRulesButton() {
           Close
         </button>
       </div>
-      <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 10px 0' }}>
+      <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.8rem', margin: '0 0 10px 0' }}>
         Saved rules improve suggestions for similar items. They never auto-post.
       </p>
       {loading ? (
-        <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Loading rules…</p>
+        <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem' }}>Loading rules…</p>
       ) : rules.length === 0 ? (
-        <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>No rules yet. Use “Remember this choice next time” when resolving or ignoring an item.</p>
+        <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem' }}>No rules yet. Use “Remember this choice next time” when resolving or ignoring an item.</p>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rules.map((r) => (
@@ -1209,18 +1209,18 @@ function DetectedCard({
   const suggestedLabel = getSuggestedActionLabel(suggestedAction);
   const showTransferMatch = !!item.possibleTransferMatchId;
   const statusBadge =
-    item.status === 'ignored' ? <Badge label="Ignored" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />
+    item.status === 'ignored' ? <Badge label="Ignored" style={{ background: 'var(--surface)', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }} />
     : item.status === 'resolved' ? <Badge label="Resolved" style={{ background: 'var(--surface)', color: 'var(--green)', border: '1px solid var(--border)' }} />
     : <Badge label="New" style={{ background: 'rgba(14, 165, 233, 0.15)', color: 'var(--accent)', border: '1px solid var(--border)' }} />;
   const pendingPostedBadge = item.pending
-    ? <Badge label="Pending" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />
-    : <Badge label="Posted" style={{ background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }} />;
+    ? <Badge label="Pending" style={{ background: 'var(--surface)', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }} />
+    : <Badge label="Posted" style={{ background: 'var(--surface)', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }} />;
   const refundReversalBadge =
     item.likelyReversal ? <Badge label="Possible reversal" style={{ background: 'rgba(234, 179, 8, 0.2)', color: 'var(--yellow, #eab308)', border: '1px solid var(--border)' }} />
     : item.likelyRefund ? <Badge label="Possible refund" style={{ background: 'rgba(34, 197, 94, 0.15)', color: 'var(--green)', border: '1px solid var(--border)' }} />
     : null;
   const testBadge = item.source === 'test' ? (
-    <Badge label="Test" style={{ background: 'rgba(148, 163, 184, 0.2)', color: 'var(--muted)', border: '1px solid var(--border)' }} />
+    <Badge label="Test" style={{ background: 'rgba(148, 163, 184, 0.2)', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }} />
   ) : null;
   return (
     <div
@@ -1244,7 +1244,7 @@ function DetectedCard({
         ) : null}
       </div>
       {item.status === 'resolved' && item.linkedPurchaseId && (item.linkedPurchaseTitle != null || item.linkedPurchaseDateISO != null || item.linkedPurchaseAmountCents != null) ? (
-        <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 6 }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>
           Linked refund to purchase: {item.linkedPurchaseTitle ?? 'Purchase'} {item.linkedPurchaseDateISO ? ` · ${item.linkedPurchaseDateISO}` : ''} {item.linkedPurchaseAmountCents != null ? ` · ${formatCents(item.linkedPurchaseAmountCents)}` : ''}
         </div>
       ) : null}
@@ -1255,16 +1255,16 @@ function DetectedCard({
         </span>
       </div>
       {item.source === 'test' ? (
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>Test detected activity</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Test detected activity</div>
       ) : null}
-      <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>
+      <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>
         {item.accountName} · {item.accountType.replace(/_/g, ' ')} · {item.dateISO}
         {item.updatedFromPending && !item.pending && (
           <span style={{ marginLeft: 4, fontStyle: 'italic' }}>· Updated from pending to posted</span>
         )}
       </div>
       {item.sourceMode === 'real_pilot' && item.detectedAt && (
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 6 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>
           Detected {new Date(item.detectedAt).toLocaleString()}
         </div>
       )}
@@ -1282,10 +1282,10 @@ function DetectedCard({
           Suggested: {suggestedLabel}
         </span>
         {item.suggestedFromRule && (
-          <span style={{ fontSize: '0.7rem', color: 'var(--muted)', fontStyle: 'italic' }}>Based on your saved rule</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--ui-primary-text, var(--text))', fontStyle: 'italic' }}>Based on your saved rule</span>
         )}
         {showTransferMatch && (
-          <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Possible transfer pair detected</span>
+          <span style={{ color: 'var(--ui-primary-text, var(--text))', fontStyle: 'italic' }}>Possible transfer pair detected</span>
         )}
       </div>
       {showActions ? (

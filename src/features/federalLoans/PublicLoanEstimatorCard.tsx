@@ -89,7 +89,7 @@ export function PublicLoanEstimatorCard() {
   return (
     <div className="card" style={{ marginBottom: 16, padding: '14px 16px' }}>
       <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Public Loan Estimator</h4>
-      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 12 }}>
+      <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 12 }}>
         These are consolidated federal loan estimates based on your total public loan balance.
       </p>
 
@@ -139,7 +139,7 @@ export function PublicLoanEstimatorCard() {
               <option key={n} value={String(n)}>{n}</option>
             ))}
           </Select>
-          <p style={{ marginTop: 2, fontSize: '0.75rem', color: 'var(--muted)' }}>
+          <p style={{ marginTop: 2, fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))' }}>
             Include yourself, dependents, spouse (if filing jointly), and others you support.
           </p>
         </div>
@@ -215,7 +215,7 @@ export function PublicLoanEstimatorCard() {
           style={{ width: '100%', maxWidth: 160, padding: '6px 8px' }}
         />
         {overrideCents != null && overrideCents > 0 && (
-          <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          <p style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
             When set, the actual override is shown above; the estimated payment from the formula remains for comparison.
           </p>
         )}

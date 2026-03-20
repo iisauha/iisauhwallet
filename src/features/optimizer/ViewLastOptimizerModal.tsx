@@ -23,7 +23,7 @@ export function ViewLastOptimizerModal({ open, onClose }: ViewLastOptimizerModal
         </>
       ) : (
         <>
-          <p style={{ color: 'var(--muted)', marginBottom: 12 }}>
+          <p style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 12 }}>
             No saved optimization result yet. Run the optimizer first to see your last computed values here.
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

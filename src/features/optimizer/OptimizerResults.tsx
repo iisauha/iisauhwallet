@@ -10,7 +10,7 @@ type RowProps = { label: string; value: number };
 function Row({ label, value }: RowProps) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '4px 0', fontSize: '0.9rem' }}>
-      <span style={{ color: 'var(--muted)' }}>{label}</span>
+      <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>{label}</span>
       <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(value)}</span>
     </div>
   );
@@ -42,9 +42,9 @@ export function OptimizerResultsSummary({ result }: { result: OptimizerResult })
 
   return (
     <div className="card" style={{ padding: 14 }}>
-      <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 12, color: 'var(--muted)' }}>Summary</div>
+      <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 12, color: 'var(--ui-primary-text, var(--text))' }}>Summary</div>
       <Row label="Monthly Gross" value={result.gross_monthly} />
-      <div style={{ marginTop: 8, marginBottom: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)' }}>
+      <div style={{ marginTop: 8, marginBottom: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>
         Pre-Tax Contributions
       </div>
       <Row label="Pension" value={result.pension_monthly} />
@@ -85,19 +85,19 @@ export function OptimizerResults({ result, showExpandedByDefault = false }: Opti
           </div>
           <div style={{ padding: 12, maxHeight: 360, overflowY: 'auto' }}>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Gross</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Gross</div>
               <Row label="Monthly Gross" value={result.gross_monthly} />
               <Row label="Monthly Taxable Income (AGI)" value={result.agi_monthly} />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Pre-Tax Contributions</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Pre-Tax Contributions</div>
               <Row label="Pension" value={result.pension_monthly} />
               <Row label="HCFSA" value={result.hcfsa_monthly} />
               <Row label="Commuter" value={result.commuter_monthly} />
               <Row label="457b" value={result.contrib_457b_monthly} />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Taxes</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Taxes</div>
               <Row label="Social Security" value={result.social_security_monthly} />
               <Row label="Medicare" value={result.medicare_monthly} />
               <Row label="Federal Tax" value={result.federal_tax_monthly} />
@@ -107,7 +107,7 @@ export function OptimizerResults({ result, showExpandedByDefault = false }: Opti
               <Row label="NY FLI" value={result.ny_fli_monthly} />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Fixed Bills</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Fixed Bills</div>
               <Row label="Rent" value={result.rent_monthly} />
               <Row label="Utilities" value={result.utilities_monthly} />
               <Row label="Wifi" value={result.wifi_monthly} />
@@ -118,7 +118,7 @@ export function OptimizerResults({ result, showExpandedByDefault = false }: Opti
               <Row label="Other" value={result.other_monthly} />
             </div>
             <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Monthly After Expenses</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Monthly After Expenses</div>
               <Row label="Monthly After Expenses" value={result.after_expenses_monthly} />
             </div>
           </div>

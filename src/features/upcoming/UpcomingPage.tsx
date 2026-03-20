@@ -268,7 +268,7 @@ export function UpcomingPage() {
                   {formatCents(i.amountCents || 0)}
                 </span>
               </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(i.expectedDate)}</div>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(i.expectedDate)}</div>
               <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
                 <button
                   type="button"
@@ -313,7 +313,7 @@ export function UpcomingPage() {
                   {formatCents(i.amountCents || 0)}
                 </span>
               </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                 {formatExpectedTiming(i.expectedDate)} • From recurring
               </div>
               <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -394,7 +394,7 @@ export function UpcomingPage() {
                   {formatCents(c.amountCents || 0)}
                 </span>
               </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(c.expectedDate)}</div>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(c.expectedDate)}</div>
               <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
                 <button
                   type="button"
@@ -439,7 +439,7 @@ export function UpcomingPage() {
                   {formatCents(c.amountCents || 0)}
                 </span>
               </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                 {formatExpectedTiming(c.dateKey)} • From recurring
               </div>
               <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -513,11 +513,11 @@ export function UpcomingPage() {
             <span className="v pos">{formatCents(displayedFinalNetCashCents)}</span>
           </div>
           <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected income in window</span>
+            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected income in window</span>
             <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
           </div>
           <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-title-text, var(--muted))' }}>Expected costs in window</span>
+            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected costs in window</span>
             <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
           </div>
           <div className="summary-kv amount-remaining-emphasis">
@@ -653,7 +653,7 @@ export function UpcomingPage() {
         <div className="modal-overlay">
           <div className="modal">
             <h3>Adjust amount?</h3>
-            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>
               {(() => {
                 const m: any = modal;
                 const hasLast = typeof m.source?.lastCents === 'number';

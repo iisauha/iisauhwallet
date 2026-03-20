@@ -72,7 +72,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
     <Modal open={open} title="Reset passcode" onClose={handleClose}>
       {step === 'current' && (
         <>
-          <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--muted)' }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))' }}>
             Enter your current passcode to continue.
           </p>
           <input
@@ -104,7 +104,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
       )}
       {step === 'new' && (
         <>
-          <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--muted)' }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))' }}>
             Enter and confirm your new {PASSCODE_LENGTH}-digit passcode.
           </p>
           <input

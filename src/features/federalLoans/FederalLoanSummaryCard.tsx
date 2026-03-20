@@ -36,11 +36,11 @@ export function FederalLoanSummaryCard({
           {formatCents(estimatedPaymentCents)}/month
         </span>
       </div>
-      <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+      <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
         Federal payments apply to the entire loan portfolio, not individual loans.
       </p>
       {numPublicLoans > 0 && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: 0 }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: 0 }}>
           Estimated share per loan: ~{formatCents(sharePerLoan)} (estimate only).
         </p>
       )}

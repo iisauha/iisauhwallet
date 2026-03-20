@@ -134,7 +134,7 @@ export function RecurringPage() {
               }
             >
               {inactive ? (
-                <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 6 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>
                   Inactive – not included in projections
                 </div>
               ) : null}
@@ -144,7 +144,7 @@ export function RecurringPage() {
                   {`$${((r.amountCents || 0) / 100).toFixed(2)}`}
                 </span>
               </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>
+              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                 {r.frequency || 'monthly'} • start {formatLongLocalDate(r.startDate)}
               </div>
               <div className="btn-row" style={{ display: 'flex', flexWrap: 'nowrap', gap: 8, marginTop: 10 }}>
@@ -303,12 +303,12 @@ export function RecurringPage() {
                         {`$${((r.amountCents || 0) / 100).toFixed(2)}`}
                       </span>
                     </div>
-                    <div style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem', marginTop: 6 }}>
+                    <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                       {getCategoryName(cfg, r.category || 'uncategorized')} • {r.frequency || 'monthly'} • start{' '}
                       {formatLongLocalDate(r.startDate)} {r.autoPay ? '• autopay' : ''}
                     </div>
                     {r.useLoanEstimatedPayment ? (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 4 }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
                         Amount source: current visible Payment(now) from Loans tab
                       </div>
                     ) : null}
@@ -509,7 +509,7 @@ export function RecurringPage() {
                       </button>
                     </div>
                     {preTaxDeductions.length === 0 ? (
-                    <p style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem', marginTop: 0 }}>
+                    <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', marginTop: 0 }}>
                         No pre-tax deductions added yet.
                       </p>
                     ) : null}
@@ -645,7 +645,7 @@ export function RecurringPage() {
                               const totalCents = amtCents + employerCents;
                               if (!(amtCents > 0) && !(employerCents > 0)) return null;
                               return (
-                                <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 4 }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
                                   {d.employerContributionType === 'pct_employee' ? (
                                     <>
                                       <div>Employee contribution: ${ (amtCents / 100).toFixed(2) }</div>
@@ -799,7 +799,7 @@ export function RecurringPage() {
                       <label htmlFor="useLoanEst">Use current loan payment</label>
                     </div>
                     {useLoanEstimatedPayment ? (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 6 }}>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6 }}>
                         Uses the current visible Payment(now) value from the Loans tab. Amount: {totalVisiblePaymentNowCents > 0 ? `$${(totalVisiblePaymentNowCents / 100).toFixed(2)}` : '—'}
                       </p>
                     ) : null}
@@ -1179,7 +1179,7 @@ export function RecurringPage() {
         <div className="modal-overlay">
           <div className="modal">
             <h3>Are you sure you want to delete this?</h3>
-            <p style={{ color: 'var(--ui-primary-text, var(--muted))', marginTop: 0 }}>{confirmDelete.label}</p>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>{confirmDelete.label}</p>
             <div className="btn-row">
               <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
                 Cancel

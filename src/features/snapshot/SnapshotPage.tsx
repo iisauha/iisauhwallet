@@ -683,7 +683,7 @@ export function SnapshotPage() {
             {modal.type === 'loan-payment-confirm' ? (
               <>
                 <h3>Apply this payment to loan balances?</h3>
-                <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+                <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>
                   Do you want this posted loan payment to update the loan balances in the Loans tab?
                 </p>
                 <div className="btn-row">
@@ -720,14 +720,14 @@ export function SnapshotPage() {
             {modal.type === 'loan-payment-preview' ? (
               <>
                 <h3>Loan payment breakdown</h3>
-                <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+                <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>
                   Review how this payment will update your loan balances. You can edit the private loan amounts for this
                   posted payment only.
                 </p>
                 <div className="card" style={{ padding: 10, marginBottom: 10 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 6 }}>Private loans</div>
                   {modal.privateRows.length === 0 ? (
-                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>No private loans detected.</p>
+                    <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', margin: 0 }}>No private loans detected.</p>
                   ) : (
                     modal.privateRows.map((row, idx) => {
                       const current = row.currentBalanceCents || 0;
@@ -749,12 +749,12 @@ export function SnapshotPage() {
                         >
                           <div>
                             <div style={{ fontSize: '0.9rem' }}>{row.name}</div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
                               Current balance: {formatCents(current)}
                             </div>
                           </div>
                           <div>
-                            <label style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Subtract ($)</label>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))' }}>Subtract ($)</label>
                             <input
                               type="text"
                               inputMode="decimal"
@@ -768,7 +768,7 @@ export function SnapshotPage() {
                             />
                           </div>
                           <div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>New balance</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))' }}>New balance</div>
                             <div style={{ fontSize: '0.9rem' }}>{formatCents(newBalance)}</div>
                           </div>
                         </div>
@@ -877,7 +877,7 @@ export function SnapshotPage() {
               return (
                 <>
                   <h3>Card reward rules</h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: -4, marginBottom: 12 }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 12 }}>
                     Add rules for category/subcategory. Exact match wins; catch-all applies when no rule matches.
                   </p>
                   {modal.rules.map((rule, idx) => {
@@ -956,7 +956,7 @@ export function SnapshotPage() {
                   <button type="button" className="btn btn-secondary" style={{ marginBottom: 12 }} onClick={addRule}>Add rule</button>
                   <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                     <label style={{ fontSize: '0.9rem' }}>Current reward balance</label>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
                       Manual balance for this card. Informational only; does not affect net worth.
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -1062,7 +1062,7 @@ export function SnapshotPage() {
             {modal.type === 'add-pending' ? (
               <>
                 {detected?.launchFlow && (detected.launchFlow.flow === 'pending_in' || detected.launchFlow.flow === 'pending_out') && detected.launchFlow.item ? (
-                  <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                  <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }}>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
                     <div>Merchant: {detected.launchFlow.item.title}</div>
                     <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
@@ -1403,7 +1403,7 @@ export function SnapshotPage() {
             {modal.type === 'post-inbound' ? (
               <>
                 <h3>Confirm deposit posted</h3>
-                <p style={{ color: 'var(--muted)', marginTop: 0 }}>Where should this inbound be applied?</p>
+                <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>Where should this inbound be applied?</p>
                 <div className="toggle-row">
                   <input
                     type="checkbox"
@@ -1478,7 +1478,7 @@ export function SnapshotPage() {
             {modal.type === 'post-bank' ? (
               <>
                 <h3>Confirm payment posted</h3>
-                <p style={{ color: 'var(--muted)', marginTop: 0 }}>Which account should this subtract from?</p>
+                <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>Which account should this subtract from?</p>
                 <div className="field">
                   <label>Account</label>
                   <Select value={modal.bankId} onChange={(e) => setModal({ ...modal, bankId: e.target.value })}>
@@ -1535,7 +1535,7 @@ export function SnapshotPage() {
             {modal.type === 'confirm' ? (
               <>
                 <h3>{modal.title}</h3>
-                <p style={{ color: 'var(--muted)' }}>{modal.message}</p>
+                <p style={{ color: 'var(--ui-primary-text, var(--text))' }}>{modal.message}</p>
                 <div className="btn-row">
                   <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
                     Cancel

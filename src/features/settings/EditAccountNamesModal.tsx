@@ -59,7 +59,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
     <div className="modal-overlay modal-overlay-animate" onClick={onClose}>
       <div className="modal modal-animate" onClick={(e) => e.stopPropagation()}>
         <h3>Edit Account Names</h3>
-        <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 16 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 16 }}>
           Change the display name for any account. Balances and logic are unchanged.
         </p>
 
@@ -68,7 +68,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
             <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Bank / checking accounts</p>
             {banks.map((b) => (
               <div key={b.id} style={{ marginBottom: 8 }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', display: 'block', marginBottom: 2 }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', display: 'block', marginBottom: 2 }}>
                   {b.type === 'physical_cash' ? 'Physical cash' : 'Bank'}
                 </label>
                 <input
@@ -119,7 +119,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
             <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Investing accounts (HYSA, Roth IRA, etc.)</p>
             {accounts.map((a) => (
               <div key={a.id} style={{ marginBottom: 8 }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--muted))', display: 'block', marginBottom: 2 }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', display: 'block', marginBottom: 2 }}>
                   {a.type === 'hysa' ? 'HYSA' : a.type === 'roth' ? 'Roth IRA' : a.type === 'k401' ? '401(k)' : 'Investing'}
                 </label>
                 <input

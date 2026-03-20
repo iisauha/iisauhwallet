@@ -385,7 +385,7 @@ function CoastFireResultView({
           onClick={() => setCoastFireTooltipId(null)}
         />
       ) : null}
-      <p style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem', marginTop: 0 }}>
+      <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', marginTop: 0 }}>
         Coast FIRE means you already have enough invested today that, even if you stop making new
         retirement contributions, your investments could still grow to your retirement target by
         retirement age. Values are in today&apos;s dollars.
@@ -415,7 +415,7 @@ function CoastFireResultView({
               : 'YOU HAVE NOT YET REACHED COAST FIRE'}
           </p>
           {!result.coastReached && coastFireAge != null ? (
-            <p style={{ fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 0, marginBottom: 8 }}>
+            <p style={{ fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
               Estimated Coast FIRE age: {coastFireAge}
             </p>
           ) : null}
@@ -477,7 +477,7 @@ function CoastFireResultView({
         </div>
       </div>
 
-      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--muted))', marginTop: 20, marginBottom: 4 }}>
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginTop: 20, marginBottom: 4 }}>
         If you continue contributing
       </p>
       <div className="summary-compact" style={{ marginTop: 4 }}>
@@ -650,7 +650,7 @@ function CoastFireProjectionChart({
 
   return (
     <div style={{ marginTop: 20, marginBottom: 0 }}>
-      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--muted))', marginBottom: 8 }}>
+      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>
         Portfolio projection
       </p>
       <div style={{ position: 'relative', width: '100%', height: 200, background: 'var(--surface)', borderRadius: 8, padding: 12 }}>
@@ -1477,7 +1477,7 @@ export function InvestingPage() {
                     <span className="amount amount-pos">{formatCents(a.balanceCents || 0)}</span>
                   </div>
                   {(a.type === 'roth' || a.type === 'k401') && accountContributionsFromRecurring[a.id] ? (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 4 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
                       <div>Employee contrib: {formatCents(accountContributionsFromRecurring[a.id].employeeCents)}</div>
                       {accountContributionsFromRecurring[a.id].employerMatchCents > 0 ? (
                         <div>Employer match: {formatCents(accountContributionsFromRecurring[a.id].employerMatchCents)}</div>
@@ -1497,7 +1497,7 @@ export function InvestingPage() {
                       const reservedCents = Math.min(reservedRaw, balance);
                       const liquidCents = Math.max(0, balance - reservedCents);
                       return (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
                           <div>APY {h.interestRate.toFixed(2)}%</div>
                           <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
                           <div style={{ marginTop: 4 }}>
@@ -1872,7 +1872,7 @@ export function InvestingPage() {
           Investing Contribution
         </p>
         {contribution.incomeMarkedCount === 0 || contribution.grossIncomeCents <= 0 ? (
-          <p style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem' }}>
             No full-time job income with pre-tax deductions. Add recurring income marked as Full-time job in the Recurring tab.
           </p>
         ) : (
@@ -1889,7 +1889,7 @@ export function InvestingPage() {
               <span className="k">Pre-tax employee contributions</span>
               <span className="v">
                 {formatCents(contribution.preTaxInvestCents)}{' '}
-                <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem' }}>
                   ({contribution.preTaxPctGross.toFixed(1)}% of gross)
                 </span>
               </span>
@@ -1908,7 +1908,7 @@ export function InvestingPage() {
               <span className="k">Post-tax investing contributions</span>
               <span className="v">
                 {formatCents(contribution.postTaxInvestCents)}{' '}
-                <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem' }}>
                   ({contribution.postTaxPctNet.toFixed(1)}% of net)
                 </span>
               </span>
@@ -1917,7 +1917,7 @@ export function InvestingPage() {
               <span className="k">Total investing contributions</span>
               <span className="v">
                 {formatCents(contribution.totalInvestCents)}{' '}
-                <span style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem', display: 'block' }}>
+                <span style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', display: 'block' }}>
                   {(contribution.preTaxPctGross + contribution.postTaxPctNet).toFixed(1)}%
                 </span>
               </span>
@@ -1948,7 +1948,7 @@ export function InvestingPage() {
             <h3>Coast FIRE</h3>
             {!coastFireAssumptions || coastFireEditForm ? (
               <>
-                <p style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.85rem', marginTop: 0 }}>
+                <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', marginTop: 0 }}>
                   Coast FIRE means you already have enough invested today that, even if you stop making new
                   retirement contributions, your investments could still grow to your retirement target. Uses
                   inflation-adjusted returns so values are in today&apos;s dollars.
@@ -2032,7 +2032,7 @@ export function InvestingPage() {
                   />
                 </div>
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ color: 'var(--ui-primary-text, var(--muted))', fontSize: '0.9rem' }}>Include in retirement portfolio</label>
+                  <label style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem' }}>Include in retirement portfolio</label>
                   <div className="toggle-row">
                     <input
                       type="checkbox"
@@ -2189,7 +2189,7 @@ export function InvestingPage() {
                     ? `Where should this transfer go inside ${transferHysaStep.accountName}?`
                     : `Which portion should this transfer come from?`}
                 </h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))', marginBottom: 16 }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 16 }}>
                   {transferHysaStep.direction === 'in'
                     ? 'Choose which portion of the HYSA this transfer is going into.'
                     : 'Choose which portion of the HYSA this transfer is being pulled from.'}
@@ -2223,7 +2223,7 @@ export function InvestingPage() {
             ) : (
               <>
                 {detected?.launchFlow?.flow === 'transfer' && detected.launchFlow.item ? (
-                  <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--muted))', border: '1px solid var(--border)' }}>
+                  <div className="card" style={{ marginBottom: 12, padding: 10, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', border: '1px solid var(--border)' }}>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>Detected activity (reference)</div>
                     <div>Merchant: {detected.launchFlow.item.title}</div>
                     <div>Amount: {formatCents(detected.launchFlow.item.amountCents)}</div>
@@ -2333,7 +2333,7 @@ export function InvestingPage() {
             const billsDollars = (billsCents / 100).toFixed(2);
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--muted))' }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>
                   Move money between reserved savings and money designated for bills. Total HYSA balance stays the same.
                 </p>
                 <div>

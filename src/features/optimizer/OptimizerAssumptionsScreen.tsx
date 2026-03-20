@@ -33,8 +33,8 @@ function ScalarRow({
         onChange={(e) => onChange(parse(e.target.value))}
         style={{ width: 100, padding: '4px 8px' }}
       />
-      {format === 'percent' ? <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>%</span> : null}
-      {format === 'currency' ? <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>$</span> : null}
+      {format === 'percent' ? <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>%</span> : null}
+      {format === 'currency' ? <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>$</span> : null}
     </div>
   );
 }
@@ -124,12 +124,12 @@ export function OptimizerAssumptionsScreen({ assumptions, onChange, onConfirm }:
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 8px 0' }}>
+      <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
         Default 2026 assumptions (editable). Edit values if needed for a different year.
       </p>
 
       <div className="card" style={{ padding: 12 }}>
-        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10, color: 'var(--muted)' }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10, color: 'var(--ui-primary-text, var(--text))' }}>
           Scalar values
         </div>
         <ScalarRow

@@ -72,7 +72,7 @@ function renderInboundItem(
         <span className="pending-amount inbound-amount">{amountText}</span>
         </span>
         {isJoiningFrom ? (
-          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join…</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
         ) : null}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end' }}>
@@ -220,7 +220,7 @@ export function PendingInboundList(props: {
             }}
           >
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Date</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Date</span>
               <input
                 type="date"
                 value={joinDate}
@@ -369,7 +369,7 @@ function renderOutboundItem(
           <span className="pending-amount outbound-amount">{amountText}</span>
         </span>
         {isJoiningFrom ? (
-          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Select another to join…</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
         ) : null}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end' }}>
@@ -518,7 +518,7 @@ export function PendingOutboundList(props: {
             }}
           >
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Date</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Date</span>
               <input
                 type="date"
                 value={joinDate}

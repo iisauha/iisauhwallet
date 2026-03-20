@@ -124,7 +124,7 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
 
       {step === 'form' && (
         <>
-          <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginTop: -4, marginBottom: 14 }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 14 }}>
             This tool estimates the optimal 457(b) contribution and tax breakdown using your income and fixed expenses.
           </p>
           <OptimizerForm
