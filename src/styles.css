@@ -351,7 +351,7 @@ body {
   border-style: solid;
 }
 .ll-toggle.active {
-  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  border-color: color-mix(in srgb, var(--ui-outline-btn, var(--accent)) 70%, transparent);
   color: var(--ui-primary-text, var(--text));
   border-width: 1px !important;
 }

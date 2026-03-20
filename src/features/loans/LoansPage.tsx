@@ -1424,12 +1424,13 @@ export function LoansPage() {
             padding: '10px 14px',
             fontSize: '0.9rem',
             fontWeight: showPublic ? 600 : 500,
-            border: 'none',
             borderRadius: 999,
             background: showPublic
-              ? 'var(--accent)'
-              : 'color-mix(in srgb, var(--accent) 16%, transparent)',
+              ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+              : 'transparent',
             color: showPublic ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-primary-text, var(--text))',
+            border: '1px solid transparent',
+            borderColor: showPublic ? 'color-mix(in srgb, var(--accent) 50%, transparent)' : 'transparent',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
@@ -1451,12 +1452,13 @@ export function LoansPage() {
             padding: '10px 14px',
             fontSize: '0.9rem',
             fontWeight: showPrivate ? 600 : 500,
-            border: 'none',
             borderRadius: 999,
             background: showPrivate
-              ? 'var(--accent)'
-              : 'color-mix(in srgb, var(--accent) 16%, transparent)',
+              ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+              : 'transparent',
             color: showPrivate ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-primary-text, var(--text))',
+            border: '1px solid transparent',
+            borderColor: showPrivate ? 'color-mix(in srgb, var(--accent) 50%, transparent)' : 'transparent',
             cursor: 'pointer',
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
