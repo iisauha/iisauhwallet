@@ -16,7 +16,6 @@ import {
   savePasscodeFailedAttempts,
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
-  loadSecurityQuizCompleted,
   loadPasscodePaused,
   loadPasscode6Digit,
   savePasscode6Digit,
@@ -24,13 +23,12 @@ import {
   wipeAllAppData,
   type SecurityQA,
 } from '../../state/storage';
-import { SecurityOnboarding } from './SecurityOnboarding';
+import { Select } from '../../ui/Select';
 
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCKOUT_HOURS = 24;
 
 type Step =
-  | 'security-onboarding'
   | 'enter'
   | 'create'
   | 'confirm'
@@ -80,7 +78,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
   const [step, setStep] = useState<Step>(() => {
-    if (!loadSecurityQuizCompleted()) return 'security-onboarding';
     const hash = loadPasscodeHash();
     if (hash !== null) {
       if (!loadPasscode6Digit()) return 'update-to-6digit';
@@ -118,34 +115,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   }, [failedAttempts]);
 
   useEffect(() => {
-    if (!loadSecurityQuizCompleted()) {
-      // #region agent log
-      try {
-        fetch('http://127.0.0.1:7727/ingest/00741c85-8e68-4158-889a-205b27f8db72', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Debug-Session-Id': 'e62d08',
-          },
-          body: JSON.stringify({
-            sessionId: 'e62d08',
-            runId: 'fix_security_onboarding_module_pre',
-            hypothesisId: 'H1_passcodegate_sets_security_onboarding_step',
-            location: 'src/features/passcode/PasscodeGate.tsx',
-            message: 'Security quiz not completed; switching to security-onboarding step',
-            data: { storedHashPresent: !!storedHash },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-      } catch (_) {}
-      // #endregion
-
-      setStep('security-onboarding');
-      setInput('');
-      setConfirmInput('');
-      setError('');
-      return;
-    }
     if (!storedHash) {
       setStep('create');
       setInput('');
@@ -404,16 +373,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     borderRadius: 10,
     border: '1px solid var(--border)',
     background: 'var(--bg)',
-    color: 'var(--text)',
+    color: 'var(--ui-primary-text, var(--text))',
     marginBottom: 12,
   };
   const selectStyle: React.CSSProperties = {
     width: '100%',
-    padding: '10px 12px',
-    borderRadius: 10,
-    border: '1px solid var(--border)',
-    background: 'var(--bg)',
-    color: 'var(--text)',
     marginBottom: 12,
     fontSize: '0.95rem',
   };
@@ -426,14 +390,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const lockoutMessage = lockoutEnd
     ? `Recovery attempts are disabled for 24 hours until ${lockoutEnd.toLocaleString()}.`
     : 'Recovery attempts are disabled for 24 hours.';
-
-  if (step === 'security-onboarding') {
-    return (
-      <div className="passcode-gate">
-        <SecurityOnboarding onPass={() => setStep(storedHash ? 'enter' : 'create')} />
-      </div>
-    );
-  }
 
   const content = (
     <div
@@ -512,8 +468,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {/* Create / Confirm / Hint / Security Q / Recovery key show */}
       {step === 'create' && (
         <>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>Create passcode</h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Create passcode</h1>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             Choose a {PASSCODE_LENGTH}-digit passcode to protect access on this device.
           </p>
           <input
@@ -534,8 +490,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
       {step === 'confirm' && (
         <>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>Confirm passcode</h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Re-enter your {PASSCODE_LENGTH}-digit passcode.</p>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Confirm passcode</h1>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>Re-enter your {PASSCODE_LENGTH}-digit passcode.</p>
           <input
             type="password"
             inputMode="numeric"
@@ -577,7 +533,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             Answer two questions to recover your passcode later. You can skip; recovery will be limited without them.
           </p>
           <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 1</label>
-          <select
+          <Select
             value={securityQ1}
             onChange={(e) => setSecurityQ1(e.target.value)}
             style={selectStyle}
@@ -586,17 +542,17 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             {SECURITY_QUESTION_OPTIONS.map((q) => (
               <option key={q} value={q}>{q}</option>
             ))}
-          </select>
+          </Select>
           {securityQ1 && (
             <>
               <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={inputStyle} />
               <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 2</label>
-              <select value={securityQ2} onChange={(e) => setSecurityQ2(e.target.value)} style={selectStyle}>
+              <Select value={securityQ2} onChange={(e) => setSecurityQ2(e.target.value)} style={selectStyle}>
                 <option value="">— Select —</option>
                 {SECURITY_QUESTION_OPTIONS.filter((q) => q !== securityQ1).map((q) => (
                   <option key={q} value={q}>{q}</option>
                 ))}
-              </select>
+              </Select>
               {securityQ2 && (
                 <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={inputStyle} />
               )}
@@ -637,8 +593,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {/* Enter */}
       {step === 'enter' && (
         <>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center' }}>Enter Passcode</h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Enter Passcode</h1>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             Enter your {PASSCODE_LENGTH}-digit passcode to continue.
           </p>
           <input
@@ -662,8 +618,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
       {step === 'update-to-6digit' && (
         <>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Update to 6-digit passcode</h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Update to 6-digit passcode</h1>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
             This app now requires a 6-digit passcode. Enter your current passcode to continue, then set a new 6-digit one.
           </p>
           <input
@@ -683,8 +639,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
       {step === 'update-to-6digit-confirm' && (
         <>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Set new 6-digit passcode</h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new 6-digit passcode.</p>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Set new 6-digit passcode</h1>
+          <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new 6-digit passcode.</p>
           <input
             type="password"
             inputMode="numeric"
@@ -777,7 +733,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {step === 'hint-show' && (
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Password hint</h1>
-          <p style={{ margin: '0 0 24px 0', padding: 16, background: 'var(--surface)', borderRadius: 10, color: 'var(--text)' }}>
+          <p style={{ margin: '0 0 24px 0', padding: 16, background: 'var(--surface)', borderRadius: 10, color: 'var(--ui-primary-text, var(--text))' }}>
             {loadPasscodeHint() || 'No hint set.'}
           </p>
           <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center' }}>
@@ -789,8 +745,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
       {step === 'reset-new-passcode' && (
         <>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Set new passcode</h1>
-          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new {PASSCODE_LENGTH}-digit passcode.</p>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Set new passcode</h1>
+          <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new {PASSCODE_LENGTH}-digit passcode.</p>
           <input
             type="password"
             inputMode="numeric"
@@ -830,7 +786,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         justifyContent: 'center',
         padding: 24,
         background: 'var(--bg)',
-        color: 'var(--text)',
+        color: 'var(--ui-primary-text, var(--text))',
         boxSizing: 'border-box',
       }}
     >
