@@ -1112,13 +1112,10 @@ export function LoansPage() {
   const [showPublic, setShowPublic] = useState(loadLoansSectionShowPublic);
   const [showPrivate, setShowPrivate] = useState(loadLoansSectionShowPrivate);
   useEffect(() => {
-    // Ensure only one section is visible even if persisted settings are inconsistent.
+    // Ensure mutual exclusivity if persisted settings are inconsistent.
     if (showPublic && showPrivate) {
       setShowPrivate(false);
       saveLoansSectionShowPrivate(false);
-    } else if (!showPublic && !showPrivate) {
-      setShowPublic(true);
-      saveLoansSectionShowPublic(true);
     }
   }, []);
   const [showConsolidationModal, setShowConsolidationModal] = useState(false);
@@ -1314,6 +1311,9 @@ export function LoansPage() {
   }
 
   const hasRecurringIncome = detectedAgi.grossCents > 0;
+  const paymentNowDisplayClass =
+    summary.totalMonthlyNow >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
+  const paymentNowAmountColor = summary.totalMonthlyNow >= 0 ? 'var(--green)' : 'var(--red)';
 
   return (
     <div className="tab-panel active" id="loansContent">
@@ -1321,27 +1321,34 @@ export function LoansPage() {
 
       <div className="summary">
         <div className="summary-compact" style={{ marginBottom: 0 }}>
-        <div className="summary-kv" style={{ marginTop: 0 }}>
-          <span className="k">Total balance</span>
-          <span className="v" style={{ color: 'var(--red)', fontWeight: 500 }}>
-            <AnimatedNumber value={summary.totalBalance} format={formatCents} />
-          </span>
-        </div>
-        <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
-          <span className="k">Public</span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 500 }}>
-            <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
-          </span>
-        </div>
-        <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
-          <span className="k">Private</span>
-          <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 500 }}>
-            <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
-          </span>
-        </div>
-        <div className="summary-kv" style={{ marginTop: 4, alignItems: 'center' }}>
-          <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="summary-kv" style={{ marginTop: 0 }}>
+            <span className="k">Total balance</span>
+            <span className="v" style={{ color: 'var(--red)' }}>
+              <AnimatedNumber value={summary.totalBalance} format={formatCents} />
+            </span>
+          </div>
+          <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
+            <span className="k">Public</span>
+            <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+              <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
+            </span>
+          </div>
+          <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+            <span className="k">Private</span>
+            <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+              <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
+            </span>
+          </div>
+
+          <div className={paymentNowDisplayClass} style={{ marginTop: 4, alignItems: 'center' }}>
             <span
+              className="k"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer'
+              }}
               role="button"
               tabIndex={0}
               aria-label="Edit Payment(now)"
@@ -1356,47 +1363,37 @@ export function LoansPage() {
                   setShowEditPaymentNow(true);
                 }
               }}
-              style={{
-                color: 'var(--ui-primary-text, var(--text))',
-                fontWeight: 700,
-                cursor: 'pointer',
-                border: 'none',
-                background: 'none',
-                padding: 0,
-                WebkitTapHighlightColor: 'transparent'
-              }}
             >
               Payment (now)
+              <button
+                type="button"
+                className="info-icon"
+                aria-label="Future payment breakdown"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAfterGraceBreakdown(true);
+                }}
+              >
+                i
+              </button>
             </span>
-            <button
-              type="button"
-              className="info-icon"
-              aria-label="Future payment breakdown"
-              onClick={() => setShowAfterGraceBreakdown(true)}
-            >
-              i
-            </button>
-          </span>
-          <span className="v" style={{ color: 'var(--red)', fontWeight: 700 }}>
-            {summary.totalMonthlyNow > 0 ? (
-              <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} />
-            ) : (
-              '—'
-            )}
-          </span>
-        </div>
-        {summary.avgPrivateRate != null ? (
-          <div className="summary-kv" style={{ marginTop: 2 }}>
-            <span className="k">Avg private rate</span>
-            <span className="v" style={{ fontWeight: 500 }}>{summary.avgPrivateRate.toFixed(2)}%</span>
+            <span className="v" style={{ color: paymentNowAmountColor }}>
+              {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} /> : '—'}
+            </span>
           </div>
-        ) : null}
-        {summary.avgPublicRate != null ? (
-          <div className="summary-kv" style={{ marginTop: 2 }}>
-            <span className="k">Avg public rate</span>
-            <span className="v" style={{ fontWeight: 500 }}>{summary.avgPublicRate.toFixed(2)}%</span>
-          </div>
-        ) : null}
+
+          {summary.avgPrivateRate != null ? (
+            <div className="summary-kv" style={{ marginTop: 2 }}>
+              <span className="k">Avg private rate</span>
+              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+            </div>
+          ) : null}
+          {summary.avgPublicRate != null ? (
+            <div className="summary-kv" style={{ marginTop: 2 }}>
+              <span className="k">Avg public rate</span>
+              <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -1435,9 +1432,10 @@ export function LoansPage() {
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
-            setShowPublic(true);
+            const nextShowPublic = !showPublic;
+            setShowPublic(nextShowPublic);
+            saveLoansSectionShowPublic(nextShowPublic);
             setShowPrivate(false);
-            saveLoansSectionShowPublic(true);
             saveLoansSectionShowPrivate(false);
           }}
         >
@@ -1463,10 +1461,11 @@ export function LoansPage() {
             transition: 'background-color 0.18s ease, color 0.18s ease'
           }}
           onClick={() => {
+            const nextShowPrivate = !showPrivate;
+            setShowPrivate(nextShowPrivate);
+            saveLoansSectionShowPrivate(nextShowPrivate);
             setShowPublic(false);
-            setShowPrivate(true);
             saveLoansSectionShowPublic(false);
-            saveLoansSectionShowPrivate(true);
           }}
         >
           Private
