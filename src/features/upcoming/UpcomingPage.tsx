@@ -413,7 +413,7 @@ export function UpcomingPage() {
                       } as any);
                     }}
                 >
-                  Move to Pending Outbound
+                  Move to Pending Inbound
                 </button>
                 <button
                   type="button"
@@ -466,7 +466,7 @@ export function UpcomingPage() {
                     } as any);
                   }}
                 >
-                  Move to Pending Outbound
+                  Move to Pending Inbound
                 </button>
                 <button
                   type="button"
@@ -864,6 +864,14 @@ export function UpcomingPage() {
                         subcategory: item.subcategory,
                         meta
                       });
+                      if (item.isSplit && item.fullAmountCents > cents) {
+                        const splitPortionCents = item.fullAmountCents - cents;
+                        actions.addPendingInbound({
+                          label: item.recurringName,
+                          amountCents: splitPortionCents,
+                          depositTo: 'bank'
+                        });
+                      }
                     }
                   }
 

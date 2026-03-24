@@ -38,11 +38,14 @@ const FONT_SCALE_OPTIONS = [
 const COLOR_SWATCH_STYLE = {
   width: 44,
   height: 44,
-  padding: 2,
+  padding: 0,
   border: '1px solid var(--border)',
   borderRadius: 8,
   cursor: 'pointer' as const,
   flexShrink: 0 as const,
+  appearance: 'none' as const,
+  WebkitAppearance: 'none' as const,
+  overflow: 'hidden' as const,
 };
 
 const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [

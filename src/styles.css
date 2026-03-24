@@ -356,6 +356,21 @@ body {
   border-width: 1px !important;
 }
 
+input[type="color"] {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 7px;
+}
+input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 7px;
+}
+
 .ll-control,
 .ll-select,
 input[type="date"].ll-control {
