@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   loadPasscodeHash,
   savePasscodeHash,
@@ -21,6 +21,8 @@ import {
   savePasscode6Digit,
   generateRecoveryKey,
   wipeAllAppData,
+  loadUserDisplayName,
+  loadUserProfileImage,
   type SecurityQA,
 } from '../../state/storage';
 import { Select } from '../../ui/Select';
@@ -74,9 +76,55 @@ function isLockedOut(): boolean {
   return new Date() < end;
 }
 
+function WelcomeScreen({ name, profileImage, visible }: { name: string; profileImage: string | null; visible: boolean }) {
+  const [photoVisible, setPhotoVisible] = useState(false);
+  const [nameVisible, setNameVisible] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhotoVisible(true), 50);
+    const t2 = setTimeout(() => setNameVisible(true), 200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: '#111111', zIndex: 9999,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20,
+        opacity: visible ? 1 : 0, transition: 'opacity 0.4s ease',
+      }}
+    >
+      <div
+        style={{
+          width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+          opacity: photoVisible ? 1 : 0, transition: 'opacity 0.4s ease',
+          background: profileImage ? 'transparent' : '#333',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        {profileImage
+          ? <img src={profileImage} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+          : <span style={{ fontSize: '2rem', fontWeight: 700, color: '#fff' }}>{name.charAt(0).toUpperCase()}</span>
+        }
+      </div>
+      <div
+        style={{
+          fontSize: '28px', fontWeight: 700, color: '#fff',
+          opacity: nameVisible ? 1 : 0, transition: 'opacity 0.4s ease',
+        }}
+      >
+        Welcome back, {name}
+      </div>
+    </div>
+  );
+}
+
 export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const justLoggedInRef = useRef(false);
   const [step, setStep] = useState<Step>(() => {
     const hash = loadPasscodeHash();
     if (hash !== null) {
@@ -217,6 +265,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       return;
     }
     resetFailedAttempts();
+    justLoggedInRef.current = true;
     setAuthenticated(true);
     setInput('');
   }, [input, storedHash, failedAttempts, recordFailedAttempt, resetFailedAttempts]);
@@ -381,6 +430,28 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     marginBottom: 12,
     fontSize: '0.95rem',
   };
+
+  useEffect(() => {
+    if (!authenticated || !justLoggedInRef.current) return;
+    justLoggedInRef.current = false;
+    const name = loadUserDisplayName();
+    if (!name) return;
+    setShowWelcome(true);
+    setWelcomeVisible(true);
+    const t1 = setTimeout(() => setWelcomeVisible(false), 1500);
+    const t2 = setTimeout(() => setShowWelcome(false), 1900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [authenticated]);
+
+  if (showWelcome) {
+    return (
+      <WelcomeScreen
+        name={loadUserDisplayName() || ''}
+        profileImage={loadUserProfileImage()}
+        visible={welcomeVisible}
+      />
+    );
+  }
 
   if (loadPasscodePaused() || authenticated) {
     return <>{children}</>;

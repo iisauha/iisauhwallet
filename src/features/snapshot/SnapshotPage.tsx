@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
@@ -12,18 +12,177 @@ import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 import {
-  IconCreditCard, IconWallet, IconClock, IconPlusCircle, IconEye, IconChevronRightCircle, IconPlus,
+  IconCreditCard, IconClock, IconPlus, IconChevronRight,
+  IconPlusCircle, IconArrowDownRight, IconArrowUpRight,
+  IconRefreshCircle, IconVault, IconGiftBox,
 } from '../../ui/icons';
 
+// --- Flipper Carousel ---
+
+const CHEVRON_LEFT = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="m15 18-6-6 6-6" />
+  </svg>
+);
+const CHEVRON_RIGHT_SVG = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+
+function HeroFlipperCarousel({
+  onLogPurchase,
+  onReimbursable,
+  onPendingOut,
+  onPendingIn,
+  onAddRecurring,
+  onUpdateBalance,
+  onAddBonus,
+}: {
+  onLogPurchase: () => void;
+  onReimbursable: () => void;
+  onPendingOut: () => void;
+  onPendingIn: () => void;
+  onAddRecurring: () => void;
+  onUpdateBalance: () => void;
+  onAddBonus: () => void;
+}) {
+  const slides = useMemo(() => [
+    { icon: <IconPlusCircle />,    label: 'Log a Purchase',        onAction: onLogPurchase },
+    { icon: <IconCreditCard />,    label: 'Reimbursable Charge',   onAction: onReimbursable },
+    { icon: <IconArrowDownRight />,label: 'Add Pending Outbound',  onAction: onPendingOut },
+    { icon: <IconArrowUpRight />,  label: 'Add Pending Inbound',   onAction: onPendingIn },
+    { icon: <IconRefreshCircle />, label: 'Add Recurring Item',    onAction: onAddRecurring },
+    { icon: <IconVault />,         label: 'Update a Balance',      onAction: onUpdateBalance },
+    { icon: <IconGiftBox />,       label: 'Add Bonus Card',        onAction: onAddBonus },
+  ], [onLogPurchase, onReimbursable, onPendingOut, onPendingIn, onAddRecurring, onUpdateBalance, onAddBonus]);
+
+  const [displayIndex, setDisplayIndex] = useState(0);
+  const [phase, setPhase] = useState<'idle' | 'out' | 'in'>('idle');
+  const [flipDuration, setFlipDuration] = useState(300);
+  const currentRef = useRef(0);
+  const isFlippingRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const lastManualRef = useRef(0);
+  const touchStartXRef = useRef(0);
+
+  const triggerFlip = useCallback((target: number, fast: boolean) => {
+    if (isFlippingRef.current) return;
+    isFlippingRef.current = true;
+    const dur = fast ? 100 : 300;
+    setFlipDuration(dur);
+    setPhase('out');
+    setTimeout(() => {
+      currentRef.current = target;
+      setDisplayIndex(target);
+      setPhase('in');
+      setTimeout(() => {
+        setPhase('idle');
+        isFlippingRef.current = false;
+      }, dur / 2);
+    }, dur / 2);
+  }, []);
+
+  const goNext = useCallback((fast = false) => {
+    triggerFlip((currentRef.current + 1) % slides.length, fast);
+  }, [triggerFlip, slides.length]);
+
+  const goPrev = useCallback((fast = false) => {
+    triggerFlip((currentRef.current - 1 + slides.length) % slides.length, fast);
+  }, [triggerFlip, slides.length]);
+
+  const restartInterval = useCallback(() => {
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      triggerFlip((currentRef.current + 1) % slides.length, false);
+    }, 10000);
+  }, [triggerFlip, slides.length]);
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      triggerFlip((currentRef.current + 1) % slides.length, false);
+    }, 10000);
+    return () => clearInterval(intervalRef.current);
+  }, [triggerFlip, slides.length]);
+
+  const handleManualNext = () => {
+    const now = Date.now();
+    const fast = now - lastManualRef.current < 600;
+    lastManualRef.current = now;
+    restartInterval();
+    goNext(fast);
+  };
+
+  const handleManualPrev = () => {
+    const now = Date.now();
+    const fast = now - lastManualRef.current < 600;
+    lastManualRef.current = now;
+    restartInterval();
+    goPrev(fast);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+    if (Math.abs(dx) > 40) {
+      const now = Date.now();
+      const fast = now - lastManualRef.current < 600;
+      lastManualRef.current = now;
+      restartInterval();
+      if (dx < 0) goNext(fast);
+      else goPrev(fast);
+    }
+  };
+
+  const slide = slides[displayIndex];
+
+  return (
+    <div className="hero-flipper-wrap">
+      <button type="button" className="hero-flipper-nav" onClick={handleManualPrev} aria-label="Previous">
+        {CHEVRON_LEFT}
+      </button>
+      <div
+        className="hero-flipper-card"
+        data-phase={phase}
+        style={{ '--flip-dur': `${Math.round(flipDuration / 2)}ms` } as React.CSSProperties}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <div className="hero-flipper-icon">{slide.icon}</div>
+        <div className="hero-flipper-label">{slide.label}</div>
+        <button type="button" className="hero-flipper-cta" onClick={slide.onAction}>
+          Open
+        </button>
+      </div>
+      <button type="button" className="hero-flipper-nav" onClick={handleManualNext} aria-label="Next">
+        {CHEVRON_RIGHT_SVG}
+      </button>
+      <div className="hero-flipper-dots">
+        {slides.map((_, i) => (
+          <span key={i} className={`hero-flipper-dot${i === displayIndex ? ' active' : ''}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function SnapshotPage({
   onSwitchTab,
   onLogTransaction,
+  onReimbursable,
+  onAddRecurring,
+  onAddBonus,
   pendingInTrigger = 0,
   pendingOutTrigger = 0,
 }: {
   onSwitchTab?: (tab: string) => void;
   onLogTransaction?: () => void;
+  onReimbursable?: () => void;
+  onAddRecurring?: () => void;
+  onAddBonus?: () => void;
   pendingInTrigger?: number;
   pendingOutTrigger?: number;
 }) {
@@ -267,37 +426,16 @@ export function SnapshotPage({
   return (
     <div className="tab-panel active" id="snapshotContent">
 
-      {/* Hero CTA Card */}
-      <div className="hero-cta-card">
-        <p className="hero-cta-headline">What do you want to do today?</p>
-        <p className="hero-cta-sub">Log a transaction, check your balances, or review what's coming up.</p>
-        <div className="hero-cta-actions">
-          <button
-            type="button"
-            className="hero-cta-pill"
-            onClick={() => onLogTransaction?.()}
-          >
-            <IconPlusCircle />
-            Log transaction
-          </button>
-          <button
-            type="button"
-            className="hero-cta-pill"
-            onClick={() => document.getElementById('snapshotSummary')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            <IconEye />
-            Check snapshot
-          </button>
-          <button
-            type="button"
-            className="hero-cta-pill"
-            onClick={() => onSwitchTab?.('upcoming')}
-          >
-            <IconChevronRightCircle />
-            View upcoming
-          </button>
-        </div>
-      </div>
+      {/* Hero Flipper Carousel */}
+      <HeroFlipperCarousel
+        onLogPurchase={() => onLogTransaction?.()}
+        onReimbursable={() => onReimbursable?.()}
+        onPendingOut={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}
+        onPendingIn={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}
+        onAddRecurring={() => onAddRecurring?.()}
+        onUpdateBalance={() => { setActiveSection((prev) => prev === 'cash' ? null : 'cash'); }}
+        onAddBonus={() => onAddBonus?.()}
+      />
 
       {/* Summary Stat Tiles */}
       <div className="stat-tiles-row">
@@ -317,7 +455,7 @@ export function SnapshotPage({
           onClick={() => toggleSection('cash')}
           aria-expanded={activeSection === 'cash'}
         >
-          <div className="stat-tile-icon"><IconWallet /></div>
+          <div className="stat-tile-icon" style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--muted)', lineHeight: 1 }}>$</div>
           <div className="stat-tile-value">{formatCents(totalCashCents)}</div>
           <div className="stat-tile-label">Cash</div>
         </button>
@@ -590,9 +728,6 @@ export function SnapshotPage({
             }}
           />
           <div className="btn-row">
-            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
-              Add item
-            </button>
             <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending inbound items?', () => actions.clearPending('in'))}>
               Clear All
             </button>
@@ -647,9 +782,6 @@ export function SnapshotPage({
             }}
           />
           <div className="btn-row">
-            <button type="button" className="btn btn-add" onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}>
-              Add item
-            </button>
             <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending outbound items?', () => actions.clearPending('out'))}>
               Clear All
             </button>

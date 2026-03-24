@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { TAB_ORDER_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
@@ -24,6 +25,8 @@ import { Modal } from '../../ui/Modal';
 import {
   IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
   IconExport, IconChevronRight, IconTrash,
+  IconHome, IconArrowExchange, IconCalendar, IconBankBuilding,
+  IconBarChartTrend, IconRefreshCircle, IconStar,
 } from '../../ui/icons';
 
 /** Returns export filename: Month_Day_Year.json */
@@ -156,7 +159,41 @@ function SettingsRow({
   );
 }
 
-export function SettingsPage() {
+const TAB_ORDER_ALL = [
+  { key: 'snapshot',    label: 'Snapshot',           icon: <IconHome /> },
+  { key: 'spending',    label: 'Spending',            icon: <IconArrowExchange /> },
+  { key: 'upcoming',   label: 'Upcoming',            icon: <IconCalendar /> },
+  { key: 'loans',      label: 'Loans',               icon: <IconBankBuilding /> },
+  { key: 'investing',  label: 'Investing',           icon: <IconBarChartTrend /> },
+  { key: 'recurring',  label: 'Recurring',           icon: <IconRefreshCircle /> },
+  { key: 'subtracker', label: 'Sign-Up Bonuses',     icon: <IconStar /> },
+];
+
+function loadTabOrderFromStorage(): string[] {
+  try {
+    const raw = localStorage.getItem(TAB_ORDER_KEY);
+    if (!raw) return TAB_ORDER_ALL.map((t) => t.key);
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return TAB_ORDER_ALL.map((t) => t.key);
+    const allKeys = TAB_ORDER_ALL.map((t) => t.key);
+    const filtered = (parsed as string[]).filter((k) => allKeys.includes(k));
+    const missing = allKeys.filter((k) => !filtered.includes(k));
+    return [...filtered, ...missing];
+  } catch { return TAB_ORDER_ALL.map((t) => t.key); }
+}
+
+const GripIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="7" r="1" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="17" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="7" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="17" r="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: string[]) => void } = {}) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
@@ -170,6 +207,8 @@ export function SettingsPage() {
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
+  const [tabOrder, setTabOrder] = useState<string[]>(() => loadTabOrderFromStorage());
+  const dragIndexRef = useRef<number | null>(null);
 
   const hasPasscode = loadPasscodeHash() !== null;
   const passcodePaused = loadPasscodePaused();
@@ -274,6 +313,59 @@ export function SettingsPage() {
         />
       </div>
       <AppCustomizationModal open={appCustomizationOpen} onClose={() => setAppCustomizationOpen(false)} />
+
+      {/* Tab Order */}
+      <p className="settings-group-label">Tab Order</p>
+      <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '-4px 16px 10px', lineHeight: 1.4 }}>
+        Drag to reorder your navigation tabs
+      </p>
+      <div className="settings-list" style={{ gap: 2 }}>
+        {tabOrder.map((key, index) => {
+          const item = TAB_ORDER_ALL.find((t) => t.key === key);
+          if (!item) return null;
+          return (
+            <div
+              key={key}
+              draggable
+              onDragStart={(e) => {
+                dragIndexRef.current = index;
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const fromIdx = dragIndexRef.current;
+                if (fromIdx === null || fromIdx === index) return;
+                const next = [...tabOrder];
+                const [dragged] = next.splice(fromIdx, 1);
+                next.splice(index, 0, dragged);
+                dragIndexRef.current = null;
+                setTabOrder(next);
+                localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(next));
+                onTabOrderChange?.(next);
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                background: 'var(--ui-card-bg, var(--surface))',
+                borderRadius: 12, cursor: 'grab', userSelect: 'none',
+              }}
+            >
+              <span
+                className="settings-row-icon"
+                style={{ background: '#374151', flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
+              >
+                {item.icon}
+              </span>
+              <span style={{ flex: 1, fontSize: '1rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                {item.label}
+              </span>
+              <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center' }}>
+                <GripIcon />
+              </span>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Accounts */}
       <p className="settings-group-label">Accounts</p>

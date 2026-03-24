@@ -26,8 +26,14 @@ export function IconHome() {
 export function IconArrowExchange() {
   return (
     <svg {...SVG_PROPS}>
-      <path d="M7 16H3m0 0l4-4m-4 4l4 4" />
-      <path d="M17 8h4m0 0l-4-4m4 4l-4 4" />
+      {/* Money bag neck/knot */}
+      <path d="M9.5 6.5c0-1.5 1.2-2.5 2.5-2.5s2.5 1 2.5 2.5" />
+      <path d="M9.5 6.5h5" />
+      {/* Bag body */}
+      <path d="M5 14.5c0-3.9 3.1-7 7-7s7 3.1 7 7c0 4-3.1 7-7 7s-7-3-7-7z" />
+      {/* $ detail */}
+      <path d="M12 11.5v7" />
+      <path d="M10.5 12.8c0-.8.7-1.3 1.5-1.3s1.5.5 1.5 1.3-1.5 1.5-1.5 2.4 1.5 1.3 1.5 2.1-.7 1.2-1.5 1.2-1.5-.4-1.5-1.2" />
     </svg>
   );
 }
@@ -45,10 +51,12 @@ export function IconCalendar() {
 export function IconRefreshCircle() {
   return (
     <svg {...SVG_PROPS}>
-      <path d="M21 12a9 9 0 0 1-9 9m-9-9a9 9 0 0 1 9-9" />
-      <path d="M3 12a9 9 0 0 1 9-9m9 9a9 9 0 0 1-9 9" />
-      <path d="M20.5 7.5L21 3l-4.5.5" />
-      <path d="M3.5 16.5L3 21l4.5-.5" />
+      {/* Top arc with forward arrowhead */}
+      <path d="M1.5 11A10.5 10.5 0 0 1 21 8.5" />
+      <path d="M19 5l2 3.5-3.5.5" />
+      {/* Bottom arc with backward arrowhead */}
+      <path d="M22.5 13A10.5 10.5 0 0 1 3 15.5" />
+      <path d="M5 19l-2-3.5 3.5-.5" />
     </svg>
   );
 }
@@ -68,7 +76,6 @@ export function IconBarChartTrend() {
       <rect x="2" y="15" width="4" height="7" rx="0.5" />
       <rect x="9" y="10" width="4" height="12" rx="0.5" />
       <rect x="16" y="6" width="4" height="16" rx="0.5" />
-      <path d="M3 5L9 3l6 1 6-3" />
     </svg>
   );
 }

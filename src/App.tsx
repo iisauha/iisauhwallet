@@ -113,7 +113,7 @@ function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
         className="app-header-left"
         onClick={onAvatarClick}
         aria-label="Open settings"
-        style={{ background: 'none', border: 'none', padding: 0, font: 'inherit' }}
+        style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', display: 'flex', alignItems: 'center', gap: 10 }}
       >
         {profileImage ? (
           <img src={profileImage} className="app-header-avatar" alt="" />
@@ -122,10 +122,9 @@ function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
             {displayName ? displayName.charAt(0).toUpperCase() : ''}
           </div>
         )}
-        <div className="app-header-text">
-          <span className="app-header-greeting">Welcome back</span>
-          <span className="app-header-name">{displayName || 'iisauh Wallet'}</span>
-        </div>
+        <span className="app-header-name" style={{ fontSize: '21px', fontWeight: 600, color: 'var(--ui-title-text, var(--text))' }}>
+          {displayName || 'iisauh Wallet'}
+        </span>
       </button>
     </header>
   );
@@ -255,6 +254,9 @@ function MainApp() {
       <SnapshotPage
         onSwitchTab={(t) => setTab(t as TabKey)}
         onLogTransaction={() => { setTab('spending'); setSpendingAddTrigger((n) => n + 1); }}
+        onReimbursable={() => { setTab('spending'); setSpendingReimburseAddTrigger((n) => n + 1); }}
+        onAddRecurring={() => { setTab('recurring'); setRecurringAddTrigger((n) => n + 1); }}
+        onAddBonus={() => { setTab('subtracker'); setSubtrackerAddTrigger((n) => n + 1); }}
         pendingInTrigger={snapshotPendingInTrigger}
         pendingOutTrigger={snapshotPendingOutTrigger}
       />
@@ -264,7 +266,7 @@ function MainApp() {
     if (tab === 'investing') return <InvestingPage />;
     if (tab === 'recurring') return <RecurringPage addTrigger={recurringAddTrigger} />;
     if (tab === 'subtracker') return <SubTrackerPage addTrigger={subtrackerAddTrigger} />;
-    return <SettingsPage />;
+    return <SettingsPage onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
   }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddTrigger, subtrackerAddTrigger]);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {

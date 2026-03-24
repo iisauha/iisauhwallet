@@ -125,8 +125,8 @@ body {
 }
 /* inactive tab slight hover lift on desktop */
 .tab-panel {
-  padding: 20px 18px;
-  padding-bottom: 32px;
+  padding: 20px 16px;
+  padding-bottom: 40px;
   animation: tabContentIn 0.25s ease-out;
 }
 @keyframes tabContentIn {
@@ -141,7 +141,7 @@ body {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--ui-title-text, var(--text));
-  margin: 0 0 12px 0;
+  margin: 24px 0 12px 0;
   padding: 8px 8px;
   cursor: pointer;
   border-radius: 8px;
@@ -297,11 +297,19 @@ body {
   -webkit-tap-highlight-color: transparent;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
-.btn-primary { background: var(--accent); color: var(--ui-outline-btn, var(--ui-primary-text, var(--text))); }
+.btn-primary {
+  background: var(--ui-add-btn, var(--accent));
+  color: #fff;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 700;
+}
 .btn-secondary {
   background: transparent;
   color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
-  border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
+  border: 1px solid var(--ui-outline-btn, #444);
+  border-radius: 999px;
+  padding: 12px 24px;
 }
 /* Pause: orange outline (ignores custom outline-button color) */
 .btn-secondary.btn-outline-neutral {
@@ -367,13 +375,15 @@ body {
   border-style: solid;
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
-  border-color: var(--ui-outline-btn, var(--ui-border, var(--border)));
+  background: #2A2A2A;
+  color: #9A9A94;
+  border-color: #333 !important;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 .ll-toggle.active {
-  border-color: var(--ui-add-btn, var(--accent));
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 15%, transparent);
-  color: var(--ui-add-btn, var(--accent));
+  background: #E8553E !important;
+  color: #fff !important;
+  border-color: #E8553E !important;
   border-width: 1px !important;
 }
 
@@ -1108,6 +1118,189 @@ input[type="date"].ll-control:focus {
 .quick-sheet-item:active { transform: scale(0.99); }
 .hero-cta-pill:active { transform: scale(0.97); }
 .settings-row:active { transform: scale(0.99); }
+
+/* ─── UI Consistency — Card Accent Strip ─────────────────────────── */
+/* Apply to any card showing a balance, summary, or account value */
+.card-accent-strip {
+  border-left: 4px solid var(--ui-add-btn, var(--accent)) !important;
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0 !important;
+  box-shadow: none !important;
+}
+
+/* ─── UI Consistency — Chip / Badge ──────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #2A2A2A;
+  color: #9A9A94;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.chip.active {
+  background: var(--ui-add-btn, #E8553E);
+  color: #fff;
+}
+.chip.positive {
+  background: #3D5E45;
+  color: #fff;
+}
+
+/* ─── UI Consistency — Form inputs ───────────────────────────────── */
+.ll-control,
+.ll-select,
+input[type="text"].ll-control,
+input[type="number"].ll-control,
+textarea.ll-control {
+  background: #2A2A2A !important;
+  border: 1px solid #333 !important;
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  font-size: 1rem !important;
+  color: var(--ui-primary-text, var(--text)) !important;
+}
+.ll-control::placeholder,
+.ll-select::placeholder {
+  color: #9A9A94 !important;
+}
+.ll-control:focus,
+.ll-select:focus {
+  border-color: var(--ui-add-btn, var(--accent)) !important;
+  outline: none !important;
+}
+
+/* ─── UI Consistency — Account card left accent ───────────────────── */
+.card.ll-account-card {
+  border-left: 4px solid var(--ui-add-btn, var(--accent));
+  border-top: 1px solid var(--ui-border, var(--border));
+  border-right: 1px solid var(--ui-border, var(--border));
+  border-bottom: 1px solid var(--ui-border, var(--border));
+  box-shadow: none;
+}
+
+/* ─── UI Consistency — Summary card left accent ───────────────────── */
+.summary {
+  border-left: 4px solid var(--ui-add-btn, var(--accent));
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  box-shadow: none;
+}
+
+/* ─── UI Consistency — Card press state ──────────────────────────── */
+.card:active { transform: scale(0.97); }
+.stat-tile:active { transform: scale(0.97); }
+
+/* ─── Hero Flipper Carousel ───────────────────────────────────────── */
+.hero-flipper-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  margin-bottom: 28px;
+}
+.hero-flipper-card {
+  flex: 1;
+  background: var(--ui-card-bg, var(--surface));
+  border-radius: 20px;
+  padding: 28px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-height: 200px;
+  justify-content: center;
+  transform-style: preserve-3d;
+}
+@keyframes heroFlipOut {
+  from { transform: perspective(700px) rotateX(0deg); opacity: 1; }
+  to   { transform: perspective(700px) rotateX(-90deg); opacity: 0.2; }
+}
+@keyframes heroFlipIn {
+  from { transform: perspective(700px) rotateX(90deg); opacity: 0.2; }
+  to   { transform: perspective(700px) rotateX(0deg); opacity: 1; }
+}
+.hero-flipper-card[data-phase="out"] {
+  animation: heroFlipOut var(--flip-dur, 150ms) ease-in forwards;
+  transform-origin: center bottom;
+}
+.hero-flipper-card[data-phase="in"] {
+  animation: heroFlipIn var(--flip-dur, 150ms) ease-out forwards;
+  transform-origin: center top;
+}
+.hero-flipper-icon {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-flipper-icon svg {
+  width: 64px;
+  height: 64px;
+}
+.hero-flipper-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ui-title-text, var(--text));
+  text-align: center;
+  line-height: 1.3;
+}
+.hero-flipper-cta {
+  background: #E8553E;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 32px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  margin-top: 4px;
+  font-family: var(--app-font-family);
+}
+.hero-flipper-cta:active { transform: scale(0.96); }
+.hero-flipper-nav {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.hero-flipper-nav:hover { background: var(--surface-hover); }
+.hero-flipper-dots {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.hero-flipper-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.35;
+  transition: all 0.25s ease;
+}
+.hero-flipper-dot.active {
+  background: #E8553E;
+  opacity: 1;
+  width: 20px;
+  border-radius: 3px;
+}
 
 /* ─── prefers-reduced-motion ──────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
