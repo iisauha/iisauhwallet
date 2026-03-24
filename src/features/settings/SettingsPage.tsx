@@ -179,7 +179,7 @@ export function SettingsPage() {
     <div className="tab-panel active" id="settingsContent">
       <p className="section-title page-title">Settings</p>
 
-      <div className="settings-section" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div className="settings-section" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16 }}>
         <input
           ref={profileImageRef}
           type="file"
@@ -196,7 +196,7 @@ export function SettingsPage() {
             borderRadius: '50%',
             padding: 0,
             border: 'none',
-            background: profileImage ? `url(${profileImage}) center/cover` : 'var(--surface)',
+            background: profileImage ? `url(${profileImage}) center/cover` : 'var(--ui-card-bg, var(--surface))',
             color: 'var(--ui-primary-text, var(--text))',
             fontSize: '1.5rem',
             fontWeight: 600,
@@ -207,6 +207,16 @@ export function SettingsPage() {
           {!profileImage && (displayName ? displayName.charAt(0).toUpperCase() : '?')}
         </button>
         <div style={{ flex: 1, minWidth: 120 }}>
+          <div style={{
+            fontSize: '0.8rem',
+            color: 'var(--ui-primary-text, var(--text))',
+            opacity: 0.55,
+            marginBottom: 3,
+            fontWeight: 500,
+            letterSpacing: '0.01em',
+          }}>
+            Welcome back
+          </div>
           <input
             type="text"
             value={displayName}
@@ -215,13 +225,13 @@ export function SettingsPage() {
             placeholder="Your name"
             style={{
               width: '100%',
-              padding: displayName ? '4px 0' : '10px 12px',
-              fontSize: '1.5rem',
-              fontWeight: 600,
-              border: displayName ? 'none' : '1px solid var(--border)',
+              padding: displayName ? '0' : '8px 12px',
+              fontSize: '1.4rem',
+              fontWeight: 700,
+              border: displayName ? 'none' : '1px solid var(--ui-border, var(--border))',
               borderRadius: 10,
-              background: displayName ? 'transparent' : 'var(--surface)',
-              color: 'var(--ui-primary-text, var(--text))',
+              background: 'transparent',
+              color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))',
             }}
           />
         </div>

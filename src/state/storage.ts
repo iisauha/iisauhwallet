@@ -195,16 +195,16 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
     const raw = localStorage.getItem(UI_ADVANCED_COLORS_KEY);
     if (!raw) {
       return {
-        cardBg: '#F1EFE4',
-        surfaceSecondary: '#F1EFE4',
-        sectionBg: '#F1EFE4',
-        modalBg: '#F1EFE4',
-        tabBarBg: '#F1EFE4',
-        border: '#000000',
-        titleText: '#000000',
-        primaryText: '#000000',
-        outlineButton: '#000000',
-        addButton: '#3A87FE',
+        cardBg: '#252525',
+        surfaceSecondary: '#202020',
+        sectionBg: '#232323',
+        modalBg: '#2d2d2d',
+        tabBarBg: '#1e1e1e',
+        border: '#3a3a3a',
+        titleText: '#f0f0f0',
+        primaryText: '#cccccc',
+        outlineButton: '#cccccc',
+        addButton: '#E8673A',
       };
     }
     const parsed = JSON.parse(raw);
@@ -1062,9 +1062,9 @@ export function savePublicLoanShowPaymentActions(value: boolean) {
 }
 
 /** Default base for surface/border/muted when only app background is customized. Exported for theme init. */
-export const DEFAULT_THEME_COLOR = '#F1EFE4';
+export const DEFAULT_THEME_COLOR = '#1a1a1a';
 // System default accent used for navigation buttons and primary actions.
-export const DEFAULT_ACCENT_COLOR = '#3A87FE';
+export const DEFAULT_ACCENT_COLOR = '#E8673A';
 
 function isValidHex(hex: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(hex);

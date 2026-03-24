@@ -2,15 +2,7 @@ import { useState } from 'react';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
 import { useAdvancedUIColors } from '../../theme/AdvancedUIColorsContext';
-import {
-  loadThemePresets,
-  saveThemePresets,
-  type AdvancedUIColors,
-  type SavedThemePreset,
-  uid,
-  DEFAULT_THEME_COLOR,
-  DEFAULT_ACCENT_COLOR,
-} from '../../state/storage';
+import type { AdvancedUIColors } from '../../state/storage';
 import { Select } from '../../ui/Select';
 
 const FONT_FAMILY_OPTIONS = [
@@ -35,200 +27,150 @@ const FONT_SCALE_OPTIONS = [
   { value: 1.06, label: 'Large' },
 ];
 
-const COLOR_SWATCH_STYLE = {
-  width: 44,
-  height: 44,
-  padding: 0,
-  border: '1px solid var(--ui-outline-btn, var(--border))',
-  borderRadius: 8,
-  cursor: 'pointer' as const,
-  flexShrink: 0 as const,
-  appearance: 'none' as const,
-  WebkitAppearance: 'none' as const,
-  overflow: 'hidden' as const,
+type PresetTheme = {
+  id: string;
+  name: string;
+  themeColor: string;
+  accentColor: string;
+  advancedColors: AdvancedUIColors;
 };
 
-const TEXT_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
-  { key: 'titleText', label: 'Titles / Headings' },
-  { key: 'primaryText', label: 'All Other Text' },
+const PRESET_THEMES: PresetTheme[] = [
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    themeColor: '#1a1a1a',
+    accentColor: '#E8673A',
+    advancedColors: {
+      cardBg: '#252525',
+      surfaceSecondary: '#202020',
+      sectionBg: '#232323',
+      modalBg: '#2d2d2d',
+      tabBarBg: '#1e1e1e',
+      border: '#3a3a3a',
+      titleText: '#f0f0f0',
+      primaryText: '#cccccc',
+      outlineButton: '#cccccc',
+      addButton: '#E8673A',
+    },
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    themeColor: '#0f1a12',
+    accentColor: '#5cb87a',
+    advancedColors: {
+      cardBg: '#162219',
+      surfaceSecondary: '#132116',
+      sectionBg: '#152019',
+      modalBg: '#1c2e20',
+      tabBarBg: '#111c14',
+      border: '#2a3f2e',
+      titleText: '#e8f5e0',
+      primaryText: '#c4dcc7',
+      outlineButton: '#c4dcc7',
+      addButton: '#5cb87a',
+    },
+  },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    themeColor: '#0c1927',
+    accentColor: '#38bdf8',
+    advancedColors: {
+      cardBg: '#142233',
+      surfaceSecondary: '#112030',
+      sectionBg: '#132131',
+      modalBg: '#1a2d3e',
+      tabBarBg: '#0e1f2e',
+      border: '#253d52',
+      titleText: '#e0f0ff',
+      primaryText: '#b8d4ee',
+      outlineButton: '#b8d4ee',
+      addButton: '#38bdf8',
+    },
+  },
+  {
+    id: 'amber',
+    name: 'Amber',
+    themeColor: '#1a1200',
+    accentColor: '#f59e0b',
+    advancedColors: {
+      cardBg: '#251a05',
+      surfaceSecondary: '#201600',
+      sectionBg: '#231803',
+      modalBg: '#2e2108',
+      tabBarBg: '#1e1600',
+      border: '#3d2e0a',
+      titleText: '#fff8e0',
+      primaryText: '#d4c08a',
+      outlineButton: '#d4c08a',
+      addButton: '#f59e0b',
+    },
+  },
+  {
+    id: 'indigo',
+    name: 'Indigo',
+    themeColor: '#0f0e1a',
+    accentColor: '#a78bfa',
+    advancedColors: {
+      cardBg: '#1a1929',
+      surfaceSecondary: '#181724',
+      sectionBg: '#191827',
+      modalBg: '#232232',
+      tabBarBg: '#141320',
+      border: '#322e50',
+      titleText: '#f0eeff',
+      primaryText: '#c4bfe8',
+      outlineButton: '#c4bfe8',
+      addButton: '#a78bfa',
+    },
+  },
+  {
+    id: 'light',
+    name: 'Light',
+    themeColor: '#f4f4f0',
+    accentColor: '#E8673A',
+    advancedColors: {
+      cardBg: '#ffffff',
+      surfaceSecondary: '#eeeeea',
+      sectionBg: '#f7f7f4',
+      modalBg: '#ffffff',
+      tabBarBg: '#f4f4f0',
+      border: '#d0d0c8',
+      titleText: '#111111',
+      primaryText: '#333333',
+      outlineButton: '#333333',
+      addButton: '#E8673A',
+    },
+  },
 ];
-
-const SURFACE_COLOR_OPTIONS: { key: keyof AdvancedUIColors; label: string }[] = [
-  { key: 'cardBg', label: 'Main Cards' },
-  { key: 'surfaceSecondary', label: 'Summary Cards' },
-  { key: 'sectionBg', label: 'Dropdown cards' },
-  { key: 'modalBg', label: 'Popup card background' },
-  { key: 'tabBarBg', label: 'Bottom Tab Bar background' },
-  { key: 'border', label: 'Border of Summary + Popups Cards' },
-  { key: 'outlineButton', label: 'Buttons (Text + Border)' },
-  { key: 'addButton', label: 'Adding an Item Buttons' },
-];
-
-const SYSTEM_DEFAULT_LIGHT_THEME_ID = 'system-default';
-const SYSTEM_DEFAULT_DARK_THEME_ID = 'system-default-dark';
-const BUILT_IN_THEME_IDS = new Set([SYSTEM_DEFAULT_LIGHT_THEME_ID, SYSTEM_DEFAULT_DARK_THEME_ID]);
-
-const SYSTEM_DEFAULT_LIGHT_ADV_COLORS: AdvancedUIColors = {
-  cardBg: '#F1EFE4',
-  surfaceSecondary: '#F1EFE4',
-  sectionBg: '#F1EFE4',
-  modalBg: '#F1EFE4',
-  tabBarBg: '#F1EFE4',
-  border: '#000000',
-  titleText: '#000000',
-  primaryText: '#000000',
-  outlineButton: '#000000',
-  addButton: '#3A87FE',
-};
-
-const SYSTEM_DEFAULT_DARK_ADV_COLORS: AdvancedUIColors = {
-  cardBg: '#1e293b',
-  surfaceSecondary: '#1e293b',
-  sectionBg: '#1e293b',
-  modalBg: '#1e293b',
-  tabBarBg: '#1e293b',
-  border: '#F1EFE4',
-  titleText: '#F1EFE4',
-  primaryText: '#F1EFE4',
-  outlineButton: '#F1EFE4',
-  addButton: '#FDC700',
-};
-
-const SYSTEM_DEFAULT_LIGHT_PRESET: SavedThemePreset = {
-  id: SYSTEM_DEFAULT_LIGHT_THEME_ID,
-  name: 'System Default: Light Mode',
-  themeColor: DEFAULT_THEME_COLOR,
-  accentColor: DEFAULT_ACCENT_COLOR,
-  advancedColors: SYSTEM_DEFAULT_LIGHT_ADV_COLORS,
-};
-
-const SYSTEM_DEFAULT_DARK_PRESET: SavedThemePreset = {
-  id: SYSTEM_DEFAULT_DARK_THEME_ID,
-  name: 'System Default: Dark Mode',
-  themeColor: '#1e293b',
-  accentColor: '#FDC700',
-  advancedColors: SYSTEM_DEFAULT_DARK_ADV_COLORS,
-};
-
-const BUILT_IN_THEME_PRESETS: SavedThemePreset[] = [SYSTEM_DEFAULT_LIGHT_PRESET, SYSTEM_DEFAULT_DARK_PRESET];
-
-function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (hex: string) => void }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-      }}
-    >
-      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>{label}</span>
-      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={COLOR_SWATCH_STYLE} aria-label={label} />
-    </div>
-  );
-}
-
-function TextColorsSection() {
-  const ctx = useAdvancedUIColors();
-  if (!ctx) return null;
-  const { colors, setColor } = ctx;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {TEXT_COLOR_OPTIONS.map(({ key, label }) => {
-        const value = colors[key] ?? '';
-        return (
-          <ColorRow
-            key={key}
-            label={label}
-            value={value || '#f1f5f9'}
-            onChange={(hex) => setColor(key, hex)}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function SurfaceColorsSection() {
-  const ctx = useAdvancedUIColors();
-  if (!ctx) return null;
-  const { colors, setColor } = ctx;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {SURFACE_COLOR_OPTIONS.map(({ key, label }) => {
-        const value = colors[key] ?? '';
-        const pickerFallback = key === 'outlineButton' ? '#64748b' : '#1e293b';
-        return (
-          <ColorRow
-            key={key}
-            label={label}
-            value={value || pickerFallback}
-            onChange={(hex) => setColor(key, hex)}
-          />
-        );
-      })}
-    </div>
-  );
-}
 
 export function AppCustomizationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { themeColor, setThemeColor, accentColor, setAccentColor } = useTheme();
+  const { themeColor, setThemeColor, setAccentColor } = useTheme();
   const { fontFamily, fontScale, setFontFamily, setFontScale } = useAppearance();
   const advCtx = useAdvancedUIColors();
-  const [themePresets, setThemePresets] = useState<SavedThemePreset[]>(() =>
-    loadThemePresets().filter((p) => !BUILT_IN_THEME_IDS.has(p.id))
-  );
-  const [newThemeName, setNewThemeName] = useState('');
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    const match = PRESET_THEMES.find((p) => p.themeColor === themeColor);
+    return match?.id ?? null;
+  });
 
   if (!open) return null;
 
-  const handleSaveTheme = () => {
-    if (!advCtx) return;
-    const name = (newThemeName || '').trim() || 'Custom theme';
-    const preset: SavedThemePreset = {
-      id: uid(),
-      name,
-      themeColor,
-      accentColor,
-      advancedColors: advCtx.colors,
-    };
-    const next = [
-      ...themePresets.filter((p: SavedThemePreset) => p.name.toLowerCase() !== name.toLowerCase()),
-      preset,
-    ];
-    setThemePresets(next);
-    saveThemePresets(next);
-  };
-
-  const handleApplyTheme = (preset: SavedThemePreset) => {
+  const handleApply = (preset: PresetTheme) => {
     setThemeColor(preset.themeColor);
     setAccentColor(preset.accentColor);
     if (!advCtx) return;
     const keys: (keyof AdvancedUIColors)[] = [
-      'cardBg',
-      'surfaceSecondary',
-      'sectionBg',
-      'modalBg',
-      'tabBarBg',
-      'border',
-      'titleText',
-      'primaryText',
-      'outlineButton',
-      'addButton',
+      'cardBg', 'surfaceSecondary', 'sectionBg', 'modalBg', 'tabBarBg',
+      'border', 'titleText', 'primaryText', 'outlineButton', 'addButton',
     ];
-    const nextColors = preset.advancedColors || {};
     keys.forEach((k) => {
-      const v = nextColors[k];
+      const v = preset.advancedColors[k];
       if (v && v.trim() !== '') advCtx.setColor(k, v);
       else advCtx.clearColor(k);
     });
-  };
-
-  const handleDeleteTheme = (id: string) => {
-    if (BUILT_IN_THEME_IDS.has(id)) return;
-    const next = themePresets.filter((p) => p.id !== id);
-    setThemePresets(next);
-    saveThemePresets(next);
+    setActiveId(preset.id);
   };
 
   return (
@@ -236,77 +178,56 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
       <div className="modal modal-animate" onClick={(e) => e.stopPropagation()}>
         <h3>App Customization</h3>
 
-        <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>
-          Colors
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-          <ColorRow label="App background" value={themeColor} onChange={setThemeColor} />
-          <ColorRow label="Navigation Buttons" value={accentColor} onChange={setAccentColor} />
-        </div>
-
-        <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>
-          Text colors
-        </p>
-        <div style={{ marginBottom: 20 }}>
-          <TextColorsSection />
-        </div>
-
-        <p className="section-title" style={{ marginTop: 8, marginBottom: 10 }}>
-          Surface colors / advanced
-        </p>
-        <div style={{ marginBottom: 24 }}>
-          <SurfaceColorsSection />
-        </div>
-
-        <p className="section-title" style={{ marginTop: 8, marginBottom: 10 }}>
-          Saved themes
-        </p>
-        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input
-              className="ll-control"
-              style={{ flex: 1, minWidth: 140, maxWidth: 260 }}
-              placeholder="Theme name (e.g. Forest)"
-              value={newThemeName}
-              onChange={(e) => setNewThemeName(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleSaveTheme}
-              style={{ flexShrink: 0 }}
-            >
-              Save theme
-            </button>
-          </div>
-          {themePresets.length > 0 || true ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-              {[...BUILT_IN_THEME_PRESETS, ...themePresets].map((p: SavedThemePreset) => (
-                <div key={p.id} style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ justifyContent: 'space-between', display: 'flex', flex: 1 }}
-                    onClick={() => handleApplyTheme(p)}
-                  >
-                    <span>{p.name}</span>
-                    <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Apply</span>
-                  </button>
-                  {!BUILT_IN_THEME_IDS.has(p.id) ? (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: '10px 12px' }}
-                      onClick={() => handleDeleteTheme(p.id)}
-                    >
-                      Delete
-                    </button>
-                  ) : null}
+        <p className="section-title" style={{ marginTop: 16, marginBottom: 12 }}>Theme</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 24 }}>
+          {PRESET_THEMES.map((preset) => {
+            const isActive = activeId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handleApply(preset)}
+                style={{
+                  background: preset.themeColor,
+                  border: isActive
+                    ? `2px solid ${preset.accentColor}`
+                    : '2px solid transparent',
+                  borderRadius: 12,
+                  padding: '12px 12px 10px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  textAlign: 'left',
+                  boxShadow: isActive ? `0 0 0 1px ${preset.accentColor}` : 'none',
+                }}
+              >
+                <div style={{
+                  background: preset.advancedColors.cardBg,
+                  borderRadius: 6,
+                  height: 28,
+                  width: '100%',
+                  border: `1px solid ${preset.advancedColors.border}`,
+                }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{
+                    color: preset.advancedColors.primaryText ?? '#cccccc',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                  }}>
+                    {preset.name}
+                  </span>
+                  <div style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    background: preset.accentColor,
+                    flexShrink: 0,
+                  }} />
                 </div>
-              ))}
-            </div>
-          ) : null}
+              </button>
+            );
+          })}
         </div>
 
         <p className="section-title" style={{ marginTop: 8 }}>Typography</p>
@@ -343,10 +264,9 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                   style={{
                     padding: '10px 16px',
                     borderRadius: 8,
-                      border: isSelected
-                        ? '2px solid var(--ui-outline-btn, var(--accent))'
-                        : '1px solid var(--ui-outline-btn, var(--border))',
-                    // Must follow the user's "Popup card background" setting.
+                    border: isSelected
+                      ? '2px solid var(--ui-outline-btn, var(--accent))'
+                      : '1px solid var(--ui-outline-btn, var(--border))',
                     background: 'var(--ui-modal-bg, var(--surface))',
                     color: 'var(--ui-primary-text, var(--text))',
                     fontSize: '0.9rem',

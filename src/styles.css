@@ -1,16 +1,16 @@
 /* Milestone A/B: keep look/feel close to legacy while refactoring */
 *, *::before, *::after { box-sizing: border-box; }
 :root {
-  --bg: #0f172a;
-  --bg-secondary: #1a2332;
-  --surface: #1e293b;
-  --surface-hover: #243447;
-  --border: #334155;
-  --border-subtle: #2d3a4a;
-  --text: #f1f5f9;
-  --muted: #94a3b8;
-  --accent: #0ea5e9;
-  --accent-hover: #38bdf8;
+  --bg: #1a1a1a;
+  --bg-secondary: #202020;
+  --surface: #252525;
+  --surface-hover: #2e2e2e;
+  --border: #3a3a3a;
+  --border-subtle: #303030;
+  --text: #f0f0f0;
+  --muted: #888888;
+  --accent: #E8673A;
+  --accent-hover: #f07848;
   --danger: #dc2626;
   /* Semantic colors: never overridden by theme. Positive = income/gains, negative = expenses/losses. */
   --semantic-positive: #16a34a;
