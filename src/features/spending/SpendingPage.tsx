@@ -563,7 +563,7 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                   );
                 })}
                 {(() => {
-                  const { totalCashback, totalPoints, totalMiles, pointsApproxCents } = totalRewards;
+                  const { totalCashback, totalPoints, totalMiles, pointsApproxCents, milesApproxCents } = totalRewards;
                   const hasTotals =
                     (totalCashback || 0) > 0 || (totalPoints || 0) > 0 || (totalMiles || 0) > 0;
                   if (!hasTotals) return null;
@@ -592,6 +592,9 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
                       {(totalMiles || 0) > 0 ? (
                         <div style={lineStyle}>
                           <span style={{ color: 'var(--green)' }}>{totalMiles.toLocaleString()}</span> miles
+                          {milesApproxCents != null && milesApproxCents > 0 ? (
+                            <span style={{ color: 'var(--ui-primary-text, var(--text))', fontWeight: 400 }}> (~{formatCents(milesApproxCents)})</span>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>

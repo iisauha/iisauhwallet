@@ -651,7 +651,7 @@ export function SnapshotPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-add"
+                    className="btn btn-secondary"
                     onClick={() => {
                       const preview = buildLoanPaymentPreview(modal.pendingId);
                       if (!preview) {
@@ -747,7 +747,7 @@ export function SnapshotPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-add"
+                    className="btn btn-secondary"
                     onClick={() => {
                       const overrides: Record<string, number> = {};
                       for (const row of modal.privateRows) {
@@ -1249,7 +1249,7 @@ export function SnapshotPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-add"
+                    className="btn btn-secondary"
                     onClick={() => {
                       const amountCents = parseCents(modal.amount);
                       if (!(amountCents > 0)) return;

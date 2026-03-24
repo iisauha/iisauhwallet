@@ -39,7 +39,7 @@ const COLOR_SWATCH_STYLE = {
   width: 44,
   height: 44,
   padding: 0,
-  border: '1px solid var(--border)',
+  border: '1px solid var(--ui-outline-btn, var(--border))',
   borderRadius: 8,
   cursor: 'pointer' as const,
   flexShrink: 0 as const,

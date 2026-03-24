@@ -1781,7 +1781,7 @@ export function InvestingPage() {
 
       <button
         type="button"
-        className="btn btn-add"
+        className="btn btn-secondary"
         style={{ width: '100%', marginTop: 24, marginBottom: 8 }}
         onClick={() => {
           setTransferFrom('');

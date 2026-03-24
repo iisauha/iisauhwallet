@@ -222,7 +222,7 @@ export function OptimizerForm({ values, onChange, onSubmit, isRunning, error }: 
         <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>{error}</p>
       ) : null}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-        <button type="submit" className="btn btn-add" disabled={isRunning}>
+        <button type="submit" className="btn btn-secondary" disabled={isRunning}>
           {isRunning ? 'Running…' : 'Run Optimization'}
         </button>
       </div>

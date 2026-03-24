@@ -16,7 +16,7 @@ export function ViewLastOptimizerModal({ open, onClose }: ViewLastOptimizerModal
         <>
           <OptimizerResults result={saved.result} showExpandedByDefault={false} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-            <button type="button" className="btn btn-add" onClick={onClose}>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
           </div>
@@ -27,7 +27,7 @@ export function ViewLastOptimizerModal({ open, onClose }: ViewLastOptimizerModal
             No saved optimization result yet. Run the optimizer first to see your last computed values here.
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-add" onClick={onClose}>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
           </div>

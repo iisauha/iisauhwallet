@@ -252,7 +252,7 @@ export function AddPurchaseModal(props: {
               </button>
               <button
                 type="button"
-                className="btn btn-add"
+                className="btn btn-secondary"
                 onClick={() => {
                   setSuggestionAccepted(true);
                   setApplyToSnapshot(true);
@@ -294,7 +294,7 @@ export function AddPurchaseModal(props: {
               </button>
               <button
                 type="button"
-                className="btn btn-add"
+                className="btn btn-secondary"
                 onClick={() => {
                   setSuggestionAccepted(true);
                   setApplyToSnapshot(true);
@@ -359,7 +359,7 @@ export function AddPurchaseModal(props: {
               </button>
               <button
                 type="button"
-                className="btn btn-add"
+                className="btn btn-secondary"
                 onClick={() => {
                   if (rewardAdjustMode === 'computed') {
                     if (rewardAdjustPopup.rewardType === 'cashback') {
@@ -511,7 +511,7 @@ export function AddPurchaseModal(props: {
 
               <button
                 type="button"
-                className="btn btn-add"
+                className="btn btn-secondary"
                 onClick={() => {
                   if (editRewardMode === 'computed') {
                     const sameCard = !!editRewardPopup.oldCardId && !!editRewardPopup.newCardId && editRewardPopup.oldCardId === editRewardPopup.newCardId;
@@ -976,8 +976,7 @@ export function AddPurchaseModal(props: {
                 if (reimbursementCents > 0) {
                   actions.addPendingInbound({
                     label: `Reimbursement: ${title.trim() || 'Purchase'}`,
-                    amountCents: reimbursementCents,
-                    depositTo: 'bank'
+                    amountCents: reimbursementCents
                   });
                 }
               }
