@@ -11,8 +11,41 @@ import { getEffectiveRules } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
+import {
+  IconCreditCard, IconVault, IconClock, IconPlusCircle, IconEye, IconChevronRightCircle, IconCoin,
+} from '../../ui/icons';
 
-export function SnapshotPage() {
+// Progress ring helper
+function ProgressRing({
+  pct,
+  color,
+  size = 56,
+  strokeWidth = 5,
+}: {
+  pct: number;
+  color: string;
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const r = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * r;
+  const filled = Math.min(1, Math.max(0, pct)) * circ;
+  const cx = size / 2;
+  const cy = size / 2;
+  return (
+    <svg width={size} height={size} className="progress-ring-svg" style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth} />
+      <circle
+        cx={cx} cy={cy} r={r} fill="none" stroke={color}
+        strokeWidth={strokeWidth} strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={circ - filled}
+        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+      />
+    </svg>
+  );
+}
+
+export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => void }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
 
@@ -215,9 +248,81 @@ export function SnapshotPage() {
     }
   }
 
+  // Progress ring data
+  const totalCardDebtCents = totals.ccDebtCents;
+  // Cap card debt ring at $20k for visual scale
+  const cardDebtRingPct = totalCardDebtCents > 0 ? Math.min(1, totalCardDebtCents / 200000) : 0;
+
+  const totalCashCents = totals.bankTotalCents;
+  const monthlyIncomeCents = useMemo(
+    () => (data.recurring || [])
+      .filter((r) => r.type === 'income')
+      .reduce((s, r) => s + (r.amountCents || 0), 0),
+    [data.recurring]
+  );
+  const cashRingPct = monthlyIncomeCents > 0 ? Math.min(1, totalCashCents / monthlyIncomeCents) : 0;
+
+  const pendingCount = (data.pendingIn || []).length + (data.pendingOut || []).length;
+  const pendingRingPct = Math.min(1, pendingCount / 10);
+
   return (
     <div className="tab-panel active" id="snapshotContent">
-      <p className="section-title page-title" style={{ marginBottom: 8 }}>Snapshot</p>
+
+      {/* Hero CTA Card */}
+      <div className="hero-cta-card">
+        <div className="hero-cta-coin"><IconCoin /></div>
+        <p className="hero-cta-headline">What do you want to do today?</p>
+        <p className="hero-cta-sub">Log a transaction, check your balances, or review what's coming up.</p>
+        <div className="hero-cta-actions">
+          <button
+            type="button"
+            className="hero-cta-pill"
+            onClick={() => onSwitchTab?.('spending')}
+          >
+            <IconPlusCircle />
+            Log transaction
+          </button>
+          <button
+            type="button"
+            className="hero-cta-pill"
+            onClick={() => document.getElementById('snapshotSummary')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            <IconEye />
+            Check snapshot
+          </button>
+          <button
+            type="button"
+            className="hero-cta-pill"
+            onClick={() => onSwitchTab?.('upcoming')}
+          >
+            <IconChevronRightCircle />
+            View upcoming
+          </button>
+        </div>
+      </div>
+
+      {/* Progress Rings */}
+      <div className="progress-rings-row">
+        <div className="progress-ring-tile">
+          <div className="progress-ring-icon"><IconCreditCard /></div>
+          <ProgressRing pct={cardDebtRingPct} color="var(--ui-add-btn, var(--accent))" />
+          <div className="progress-ring-label">{formatCents(totalCardDebtCents)}</div>
+          <div className="progress-ring-sub">Card debt</div>
+        </div>
+        <div className="progress-ring-tile">
+          <div className="progress-ring-icon"><IconVault /></div>
+          <ProgressRing pct={cashRingPct} color="#3D9E4F" />
+          <div className="progress-ring-label">{formatCents(totalCashCents)}</div>
+          <div className="progress-ring-sub">Cash</div>
+        </div>
+        <div className="progress-ring-tile">
+          <div className="progress-ring-icon"><IconClock /></div>
+          <ProgressRing pct={pendingRingPct} color="#6366f1" />
+          <div className="progress-ring-label">{pendingCount}</div>
+          <div className="progress-ring-sub">Pending</div>
+        </div>
+      </div>
+
       <div
         className="section-header"
         id="bankHeader"
@@ -545,7 +650,7 @@ export function SnapshotPage() {
         </>
       ) : null}
 
-      <div className="summary" id="snapshotSummary">
+      <div className="summary net-cash-card" id="snapshotSummary" style={{ borderLeft: '4px solid var(--ui-add-btn, var(--accent))' }}>
         <div className="summary-compact">
           <div className="summary-kv">
             <span className="k">Current Cash in Checking Accounts</span>

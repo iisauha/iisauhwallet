@@ -23,9 +23,10 @@
   --shadow-strong: 0 2px 10px rgba(0,0,0,0.22);
   --safe-bottom: env(safe-area-inset-bottom);
   --safe-top: env(safe-area-inset-top);
-  --tabbar-h: 56px;
-  --radius-card: 12px;
-  --radius-control: 10px;
+  --tabbar-h: 74px;
+  --header-h: 60px;
+  --radius-card: 16px;
+  --radius-control: 12px;
   /* Personalization: set from Settings; do not override semantic green/red. */
   --app-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --app-font-scale: 1;
@@ -40,31 +41,24 @@ body {
   background: var(--bg);
   color: var(--ui-primary-text, var(--text));
   font-family: var(--app-font-family);
-  padding-top: var(--safe-top);
-  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+  padding-top: calc(var(--header-h) + var(--safe-top));
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
 }
 .tabs {
   display: flex;
-  justify-content: flex-start;
-  gap: 2px;
+  justify-content: space-around;
   align-items: center;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   background: var(--ui-tabbar-bg, var(--surface));
-  border-top: 1px solid var(--border);
-  padding-left: max(24px, env(safe-area-inset-left, 0px));
-  padding-right: max(24px, env(safe-area-inset-right, 0px));
+  border-top: 1px solid var(--ui-border, var(--border));
+  padding: 0 4px;
   padding-bottom: var(--safe-bottom);
+  height: calc(var(--tabbar-h) + var(--safe-bottom));
   z-index: 100;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
 }
-.tabs::-webkit-scrollbar { display: none; }
 .info-icon {
   width: 20px;
   height: 20px;
@@ -82,36 +76,58 @@ body {
   flex-shrink: 0;
 }
 .tab {
-  flex: 0 0 auto;
-  min-width: max-content;
-  padding: 8px 10px;
-  margin: 4px 0 6px 0;
-  font-size: 0.9rem;
-  font-weight: 500;
-  font-family: var(--app-font-family);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 2px;
+  margin: 0;
   background: transparent;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  color: var(--ui-primary-text, var(--text));
+  border: none;
+  border-radius: 0;
+  color: var(--muted);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  scroll-snap-align: start;
-  transition:
-    color 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.18s ease;
+  transition: color 0.2s ease;
+}
+.tab-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transition: background-color 0.22s ease, transform 0.2s ease, box-shadow 0.22s ease;
+}
+.tab-active-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  background: var(--ui-add-btn, var(--accent));
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: box-shadow 0.22s ease, background-color 0.22s ease;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 40%, transparent);
+  white-space: nowrap;
+}
+.tab-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
 }
 .tab.active {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  color: var(--accent);
-  transform: translateY(-1px);
+  color: #ffffff;
 }
+/* inactive tab slight hover lift on desktop */
 .tab-panel {
-  padding: 18px 16px;
-  padding-bottom: 28px;
-  animation: tabContentIn 0.22s ease-out;
+  padding: 20px 18px;
+  padding-bottom: 32px;
+  animation: tabContentIn 0.25s ease-out;
 }
 @keyframes tabContentIn {
   from { opacity: 0; }
@@ -566,4 +582,376 @@ input[type="date"].ll-control:focus {
 }
 .settings-outline-trigger:hover {
   background: var(--surface-hover);
+}
+
+/* ─── Global App Header ─────────────────────────────────────────── */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: var(--ui-tabbar-bg, var(--bg));
+  border-bottom: 1px solid var(--ui-border, var(--border));
+  height: calc(var(--header-h) + var(--safe-top));
+  padding-top: var(--safe-top);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 18px;
+  padding-right: 18px;
+  gap: 12px;
+}
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-header-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1.5px solid var(--ui-border, var(--border));
+}
+.app-header-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--ui-card-bg, var(--surface));
+  border: 1.5px solid var(--ui-border, var(--border));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.app-header-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.app-header-greeting {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1;
+  margin-bottom: 1px;
+}
+.app-header-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ui-title-text, var(--text));
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.app-header-bell {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+.app-header-bell:hover { background: var(--surface-hover); color: var(--ui-primary-text, var(--text)); }
+.streak-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: default;
+}
+
+/* ─── Floating Action Button ─────────────────────────────────────── */
+.fab {
+  position: fixed;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--ui-add-btn, var(--accent));
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 55%, transparent);
+  z-index: 80;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.fab:active { transform: scale(0.93); }
+.fab.fab-open { transform: rotate(45deg); }
+
+/* ─── Quick-Action Bottom Sheet ──────────────────────────────────── */
+.quick-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 150;
+  animation: llFadeIn 0.2s ease-out;
+}
+.quick-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--ui-modal-bg, var(--surface));
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--ui-border, var(--border));
+  padding: 0 0 calc(16px + var(--safe-bottom));
+  z-index: 160;
+  animation: sheetSlideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.quick-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--muted);
+  opacity: 0.4;
+  margin: 12px auto 4px;
+}
+.quick-sheet-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ui-title-text, var(--text));
+  padding: 10px 20px 14px;
+  margin: 0;
+}
+.quick-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--ui-primary-text, var(--text));
+  font-size: 0.95rem;
+  font-family: var(--app-font-family);
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+.quick-sheet-item:active { background: var(--surface-hover); }
+.quick-sheet-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 12%, transparent);
+  color: var(--ui-add-btn, var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.quick-sheet-chevron {
+  margin-left: auto;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ─── Progress Rings ─────────────────────────────────────────────── */
+.progress-rings-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.progress-ring-tile {
+  background: var(--ui-card-bg, var(--surface));
+  border: 1px solid var(--ui-border, var(--border));
+  border-radius: var(--radius-card);
+  padding: 14px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.progress-ring-icon {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.progress-ring-svg {
+  display: block;
+}
+.progress-ring-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ui-title-text, var(--text));
+  text-align: center;
+  line-height: 1;
+}
+.progress-ring-sub {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.2;
+  margin-top: -4px;
+}
+
+/* ─── Hero CTA Card ──────────────────────────────────────────────── */
+.hero-cta-card {
+  background: #3D5E45;
+  border-radius: var(--radius-card);
+  padding: 20px 18px 18px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-cta-coin {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  color: rgba(255, 255, 255, 0.25);
+}
+.hero-cta-headline {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  padding-right: 36px;
+}
+.hero-cta-sub {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+.hero-cta-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hero-cta-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--app-font-family);
+  transition: background-color 0.15s ease;
+}
+.hero-cta-pill:active { background: rgba(255, 255, 255, 0.25); }
+
+/* ─── Net Cash Summary Card (coral left border) ───────────────────── */
+.net-cash-card {
+  background: var(--ui-card-bg, var(--surface));
+  border: 1px solid var(--ui-border, var(--border));
+  border-left: 4px solid var(--ui-add-btn, var(--accent));
+  border-radius: var(--radius-card);
+  padding: 16px 16px;
+  margin-bottom: 16px;
+}
+.net-cash-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--ui-title-text, var(--text));
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.net-cash-value.positive { color: var(--green); }
+.net-cash-value.negative { color: var(--red); }
+.net-cash-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--ui-border, var(--border-subtle));
+  font-size: 0.85rem;
+}
+.net-cash-row:last-child { border-bottom: none; }
+.net-cash-row-label { color: var(--muted); }
+.net-cash-row-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ─── Today's Activity section ───────────────────────────────────── */
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ui-border, var(--border-subtle));
+}
+.activity-row:last-child { border-bottom: none; }
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--ui-section-bg, var(--bg-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.activity-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  color: var(--ui-primary-text, var(--text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.activity-amount-chip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.activity-amount-chip.out { background: var(--red-light); color: var(--red); }
+.activity-amount-chip.in { background: var(--green-light); color: var(--green); }
+
+@media (hover: hover) and (pointer: fine) {
+  .quick-sheet-item:hover { background: var(--surface-hover); }
+  .hero-cta-pill:hover { background: rgba(255, 255, 255, 0.22); }
 }

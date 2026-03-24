@@ -58,7 +58,7 @@ const PRESET_THEMES: PresetTheme[] = [
     id: 'forest',
     name: 'Forest',
     themeColor: '#0f1a12',
-    accentColor: '#5cb87a',
+    accentColor: '#22c55e',
     advancedColors: {
       cardBg: '#162219',
       surfaceSecondary: '#132116',
@@ -69,14 +69,14 @@ const PRESET_THEMES: PresetTheme[] = [
       titleText: '#e8f5e0',
       primaryText: '#c4dcc7',
       outlineButton: '#c4dcc7',
-      addButton: '#5cb87a',
+      addButton: '#22c55e',
     },
   },
   {
     id: 'ocean',
     name: 'Ocean',
     themeColor: '#0c1927',
-    accentColor: '#38bdf8',
+    accentColor: '#0ea5e9',
     advancedColors: {
       cardBg: '#142233',
       surfaceSecondary: '#112030',
@@ -87,14 +87,14 @@ const PRESET_THEMES: PresetTheme[] = [
       titleText: '#e0f0ff',
       primaryText: '#b8d4ee',
       outlineButton: '#b8d4ee',
-      addButton: '#38bdf8',
+      addButton: '#0ea5e9',
     },
   },
   {
     id: 'amber',
     name: 'Amber',
     themeColor: '#1a1200',
-    accentColor: '#f59e0b',
+    accentColor: '#fbbf24',
     advancedColors: {
       cardBg: '#251a05',
       surfaceSecondary: '#201600',
@@ -105,14 +105,14 @@ const PRESET_THEMES: PresetTheme[] = [
       titleText: '#fff8e0',
       primaryText: '#d4c08a',
       outlineButton: '#d4c08a',
-      addButton: '#f59e0b',
+      addButton: '#fbbf24',
     },
   },
   {
     id: 'indigo',
     name: 'Indigo',
     themeColor: '#0f0e1a',
-    accentColor: '#a78bfa',
+    accentColor: '#818cf8',
     advancedColors: {
       cardBg: '#1a1929',
       surfaceSecondary: '#181724',
@@ -123,7 +123,7 @@ const PRESET_THEMES: PresetTheme[] = [
       titleText: '#f0eeff',
       primaryText: '#c4bfe8',
       outlineButton: '#c4bfe8',
-      addButton: '#a78bfa',
+      addButton: '#818cf8',
     },
   },
   {

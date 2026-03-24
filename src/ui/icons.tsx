@@ -1,0 +1,328 @@
+// All icons: inline SVG, 24×24, stroke="currentColor", fill="none", stroke-width="1.5"
+// stroke-linecap="round", stroke-linejoin="round"
+
+const SVG_PROPS = {
+  width: 24,
+  height: 24,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.5,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+};
+
+// --- Tab Icons ---
+
+export function IconHome() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
+      <path d="M9 21V12h6v9" />
+    </svg>
+  );
+}
+
+export function IconArrowExchange() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M7 16H3m0 0l4-4m-4 4l4 4" />
+      <path d="M17 8h4m0 0l-4-4m4 4l-4 4" />
+    </svg>
+  );
+}
+
+export function IconCalendar() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+      <rect x="8" y="14" width="4" height="4" rx="0.5" />
+    </svg>
+  );
+}
+
+export function IconRefreshCircle() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M21 12a9 9 0 0 1-9 9m-9-9a9 9 0 0 1 9-9" />
+      <path d="M3 12a9 9 0 0 1 9-9m9 9a9 9 0 0 1-9 9" />
+      <path d="M20.5 7.5L21 3l-4.5.5" />
+      <path d="M3.5 16.5L3 21l4.5-.5" />
+    </svg>
+  );
+}
+
+export function IconBankBuilding() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M3 22h18M3 7h18M12 3L3 7h18L12 3z" />
+      <path d="M6 7v15M10 7v15M14 7v15M18 7v15" />
+    </svg>
+  );
+}
+
+export function IconBarChartTrend() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="2" y="14" width="4" height="8" rx="0.5" />
+      <rect x="9" y="9" width="4" height="13" rx="0.5" />
+      <rect x="16" y="5" width="4" height="17" rx="0.5" />
+      <path d="M4 11L9 7l5 3 7-7" />
+    </svg>
+  );
+}
+
+export function IconStar() {
+  return (
+    <svg {...SVG_PROPS}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+// --- Header Icons ---
+
+export function IconBell() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+export function IconFlame() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M12 2C6.5 6.5 9 12 9 12c-2-1-3-2.5-3-4.5C4 11 3 14 5 17a7 7 0 0 0 14 0c0-5-3-8-4-10-1.5 2.5-2.5 4-2.5 5.5S11 15 12 15s2-1.5 1.5-3.5C13 9 12 6.5 12 2z" />
+    </svg>
+  );
+}
+
+export function IconGear() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+// --- Action Icons ---
+
+export function IconPlusCircle() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v8M8 12h8" />
+    </svg>
+  );
+}
+
+export function IconEye() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function IconChevronRightCircle() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m10 8 4 4-4 4" />
+    </svg>
+  );
+}
+
+export function IconVault() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="2" y="3" width="20" height="18" rx="2" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="1.5" />
+      <path d="M15.5 8.5L17 7" />
+    </svg>
+  );
+}
+
+export function IconCreditCard() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="1" y="4" width="22" height="16" rx="3" />
+      <path d="M1 10h22" />
+    </svg>
+  );
+}
+
+export function IconClock() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+
+export function IconArrowUpRight() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M7 17L17 7" />
+      <path d="M7 7h10v10" />
+    </svg>
+  );
+}
+
+export function IconArrowDownRight() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M7 7l10 10" />
+      <path d="M17 7v10H7" />
+    </svg>
+  );
+}
+
+export function IconPlusClock() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="16" cy="15" r="6" />
+      <path d="M16 11v4l2.5 1.5" />
+      <path d="M5 9h6M8 6v6" />
+    </svg>
+  );
+}
+
+export function IconCheckCircle() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+export function IconPencil() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+export function IconTrash() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+export function IconExport() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m17 8-5-5-5 5" />
+      <path d="M12 3v12" />
+    </svg>
+  );
+}
+
+export function IconPiggyBank() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M19 10c0-4.42-3.58-8-8-8S3 5.58 3 10c0 2.76 1.4 5.2 3.5 6.68V19a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h4v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-2.32A7.98 7.98 0 0 0 19 10z" />
+      <circle cx="8.5" cy="10.5" r="1" fill="currentColor" stroke="none" />
+      <path d="M19 10h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2" />
+      <path d="M12 3v2" />
+    </svg>
+  );
+}
+
+export function IconShieldChart() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 16v-5M12 16v-8M15 16v-3" />
+    </svg>
+  );
+}
+
+export function IconInfoCircle() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8h.01M12 11v5" />
+    </svg>
+  );
+}
+
+export function IconGiftBox() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="3" y="8" width="18" height="14" rx="1" />
+      <path d="M21 8H3V6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2z" />
+      <path d="M12 5v17" />
+      <path d="M8 5c0-2 4-4 4-4s4 2 4 4" />
+    </svg>
+  );
+}
+
+export function IconChevronRight() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+export function IconChevronDown() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+export function IconPlus() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+export function IconCoin() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v2M12 15v2M9.5 9.5C9.5 8.67 10.67 8 12 8s2.5.67 2.5 1.5c0 1.5-2.5 2-2.5 3.5s2.5 2 2.5 3.5" />
+    </svg>
+  );
+}
+
+export function IconRefresh() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M23 4v6h-6" />
+      <path d="M1 20v-6h6" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+      <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </svg>
+  );
+}
+
+export function IconMagnify() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.35-4.35" />
+    </svg>
+  );
+}
