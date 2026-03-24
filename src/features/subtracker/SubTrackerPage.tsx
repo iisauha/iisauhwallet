@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import {
@@ -377,8 +377,12 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
 
+  const lastAddTriggerRef = useRef(addTrigger);
   useEffect(() => {
-    if (addTrigger > 0) { setEditorOpen(true); setEditorEntryId(null); }
+    if (addTrigger !== lastAddTriggerRef.current) {
+      lastAddTriggerRef.current = addTrigger;
+      if (addTrigger > 0) { setEditorOpen(true); setEditorEntryId(null); }
+    }
   }, [addTrigger]);
   const [spentInput, setSpentInput] = useState<string>('0.00');
   const [completedEditor, setCompletedEditor] = useState<null | { mode: 'add' } | { mode: 'edit'; id: string }>(null);

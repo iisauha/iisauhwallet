@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
@@ -21,8 +21,12 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
 
   const [open, setOpen] = useState(false);
 
+  const lastAddTriggerRef = useRef(addTrigger);
   useEffect(() => {
-    if (addTrigger > 0) setOpen(true);
+    if (addTrigger !== lastAddTriggerRef.current) {
+      lastAddTriggerRef.current = addTrigger;
+      if (addTrigger > 0) setOpen(true);
+    }
   }, [addTrigger]);
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [name, setName] = useState('');

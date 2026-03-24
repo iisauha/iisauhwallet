@@ -457,28 +457,31 @@ input[type="date"].ll-control:focus {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 200;
-  padding: 10px;
-  padding-bottom: calc(10px + var(--safe-bottom));
+  padding: 16px;
+  padding-bottom: calc(16px + var(--safe-bottom));
+  animation: llFadeIn 0.18s ease-out;
 }
 .modal {
   width: 100%;
   max-width: 420px;
-  max-height: 90vh;
+  max-height: 88vh;
   font-family: var(--app-font-family);
-  background: var(--ui-modal-bg, var(--surface));
-  border-radius: 16px;
-  padding: 20px;
-  border: 1px solid var(--ui-border, var(--border));
+  background: #1E1E1E;
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  border: 1px solid rgba(255,255,255,0.08);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  animation: llModalIn 0.22s ease-out;
+  animation: llModalIn 0.2s ease-out;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
 }
-.modal-overlay { animation: llFadeIn 0.2s ease-out; }
 .modal:focus { outline: none; }
 .modal:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 2px; }
 
@@ -487,8 +490,8 @@ input[type="date"].ll-control:focus {
   to { opacity: 1; }
 }
 @keyframes llModalIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.99); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -526,18 +529,23 @@ input[type="date"].ll-control:focus {
   .section-header:active { background: var(--ui-section-bg, var(--ui-card-bg, var(--surface))); }
   .icon-btn:hover { background: transparent; }
 }
-.modal h3 { margin: 0 0 16px 0; font-size: 1.25rem; color: var(--ui-title-text, var(--text)); font-weight: 600; }
-.modal .field { margin-bottom: 14px; }
-.modal label { display: block; font-size: 0.9rem; color: var(--ui-primary-text, var(--text)); margin-bottom: 4px; }
+.modal h3 { margin: 0 0 18px 0; font-size: 1.2rem; color: var(--ui-title-text, var(--text)); font-weight: 700; }
+.modal .field { margin-bottom: 16px; }
+.modal label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; letter-spacing: 0.02em; }
 .modal input, .modal select, .modal textarea {
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
-  font-size: 1.1rem;
-  border-radius: 10px;
-  border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
-  background: var(--ui-modal-bg, var(--surface));
+  font-size: 1rem;
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: #2A2A2A;
   color: var(--ui-primary-text, var(--text));
+  transition: border-color 0.15s ease;
+}
+.modal input:focus, .modal select:focus, .modal textarea:focus {
+  outline: none;
+  border-color: var(--ui-add-btn, var(--accent));
 }
 
 /* Spending: remove the small caret that looks like an "upside down range". */
@@ -723,17 +731,19 @@ input[type="date"].ll-control:focus {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 150;
-  animation: llFadeIn 0.2s ease-out;
+  animation: llFadeIn 0.18s ease-out;
 }
 .quick-sheet {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--ui-modal-bg, var(--surface));
+  background: #1E1E1E;
   border-radius: 20px 20px 0 0;
-  border-top: 1px solid var(--ui-border, var(--border));
+  border-top: 1px solid rgba(255,255,255,0.08);
   padding: 0 0 calc(16px + var(--safe-bottom));
   z-index: 160;
   animation: sheetSlideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
@@ -794,45 +804,65 @@ input[type="date"].ll-control:focus {
   flex-shrink: 0;
 }
 
-/* ─── Progress Rings ─────────────────────────────────────────────── */
-.progress-rings-row {
+/* ─── Stat Tiles (Snapshot) ──────────────────────────────────────── */
+.stat-tiles-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 20px;
 }
-.progress-ring-tile {
+.stat-tile {
   background: var(--ui-card-bg, var(--surface));
   border: 1px solid var(--ui-border, var(--border));
   border-radius: var(--radius-card);
-  padding: 14px 8px 12px;
+  padding: 18px 8px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  font-family: var(--app-font-family);
 }
-.progress-ring-icon {
+.stat-tile.active {
+  border-color: var(--ui-add-btn, var(--accent));
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 10%, var(--ui-card-bg, var(--surface)));
+}
+.stat-tile:active { transform: scale(0.97); }
+.stat-tile-icon {
   color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.progress-ring-svg {
-  display: block;
-}
-.progress-ring-label {
-  font-size: 0.85rem;
-  font-weight: 700;
+.stat-tile.active .stat-tile-icon { color: var(--ui-add-btn, var(--accent)); }
+.stat-tile-value {
+  font-size: 1.05rem;
+  font-weight: 800;
   color: var(--ui-title-text, var(--text));
-  text-align: center;
   line-height: 1;
-}
-.progress-ring-sub {
-  font-size: 0.68rem;
-  color: var(--muted);
   text-align: center;
-  line-height: 1.2;
-  margin-top: -4px;
+  letter-spacing: -0.02em;
+}
+.stat-tile-label {
+  font-size: 0.67rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-align: center;
+}
+
+/* ─── Snapshot Collapsible Section Bodies ────────────────────────── */
+.snapshot-section-body {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.28s ease-in-out, opacity 0.22s ease-in-out;
+}
+.snapshot-section-body.open {
+  max-height: 3000px;
+  opacity: 1;
 }
 
 /* ─── Hero CTA Card ──────────────────────────────────────────────── */
@@ -1060,4 +1090,29 @@ input[type="date"].ll-control:focus {
   .hero-cta-pill:hover { background: rgba(255, 255, 255, 0.22); }
   .settings-row:hover { background: var(--surface-hover); }
   .snapshot-add-btn:hover { background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 22%, transparent); }
+  .stat-tile:hover { background: var(--surface-hover); }
+  .stat-tile.active:hover { background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 16%, var(--ui-card-bg, var(--surface))); }
+}
+
+/* ─── Tab Content Transitions ─────────────────────────────────────── */
+.tab-panel {
+  animation: llTabIn 0.18s ease-out;
+}
+@keyframes llTabIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Button press states ─────────────────────────────────────────── */
+.btn:active, .btn-primary:active, .btn-secondary:active, .btn-add:active { transform: scale(0.97); }
+.quick-sheet-item:active { transform: scale(0.99); }
+.hero-cta-pill:active { transform: scale(0.97); }
+.settings-row:active { transform: scale(0.99); }
+
+/* ─── prefers-reduced-motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

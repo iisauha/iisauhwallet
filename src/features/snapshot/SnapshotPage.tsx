@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
@@ -15,42 +15,15 @@ import {
   IconCreditCard, IconWallet, IconClock, IconPlusCircle, IconEye, IconChevronRightCircle, IconPlus,
 } from '../../ui/icons';
 
-// Progress ring helper
-function ProgressRing({
-  pct,
-  color,
-  size = 56,
-  strokeWidth = 5,
-}: {
-  pct: number;
-  color: string;
-  size?: number;
-  strokeWidth?: number;
-}) {
-  const r = (size - strokeWidth) / 2;
-  const circ = 2 * Math.PI * r;
-  const filled = Math.min(1, Math.max(0, pct)) * circ;
-  const cx = size / 2;
-  const cy = size / 2;
-  return (
-    <svg width={size} height={size} className="progress-ring-svg" style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth} />
-      <circle
-        cx={cx} cy={cy} r={r} fill="none" stroke={color}
-        strokeWidth={strokeWidth} strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={circ - filled}
-        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-      />
-    </svg>
-  );
-}
 
 export function SnapshotPage({
   onSwitchTab,
+  onLogTransaction,
   pendingInTrigger = 0,
   pendingOutTrigger = 0,
 }: {
   onSwitchTab?: (tab: string) => void;
+  onLogTransaction?: () => void;
   pendingInTrigger?: number;
   pendingOutTrigger?: number;
 }) {
@@ -119,16 +92,34 @@ export function SnapshotPage({
       }
   >({ type: 'none' });
 
+  // Which detail section is expanded: 'cash' | 'cards' | 'pending' | null (accordion)
+  const [activeSection, setActiveSection] = useState<'cash' | 'cards' | 'pending' | null>(null);
+
+  function toggleSection(s: 'cash' | 'cards' | 'pending') {
+    setActiveSection((prev) => (prev === s ? null : s));
+  }
+
   // Open add-pending modal when triggered from quick-action sheet
+  // useRef guards prevent firing on tab remount with a stale trigger value
+  const lastPendingInTriggerRef = useRef(pendingInTrigger);
   useEffect(() => {
-    if (pendingInTrigger > 0) {
-      setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' });
+    if (pendingInTrigger !== lastPendingInTriggerRef.current) {
+      lastPendingInTriggerRef.current = pendingInTrigger;
+      if (pendingInTrigger > 0) {
+        setActiveSection('pending');
+        setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' });
+      }
     }
   }, [pendingInTrigger]);
 
+  const lastPendingOutTriggerRef = useRef(pendingOutTrigger);
   useEffect(() => {
-    if (pendingOutTrigger > 0) {
-      setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' });
+    if (pendingOutTrigger !== lastPendingOutTriggerRef.current) {
+      lastPendingOutTriggerRef.current = pendingOutTrigger;
+      if (pendingOutTrigger > 0) {
+        setActiveSection('pending');
+        setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' });
+      }
     }
   }, [pendingOutTrigger]);
 
@@ -269,22 +260,9 @@ export function SnapshotPage({
     }
   }
 
-  // Progress ring data
   const totalCardDebtCents = totals.ccDebtCents;
-  // Cap card debt ring at $20k for visual scale
-  const cardDebtRingPct = totalCardDebtCents > 0 ? Math.min(1, totalCardDebtCents / 200000) : 0;
-
   const totalCashCents = totals.bankTotalCents;
-  const monthlyIncomeCents = useMemo(
-    () => (data.recurring || [])
-      .filter((r) => r.type === 'income')
-      .reduce((s, r) => s + (r.amountCents || 0), 0),
-    [data.recurring]
-  );
-  const cashRingPct = monthlyIncomeCents > 0 ? Math.min(1, totalCashCents / monthlyIncomeCents) : 0;
-
   const pendingCount = (data.pendingIn || []).length + (data.pendingOut || []).length;
-  const pendingRingPct = Math.min(1, pendingCount / 10);
 
   return (
     <div className="tab-panel active" id="snapshotContent">
@@ -297,7 +275,7 @@ export function SnapshotPage({
           <button
             type="button"
             className="hero-cta-pill"
-            onClick={() => onSwitchTab?.('spending')}
+            onClick={() => onLogTransaction?.()}
           >
             <IconPlusCircle />
             Log transaction
@@ -321,43 +299,41 @@ export function SnapshotPage({
         </div>
       </div>
 
-      {/* Summary Tiles */}
-      <div className="progress-rings-row">
+      {/* Summary Stat Tiles */}
+      <div className="stat-tiles-row">
         <button
           type="button"
-          className="progress-ring-tile"
-          style={{ cursor: 'pointer', textAlign: 'center', border: 'none', width: '100%' }}
-          onClick={() => document.getElementById('snapshotCards')?.scrollIntoView({ behavior: 'smooth' })}
+          className={`stat-tile${activeSection === 'cards' ? ' active' : ''}`}
+          onClick={() => toggleSection('cards')}
+          aria-expanded={activeSection === 'cards'}
         >
-          <div className="progress-ring-icon" style={{ color: 'var(--ui-add-btn, var(--accent))' }}><IconCreditCard /></div>
-          <ProgressRing pct={cardDebtRingPct} color="var(--ui-add-btn, var(--accent))" />
-          <div className="progress-ring-label">{formatCents(totalCardDebtCents)}</div>
-          <div className="progress-ring-sub">CC Balance</div>
+          <div className="stat-tile-icon"><IconCreditCard /></div>
+          <div className="stat-tile-value">{formatCents(totalCardDebtCents)}</div>
+          <div className="stat-tile-label">CC Balance</div>
         </button>
         <button
           type="button"
-          className="progress-ring-tile"
-          style={{ cursor: 'pointer', textAlign: 'center', border: 'none', width: '100%' }}
-          onClick={() => document.getElementById('snapshotCash')?.scrollIntoView({ behavior: 'smooth' })}
+          className={`stat-tile${activeSection === 'cash' ? ' active' : ''}`}
+          onClick={() => toggleSection('cash')}
+          aria-expanded={activeSection === 'cash'}
         >
-          <div className="progress-ring-icon" style={{ color: '#3D9E4F' }}><IconWallet /></div>
-          <ProgressRing pct={cashRingPct} color="#3D9E4F" />
-          <div className="progress-ring-label">{formatCents(totalCashCents)}</div>
-          <div className="progress-ring-sub">Cash</div>
+          <div className="stat-tile-icon"><IconWallet /></div>
+          <div className="stat-tile-value">{formatCents(totalCashCents)}</div>
+          <div className="stat-tile-label">Cash</div>
         </button>
         <button
           type="button"
-          className="progress-ring-tile"
-          style={{ cursor: 'pointer', textAlign: 'center', border: 'none', width: '100%' }}
-          onClick={() => document.getElementById('snapshotPending')?.scrollIntoView({ behavior: 'smooth' })}
+          className={`stat-tile${activeSection === 'pending' ? ' active' : ''}`}
+          onClick={() => toggleSection('pending')}
+          aria-expanded={activeSection === 'pending'}
         >
-          <div className="progress-ring-icon" style={{ color: '#6366f1' }}><IconClock /></div>
-          <ProgressRing pct={pendingRingPct} color="#6366f1" />
-          <div className="progress-ring-label">{pendingCount}</div>
-          <div className="progress-ring-sub">Pending</div>
+          <div className="stat-tile-icon"><IconClock /></div>
+          <div className="stat-tile-value">{pendingCount}</div>
+          <div className="stat-tile-label">Pending</div>
         </button>
       </div>
 
+      <div className={`snapshot-section-body${activeSection === 'cash' ? ' open' : ''}`}>
       <div className="snapshot-section-label" id="snapshotCash">
         <span>Cash</span>
         <div className="snapshot-section-label-actions">
@@ -383,8 +359,7 @@ export function SnapshotPage({
           </button>
         </div>
       </div>
-      {true ? (
-        <>
+      <>
           <div>
             {visibleBanks.map((b) => {
               const linkedLiquid = linkedHysaLiquidByBankId[b.id] || 0;
@@ -444,8 +419,9 @@ export function SnapshotPage({
             })}
           </div>
         </>
-      ) : null}
+      </div>
 
+      <div className={`snapshot-section-body${activeSection === 'cards' ? ' open' : ''}`}>
       <div className="snapshot-section-label" id="snapshotCards">
         <span>Credit Cards</span>
         <div className="snapshot-section-label-actions">
@@ -471,8 +447,7 @@ export function SnapshotPage({
           </button>
         </div>
       </div>
-      {true ? (
-        <>
+      <>
           <div>
             {visibleCards.map((c) => {
               const balanceCents = c.balanceCents ?? 0;
@@ -562,8 +537,9 @@ export function SnapshotPage({
             })}
           </div>
         </>
-      ) : null}
+      </div>
 
+      <div className={`snapshot-section-body${activeSection === 'pending' ? ' open' : ''}`}>
       <div className="snapshot-section-label" id="snapshotPending">
         <span>Pending Inbound</span>
         <button
@@ -575,8 +551,7 @@ export function SnapshotPage({
           Add
         </button>
       </div>
-      {true ? (
-        <>
+      <>
           <PendingInboundList
             data={data}
             items={data.pendingIn || []}
@@ -623,7 +598,6 @@ export function SnapshotPage({
             </button>
           </div>
         </>
-      ) : null}
 
       <div className="snapshot-section-label">
         <span>Pending Outbound</span>
@@ -636,8 +610,7 @@ export function SnapshotPage({
           Add
         </button>
       </div>
-      {true ? (
-        <>
+      <>
           <PendingOutboundList
             data={data}
             items={data.pendingOut || []}
@@ -682,7 +655,7 @@ export function SnapshotPage({
             </button>
           </div>
         </>
-      ) : null}
+      </div>
 
       <div className="summary net-cash-card" id="snapshotSummary" style={{ borderLeft: '4px solid var(--ui-add-btn, var(--accent))' }}>
         <div className="summary-compact">

@@ -20,7 +20,7 @@ import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './sta
 import {
   IconHome, IconArrowExchange, IconCalendar, IconRefreshCircle,
   IconBankBuilding, IconBarChartTrend, IconStar,
-  IconPlusCircle, IconVault, IconArrowUpRight,
+  IconPlusCircle, IconCreditCard, IconVault, IconArrowUpRight,
   IconArrowDownRight, IconRefresh, IconGiftBox, IconExport,
   IconChevronRight, IconPlus,
 } from './ui/icons';
@@ -138,6 +138,7 @@ interface QuickSheetProps {
 
 export type QuickAction =
   | 'log-purchase'
+  | 'add-reimbursable'
   | 'add-pending-out'
   | 'add-pending-in'
   | 'add-recurring'
@@ -148,6 +149,7 @@ export type QuickAction =
 function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
   const items: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
     { icon: <IconPlusCircle />, label: 'Log a purchase', action: 'log-purchase' },
+    { icon: <IconCreditCard />, label: 'Reimbursable Charge', action: 'add-reimbursable' },
     { icon: <IconArrowDownRight />, label: 'Add pending outbound', action: 'add-pending-out' },
     { icon: <IconArrowUpRight />, label: 'Add pending inbound', action: 'add-pending-in' },
     { icon: <IconRefresh />, label: 'Add recurring item', action: 'add-recurring' },
@@ -189,6 +191,7 @@ function MainApp() {
   const [sheetOpen, setSheetOpen] = useState(false);
   // Trigger counters — increment to open add modal in respective tab
   const [spendingAddTrigger, setSpendingAddTrigger] = useState(0);
+  const [spendingReimburseAddTrigger, setSpendingReimburseAddTrigger] = useState(0);
   const [snapshotPendingInTrigger, setSnapshotPendingInTrigger] = useState(0);
   const [snapshotPendingOutTrigger, setSnapshotPendingOutTrigger] = useState(0);
   const [recurringAddTrigger, setRecurringAddTrigger] = useState(0);
@@ -216,6 +219,10 @@ function MainApp() {
       case 'log-purchase':
         setTab('spending');
         setSpendingAddTrigger((n) => n + 1);
+        break;
+      case 'add-reimbursable':
+        setTab('spending');
+        setSpendingReimburseAddTrigger((n) => n + 1);
         break;
       case 'add-pending-in':
         setTab('snapshot');
@@ -247,6 +254,7 @@ function MainApp() {
     if (tab === 'snapshot') return (
       <SnapshotPage
         onSwitchTab={(t) => setTab(t as TabKey)}
+        onLogTransaction={() => { setTab('spending'); setSpendingAddTrigger((n) => n + 1); }}
         pendingInTrigger={snapshotPendingInTrigger}
         pendingOutTrigger={snapshotPendingOutTrigger}
       />
@@ -299,7 +307,7 @@ function MainApp() {
           style={{ display: tab === 'spending' ? 'block' : 'none', position: 'relative', minHeight: '100%' }}
           aria-hidden={tab !== 'spending'}
         >
-          <SpendingPage tabVisible={tab === 'spending'} addTrigger={spendingAddTrigger} />
+          <SpendingPage tabVisible={tab === 'spending'} addTrigger={spendingAddTrigger} reimburseAddTrigger={spendingReimburseAddTrigger} />
         </div>
       )}
       {tab !== 'spending' && (

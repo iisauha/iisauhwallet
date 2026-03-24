@@ -65,10 +65,10 @@ export function IconBankBuilding() {
 export function IconBarChartTrend() {
   return (
     <svg {...SVG_PROPS}>
-      <rect x="2" y="14" width="4" height="8" rx="0.5" />
-      <rect x="9" y="9" width="4" height="13" rx="0.5" />
-      <rect x="16" y="5" width="4" height="17" rx="0.5" />
-      <path d="M4 11L9 7l5 3 7-7" />
+      <rect x="2" y="15" width="4" height="7" rx="0.5" />
+      <rect x="9" y="10" width="4" height="12" rx="0.5" />
+      <rect x="16" y="6" width="4" height="16" rx="0.5" />
+      <path d="M3 5L9 3l6 1 6-3" />
     </svg>
   );
 }
