@@ -9,7 +9,7 @@ import { Select } from '../../ui/Select';
 import { OptimizerModal } from '../optimizer/OptimizerModal';
 import { ViewLastOptimizerModal } from '../optimizer/ViewLastOptimizerModal';
 
-export function RecurringPage() {
+export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -20,6 +20,10 @@ export function RecurringPage() {
   }, [actions]);
 
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (addTrigger > 0) setOpen(true);
+  }, [addTrigger]);
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');

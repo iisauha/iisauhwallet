@@ -27,7 +27,7 @@ function addMonths(d: Date, months: number) {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
-export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {}) {
+export function SpendingPage({ tabVisible = true, addTrigger = 0 }: { tabVisible?: boolean; addTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -35,6 +35,10 @@ export function SpendingPage({ tabVisible = true }: { tabVisible?: boolean } = {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [openAdd, setOpenAdd] = useState(false);
+
+  useEffect(() => {
+    if (addTrigger > 0) setOpenAdd(true);
+  }, [addTrigger]);
   const [reimbursementMode, setReimbursementMode] = useState(false);
   const [view, setView] = useState<BreakdownView>('category');
   const [lastRewardsSubView, setLastRewardsSubView] = useState<'rewards' | 'card'>('rewards');

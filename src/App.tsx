@@ -17,12 +17,10 @@ import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
 import { ReminderProvider } from './state/ReminderContext';
 import { TAB_ORDER_KEY } from './state/keys';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
-import { useLedgerStore } from './state/store';
 import {
   IconHome, IconArrowExchange, IconCalendar, IconRefreshCircle,
   IconBankBuilding, IconBarChartTrend, IconStar,
-  IconBell, IconFlame, IconPlusCircle,
-  IconVault, IconArrowUpRight,
+  IconPlusCircle, IconVault, IconArrowUpRight,
   IconArrowDownRight, IconRefresh, IconGiftBox, IconExport,
   IconChevronRight, IconPlus,
 } from './ui/icons';
@@ -103,35 +101,8 @@ function saveTabOrder(order: TabKey[]): void {
   } catch (_) {}
 }
 
-function computeStreak(data: { purchases?: { dateISO?: string }[] }): number {
-  try {
-    const purchases = data?.purchases || [];
-    if (!purchases.length) return 0;
-    const dateSet = new Set(purchases.map((p) => (p.dateISO || '').slice(0, 10)));
-    let count = 0;
-    const today = new Date();
-    for (let i = 0; i < 365; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      if (dateSet.has(key)) {
-        count++;
-      } else if (i > 0) {
-        break;
-      }
-    }
-    return count;
-  } catch {
-    return 0;
-  }
-}
 
-interface GlobalHeaderProps {
-  onAvatarClick: () => void;
-  streak: number;
-}
-
-function GlobalHeader({ onAvatarClick, streak }: GlobalHeaderProps) {
+function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
   const displayName = loadUserDisplayName();
   const profileImage = loadUserProfileImage();
 
@@ -148,44 +119,41 @@ function GlobalHeader({ onAvatarClick, streak }: GlobalHeaderProps) {
           <img src={profileImage} className="app-header-avatar" alt="" />
         ) : (
           <div className="app-header-avatar-placeholder">
-            {displayName ? displayName.charAt(0).toUpperCase() : '?'}
+            {displayName ? displayName.charAt(0).toUpperCase() : ''}
           </div>
         )}
         <div className="app-header-text">
           <span className="app-header-greeting">Welcome back</span>
-          <span className="app-header-name">{displayName || 'there'}</span>
+          <span className="app-header-name">{displayName || 'iisauh Wallet'}</span>
         </div>
       </button>
-
-      <div className="app-header-right">
-        <button type="button" className="app-header-bell" aria-label="Notifications">
-          <IconBell />
-        </button>
-        {streak > 0 && (
-          <div className="streak-chip">
-            <IconFlame />
-            <span>{streak}</span>
-          </div>
-        )}
-      </div>
     </header>
   );
 }
 
 interface QuickSheetProps {
   onClose: () => void;
-  onNavigate: (tab: TabKey) => void;
+  onAction: (action: QuickAction) => void;
 }
 
-function QuickActionSheet({ onClose, onNavigate }: QuickSheetProps) {
-  const items = [
-    { icon: <IconPlusCircle />, label: 'Log a purchase', tab: 'spending' as TabKey },
-    { icon: <IconArrowDownRight />, label: 'Add pending outbound', tab: 'snapshot' as TabKey },
-    { icon: <IconArrowUpRight />, label: 'Add pending inbound', tab: 'snapshot' as TabKey },
-    { icon: <IconRefresh />, label: 'Add recurring item', tab: 'recurring' as TabKey },
-    { icon: <IconVault />, label: 'Update a balance', tab: 'snapshot' as TabKey },
-    { icon: <IconGiftBox />, label: 'Add a bonus card', tab: 'subtracker' as TabKey },
-    { icon: <IconExport />, label: 'Export backup', tab: 'settings' as TabKey },
+export type QuickAction =
+  | 'log-purchase'
+  | 'add-pending-out'
+  | 'add-pending-in'
+  | 'add-recurring'
+  | 'update-balance'
+  | 'add-bonus'
+  | 'export';
+
+function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
+  const items: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
+    { icon: <IconPlusCircle />, label: 'Log a purchase', action: 'log-purchase' },
+    { icon: <IconArrowDownRight />, label: 'Add pending outbound', action: 'add-pending-out' },
+    { icon: <IconArrowUpRight />, label: 'Add pending inbound', action: 'add-pending-in' },
+    { icon: <IconRefresh />, label: 'Add recurring item', action: 'add-recurring' },
+    { icon: <IconVault />, label: 'Update a balance', action: 'update-balance' },
+    { icon: <IconGiftBox />, label: 'Add a bonus card', action: 'add-bonus' },
+    { icon: <IconExport />, label: 'Export backup', action: 'export' },
   ];
 
   return (
@@ -196,11 +164,11 @@ function QuickActionSheet({ onClose, onNavigate }: QuickSheetProps) {
         <p className="quick-sheet-title">What do you want to do?</p>
         {items.map((item) => (
           <button
-            key={item.label}
+            key={item.action}
             type="button"
             className="quick-sheet-item"
             onClick={() => {
-              onNavigate(item.tab);
+              onAction(item.action);
               onClose();
             }}
           >
@@ -219,7 +187,12 @@ function MainApp() {
   const [spendingVisited, setSpendingVisited] = useState(false);
   const [tabOrder, setTabOrder] = useState<TabKey[]>(() => loadTabOrder());
   const [sheetOpen, setSheetOpen] = useState(false);
-  const data = useLedgerStore((s) => s.data);
+  // Trigger counters — increment to open add modal in respective tab
+  const [spendingAddTrigger, setSpendingAddTrigger] = useState(0);
+  const [snapshotPendingInTrigger, setSnapshotPendingInTrigger] = useState(0);
+  const [snapshotPendingOutTrigger, setSnapshotPendingOutTrigger] = useState(0);
+  const [recurringAddTrigger, setRecurringAddTrigger] = useState(0);
+  const [subtrackerAddTrigger, setSubtrackerAddTrigger] = useState(0);
 
   useEffect(() => {
     if (tab === 'spending') setSpendingVisited(true);
@@ -238,18 +211,53 @@ function MainApp() {
     }
   }, [tab, visibleNavOrder]);
 
-  const streak = useMemo(() => computeStreak(data), [data]);
+  const handleQuickAction = useCallback((action: QuickAction) => {
+    switch (action) {
+      case 'log-purchase':
+        setTab('spending');
+        setSpendingAddTrigger((n) => n + 1);
+        break;
+      case 'add-pending-in':
+        setTab('snapshot');
+        setSnapshotPendingInTrigger((n) => n + 1);
+        break;
+      case 'add-pending-out':
+        setTab('snapshot');
+        setSnapshotPendingOutTrigger((n) => n + 1);
+        break;
+      case 'add-recurring':
+        setTab('recurring');
+        setRecurringAddTrigger((n) => n + 1);
+        break;
+      case 'update-balance':
+        setTab('snapshot');
+        break;
+      case 'add-bonus':
+        setTab('subtracker');
+        setSubtrackerAddTrigger((n) => n + 1);
+        break;
+      case 'export':
+        setTab('settings');
+        break;
+    }
+  }, []);
 
   const otherTabContent = useMemo(() => {
     if (tab === 'spending') return null;
-    if (tab === 'snapshot') return <SnapshotPage onSwitchTab={(t) => setTab(t as TabKey)} />;
+    if (tab === 'snapshot') return (
+      <SnapshotPage
+        onSwitchTab={(t) => setTab(t as TabKey)}
+        pendingInTrigger={snapshotPendingInTrigger}
+        pendingOutTrigger={snapshotPendingOutTrigger}
+      />
+    );
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'loans') return <LoansPage />;
     if (tab === 'investing') return <InvestingPage />;
-    if (tab === 'recurring') return <RecurringPage />;
-    if (tab === 'subtracker') return <SubTrackerPage />;
+    if (tab === 'recurring') return <RecurringPage addTrigger={recurringAddTrigger} />;
+    if (tab === 'subtracker') return <SubTrackerPage addTrigger={subtrackerAddTrigger} />;
     return <SettingsPage />;
-  }, [tab]);
+  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddTrigger, subtrackerAddTrigger]);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', String(index));
@@ -284,14 +292,14 @@ function MainApp() {
 
   return (
     <>
-      <GlobalHeader onAvatarClick={() => setTab('settings')} streak={streak} />
+      <GlobalHeader onAvatarClick={() => setTab('settings')} />
 
       {(spendingVisited || tab === 'spending') && (
         <div
           style={{ display: tab === 'spending' ? 'block' : 'none', position: 'relative', minHeight: '100%' }}
           aria-hidden={tab !== 'spending'}
         >
-          <SpendingPage tabVisible={tab === 'spending'} />
+          <SpendingPage tabVisible={tab === 'spending'} addTrigger={spendingAddTrigger} />
         </div>
       )}
       {tab !== 'spending' && (
@@ -314,7 +322,7 @@ function MainApp() {
       {sheetOpen && (
         <QuickActionSheet
           onClose={() => setSheetOpen(false)}
-          onNavigate={(t) => setTab(t)}
+          onAction={handleQuickAction}
         />
       )}
 

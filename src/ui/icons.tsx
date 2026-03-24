@@ -326,3 +326,77 @@ export function IconMagnify() {
     </svg>
   );
 }
+
+export function IconWallet() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M21 18V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1" />
+      <path d="M23 13H17a2 2 0 0 0 0 4h6v-4z" />
+    </svg>
+  );
+}
+
+export function IconPalette() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="8" cy="14" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="9" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="14" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function IconLayout() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18M9 21V9" />
+    </svg>
+  );
+}
+
+export function IconShield() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
+export function IconTag() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function IconUser() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+export function IconDatabase() {
+  return (
+    <svg {...SVG_PROPS}>
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  );
+}
+
+export function IconLock() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}

@@ -350,7 +350,7 @@ function CompletedBonusEditorModal({
   );
 }
 
-export function SubTrackerPage() {
+export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cards = data.cards || [];
@@ -376,6 +376,10 @@ export function SubTrackerPage() {
   const [tierDrafts, setTierDrafts] = useState<TierDraft[]>(() => [{ id: uid(), spendTarget: '', rewardAmount: '', rewardUnit: 'points' }]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (addTrigger > 0) { setEditorOpen(true); setEditorEntryId(null); }
+  }, [addTrigger]);
   const [spentInput, setSpentInput] = useState<string>('0.00');
   const [completedEditor, setCompletedEditor] = useState<null | { mode: 'add' } | { mode: 'edit'; id: string }>(null);
   const [completedBonusesCollapsed, setCompletedBonusesCollapsed] = useDropdownCollapsed('sub_tracker_completed_bonuses', false);

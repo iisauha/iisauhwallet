@@ -12,7 +12,7 @@ import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 import {
-  IconCreditCard, IconVault, IconClock, IconPlusCircle, IconEye, IconChevronRightCircle, IconCoin,
+  IconCreditCard, IconWallet, IconClock, IconPlusCircle, IconEye, IconChevronRightCircle, IconPlus,
 } from '../../ui/icons';
 
 // Progress ring helper
@@ -45,7 +45,15 @@ function ProgressRing({
   );
 }
 
-export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => void }) {
+export function SnapshotPage({
+  onSwitchTab,
+  pendingInTrigger = 0,
+  pendingOutTrigger = 0,
+}: {
+  onSwitchTab?: (tab: string) => void;
+  pendingInTrigger?: number;
+  pendingOutTrigger?: number;
+}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
 
@@ -110,6 +118,19 @@ export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => v
         rewardCppStr: string;
       }
   >({ type: 'none' });
+
+  // Open add-pending modal when triggered from quick-action sheet
+  useEffect(() => {
+    if (pendingInTrigger > 0) {
+      setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' });
+    }
+  }, [pendingInTrigger]);
+
+  useEffect(() => {
+    if (pendingOutTrigger > 0) {
+      setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' });
+    }
+  }, [pendingOutTrigger]);
 
   const totals = useMemo(() => calcFinalNetCashCents(data), [data]);
 
@@ -270,7 +291,6 @@ export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => v
 
       {/* Hero CTA Card */}
       <div className="hero-cta-card">
-        <div className="hero-cta-coin"><IconCoin /></div>
         <p className="hero-cta-headline">What do you want to do today?</p>
         <p className="hero-cta-sub">Log a transaction, check your balances, or review what's coming up.</p>
         <div className="hero-cta-actions">
@@ -301,51 +321,69 @@ export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => v
         </div>
       </div>
 
-      {/* Progress Rings */}
+      {/* Summary Tiles */}
       <div className="progress-rings-row">
-        <div className="progress-ring-tile">
-          <div className="progress-ring-icon"><IconCreditCard /></div>
+        <button
+          type="button"
+          className="progress-ring-tile"
+          style={{ cursor: 'pointer', textAlign: 'center', border: 'none', width: '100%' }}
+          onClick={() => document.getElementById('snapshotCards')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <div className="progress-ring-icon" style={{ color: 'var(--ui-add-btn, var(--accent))' }}><IconCreditCard /></div>
           <ProgressRing pct={cardDebtRingPct} color="var(--ui-add-btn, var(--accent))" />
           <div className="progress-ring-label">{formatCents(totalCardDebtCents)}</div>
-          <div className="progress-ring-sub">Card debt</div>
-        </div>
-        <div className="progress-ring-tile">
-          <div className="progress-ring-icon"><IconVault /></div>
+          <div className="progress-ring-sub">CC Balance</div>
+        </button>
+        <button
+          type="button"
+          className="progress-ring-tile"
+          style={{ cursor: 'pointer', textAlign: 'center', border: 'none', width: '100%' }}
+          onClick={() => document.getElementById('snapshotCash')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <div className="progress-ring-icon" style={{ color: '#3D9E4F' }}><IconWallet /></div>
           <ProgressRing pct={cashRingPct} color="#3D9E4F" />
           <div className="progress-ring-label">{formatCents(totalCashCents)}</div>
           <div className="progress-ring-sub">Cash</div>
-        </div>
-        <div className="progress-ring-tile">
-          <div className="progress-ring-icon"><IconClock /></div>
+        </button>
+        <button
+          type="button"
+          className="progress-ring-tile"
+          style={{ cursor: 'pointer', textAlign: 'center', border: 'none', width: '100%' }}
+          onClick={() => document.getElementById('snapshotPending')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <div className="progress-ring-icon" style={{ color: '#6366f1' }}><IconClock /></div>
           <ProgressRing pct={pendingRingPct} color="#6366f1" />
           <div className="progress-ring-label">{pendingCount}</div>
           <div className="progress-ring-sub">Pending</div>
-        </div>
+        </button>
       </div>
 
-      <div
-        className="section-header"
-        id="bankHeader"
-        onClick={() => setCashCollapsed(!cashCollapsed)}
-      >
-        <span className="section-header-left">
-          Cash
-        </span>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            const next = !showZeroCashItems;
-            setShowZeroCashItems(next);
-            saveBoolPref(SHOW_ZERO_CASH_KEY, next);
-          }}
-        >
-          {showZeroCashItems ? 'Hide $0 cash' : 'Show $0 cash'}
-        </button>
-        <span className="chevron">{cashCollapsed ? '▸' : '▾'}</span>
+      <div className="snapshot-section-label" id="snapshotCash">
+        <span>Cash</span>
+        <div className="snapshot-section-label-actions">
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              const next = !showZeroCashItems;
+              setShowZeroCashItems(next);
+              saveBoolPref(SHOW_ZERO_CASH_KEY, next);
+            }}
+          >
+            {showZeroCashItems ? 'Hide $0' : 'Show $0'}
+          </button>
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={() => setModal({ type: 'add-bank', name: '' })}
+          >
+            <IconPlus />
+            Add
+          </button>
+        </div>
       </div>
-      {!cashCollapsed ? (
+      {true ? (
         <>
           <div>
             {visibleBanks.map((b) => {
@@ -405,36 +443,35 @@ export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => v
               );
             })}
           </div>
-          <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-bank', name: '' })} >
-            Add Bank Account
-          </button>
         </>
       ) : null}
 
-      <div
-        className="section-header"
-        id="cardHeader"
-        style={{ marginTop: 24 }}
-        onClick={() => setCardsCollapsed(!cardsCollapsed)}
-      >
-        <span className="section-header-left">
-          Credit Cards
-        </span>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            const next = !showZeroCreditCards;
-            setShowZeroCreditCards(next);
-            saveBoolPref(SHOW_ZERO_CARDS_KEY, next);
-          }}
-        >
-          {showZeroCreditCards ? 'Hide $0 balances' : 'Show $0 balances'}
-        </button>
-        <span className="chevron">{cardsCollapsed ? '▸' : '▾'}</span>
+      <div className="snapshot-section-label" id="snapshotCards">
+        <span>Credit Cards</span>
+        <div className="snapshot-section-label-actions">
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              const next = !showZeroCreditCards;
+              setShowZeroCreditCards(next);
+              saveBoolPref(SHOW_ZERO_CARDS_KEY, next);
+            }}
+          >
+            {showZeroCreditCards ? 'Hide $0' : 'Show $0'}
+          </button>
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={() => setModal({ type: 'add-card', name: '' })}
+          >
+            <IconPlus />
+            Add
+          </button>
+        </div>
       </div>
-      {!cardsCollapsed ? (
+      {true ? (
         <>
           <div>
             {visibleCards.map((c) => {
@@ -524,24 +561,21 @@ export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => v
               );
             })}
           </div>
-          <button type="button" className="btn btn-add" style={{ width: '100%', marginTop: 8 }} onClick={() => setModal({ type: 'add-card', name: '' })} >
-            Add Credit Card
-          </button>
         </>
       ) : null}
 
-      <div
-        className="section-header"
-        id="pendingInHeader"
-        style={{ marginTop: 24 }}
-        onClick={() => setPendingInCollapsed(!pendingInCollapsed)}
-      >
-        <span className="section-header-left">
-          Pending Inbound
-        </span>
-        <span className="chevron">{pendingInCollapsed ? '▸' : '▾'}</span>
+      <div className="snapshot-section-label" id="snapshotPending">
+        <span>Pending Inbound</span>
+        <button
+          type="button"
+          className="snapshot-add-btn"
+          onClick={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}
+        >
+          <IconPlus />
+          Add
+        </button>
       </div>
-      {!pendingInCollapsed ? (
+      {true ? (
         <>
           <PendingInboundList
             data={data}
@@ -591,18 +625,18 @@ export function SnapshotPage({ onSwitchTab }: { onSwitchTab?: (tab: string) => v
         </>
       ) : null}
 
-      <div
-        className="section-header"
-        id="pendingOutHeader"
-        style={{ marginTop: 24 }}
-        onClick={() => setPendingOutCollapsed(!pendingOutCollapsed)}
-      >
-        <span className="section-header-left">
-          Pending Outbound
-        </span>
-        <span className="chevron">{pendingOutCollapsed ? '▸' : '▾'}</span>
+      <div className="snapshot-section-label">
+        <span>Pending Outbound</span>
+        <button
+          type="button"
+          className="snapshot-add-btn"
+          onClick={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}
+        >
+          <IconPlus />
+          Add
+        </button>
       </div>
-      {!pendingOutCollapsed ? (
+      {true ? (
         <>
           <PendingOutboundList
             data={data}

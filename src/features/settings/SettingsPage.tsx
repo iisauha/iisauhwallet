@@ -5,8 +5,6 @@ import {
   importJSON,
   loadCategoryConfig,
   saveCategoryConfig,
-  loadBirthdateISO,
-  saveBirthdateISO,
   getCategoryName,
   loadPasscodeHash,
   loadPasscodePaused,
@@ -23,18 +21,16 @@ import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
 import { ResetPasscodeModal } from './ResetPasscodeModal';
 import { Modal } from '../../ui/Modal';
+import {
+  IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
+  IconExport, IconChevronRight, IconTrash,
+} from '../../ui/icons';
 
-/** Returns export filename: Month_Day_Year.json (full month name, underscores, day no leading zero, 4-digit year). */
+/** Returns export filename: Month_Day_Year.json */
 function getExportFileName(): string {
   const d = new Date();
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  const month = months[d.getMonth()];
-  const day = d.getDate();
-  const year = d.getFullYear();
-  return `${month}_${day}_${year}.json`;
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${months[d.getMonth()]}_${d.getDate()}_${d.getFullYear()}.json`;
 }
 
 function downloadJsonFile(filename: string, text: string) {
@@ -76,8 +72,8 @@ function exportMonthlyPurchasesCsv() {
       escapeCsvCell(p.dateISO ?? ''),
       String((p.amountCents ?? 0) / 100),
       escapeCsvCell(getCategoryName(cfg, p.category ?? 'uncategorized')),
-      escapeCsvCell(String(p.subcategory ?? ''))
-    ])
+      escapeCsvCell(String(p.subcategory ?? '')),
+    ]),
   ];
   const csv = rows.map((r) => r.join(',')).join('\r\n');
   const now = new Date();
@@ -101,10 +97,9 @@ const HIDEABLE_TAB_LABELS: Record<string, string> = {
   loans: 'Loans',
   investing: 'Investing',
   recurring: 'Recurring',
-  subtracker: 'Sign Up Bonus Tracker',
+  subtracker: 'Sign-Up Bonus Tracker',
 };
 
-/** Resize image to max 200x200 and return as data URL to keep localStorage small. */
 function resizeImageToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = document.createElement('img');
@@ -113,26 +108,52 @@ function resizeImageToDataUrl(file: File): Promise<string> {
       URL.revokeObjectURL(url);
       const size = 200;
       const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = size; canvas.height = size;
       const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('No canvas context'));
-        return;
-      }
+      if (!ctx) { reject(new Error('No canvas context')); return; }
       ctx.drawImage(img, 0, 0, size, size);
-      try {
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      } catch (e) {
-        reject(e);
-      }
+      try { resolve(canvas.toDataURL('image/jpeg', 0.85)); } catch (e) { reject(e); }
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Image load failed'));
-    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
     img.src = url;
   });
+}
+
+// Settings row component
+function SettingsRow({
+  icon,
+  iconBg,
+  label,
+  sublabel,
+  value,
+  onClick,
+  danger,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  label: string;
+  sublabel?: string;
+  value?: string;
+  onClick?: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={`settings-row${danger ? ' settings-danger-row' : ''}`}
+      onClick={onClick}
+    >
+      <span className="settings-row-icon" style={{ background: iconBg }}>
+        {icon}
+      </span>
+      <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+        <span className="settings-row-label">{label}</span>
+        {sublabel && <div className="settings-row-sublabel">{sublabel}</div>}
+      </span>
+      {value && <span className="settings-row-value">{value}</span>}
+      {!danger && <span className="settings-row-chevron"><IconChevronRight /></span>}
+    </button>
+  );
 }
 
 export function SettingsPage() {
@@ -140,7 +161,6 @@ export function SettingsPage() {
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const [manageOpen, setManageOpen] = useState(false);
-  const [birthdate, setBirthdate] = useState<string>(() => loadBirthdateISO() || '');
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
@@ -158,10 +178,7 @@ export function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
     resizeImageToDataUrl(file).then(
-      (dataUrl) => {
-        saveUserProfileImage(dataUrl);
-        setProfileImage(dataUrl);
-      },
+      (dataUrl) => { saveUserProfileImage(dataUrl); setProfileImage(dataUrl); },
       () => {}
     );
     e.target.value = '';
@@ -175,102 +192,236 @@ export function SettingsPage() {
     saveHiddenTabs(next);
   };
 
+  const handleExportJSON = async () => {
+    const text = exportJSON();
+    const fileName = getExportFileName();
+    try {
+      const nav: any = navigator as any;
+      if (nav.share) {
+        const file = new File([text], fileName, { type: 'application/json' });
+        await nav.share({ files: [file], title: 'Backup' });
+        return;
+      }
+    } catch (_) {}
+    try {
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.open();
+        w.document.write('<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,monospace;padding:16px;">' + text.replace(/</g, '&lt;') + '</pre>');
+        w.document.close();
+        return;
+      }
+    } catch (_) {}
+    downloadJsonFile(fileName, text);
+  };
+
   return (
     <div className="tab-panel active" id="settingsContent">
-      <p className="section-title page-title">Settings</p>
-
-      <div className="settings-section" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16 }}>
-        <input
-          ref={profileImageRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleProfileImageChange}
-        />
+      {/* Profile card */}
+      <div
+        className="card"
+        style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8, padding: '16px 16px' }}
+      >
+        <input ref={profileImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleProfileImageChange} />
         <button
           type="button"
           onClick={() => profileImageRef.current?.click()}
           style={{
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
-            padding: 0,
-            border: 'none',
+            width: 64, height: 64, borderRadius: '50%', padding: 0, border: '2px solid var(--ui-border, var(--border))',
             background: profileImage ? `url(${profileImage}) center/cover` : 'var(--ui-card-bg, var(--surface))',
-            color: 'var(--ui-primary-text, var(--text))',
-            fontSize: '1.5rem',
-            fontWeight: 600,
-            flexShrink: 0,
+            color: 'var(--accent)', fontSize: '1.4rem', fontWeight: 700, flexShrink: 0, cursor: 'pointer',
           }}
           aria-label="Change profile photo"
         >
-          {!profileImage && (displayName ? displayName.charAt(0).toUpperCase() : '?')}
+          {!profileImage && (displayName ? displayName.charAt(0).toUpperCase() : <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>+</span>)}
         </button>
-        <div style={{ flex: 1, minWidth: 120 }}>
-          <div style={{
-            fontSize: '0.8rem',
-            color: 'var(--ui-primary-text, var(--text))',
-            opacity: 0.55,
-            marginBottom: 3,
-            fontWeight: 500,
-            letterSpacing: '0.01em',
-          }}>
-            Welcome back
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>
+            Your name
           </div>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             onBlur={() => saveUserDisplayName(displayName || null)}
-            placeholder="Your name"
+            placeholder="Enter your name"
             style={{
-              width: '100%',
-              padding: displayName ? '0' : '8px 12px',
-              fontSize: '1.4rem',
-              fontWeight: 700,
-              border: displayName ? 'none' : '1px solid var(--ui-border, var(--border))',
-              borderRadius: 10,
-              background: 'transparent',
+              width: '100%', padding: 0, fontSize: '1.15rem', fontWeight: 700,
+              border: 'none', background: 'transparent',
               color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))',
+              fontFamily: 'var(--app-font-family)',
             }}
           />
         </div>
       </div>
 
-      <p className="section-title">Appearance</p>
-      <div className="settings-section" style={{ marginBottom: 24 }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ padding: '12px 18px', fontSize: '1rem' }}
+      {/* Appearance */}
+      <p className="settings-group-label">Appearance</p>
+      <div className="settings-list">
+        <SettingsRow
+          icon={<IconPalette />}
+          iconBg="#8B5CF6"
+          label="App Customization"
+          sublabel="Theme, colors & typography"
           onClick={() => setAppCustomizationOpen(true)}
-        >
-          App Customization
-        </button>
+        />
+        <SettingsRow
+          icon={<IconLayout />}
+          iconBg="#3B82F6"
+          label="Visible Tabs"
+          sublabel="Choose which tabs appear in the bar"
+          onClick={() => setVisibleTabsModalOpen(true)}
+        />
       </div>
       <AppCustomizationModal open={appCustomizationOpen} onClose={() => setAppCustomizationOpen(false)} />
 
-      <p className="section-title" style={{ marginTop: 24 }}>Visible tabs</p>
-      <div className="settings-section" style={{ marginBottom: 24 }}>
-        <button type="button" className="settings-outline-trigger" onClick={() => setVisibleTabsModalOpen(true)}>
-          Choose which tabs appear in the bar…
+      {/* Accounts */}
+      <p className="settings-group-label">Accounts</p>
+      <div className="settings-list">
+        <SettingsRow
+          icon={<IconUser />}
+          iconBg="#10B981"
+          label="Edit Account Names"
+          sublabel="Rename your bank accounts & cards"
+          onClick={() => setEditAccountNamesOpen(true)}
+        />
+      </div>
+      <EditAccountNamesModal open={editAccountNamesOpen} onClose={() => setEditAccountNamesOpen(false)} />
+
+      {/* Categories */}
+      <p className="settings-group-label">Categories</p>
+      <div className="settings-list">
+        <SettingsRow
+          icon={<IconTag />}
+          iconBg="#F59E0B"
+          label="Manage Categories"
+          sublabel="Add, rename, or remove spending categories"
+          onClick={() => setManageOpen(true)}
+        />
+      </div>
+
+      {/* Security */}
+      {hasPasscode && (
+        <>
+          <p className="settings-group-label">Security</p>
+          <div className="settings-list">
+            {passcodePaused ? (
+              <SettingsRow
+                icon={<IconLock />}
+                iconBg="#EF4444"
+                label="Resume Passcode Protection"
+                sublabel="Passcode is currently paused"
+                onClick={() => savePasscodePaused(false)}
+              />
+            ) : (
+              <SettingsRow
+                icon={<IconLock />}
+                iconBg="#F97316"
+                label="Pause Passcode Protection"
+                onClick={() => setPausePasscodeStep(1)}
+              />
+            )}
+            <SettingsRow
+              icon={<IconLock />}
+              iconBg="#6366F1"
+              label="Reset Passcode"
+              onClick={() => setResetPasscodeOpen(true)}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Backup */}
+      <p className="settings-group-label">Backup</p>
+      <div className="settings-list">
+        <SettingsRow
+          icon={<IconExport />}
+          iconBg="#0EA5E9"
+          label="Export JSON"
+          sublabel="Full backup of all your data"
+          onClick={handleExportJSON}
+        />
+        <SettingsRow
+          icon={<IconDatabase />}
+          iconBg="#14B8A6"
+          label="Export Purchases CSV"
+          sublabel="Current month's purchases"
+          onClick={() => exportMonthlyPurchasesCsv()}
+        />
+        <SettingsRow
+          icon={<IconDatabase />}
+          iconBg="#64748B"
+          label="Import JSON"
+          sublabel="Restore from a backup file"
+          onClick={() => fileRef.current?.click()}
+        />
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const f = e.target.files && e.target.files[0];
+          if (!f) return;
+          const r = new FileReader();
+          r.onload = () => {
+            try {
+              importJSON(String(r.result || ''));
+              actions.reload();
+              alert('Import done.');
+            } catch (_) {
+              alert('Invalid JSON.');
+            }
+            e.target.value = '';
+          };
+          r.readAsText(f);
+        }}
+      />
+
+      {/* About */}
+      <p className="settings-group-label">About</p>
+      <div className="settings-list">
+        <SettingsRow
+          icon={<IconUser />}
+          iconBg="#8B5CF6"
+          label="About the Creator"
+          onClick={() => setAboutCreatorOpen(true)}
+        />
+      </div>
+
+      {/* Danger zone */}
+      <p className="settings-group-label">Danger Zone</p>
+      <div className="settings-list">
+        <button
+          type="button"
+          className="settings-row settings-danger-row"
+          onClick={() => {
+            if (!confirm('Reset all data? This will clear localStorage for this site.')) return;
+            localStorage.clear();
+            actions.reload();
+          }}
+        >
+          <span className="settings-row-icon" style={{ background: '#EF4444' }}>
+            <IconTrash />
+          </span>
+          <span className="settings-row-label" style={{ color: 'var(--red)' }}>Reset All Data</span>
         </button>
       </div>
+
+      {/* Modals */}
+      <ManageCategoriesModal
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        load={() => loadCategoryConfig()}
+        save={(cfg) => saveCategoryConfig(cfg)}
+      />
+      <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
+
       <Modal open={visibleTabsModalOpen} title="Visible tabs" onClose={() => setVisibleTabsModalOpen(false)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
           {HIDEABLE_TAB_KEYS.map((tabKey) => (
-            <label
-              key={tabKey}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                cursor: 'pointer',
-                fontSize: '1rem',
-                color: 'var(--ui-primary-text, var(--text))',
-                fontFamily: 'var(--app-font-family)',
-              }}
-            >
+            <label key={tabKey} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontSize: '1rem', color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
               <input
                 type="checkbox"
                 checked={!hiddenTabs.includes(tabKey)}
@@ -282,69 +433,16 @@ export function SettingsPage() {
           ))}
         </div>
         <div className="btn-row">
-          <button type="button" className="btn btn-secondary" onClick={() => setVisibleTabsModalOpen(false)}>
-            Done
-          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => setVisibleTabsModalOpen(false)}>Done</button>
         </div>
       </Modal>
 
-      <p className="section-title" style={{ marginTop: 24 }}>Accounts</p>
-      <div className="settings-section" style={{ marginBottom: 24 }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ padding: '12px 18px', fontSize: '1rem' }}
-          onClick={() => setEditAccountNamesOpen(true)}
-        >
-          Edit Account Names
-        </button>
-      </div>
-      <EditAccountNamesModal open={editAccountNamesOpen} onClose={() => setEditAccountNamesOpen(false)} />
-
-      <p className="section-title" style={{ marginTop: 24 }}>Security &amp; privacy</p>
-      <div className="settings-section" style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {hasPasscode && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {passcodePaused ? (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '12px 18px', fontSize: '1rem' }}
-                onClick={() => savePasscodePaused(false)}
-              >
-                Resume passcode protection
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-secondary btn-outline-neutral"
-                style={{ padding: '12px 18px', fontSize: '1rem' }}
-                onClick={() => setPausePasscodeStep(1)}
-              >
-                Pause passcode protection
-              </button>
-            )}
-          </div>
-        )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          {hasPasscode && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ padding: '12px 18px', fontSize: '1rem' }}
-              onClick={() => setResetPasscodeOpen(true)}
-            >
-              Reset passcode
-            </button>
-          )}
-        </div>
-      </div>
       {hasPasscode && (
         <>
           {pausePasscodeStep === 1 ? (
             <Modal open={true} title="Pause passcode?" onClose={() => setPausePasscodeStep(0)}>
               <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--text))' }}>
-                This reduces app security. Anyone with access to this device could open the app without a passcode. Your data will still be stored locally on this device.
+                This reduces app security. Anyone with access to this device could open the app without a passcode.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
@@ -354,172 +452,27 @@ export function SettingsPage() {
           ) : pausePasscodeStep === 2 ? (
             <Modal open={true} title="Confirm pause" onClose={() => setPausePasscodeStep(0)}>
               <p style={{ margin: '0 0 16px 0', color: 'var(--ui-primary-text, var(--text))' }}>
-                Confirm again: the passcode will not be required when opening the app until you tap &quot;Resume passcode protection&quot; in Settings.
+                Confirm: the passcode will not be required when opening the app until you tap &quot;Resume passcode protection&quot;.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    savePasscodePaused(true);
-                    setPausePasscodeStep(0);
-                  }}
-                >
-                  Pause passcode
-                </button>
+                <button type="button" className="btn btn-primary" onClick={() => { savePasscodePaused(true); setPausePasscodeStep(0); }}>Pause passcode</button>
               </div>
             </Modal>
           ) : null}
-          <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
         </>
       )}
 
-      <p className="section-title" style={{ marginTop: 24 }}>Backup</p>
-      <div className="settings-section">
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ marginBottom: 8 }}
-          onClick={() => exportMonthlyPurchasesCsv()}
-        >
-          Export Monthly Purchases CSV
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={async () => {
-            const text = exportJSON();
-            const fileName = getExportFileName();
-
-            // Attempt share sheet first (best for iOS PWA).
-            try {
-              const nav: any = navigator as any;
-              if (nav.share) {
-                const file = new File([text], fileName, { type: 'application/json' });
-                // Only share the JSON file to avoid some platforms creating an extra .txt artifact.
-                await nav.share({ files: [file], title: 'Backup' });
-                return;
-              }
-            } catch (_) {}
-
-            // Fallback: new tab with JSON.
-            try {
-              const w = window.open('', '_blank');
-              if (w) {
-                w.document.open();
-                w.document.write(
-                  '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; padding:16px;">' +
-                    text.replace(/</g, '&lt;') +
-                    '</pre>'
-                );
-                w.document.close();
-                return;
-              }
-            } catch (_) {}
-
-            // Last resort: download single JSON file.
-            downloadJsonFile(fileName, text);
-          }}
-        >
-          Export JSON
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ marginTop: 16, marginLeft: 8 }}
-          onClick={() => fileRef.current?.click()}
-        >
-          Import JSON
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".json,application/json"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const f = e.target.files && e.target.files[0];
-            if (!f) return;
-            const r = new FileReader();
-            r.onload = () => {
-              try {
-                importJSON(String(r.result || ''));
-                actions.reload();
-                alert('Import done.');
-              } catch (_) {
-                alert('Invalid JSON.');
-              }
-              e.target.value = '';
-            };
-            r.readAsText(f);
-          }}
-        />
-      </div>
-
-      <p className="section-title" style={{ marginTop: 24 }}>
-        Categories
-      </p>
-      <div className="settings-section">
-        <button type="button" className="btn btn-secondary" onClick={() => setManageOpen(true)}>
-          Manage Categories
-        </button>
-      </div>
-      <ManageCategoriesModal
-        open={manageOpen}
-        onClose={() => setManageOpen(false)}
-        load={() => loadCategoryConfig()}
-        save={(cfg) => saveCategoryConfig(cfg)}
-      />
-
-      <p className="section-title" style={{ marginTop: 24 }}>About me</p>
-      <div className="settings-section" style={{ marginBottom: 24 }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ padding: '12px 18px', fontSize: '1rem' }}
-          onClick={() => setAboutCreatorOpen(true)}
-        >
-          About the creator
-        </button>
-      </div>
       {aboutCreatorOpen && (
         <Modal open={true} title="About me" onClose={() => setAboutCreatorOpen(false)}>
           <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
-            <p style={{ margin: '0 0 12px 0' }}>
-              Hi, my name is Isaiah. I built this app, iisauhwallet, because I am really into credit cards, points, and personal finance tracking.
-            </p>
-            <p style={{ margin: '0 0 12px 0' }}>
-              Recently, I was trying to find an app that could do everything in one place. There are some really good options out there, but each has its drawbacks. From my experience, automatic bank syncing can get frustrating because of repeated login verifications and connection issues. A lot of apps also push subscriptions when they are supposed to help you budget, which feels counterproductive.
-            </p>
-            <p style={{ margin: '0 0 12px 0' }}>
-              Another gap I noticed is that most apps do not properly track money in transit, like when you are moving funds between banks or from Venmo to your account. That is an important part of understanding where your money actually is at any given time.
-            </p>
-            <p style={{ margin: '0 0 12px 0' }}>
-              So I decided to build my own app focused on solving that. The goal is simple: always know exactly where your money is. I also wanted to include features for tracking credit card points and bonuses, loans, investing accounts, and more.
-            </p>
-            <p style={{ margin: 0 }}>
-              I hope you enjoy it.
-            </p>
+            <p style={{ margin: '0 0 12px 0' }}>Hi, my name is Isaiah. I built this app, iisauhwallet, because I am really into credit cards, points, and personal finance tracking.</p>
+            <p style={{ margin: '0 0 12px 0' }}>I was trying to find an app that could do everything in one place — automatic bank syncing can be frustrating, and most apps push subscriptions when they should help you budget.</p>
+            <p style={{ margin: '0 0 12px 0' }}>Another gap: most apps don't properly track money in transit — between banks, Venmo, etc. The goal is simple: always know exactly where your money is.</p>
+            <p style={{ margin: 0 }}>I hope you enjoy it.</p>
           </div>
         </Modal>
       )}
-
-      <p className="section-title" style={{ marginTop: 24 }}>Danger zone</p>
-      <div className="settings-section">
-        <button
-          type="button"
-          className="btn btn-danger"
-          onClick={() => {
-            if (!confirm('Reset all data? This will clear localStorage for this site.')) return;
-            // Explicit user action only.
-            localStorage.clear();
-            actions.reload();
-          }}
-        >
-          Reset All Data
-        </button>
-      </div>
     </div>
   );
 }
-
