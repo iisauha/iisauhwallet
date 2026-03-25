@@ -114,6 +114,26 @@ export function AddPurchaseModal(props: {
     setEditManualAddStr('');
   }, [editRewardPopup]);
 
+  const getPurchaseUiId = (p: any) => {
+    if (p.id) return String(p.id);
+    const parts = [
+      String(p.dateISO || ''),
+      String(p.title || ''),
+      String(p.amountCents || 0),
+      String(p.category || ''),
+      String(p.subcategory || '')
+    ];
+    return parts.join('|');
+  };
+
+  const currentPurchase = useMemo(() => {
+    if (!props.purchaseKey) return null;
+    const list: any[] = data.purchases || [];
+    return list.find((p) => getPurchaseUiId(p) === props.purchaseKey) || null;
+  }, [props.purchaseKey, data.purchases]);
+
+  const isEditing = !!currentPurchase;
+
   // Merchant autocomplete
   const [acOpen, setAcOpen] = useState(false);
   const titleWrapRef = useRef<HTMLDivElement>(null);
@@ -191,26 +211,6 @@ export function AddPurchaseModal(props: {
   }, [props.open]);
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
-
-  const getPurchaseUiId = (p: any) => {
-    if (p.id) return String(p.id);
-    const parts = [
-      String(p.dateISO || ''),
-      String(p.title || ''),
-      String(p.amountCents || 0),
-      String(p.category || ''),
-      String(p.subcategory || '')
-    ];
-    return parts.join('|');
-  };
-
-  const currentPurchase = useMemo(() => {
-    if (!props.purchaseKey) return null;
-    const list: any[] = data.purchases || [];
-    return list.find((p) => getPurchaseUiId(p) === props.purchaseKey) || null;
-  }, [props.purchaseKey, data.purchases]);
-
-  const isEditing = !!currentPurchase;
 
   useEffect(() => {
     if (props.open && props.prefill && !currentPurchase) {
