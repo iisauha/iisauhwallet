@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { initCrypto } from './state/crypto';
+import { useLedgerStore } from './state/store';
 import { loadAppThemeColor, loadAppAccentColor, loadAppFontFamily, loadAppFontScale, loadAdvancedUIColors, DEFAULT_THEME_COLOR } from './state/storage';
 import { getFontFamilyStack } from './theme/fontStacks';
 import { getThemeColorsFromHex, getAccentColorsFromHex } from './theme/themeUtils';
@@ -52,6 +53,7 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
 
 (async () => {
   await initCrypto();
+  useLedgerStore.getState().actions.reload(); // sync store with decrypted cache before first render
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <BrowserRouter basename={basename}>
