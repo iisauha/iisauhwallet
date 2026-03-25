@@ -462,6 +462,18 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [authenticated]);
 
+  // Show welcome screen on app load when passcode is paused
+  useEffect(() => {
+    if (!loadPasscodePaused()) return;
+    const name = loadUserDisplayName();
+    if (!name) return;
+    setShowWelcome(true);
+    setWelcomeVisible(true);
+    const t1 = setTimeout(() => setWelcomeVisible(false), 2400);
+    const t2 = setTimeout(() => setShowWelcome(false), 2900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
   if (showWelcome) {
     return (
       <WelcomeScreen

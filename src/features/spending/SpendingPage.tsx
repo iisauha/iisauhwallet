@@ -84,7 +84,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const lastSlicesKeyRef = useRef<string | null>(null);
 
   const { startKey, endKey } = useMemo(() => {
     const now = new Date();
@@ -293,17 +292,13 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   useEffect(() => {
     if (!canvasRef.current) return;
     if (view !== 'category') return;
-    const key = JSON.stringify(byCategory);
-    const prevKey = lastSlicesKeyRef.current;
-    const shouldAnimate = key !== prevKey;
-    lastSlicesKeyRef.current = key;
     renderSpendingPieChart(
       canvasRef.current,
       byCategory,
       (categoryId) => {
         setDrilldownCategoryId((prev) => (prev === categoryId ? null : categoryId));
       },
-      shouldAnimate
+      true
     );
   }, [byCategory, view]);
 

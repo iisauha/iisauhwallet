@@ -106,6 +106,8 @@ export function getCategoryColor(categoryId: string) {
   return color;
 }
 
+const PIE_SLICES_KEY = 'pie_last_slices_key';
+
 export function renderSpendingPieChart(
   canvas: HTMLCanvasElement,
   slices: SpendingSlice[],
@@ -116,6 +118,15 @@ export function renderSpendingPieChart(
   const labels = slices.map((s) => getCategoryName(cfg, s.categoryId));
   const data = slices.map((s) => Math.max(0, s.amountCents) / 100);
   const colors = slices.map((s) => getCategoryColor(s.categoryId));
+
+  // Persist slices key so refresh doesn't re-trigger spin
+  const key = JSON.stringify(slices.map((s) => [s.categoryId, s.amountCents]));
+  let shouldAnimate = animate;
+  try {
+    const prev = localStorage.getItem(PIE_SLICES_KEY);
+    if (prev === key) shouldAnimate = false;
+    else localStorage.setItem(PIE_SLICES_KEY, key);
+  } catch (_) {}
 
   const existing: Chart | undefined = (canvas as any).__chart;
   if (existing) existing.destroy();
@@ -129,9 +140,10 @@ export function renderSpendingPieChart(
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: animate ? 420 : 0 },
+      animation: { duration: shouldAnimate ? 420 : 0 },
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
+        tooltip: { enabled: false },
       },
       onClick: (_event, elements, chartInstance) => {
         if (onSliceClick && elements.length > 0 && chartInstance.data.datasets[0]) {
