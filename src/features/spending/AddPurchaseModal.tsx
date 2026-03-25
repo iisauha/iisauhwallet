@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
@@ -113,6 +113,43 @@ export function AddPurchaseModal(props: {
     setEditManualSubtractStr('');
     setEditManualAddStr('');
   }, [editRewardPopup]);
+
+  // Merchant autocomplete
+  const [acOpen, setAcOpen] = useState(false);
+  const titleWrapRef = useRef<HTMLDivElement>(null);
+
+  const acSuggestions = useMemo(() => {
+    if (!title.trim()) return [];
+    const q = title.toLowerCase();
+    const allPurchases: any[] = data.purchases || [];
+    const matched = allPurchases.filter((p) => (p.title || '').toLowerCase().includes(q));
+    const byMerchant = new Map<string, any>();
+    for (const p of matched) {
+      const key = (p.title || '').toLowerCase();
+      const existing = byMerchant.get(key);
+      if (!existing || (p.dateISO || '') > (existing.dateISO || '')) {
+        byMerchant.set(key, p);
+      }
+    }
+    return Array.from(byMerchant.values())
+      .sort((a, b) => ((b.dateISO || '') > (a.dateISO || '') ? 1 : -1))
+      .slice(0, 5);
+  }, [title, data.purchases]);
+
+  useEffect(() => {
+    setAcOpen(acSuggestions.length > 0 && title.trim().length > 0);
+  }, [acSuggestions, title]);
+
+  useEffect(() => {
+    if (!acOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (titleWrapRef.current && !titleWrapRef.current.contains(e.target as Node)) {
+        setAcOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [acOpen]);
 
   useEffect(() => {
     if (props.open) setSuggestionAccepted(false);
@@ -664,7 +701,78 @@ export function AddPurchaseModal(props: {
         ) : null}
         <div className="field">
           <label>Title / Merchant</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Coffee shop" />
+          <div ref={titleWrapRef} style={{ position: 'relative' }}>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Coffee shop"
+              style={{ width: '100%', boxSizing: 'border-box' }}
+            />
+            {acOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
+                border: '1px solid var(--ui-border, var(--border))',
+                borderRadius: 12,
+                zIndex: 200,
+                marginTop: 4,
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-strong)',
+              }}>
+                {acSuggestions.map((p: any, i: number) => {
+                  const cardName = (data.cards || []).find((c: any) => c.id === p.paymentTargetId)?.name;
+                  const parts = [
+                    p.category ? getCategoryName(cfg, p.category) : null,
+                    p.subcategory || null,
+                    cardName || null,
+                  ].filter(Boolean) as string[];
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setTitle(p.title || '');
+                        if (p.category) setCategory(p.category);
+                        setSubcategory(p.subcategory || '');
+                        if (!paymentTargetId && p.paymentTargetId) {
+                          setPaymentTargetId(p.paymentTargetId);
+                          if (p.paymentSource) setPaymentSource(p.paymentSource as any);
+                        }
+                        setAcOpen(false);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                        minHeight: 44,
+                        padding: '0 16px',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: i < acSuggestions.length - 1 ? '1px solid var(--ui-border, var(--border))' : 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--ui-primary-text, var(--text)) 8%, transparent)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                    >
+                      <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--ui-primary-text, var(--text))' }}>
+                        {p.title || ''}
+                      </span>
+                      {parts.length > 0 && (
+                        <span style={{ fontSize: 13, color: 'var(--muted)', marginLeft: 6 }}>
+                          {' | ' + parts.join(' | ')}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
         <div className="field">
           <label>Amount ($)</label>
