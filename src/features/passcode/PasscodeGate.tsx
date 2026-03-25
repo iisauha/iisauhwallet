@@ -17,6 +17,7 @@ import {
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
   loadPasscodePaused,
+  loadAutoLockMinutes,
   loadPasscode6Digit,
   savePasscode6Digit,
   generateRecoveryKey,
@@ -144,6 +145,29 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const justLoggedInRef = useRef(false);
+
+  // Auto-lock on inactivity
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const minutes = loadAutoLockMinutes();
+    if (!storedHash || minutes === 0) return;
+    const ms = minutes * 60 * 1000;
+
+    function resetTimer() {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = setTimeout(() => {
+        setAuthenticated(false);
+      }, ms);
+    }
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    };
+  }, [storedHash]);
   const [step, setStep] = useState<Step>(() => {
     const hash = loadPasscodeHash();
     if (hash !== null) {

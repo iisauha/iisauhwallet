@@ -93,6 +93,8 @@ export const PASSCODE_LOCKOUT_UNTIL_KEY = 'iisauhwallet_passcode_lockout_until_v
 export const SECURITY_QUIZ_COMPLETED_KEY = 'iisauhwallet_security_quiz_completed_v1';
 // Passcode: when true, gate is skipped (user paused protection). Local-only.
 export const PASSCODE_PAUSED_KEY = 'iisauhwallet_passcode_paused_v1';
+// Passcode: auto-lock after N minutes of inactivity (0 = disabled). Default 2.
+export const PASSCODE_AUTO_LOCK_MINUTES_KEY = 'iisauhwallet_passcode_auto_lock_minutes_v1';
 // Passcode: when true, stored passcode is 6-digit (required for new/updated passcodes).
 export const PASSCODE_6DIGIT_KEY = 'iisauhwallet_passcode_6digit_v1';
 

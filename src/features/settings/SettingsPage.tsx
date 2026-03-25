@@ -10,6 +10,8 @@ import {
   loadPasscodeHash,
   loadPasscodePaused,
   savePasscodePaused,
+  loadAutoLockMinutes,
+  saveAutoLockMinutes,
   loadUserDisplayName,
   saveUserDisplayName,
   loadUserProfileImage,
@@ -192,6 +194,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
 
   const hasPasscode = loadPasscodeHash() !== null;
   const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
+  const [autoLockMinutes, setAutoLockMinutes] = useState(() => loadAutoLockMinutes());
 
   const lastExportTriggerRef = useRef(0);
 
@@ -357,6 +360,35 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               label="Reset Passcode"
               onClick={() => setResetPasscodeOpen(true)}
             />
+            <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="settings-row-icon-wrap" style={{ background: '#8B5CF6' }}>
+                  <IconLock />
+                </span>
+                <div>
+                  <div className="settings-row-label">Auto-Lock After Inactivity</div>
+                  <div className="settings-row-sublabel">Lock app after this many minutes of inactivity</div>
+                </div>
+              </div>
+              <select
+                value={autoLockMinutes}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setAutoLockMinutes(v);
+                  saveAutoLockMinutes(v);
+                }}
+                className="ll-control"
+                style={{ width: 'auto', minWidth: 110, textAlign: 'right' }}
+              >
+                <option value={1}>1 minute</option>
+                <option value={2}>2 minutes</option>
+                <option value={5}>5 minutes</option>
+                <option value={10}>10 minutes</option>
+                <option value={15}>15 minutes</option>
+                <option value={30}>30 minutes</option>
+                <option value={0}>Never</option>
+              </select>
+            </div>
           </div>
         </>
       )}

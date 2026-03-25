@@ -44,6 +44,7 @@ import {
   PASSCODE_LOCKOUT_UNTIL_KEY,
   SECURITY_QUIZ_COMPLETED_KEY,
   PASSCODE_PAUSED_KEY,
+  PASSCODE_AUTO_LOCK_MINUTES_KEY,
   PASSCODE_6DIGIT_KEY,
   CARD_REWARD_ADJUSTMENTS_KEY,
   CARD_REWARD_ONLY_ENTRIES_KEY,
@@ -1815,6 +1816,23 @@ export function savePasscodePaused(paused: boolean) {
   try {
     if (paused) localStorage.setItem(PASSCODE_PAUSED_KEY, 'true');
     else localStorage.removeItem(PASSCODE_PAUSED_KEY);
+  } catch (_) {}
+}
+
+export function loadAutoLockMinutes(): number {
+  try {
+    const raw = localStorage.getItem(PASSCODE_AUTO_LOCK_MINUTES_KEY);
+    if (raw === null) return 2;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 2;
+  } catch (_) {
+    return 2;
+  }
+}
+
+export function saveAutoLockMinutes(minutes: number) {
+  try {
+    localStorage.setItem(PASSCODE_AUTO_LOCK_MINUTES_KEY, String(minutes));
   } catch (_) {}
 }
 
