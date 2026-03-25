@@ -4,6 +4,8 @@ import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
   importJSON,
+  importJSONDecrypted,
+  ENCRYPTED_IMPORT,
   loadCategoryConfig,
   saveCategoryConfig,
   getCategoryName,
@@ -20,7 +22,10 @@ import {
   saveUserProfileImage,
   loadHiddenTabs,
   saveHiddenTabs,
+  hashPasscode,
+  clearDataCache,
 } from '../../state/storage';
+import { encryptWithPasscode } from '../../state/crypto';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
@@ -199,6 +204,68 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [autoLockMinutes, setAutoLockMinutes] = useState(() => loadAutoLockMinutes());
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(() => loadShowWelcomeScreen());
 
+  // Unified passcode-challenge modal (export JSON, export CSV, encrypted import)
+  const [challenge, setChallenge] = useState<{ mode: 'export' | 'csv' | 'import'; pendingJson?: string; fails: number; delayUntil: number; input: string; error: string } | null>(null);
+  const [challengeCountdown, setChallengeCountdown] = useState(0);
+
+  useEffect(() => {
+    if (!challenge || challenge.delayUntil === 0) { setChallengeCountdown(0); return; }
+    const tick = () => {
+      const rem = Math.ceil((challenge.delayUntil - Date.now()) / 1000);
+      if (rem <= 0) { setChallengeCountdown(0); setChallenge((c) => c ? { ...c, delayUntil: 0 } : null); }
+      else setChallengeCountdown(rem);
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [challenge?.delayUntil]);
+
+  const openChallenge = (mode: 'export' | 'csv' | 'import', pendingJson?: string) => {
+    setChallenge({ mode, pendingJson, fails: 0, delayUntil: 0, input: '', error: '' });
+    setChallengeCountdown(0);
+  };
+
+  const handleChallengeSubmit = async () => {
+    if (!challenge) return;
+    if (challenge.delayUntil > 0 && Date.now() < challenge.delayUntil) return;
+    if (!/^\d{6}$/.test(challenge.input)) {
+      setChallenge((c) => c ? { ...c, error: 'Enter 6 digits' } : null);
+      return;
+    }
+    const storedHash = loadPasscodeHash();
+    const hash = await hashPasscode(challenge.input);
+    if (hash !== storedHash) {
+      const nextFails = challenge.fails + 1;
+      let delaySec = 0;
+      if (nextFails >= 5) delaySec = 300; // 5 min lock after 5 fails
+      else if (nextFails >= 3) delaySec = 5;
+      else if (nextFails >= 2) delaySec = 2;
+      setChallenge((c) => c ? { ...c, fails: nextFails, error: `Incorrect passcode.${nextFails >= 5 ? ' Locked for 5 min.' : ''}`, input: '', delayUntil: delaySec > 0 ? Date.now() + delaySec * 1000 : 0 } : null);
+      return;
+    }
+    // Correct — run the gated action
+    const mode = challenge.mode;
+    const pendingJson = challenge.pendingJson;
+    const confirmedInput = challenge.input;
+    setChallenge(null);
+    setChallengeCountdown(0);
+    if (mode === 'export') {
+      const plainText = exportJSON();
+      const encrypted = await encryptWithPasscode(plainText, confirmedInput);
+      doExportText(encrypted);
+    } else if (mode === 'csv') {
+      exportMonthlyPurchasesCsv();
+    } else if (mode === 'import' && pendingJson) {
+      try {
+        await importJSONDecrypted(pendingJson, confirmedInput);
+        actions.reload();
+        alert('Import done.');
+      } catch (_) {
+        alert('Wrong passcode or corrupt file.');
+      }
+    }
+  };
+
   const lastExportTriggerRef = useRef(0);
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,8 +286,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     saveHiddenTabs(next);
   };
 
-  const handleExportJSON = async () => {
-    const text = exportJSON();
+  const doExportText = async (text: string) => {
     const fileName = getExportFileName();
     try {
       const nav: any = navigator as any;
@@ -240,6 +306,14 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       }
     } catch (_) {}
     downloadJsonFile(fileName, text);
+  };
+
+  const handleExportJSON = async () => {
+    if (hasPasscode) {
+      openChallenge('export');
+    } else {
+      await doExportText(exportJSON());
+    }
   };
 
   // Export trigger from quick-action sheet — must come after handleExportJSON
@@ -431,7 +505,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           iconBg="#14B8A6"
           label="Export Purchases CSV"
           sublabel="Current month's purchases"
-          onClick={() => exportMonthlyPurchasesCsv()}
+          onClick={() => hasPasscode ? openChallenge('csv') : exportMonthlyPurchasesCsv()}
         />
         <SettingsRow
           icon={<IconDatabase />}
@@ -451,12 +525,21 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           if (!f) return;
           const r = new FileReader();
           r.onload = () => {
+            const text = String(r.result || '');
             try {
-              importJSON(String(r.result || ''));
+              importJSON(text);
               actions.reload();
               alert('Import done.');
-            } catch (_) {
-              alert('Invalid JSON.');
+            } catch (err: any) {
+              if (err?.message === ENCRYPTED_IMPORT) {
+                if (!hasPasscode) {
+                  alert('This backup is encrypted but no passcode is set. Set a passcode first, then re-import.');
+                } else {
+                  openChallenge('import', text);
+                }
+              } else {
+                alert('Invalid JSON.');
+              }
             }
             e.target.value = '';
           };
@@ -483,6 +566,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           className="settings-row settings-danger-row"
           onClick={() => {
             if (!confirm('Reset all data? This will clear localStorage for this site.')) return;
+            clearDataCache();
             localStorage.clear();
             actions.reload();
           }}
@@ -596,6 +680,46 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             </Modal>
           ) : null}
         </>
+      )}
+
+      {/* Passcode challenge modal (export JSON / export CSV / encrypted import) */}
+      {challenge && (
+        <Modal
+          open={true}
+          title={challenge.mode === 'export' ? 'Confirm export' : challenge.mode === 'csv' ? 'Confirm CSV export' : 'Encrypted backup'}
+          onClose={() => { setChallenge(null); setChallengeCountdown(0); }}
+        >
+          <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.4 }}>
+            {challenge.mode === 'import'
+              ? 'This backup is encrypted. Enter your passcode to decrypt and restore it.'
+              : 'Enter your passcode to continue.'}
+          </p>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            autoComplete="off"
+            value={challenge.input}
+            onChange={(e) => setChallenge((c) => c ? { ...c, input: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' } : null)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleChallengeSubmit(); }}
+            placeholder="••••••"
+            style={{ width: '100%', padding: '10px 12px', fontSize: '1.1rem', letterSpacing: '0.2em', borderRadius: 8, border: '1px solid var(--ui-border, var(--border))', background: 'var(--ui-surface-secondary, var(--surface))', color: 'var(--text)', marginBottom: 8, boxSizing: 'border-box' }}
+            autoFocus
+          />
+          {challenge.error && <p style={{ margin: '0 0 10px 0', fontSize: '0.87rem', color: 'var(--red)' }}>{challenge.error}</p>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setChallenge(null); setChallengeCountdown(0); }}>Cancel</button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ flex: 1 }}
+              onClick={handleChallengeSubmit}
+              disabled={challengeCountdown > 0}
+            >
+              {challengeCountdown > 0 ? `Try again in ${challengeCountdown}s…` : 'Confirm'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {aboutCreatorOpen && (

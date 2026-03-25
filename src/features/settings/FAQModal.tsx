@@ -4,7 +4,7 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data in storage?',
-    a: 'No, it does not encrypt the saved files. It works like a lock on the app: it hides the screens until you enter the code, while balances and settings stay in normal browser storage on your device.',
+    a: 'Yes. All financial data stored in your browser is encrypted with AES-256 so it appears as unreadable gibberish in browser DevTools. Exported backup files are also encrypted with your passcode using PBKDF2 + AES-256, meaning they cannot be read without your passcode.',
   },
   {
     q: 'If someone gets my phone/laptop, how much can they see?',

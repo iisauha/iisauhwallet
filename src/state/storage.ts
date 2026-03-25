@@ -55,6 +55,7 @@ import {
   USER_PROFILE_IMAGE_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
+import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode } from './crypto';
 
 function now(): string {
   return new Date().toISOString();
@@ -381,36 +382,50 @@ function migrateLegacyCashIntoBanksInMemory(d: LedgerData) {
   // Do not delete d.cashInHandCents; we simply ignore it on save.
 }
 
+function applyDataDefaults(d: LedgerData): LedgerData {
+  const defaults = defaultData();
+  if (!Array.isArray(d.banks) || d.banks.length === 0) d.banks = defaults.banks;
+  if (!Array.isArray(d.cards) || d.cards.length === 0) d.cards = defaults.cards;
+  (d.banks || []).forEach((b) => {
+    if (b && !(b as any).type) (b as any).type = 'bank';
+  });
+  migrateLegacyCashIntoBanksInMemory(d);
+  if (!Array.isArray(d.pendingIn)) d.pendingIn = [];
+  if (!Array.isArray(d.pendingOut)) d.pendingOut = [];
+  if (!Array.isArray(d.purchases)) d.purchases = [];
+  if (!Array.isArray(d.recurring)) d.recurring = [];
+  if (!d.recurringPosted || typeof d.recurringPosted !== 'object') d.recurringPosted = {};
+  return d;
+}
+
 export function loadData(): LedgerData {
+  // Prefer the in-memory cache populated by initCrypto or saveData
+  const cached = getCachedData();
+  if (cached) return cached;
+
+  // Fallback: try reading plaintext from localStorage (encryption not yet initialized)
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultData();
+    if (!raw || isEncrypted(raw)) return defaultData(); // encrypted but no key — show empty
     const d = JSON.parse(raw) as LedgerData;
-
-    const defaults = defaultData();
-    if (!Array.isArray(d.banks) || d.banks.length === 0) d.banks = defaults.banks;
-    if (!Array.isArray(d.cards) || d.cards.length === 0) d.cards = defaults.cards;
-    (d.banks || []).forEach((b) => {
-      if (b && !(b as any).type) (b as any).type = 'bank';
-    });
-
-    migrateLegacyCashIntoBanksInMemory(d);
-
-    if (!Array.isArray(d.pendingIn)) d.pendingIn = [];
-    if (!Array.isArray(d.pendingOut)) d.pendingOut = [];
-    if (!Array.isArray(d.purchases)) d.purchases = [];
-    if (!Array.isArray(d.recurring)) d.recurring = [];
-    if (!d.recurringPosted || typeof d.recurringPosted !== 'object') d.recurringPosted = {};
-
-    return d;
+    return applyDataDefaults(d);
   } catch (_) {
     return defaultData();
   }
 }
 
 export function saveData(data: LedgerData) {
-  // Save uses the same main storage key as legacy.
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  setCachedData(data); // update in-memory cache synchronously for instant reads
+  const json = JSON.stringify(data);
+  // Encrypt and persist asynchronously; fall back to plaintext if encryption unavailable
+  encryptWithDeviceKey(json)
+    .then((ct) => localStorage.setItem(STORAGE_KEY, ct))
+    .catch(() => localStorage.setItem(STORAGE_KEY, json));
+}
+
+/** Clears the in-memory data cache. Call before localStorage.clear() so reload() returns empty data. */
+export function clearDataCache(): void {
+  setCachedData(null);
 }
 
 function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {
@@ -421,6 +436,11 @@ function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {
     return { ok: false, value: raw };
   }
 }
+
+// Keys that must never appear in an export (security-sensitive or device-specific)
+const EXPORT_NEVER_KEYS = new Set([
+  'iisauhwallet_dk_v1', // device encryption key — must never be exported
+]);
 
 export function exportJSON(): string {
   // Mirrors legacy buildLocalStorageExportPayload() exactly (structure + allow list).
@@ -449,10 +469,20 @@ export function exportJSON(): string {
     UPCOMING_WINDOW_KEY
   ]);
 
+  // Main data key: always use in-memory cache (decrypted). Never export encrypted blob.
+  const cached = getCachedData();
+  if (cached) {
+    payload.data[STORAGE_KEY] = cached;
+  } else {
+    // Fallback: read plaintext directly (encryption not active)
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw && !isEncrypted(raw)) payload.data[STORAGE_KEY] = safeJsonParse(raw).value;
+  }
+
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (!k) continue;
+      if (!k || k === STORAGE_KEY || EXPORT_NEVER_KEYS.has(k)) continue;
       if (k.startsWith('ledgerlite') || allow.has(k) || k.includes('snapshot_') || k.includes('expected') || k.includes('upcoming')) {
         const v = localStorage.getItem(k);
         payload.data[k] = safeJsonParse(v).value;
@@ -460,6 +490,7 @@ export function exportJSON(): string {
     }
   } catch (_) {
     allow.forEach((k) => {
+      if (k === STORAGE_KEY || EXPORT_NEVER_KEYS.has(k)) return;
       try {
         const v = localStorage.getItem(k);
         if (v !== null) payload.data[k] = safeJsonParse(v).value;
@@ -472,8 +503,15 @@ export function exportJSON(): string {
   return JSON.stringify(payload, null, 2);
 }
 
+export const ENCRYPTED_IMPORT = 'ENCRYPTED_IMPORT';
+
 export function importJSON(jsonText: string) {
   const parsed = JSON.parse(jsonText) as any;
+
+  // Encrypted export — caller must prompt for passcode and call importJSONDecrypted instead.
+  if (parsed && parsed.version === 'iisauhwallet-encrypted-v1') {
+    throw new Error(ENCRYPTED_IMPORT);
+  }
 
   // Format A: full localStorage export payload (exportJSON()).
   if (parsed && parsed.version === 'iisauhwallet-backup-v1' && parsed.data && typeof parsed.data === 'object') {
@@ -483,6 +521,17 @@ export function importJSON(jsonText: string) {
       if (typeof v === 'string') localStorage.setItem(k, v);
       else localStorage.setItem(k, JSON.stringify(v));
     });
+    // Refresh in-memory cache from the restored plaintext main key, then re-encrypt asynchronously.
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw && !isEncrypted(raw)) {
+        const restored = JSON.parse(raw) as LedgerData;
+        setCachedData(applyDataDefaults(restored));
+        encryptWithDeviceKey(raw)
+          .then((ct) => localStorage.setItem(STORAGE_KEY, ct))
+          .catch(() => {});
+      }
+    } catch (_) {}
     return;
   }
 
@@ -503,6 +552,12 @@ export function importJSON(jsonText: string) {
   }
 
   throw new Error('Invalid import format');
+}
+
+/** Decrypts an encrypted backup file (version: iisauhwallet-encrypted-v1) with the given passcode, then imports it. */
+export async function importJSONDecrypted(jsonText: string, passcode: string): Promise<void> {
+  const plain = await decryptWithPasscode(jsonText, passcode);
+  importJSON(plain);
 }
 
 export function loadCategoryConfig(): CategoryConfig {

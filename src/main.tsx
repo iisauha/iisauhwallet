@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
+import { initCrypto } from './state/crypto';
 import { loadAppThemeColor, loadAppAccentColor, loadAppFontFamily, loadAppFontScale, loadAdvancedUIColors, DEFAULT_THEME_COLOR } from './state/storage';
 import { getFontFamilyStack } from './theme/fontStacks';
 import { getThemeColorsFromHex, getAccentColorsFromHex } from './theme/themeUtils';
@@ -49,10 +50,13 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   });
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter basename={basename}>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
-);
+(async () => {
+  await initCrypto();
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <BrowserRouter basename={basename}>
+        <App />
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+})();

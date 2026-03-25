@@ -190,10 +190,27 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [generatedRecoveryKey, setGeneratedRecoveryKey] = useState('');
   const [error, setError] = useState('');
   const [failedAttempts, setFailedAttempts] = useState(loadPasscodeFailedAttempts);
+  const [delayUntil, setDelayUntil] = useState(0); // ms timestamp; 0 = no delay
+  const [countdown, setCountdown] = useState(0); // seconds remaining
+
+  // Tick countdown down while a delay is active.
+  useEffect(() => {
+    if (delayUntil === 0) return;
+    const tick = () => {
+      const remaining = Math.ceil((delayUntil - Date.now()) / 1000);
+      if (remaining <= 0) { setCountdown(0); setDelayUntil(0); }
+      else setCountdown(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [delayUntil]);
 
   const resetFailedAttempts = useCallback(() => {
     savePasscodeFailedAttempts(0);
     setFailedAttempts(0);
+    setDelayUntil(0);
+    setCountdown(0);
   }, []);
 
   const recordFailedAttempt = useCallback(() => {
@@ -203,7 +220,14 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     if (next >= MAX_FAILED_ATTEMPTS) {
       setStep('wipe-confirm');
       setError('');
+      return;
     }
+    // Progressive delays: 3 fails → 2s, 5 fails → 5s, 7 fails → 10s
+    let delaySec = 0;
+    if (next >= 7) delaySec = 10;
+    else if (next >= 5) delaySec = 5;
+    else if (next >= 3) delaySec = 2;
+    if (delaySec > 0) setDelayUntil(Date.now() + delaySec * 1000);
   }, [failedAttempts]);
 
   useEffect(() => {
@@ -297,6 +321,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   const handleEnter = useCallback(async () => {
     setError('');
+    if (delayUntil > 0 && Date.now() < delayUntil) return;
     if (!isValidSixDigits(input)) {
       setError(`Enter ${PASSCODE_LENGTH} digits`);
       return;
@@ -312,7 +337,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     justLoggedInRef.current = true;
     setAuthenticated(true);
     setInput('');
-  }, [input, storedHash, failedAttempts, recordFailedAttempt, resetFailedAttempts]);
+  }, [input, storedHash, failedAttempts, delayUntil, recordFailedAttempt, resetFailedAttempts]);
 
   const handleForgotOptions = useCallback(() => {
     setStep('forgot-options');
@@ -738,7 +763,15 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             style={inputStyle}
           />
           {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
-          <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={handleEnter}>Continue</button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            onClick={handleEnter}
+            disabled={countdown > 0}
+          >
+            {countdown > 0 ? `Try again in ${countdown}s…` : 'Continue'}
+          </button>
           <button type="button" className="btn clear-btn" style={{ width: '100%', padding: '10px 16px', fontSize: '0.9rem', marginTop: 18 }} onClick={handleForgotOptions}>
             Forgot passcode?
           </button>
