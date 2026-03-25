@@ -82,9 +82,9 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
   const [nameVisible, setNameVisible] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhotoVisible(true), 60);
-    const t2 = setTimeout(() => setGreetVisible(true), 260);
-    const t3 = setTimeout(() => setNameVisible(true), 460);
+    const t1 = setTimeout(() => setPhotoVisible(true), 30);
+    const t2 = setTimeout(() => setGreetVisible(true), 120);
+    const t3 = setTimeout(() => setNameVisible(true), 230);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
@@ -457,8 +457,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     if (!name) return;
     setShowWelcome(true);
     setWelcomeVisible(true);
-    const t1 = setTimeout(() => setWelcomeVisible(false), 2400);
-    const t2 = setTimeout(() => setShowWelcome(false), 2900);
+    const t1 = setTimeout(() => setWelcomeVisible(false), 1600);
+    const t2 = setTimeout(() => setShowWelcome(false), 1950);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [authenticated]);
 
@@ -469,8 +469,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     if (!name) return;
     setShowWelcome(true);
     setWelcomeVisible(true);
-    const t1 = setTimeout(() => setWelcomeVisible(false), 2400);
-    const t2 = setTimeout(() => setShowWelcome(false), 2900);
+    const t1 = setTimeout(() => setWelcomeVisible(false), 1600);
+    const t2 = setTimeout(() => setShowWelcome(false), 1950);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
