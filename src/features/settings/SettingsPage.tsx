@@ -191,7 +191,7 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
   const [selectedTabKey, setSelectedTabKey] = useState<string | null>(null);
 
   const hasPasscode = loadPasscodeHash() !== null;
-  const passcodePaused = loadPasscodePaused();
+  const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -330,7 +330,7 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
                 iconBg="#EF4444"
                 label="Resume Passcode Protection"
                 sublabel="Passcode is currently paused"
-                onClick={() => savePasscodePaused(false)}
+                onClick={() => { savePasscodePaused(false); setPasscodePaused(false); }}
               />
             ) : (
               <SettingsRow
@@ -421,7 +421,7 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
             actions.reload();
           }}
         >
-          <span className="settings-row-icon" style={{ background: '#EF4444' }}>
+          <span className="settings-row-icon" style={{ background: 'var(--red)' }}>
             <IconTrash />
           </span>
           <span className="settings-row-label" style={{ color: 'var(--red)' }}>Reset All Data</span>
@@ -525,7 +525,7 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
-                <button type="button" className="btn btn-primary" onClick={() => { savePasscodePaused(true); setPausePasscodeStep(0); }}>Pause passcode</button>
+                <button type="button" className="btn btn-primary" onClick={() => { savePasscodePaused(true); setPasscodePaused(true); setPausePasscodeStep(0); }}>Pause passcode</button>
               </div>
             </Modal>
           ) : null}
@@ -536,8 +536,8 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
         <Modal open={true} title="About me" onClose={() => setAboutCreatorOpen(false)}>
           <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
             <p style={{ margin: '0 0 12px 0' }}>Hi, my name is Isaiah. I built this app, iisauhwallet, because I am really into credit cards, points, and personal finance tracking.</p>
-            <p style={{ margin: '0 0 12px 0' }}>I was trying to find an app that could do everything in one place — automatic bank syncing can be frustrating, and most apps push subscriptions when they should help you budget.</p>
-            <p style={{ margin: '0 0 12px 0' }}>Another gap: most apps don't properly track money in transit — between banks, Venmo, etc. The goal is simple: always know exactly where your money is.</p>
+            <p style={{ margin: '0 0 12px 0' }}>I was trying to find an app that could do everything in one place. Automatic bank syncing can be frustrating, and most apps push subscriptions when they should help you budget.</p>
+            <p style={{ margin: '0 0 12px 0' }}>Another gap I noticed: most apps don't properly track money in transit, like transfers between banks or Venmo. The goal is simple: always know exactly where your money is.</p>
             <p style={{ margin: 0 }}>I hope you enjoy it.</p>
           </div>
         </Modal>

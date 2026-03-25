@@ -78,42 +78,61 @@ function isLockedOut(): boolean {
 
 function WelcomeScreen({ name, profileImage, visible }: { name: string; profileImage: string | null; visible: boolean }) {
   const [photoVisible, setPhotoVisible] = useState(false);
+  const [greetVisible, setGreetVisible] = useState(false);
   const [nameVisible, setNameVisible] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhotoVisible(true), 50);
-    const t2 = setTimeout(() => setNameVisible(true), 200);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t1 = setTimeout(() => setPhotoVisible(true), 60);
+    const t2 = setTimeout(() => setGreetVisible(true), 260);
+    const t3 = setTimeout(() => setNameVisible(true), 460);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, background: '#111111', zIndex: 9999,
+        position: 'fixed', inset: 0, background: 'var(--bg)', zIndex: 9999,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20,
-        opacity: visible ? 1 : 0, transition: 'opacity 0.4s ease',
+        opacity: visible ? 1 : 0, transition: 'opacity 0.5s ease',
       }}
     >
       <div
         style={{
-          width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-          opacity: photoVisible ? 1 : 0, transition: 'opacity 0.4s ease',
-          background: profileImage ? 'transparent' : '#333',
+          width: 84, height: 84, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+          opacity: photoVisible ? 1 : 0, transition: 'opacity 0.6s ease, transform 0.6s ease',
+          transform: photoVisible ? 'scale(1)' : 'scale(0.85)',
+          background: profileImage ? 'transparent' : 'var(--surface)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
         {profileImage
           ? <img src={profileImage} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-          : <span style={{ fontSize: '2rem', fontWeight: 700, color: '#fff' }}>{name.charAt(0).toUpperCase()}</span>
+          : <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--app-font-family)' }}>{name.charAt(0).toUpperCase()}</span>
         }
       </div>
-      <div
-        style={{
-          fontSize: '28px', fontWeight: 700, color: '#fff',
-          opacity: nameVisible ? 1 : 0, transition: 'opacity 0.4s ease',
-        }}
-      >
-        Welcome back, {name}
+      <div style={{ textAlign: 'center', lineHeight: 1.25 }}>
+        <div
+          style={{
+            fontSize: '18px', fontWeight: 400, color: 'var(--muted)',
+            fontFamily: 'var(--app-font-family)',
+            opacity: greetVisible ? 1 : 0,
+            transform: greetVisible ? 'translateY(0)' : 'translateY(8px)',
+            transition: 'opacity 0.55s ease, transform 0.55s ease',
+          }}
+        >
+          Welcome back,
+        </div>
+        <div
+          style={{
+            fontSize: '30px', fontWeight: 700, color: 'var(--text)',
+            fontFamily: 'var(--app-font-family)',
+            opacity: nameVisible ? 1 : 0,
+            transform: nameVisible ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'opacity 0.55s ease, transform 0.55s ease',
+          }}
+        >
+          {name}
+        </div>
       </div>
     </div>
   );
@@ -619,7 +638,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
               <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={inputStyle} />
               <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 2</label>
               <Select value={securityQ2} onChange={(e) => setSecurityQ2(e.target.value)} style={selectStyle}>
-                <option value="">— Select —</option>
+                <option value="">Select...</option>
                 {SECURITY_QUESTION_OPTIONS.filter((q) => q !== securityQ1).map((q) => (
                   <option key={q} value={q}>{q}</option>
                 ))}

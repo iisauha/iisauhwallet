@@ -128,14 +128,14 @@ function CoastFireInfoIcon({
             maxWidth: 320,
             width: 'max-content',
             padding: '12px 14px',
-            background: '#1e293b',
-            border: '1px solid var(--border)',
+            background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
+            border: '1px solid var(--ui-border, var(--border))',
             borderRadius: 8,
             fontSize: '0.8rem',
             lineHeight: 1.4,
-            color: 'var(--text)',
+            color: 'var(--ui-primary-text, var(--text))',
             zIndex: 10001,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--shadow-strong)',
             whiteSpace: 'pre-line'
           }}
         >
@@ -1498,7 +1498,7 @@ export function InvestingPage() {
                                 persist({ ...investing, accounts });
                               }}
                             >
-                              <option value="">— None —</option>
+                              <option value="">None</option>
                               {(data.banks || [])
                                 .filter((b) => b.type === 'bank')
                                 .map((b) => (
@@ -2204,7 +2204,7 @@ export function InvestingPage() {
                 <div className="field">
                   <label>From</label>
                 <Select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
-                <option value="">— Select —</option>
+                <option value="">Select...</option>
                 {banksSortedByBalance.map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
                     Bank — {b.name}
@@ -2225,7 +2225,7 @@ export function InvestingPage() {
                 <div className="field">
                   <label>To</label>
                 <Select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>
-                <option value="">— Select —</option>
+                <option value="">Select...</option>
                 {banksSortedByBalance.map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
                     Bank — {b.name}

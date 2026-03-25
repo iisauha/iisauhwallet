@@ -193,7 +193,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
                 onClick={handleAddToPaymentNow}
                 disabled={publicEstimateCents <= 0}
               >
-                Add to Payment(now)
+                Add to monthly payment
               </button>
               <button
                 type="button"
@@ -229,7 +229,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
               style={inputStyle}
             />
             <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-              When this date is reached, your estimated public loan payment can be automatically added to Payment(now).
+              When this date is reached, your estimated public loan payment will automatically be added to your monthly payment total.
             </p>
             <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Auto-add when date reached:</span>
@@ -244,7 +244,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             </div>
             {summary.firstPaymentDateAutoAddPaused ? (
               <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                Paused. Use &quot;Add to Payment(now)&quot; manually if you want to include public in Payment(now).
+                Paused. Tap "Add to monthly payment" manually to include this loan in your total.
               </p>
             ) : null}
           </div>

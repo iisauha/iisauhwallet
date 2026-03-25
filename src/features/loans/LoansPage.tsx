@@ -1364,7 +1364,7 @@ export function LoansPage() {
               }}
               role="button"
               tabIndex={0}
-              aria-label="Edit Payment(now)"
+              aria-label="Edit monthly payment"
               onClick={() => {
                 setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
                 setShowEditPaymentNow(true);
@@ -1377,7 +1377,7 @@ export function LoansPage() {
                 }
               }}
             >
-              Payment (now)
+              Monthly Payment
               <button
                 type="button"
                 className="info-icon"
@@ -1510,10 +1510,10 @@ export function LoansPage() {
                 style={{ fontSize: '0.9rem', padding: '6px 12px' }}
                 onClick={() => setShowRecomputeConfirm(true)}
               >
-                Recompute your Payment(now)
+                Recalculate monthly payment
               </button>
               <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                Re-run current balances, rates, and ranges to refresh the Payment(now) total.
+                Recalculates based on your current balances, rates, and payment schedule.
               </p>
             </div>
             <div>
@@ -1529,10 +1529,10 @@ export function LoansPage() {
                   setPaymentNowOverride(newValue);
                 }}
               >
-                Add current private loan payments to Payment(now)
+                Add private loan payments to total
               </button>
               <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                Add the sum of each private loan&apos;s current Payment(now) into the general Payment(now) field. Does not change balances or loan data.
+                Adds all private loan payments into your monthly total. Does not change balances or loan data.
               </p>
             </div>
             <div>
@@ -1632,11 +1632,11 @@ export function LoansPage() {
       {/* Recompute Payment(now) confirmation */}
       <Modal
         open={showRecomputeConfirm}
-        title="Recompute Payment(now)"
+        title="Recalculate Monthly Payment"
         onClose={() => setShowRecomputeConfirm(false)}
       >
         <p style={{ marginTop: 0, marginBottom: 16 }}>
-          This will apply one recompute cycle to private loan balances and update the same Payment(now) total. Continue?
+          This will recalculate your private loan balances and update the monthly payment total. Continue?
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
@@ -1684,14 +1684,14 @@ export function LoansPage() {
       {/* Edit Payment(now) modal */}
       <Modal
         open={showEditPaymentNow}
-        title="Edit Payment(now)"
+        title="Edit Monthly Payment"
         onClose={() => setShowEditPaymentNow(false)}
       >
         <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 12 }}>
-          Set the visible Payment(now) to any value (e.g. 0). This is a display override only; it does not change balances or other calculations.
+          Override the displayed monthly payment total to any value. This only affects what is shown here and does not change balances or other calculations.
         </p>
         <div style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', marginBottom: 4, fontSize: '0.9rem' }}>Payment(now) ($)</label>
+          <label style={{ display: 'block', marginBottom: 4, fontSize: '0.9rem' }}>Monthly Payment ($)</label>
           <input
             type="number"
             min={0}
@@ -1945,7 +1945,7 @@ function LoanEditorForm(props: {
           <div className="field">
             <label style={{ display: 'block', marginBottom: 6 }}>Payment date ranges</label>
             <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
-              Define when each payment mode applies. First matching range for today sets Payment(now).
+              Set your payment schedule. The range that covers today determines your current monthly payment.
             </p>
             {state.privatePaymentRanges.map((r, idx) => (
               <div
@@ -2081,10 +2081,10 @@ function LoanEditorForm(props: {
               checked={state.excludeFromCurrentPayment}
               onChange={(e) => onChange({ ...state, excludeFromCurrentPayment: e.target.checked })}
             />
-            <label htmlFor="excludeFromPayment">Exclude from Payment(now)</label>
+            <label htmlFor="excludeFromPayment">Exclude from monthly payment total</label>
           </div>
           <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-            If checked, this loan&apos;s payment is not added to the Payment(now) total; it is still included in grace period / after-grace estimates.
+            If checked, this loan's payment won't be included in your monthly payment total. It will still appear in grace period and future estimates.
           </p>
         </>
       ) : null}

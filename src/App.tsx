@@ -20,8 +20,7 @@ import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './sta
 import {
   IconHome, IconArrowExchange, IconCalendar, IconRefreshCircle,
   IconBankBuilding, IconBarChartTrend, IconStar,
-  IconPlusCircle, IconCreditCard, IconVault, IconArrowUpRight,
-  IconArrowDownRight, IconRefresh, IconGiftBox, IconExport,
+  IconCreditCard, IconExport,
   IconChevronRight, IconPlus,
 } from './ui/icons';
 
@@ -147,13 +146,13 @@ export type QuickAction =
 
 function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
   const items: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
-    { icon: <IconPlusCircle />, label: 'Log a purchase', action: 'log-purchase' },
-    { icon: <IconCreditCard />, label: 'Reimbursable Charge', action: 'add-reimbursable' },
-    { icon: <IconArrowDownRight />, label: 'Add pending outbound', action: 'add-pending-out' },
-    { icon: <IconArrowUpRight />, label: 'Add pending inbound', action: 'add-pending-in' },
-    { icon: <IconRefresh />, label: 'Add recurring item', action: 'add-recurring' },
-    { icon: <IconVault />, label: 'Update a balance', action: 'update-balance' },
-    { icon: <IconGiftBox />, label: 'Add a bonus card', action: 'add-bonus' },
+    { icon: <IconArrowExchange />, label: 'Log a purchase', action: 'log-purchase' },
+    { icon: <IconCreditCard />, label: 'Reimbursable charge', action: 'add-reimbursable' },
+    { icon: <IconHome />, label: 'Add pending outbound', action: 'add-pending-out' },
+    { icon: <IconHome />, label: 'Add pending inbound', action: 'add-pending-in' },
+    { icon: <IconRefreshCircle />, label: 'Add recurring item', action: 'add-recurring' },
+    { icon: <IconHome />, label: 'Update a balance', action: 'update-balance' },
+    { icon: <IconStar />, label: 'Add a bonus card', action: 'add-bonus' },
     { icon: <IconExport />, label: 'Export backup', action: 'export' },
   ];
 
@@ -185,6 +184,7 @@ function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
 
 function MainApp() {
   const [tab, setTab] = useState<TabKey>('snapshot');
+  const [prevTab, setPrevTab] = useState<TabKey>('snapshot');
   const [spendingVisited, setSpendingVisited] = useState(false);
   const [tabOrder, setTabOrder] = useState<TabKey[]>(() => loadTabOrder());
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -214,38 +214,40 @@ function MainApp() {
   }, [tab, visibleNavOrder]);
 
   const handleQuickAction = useCallback((action: QuickAction) => {
-    switch (action) {
-      case 'log-purchase':
-        setTab('spending');
-        setSpendingAddTrigger((n) => n + 1);
-        break;
-      case 'add-reimbursable':
-        setTab('spending');
-        setSpendingReimburseAddTrigger((n) => n + 1);
-        break;
-      case 'add-pending-in':
-        setTab('snapshot');
-        setSnapshotPendingInTrigger((n) => n + 1);
-        break;
-      case 'add-pending-out':
-        setTab('snapshot');
-        setSnapshotPendingOutTrigger((n) => n + 1);
-        break;
-      case 'add-recurring':
-        setTab('recurring');
-        setRecurringAddTrigger((n) => n + 1);
-        break;
-      case 'update-balance':
-        setTab('snapshot');
-        break;
-      case 'add-bonus':
-        setTab('subtracker');
-        setSubtrackerAddTrigger((n) => n + 1);
-        break;
-      case 'export':
-        setTab('settings');
-        break;
-    }
+    setTimeout(() => {
+      switch (action) {
+        case 'log-purchase':
+          setTab('spending');
+          setSpendingAddTrigger((n) => n + 1);
+          break;
+        case 'add-reimbursable':
+          setTab('spending');
+          setSpendingReimburseAddTrigger((n) => n + 1);
+          break;
+        case 'add-pending-in':
+          setTab('snapshot');
+          setSnapshotPendingInTrigger((n) => n + 1);
+          break;
+        case 'add-pending-out':
+          setTab('snapshot');
+          setSnapshotPendingOutTrigger((n) => n + 1);
+          break;
+        case 'add-recurring':
+          setTab('recurring');
+          setRecurringAddTrigger((n) => n + 1);
+          break;
+        case 'update-balance':
+          setTab('snapshot');
+          break;
+        case 'add-bonus':
+          setTab('subtracker');
+          setSubtrackerAddTrigger((n) => n + 1);
+          break;
+        case 'export':
+          setTab('settings');
+          break;
+      }
+    }, 140);
   }, []);
 
   const otherTabContent = useMemo(() => {
@@ -302,7 +304,14 @@ function MainApp() {
 
   return (
     <>
-      <GlobalHeader onAvatarClick={() => setTab('settings')} />
+      <GlobalHeader onAvatarClick={() => {
+        if (tab === 'settings') {
+          setTab(prevTab);
+        } else {
+          setPrevTab(tab);
+          setTab('settings');
+        }
+      }} />
 
       {(spendingVisited || tab === 'spending') && (
         <div

@@ -319,7 +319,7 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
                     </div>
                     {r.useLoanEstimatedPayment ? (
                       <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
-                        Amount source: current visible Payment(now) from Loans tab
+                        Amount: auto-filled from your current loan payment
                       </div>
                     ) : null}
                     <div className="btn-row">
@@ -564,7 +564,7 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
                                   )
                                 }
                               >
-                                <option value="">— Select —</option>
+                                <option value="">Select...</option>
                                 {investingState.accounts
                                   .filter((a) => a.type === 'k401')
                                   .map((a) => (
@@ -781,7 +781,7 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
                   <div className="field">
                     <label>Subcategory</label>
                     <Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
-                      <option value="">—</option>
+                      <option value="">None</option>
                       {subs.map((s) => (
                         <option key={s} value={s}>
                           {s}
@@ -812,7 +812,7 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
                     </div>
                     {useLoanEstimatedPayment ? (
                       <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6 }}>
-                        Uses the current visible Payment(now) value from the Loans tab. Amount: {totalVisiblePaymentNowCents > 0 ? `$${(totalVisiblePaymentNowCents / 100).toFixed(2)}` : '—'}
+                        Auto-filled from your Loans tab. Current amount: {totalVisiblePaymentNowCents > 0 ? `$${(totalVisiblePaymentNowCents / 100).toFixed(2)}` : 'not set'}
                       </p>
                     ) : null}
                   </div>
@@ -977,7 +977,7 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
                       value={hysaSubBucket}
                       onChange={(e) => setHysaSubBucket(e.target.value as 'liquid' | 'reserved' | '')}
                     >
-                      <option value="">— Select —</option>
+                      <option value="">Select...</option>
                       <option value="liquid">Money in HYSA Designated for Bills</option>
                       <option value="reserved">Reserved savings</option>
                     </Select>
@@ -1031,7 +1031,7 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
                               setInvestingTargetAccountId(id);
                             }}
                           >
-                            <option value="">— Select —</option>
+                            <option value="">Select...</option>
                             {investingState.accounts
                               .filter((a) => a.type === 'hysa' || a.type === 'general')
                               .map((a) => (

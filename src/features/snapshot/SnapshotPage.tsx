@@ -20,10 +20,10 @@ import {
 type ActivityType = 'purchase' | 'pending-in' | 'pending-out' | 'balance';
 
 const ACTIVITY_COLORS: Record<ActivityType, string> = {
-  purchase: 'var(--accent)',
-  'pending-in': '#22c55e',
-  'pending-out': '#f97316',
-  balance: '#818cf8',
+  purchase: 'var(--ui-add-btn, var(--accent))',
+  'pending-in': 'var(--ui-add-btn, var(--accent))',
+  'pending-out': 'var(--ui-add-btn, var(--accent))',
+  balance: 'var(--ui-add-btn, var(--accent))',
 };
 
 const ACTIVITY_DESCRIPTOR: Record<ActivityType, string> = {
@@ -998,7 +998,7 @@ export function SnapshotPage({
                             value={rule.category}
                             onChange={(e) => updateRule(idx, { category: e.target.value, subcategory: '' })}
                           >
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                             {Object.keys(cfg).map((id) => (
                               <option key={id} value={id}>{getCategoryName(cfg, id)}</option>
                             ))}
@@ -1011,7 +1011,7 @@ export function SnapshotPage({
                               value={rule.subcategory || ''}
                               onChange={(e) => updateRule(idx, { subcategory: e.target.value })}
                             >
-                              <option value="">— None —</option>
+                              <option value="">None</option>
                               {subs.map((s) => (
                                 <option key={s} value={s}>{s}</option>
                               ))}
@@ -1214,7 +1214,7 @@ export function SnapshotPage({
                       <div className="field">
                         <label>Card</label>
                         <Select value={modal.targetCardId} onChange={(e) => setModal({ ...modal, targetCardId: e.target.value })}>
-                          <option value="">— Select —</option>
+                          <option value="">Select...</option>
                           {cardsSortedByBalance.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name} — {formatCents(c.balanceCents || 0)}
@@ -1227,7 +1227,7 @@ export function SnapshotPage({
                         <div className="field">
                           <label>HYSA Account</label>
                           <Select value={modal.targetInvestingAccountId} onChange={(e) => setModal({ ...modal, targetInvestingAccountId: e.target.value })}>
-                            <option value="">— Select —</option>
+                            <option value="">Select...</option>
                             {hysaAccountsSorted.map((a: any) => (
                               <option key={a.id} value={a.id}>
                                 {a.name} — {formatCents(a.balanceCents || 0)}
@@ -1238,7 +1238,7 @@ export function SnapshotPage({
                         <div className="field">
                           <label>Use which HYSA portion?</label>
                           <Select value={modal.hysaSubBucket} onChange={(e) => setModal({ ...modal, hysaSubBucket: e.target.value as any })}>
-                            <option value="">— Select —</option>
+                            <option value="">Select...</option>
                             <option value="liquid">Money in HYSA Designated for Bills</option>
                             <option value="reserved">Reserved savings</option>
                           </Select>
@@ -1248,7 +1248,7 @@ export function SnapshotPage({
                       <div className="field">
                         <label>Bank (optional)</label>
                         <Select value={modal.targetBankId || ''} onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}>
-                          <option value="">— Select —</option>
+                          <option value="">Select...</option>
                           {banksSortedByBalance.map((b) => (
                             <option key={b.id} value={b.id}>
                               {b.name} — {formatCents(b.balanceCents || 0)}
@@ -1290,7 +1290,7 @@ export function SnapshotPage({
                           <div className="field">
                             <label>From Bank</label>
                             <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
-                              <option value="">— Select —</option>
+                              <option value="">Select...</option>
                               {banksSortedByBalance.map((b) => (
                                 <option key={b.id} value={b.id}>
                                   {b.name} — {formatCents(b.balanceCents || 0)}
@@ -1306,7 +1306,7 @@ export function SnapshotPage({
                                 value={modal.outboundSourceHysaAccountId}
                                 onChange={(e) => setModal({ ...modal, outboundSourceHysaAccountId: e.target.value })}
                               >
-                                <option value="">— Select —</option>
+                                <option value="">Select...</option>
                                 {hysaAccountsSorted.map((a: any) => (
                                   <option key={a.id} value={a.id}>
                                     {a.name} — {formatCents(a.balanceCents || 0)}
@@ -1320,7 +1320,7 @@ export function SnapshotPage({
                                 value={modal.outboundHysaSubBucket}
                                 onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}
                               >
-                                <option value="">— Select —</option>
+                                <option value="">Select...</option>
                                 <option value="liquid">Money in HYSA Designated for Bills</option>
                                 <option value="reserved">Reserved savings</option>
                               </Select>
@@ -1330,7 +1330,7 @@ export function SnapshotPage({
                         <div className="field">
                           <label>To Credit Card</label>
                           <Select value={modal.targetCardIdOut} onChange={(e) => setModal({ ...modal, targetCardIdOut: e.target.value })}>
-                            <option value="">— Select —</option>
+                            <option value="">Select...</option>
                             {cardsSortedByBalance.map((c) => (
                               <option key={c.id} value={c.id}>
                                 {c.name} — {formatCents(c.balanceCents || 0)}
@@ -1355,7 +1355,7 @@ export function SnapshotPage({
                           <div className="field">
                             <label>Bank</label>
                             <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
-                              <option value="">— Select —</option>
+                              <option value="">Select...</option>
                               {banksSortedByBalance.map((b) => (
                                 <option key={b.id} value={b.id}>
                                   {b.name} — {formatCents(b.balanceCents || 0)}
@@ -1368,7 +1368,7 @@ export function SnapshotPage({
                             <div className="field">
                               <label>HYSA Account</label>
                               <Select value={modal.outboundSourceHysaAccountId} onChange={(e) => setModal({ ...modal, outboundSourceHysaAccountId: e.target.value })}>
-                                <option value="">— Select —</option>
+                                <option value="">Select...</option>
                                 {hysaAccountsSorted.map((a: any) => (
                                   <option key={a.id} value={a.id}>
                                     {a.name} — {formatCents(a.balanceCents || 0)}
@@ -1379,7 +1379,7 @@ export function SnapshotPage({
                             <div className="field">
                               <label>Use which HYSA portion?</label>
                               <Select value={modal.outboundHysaSubBucket} onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}>
-                                <option value="">— Select —</option>
+                                <option value="">Select...</option>
                                 <option value="liquid">Money in HYSA Designated for Bills</option>
                                 <option value="reserved">Reserved savings</option>
                               </Select>

@@ -605,7 +605,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                       top: 12,
                       height: 14,
                       borderRadius: 999,
-                      background: 'rgba(148, 163, 184, 0.35)',
+                      background: 'color-mix(in srgb, var(--muted) 30%, transparent)',
                       overflow: 'hidden'
                     }}
                   >

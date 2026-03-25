@@ -307,7 +307,7 @@ body {
 .btn-secondary {
   background: transparent;
   color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
-  border: 1px solid var(--ui-outline-btn, #444);
+  border: 1px solid var(--ui-outline-btn, var(--ui-border, var(--border)));
   border-radius: 999px;
   padding: 12px 24px;
 }
@@ -483,14 +483,14 @@ input[type="date"].ll-control:focus {
   max-width: 420px;
   max-height: 88vh;
   font-family: var(--app-font-family);
-  background: #1E1E1E;
+  background: var(--ui-modal-bg, var(--ui-card-bg, var(--surface)));
   border-radius: 20px;
   padding: 24px 20px 20px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--ui-border, var(--border));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   animation: llModalIn 0.2s ease-out;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-strong);
 }
 .modal:focus { outline: none; }
 .modal:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 2px; }
@@ -751,9 +751,9 @@ input[type="date"].ll-control:focus {
   bottom: 0;
   left: 0;
   right: 0;
-  background: #1E1E1E;
+  background: var(--ui-modal-bg, var(--ui-card-bg, var(--surface)));
   border-radius: 20px 20px 0 0;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid var(--ui-border, var(--border));
   padding: 0 0 calc(16px + var(--safe-bottom));
   z-index: 160;
   animation: sheetSlideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
@@ -877,7 +877,7 @@ input[type="date"].ll-control:focus {
 
 /* ─── Hero CTA Card ──────────────────────────────────────────────── */
 .hero-cta-card {
-  background: #3D5E45;
+  background: var(--ui-add-btn, var(--accent));
   border-radius: var(--radius-card);
   padding: 20px 18px 18px;
   margin-bottom: 20px;
@@ -1113,10 +1113,10 @@ input[type="date"].ll-control:focus {
 
 /* ─── Tab Content Transitions ─────────────────────────────────────── */
 .tab-panel {
-  animation: llTabIn 0.18s ease-out;
+  animation: llTabIn 0.32s ease-out;
 }
 @keyframes llTabIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -1134,7 +1134,7 @@ input[type="date"].ll-control:focus {
   border-right: none !important;
   border-bottom: none !important;
   border-radius: 0 var(--radius-card) var(--radius-card) 0 !important;
-  box-shadow: none !important;
+  box-shadow: -4px 0 12px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 22%, transparent) !important;
 }
 
 /* ─── UI Consistency — Chip / Badge ──────────────────────────────── */
@@ -1143,18 +1143,18 @@ input[type="date"].ll-control:focus {
   align-items: center;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #2A2A2A;
-  color: #9A9A94;
+  background: color-mix(in srgb, var(--ui-primary-text, var(--text)) 10%, transparent);
+  color: var(--muted);
   font-size: 0.75rem;
   font-weight: 500;
 }
 .chip.active {
-  background: var(--ui-add-btn, #E8553E);
+  background: var(--ui-add-btn, var(--accent));
   color: #fff;
 }
 .chip.positive {
-  background: #3D5E45;
-  color: #fff;
+  background: var(--green-light);
+  color: var(--green);
 }
 
 /* ─── UI Consistency — Form inputs ───────────────────────────────── */
@@ -1172,7 +1172,7 @@ textarea.ll-control {
 }
 .ll-control::placeholder,
 .ll-select::placeholder {
-  color: #9A9A94 !important;
+  color: var(--muted) !important;
 }
 .ll-control:focus,
 .ll-select:focus {
@@ -1193,7 +1193,7 @@ textarea.ll-control {
   border-right: none;
   border-bottom: none;
   border-radius: 0 var(--radius-card) var(--radius-card) 0;
-  box-shadow: none;
+  box-shadow: -4px 0 12px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent);
 }
 
 /* ─── UI Consistency — Card press state ──────────────────────────── */

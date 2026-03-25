@@ -56,17 +56,13 @@ export function IconRefreshCircle() {
 export function IconBankBuilding() {
   return (
     <svg {...SVG_PROPS}>
-      {/* Bill / note in center */}
-      <rect x="7" y="9" width="10" height="6" rx="1" />
-      <circle cx="12" cy="12" r="1.5" />
-      {/* Top-left giving hand */}
-      <path d="M2 3c2-0.5 4 0 5.5 1.5" />
-      <path d="M2 3v4" />
-      <path d="M2 7c2-0.5 4 0 5.5 1.5" />
-      {/* Bottom-right receiving hand */}
-      <path d="M22 21c-2 0.5-4 0-5.5-1.5" />
-      <path d="M22 21v-4" />
-      <path d="M22 17c-2 0.5-4 0-5.5-1.5" />
+      <path d="M3 22h18" />
+      <path d="M6 18v-8" />
+      <path d="M10 18v-8" />
+      <path d="M14 18v-8" />
+      <path d="M18 18v-8" />
+      <path d="M3 10h18" />
+      <path d="M12 2L2 10h20L12 2z" />
     </svg>
   );
 }
