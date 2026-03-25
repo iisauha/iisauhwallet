@@ -449,7 +449,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           </div>
           {!completedBonusesCollapsed ? (
           <>
-          <div className="card-carousel">
           {completedBonuses.map((b) => {
             const cashCents = completedBonusCashValueCents(b);
             const isPointsOrMiles = b.unitType === 'points' || b.unitType === 'miles';
@@ -460,7 +459,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   ? b.bankAccountRef.name
                   : '';
             return (
-              <div className="card-carousel-item" key={b.id}><div className="card" style={{ marginBottom: 0 }}>
+              <div className="card" key={b.id} style={{ marginBottom: 12 }}>
                 <div className="row" style={{ marginBottom: 4 }}>
                   <span className="name" style={{ fontSize: '1.05rem' }}>{b.cardName}</span>
                   <button
@@ -492,10 +491,9 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   )}
                   {b.notes ? <div style={{ marginTop: 4 }}>Notes: {b.notes}</div> : null}
                 </div>
-              </div></div>
+              </div>
             );
           })}
-          </div>
           <button
             type="button"
             className="btn btn-add"

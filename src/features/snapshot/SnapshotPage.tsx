@@ -26,66 +26,52 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   balance: '#818cf8',
 };
 
+const ACTIVITY_DESCRIPTOR: Record<ActivityType, string> = {
+  purchase: 'Added purchase',
+  'pending-in': 'Pending inbound',
+  'pending-out': 'Pending outbound',
+  balance: 'Updated balance to',
+};
+
+type ActivityItem = { label: string; type: ActivityType; ts: number; amount: number | null };
+
 function RecentActivityWidget() {
   const data = useLedgerStore((s) => s.data);
 
   const activities = useMemo(() => {
-    const items: { label: string; type: ActivityType; ts: number }[] = [];
+    const items: ActivityItem[] = [];
 
     (data.purchases || []).forEach((p) => {
       if (p.dateISO) {
-        items.push({
-          label: p.title || 'Purchase',
-          type: 'purchase',
-          ts: new Date(p.dateISO + 'T23:59:59').getTime(),
-        });
+        items.push({ label: p.title || 'Purchase', type: 'purchase', ts: new Date(p.dateISO + 'T23:59:59').getTime(), amount: p.amountCents ?? null });
       }
     });
 
     (data.pendingIn || []).forEach((p) => {
       if (p.createdAt) {
-        items.push({
-          label: p.label || 'Inbound transfer',
-          type: 'pending-in',
-          ts: new Date(p.createdAt).getTime(),
-        });
+        items.push({ label: p.label || 'Inbound transfer', type: 'pending-in', ts: new Date(p.createdAt).getTime(), amount: p.amountCents ?? null });
       }
     });
 
     (data.pendingOut || []).forEach((p) => {
       if (p.createdAt) {
-        items.push({
-          label: p.label || 'Outbound transfer',
-          type: 'pending-out',
-          ts: new Date(p.createdAt).getTime(),
-        });
+        items.push({ label: p.label || 'Outbound transfer', type: 'pending-out', ts: new Date(p.createdAt).getTime(), amount: p.amountCents ?? null });
       }
     });
 
     (data.banks || []).forEach((b) => {
       if (b.updatedAt) {
-        items.push({
-          label: b.name || 'Bank account',
-          type: 'balance',
-          ts: new Date(b.updatedAt).getTime(),
-        });
+        items.push({ label: b.name || 'Bank account', type: 'balance', ts: new Date(b.updatedAt).getTime(), amount: b.balanceCents ?? null });
       }
     });
 
     (data.cards || []).forEach((c) => {
       if (c.updatedAt) {
-        items.push({
-          label: c.name || 'Credit card',
-          type: 'balance',
-          ts: new Date(c.updatedAt).getTime(),
-        });
+        items.push({ label: c.name || 'Credit card', type: 'balance', ts: new Date(c.updatedAt).getTime(), amount: c.balanceCents ?? null });
       }
     });
 
-    return items
-      .filter((i) => !isNaN(i.ts))
-      .sort((a, b) => b.ts - a.ts)
-      .slice(0, 3);
+    return items.filter((i) => !isNaN(i.ts)).sort((a, b) => b.ts - a.ts).slice(0, 3);
   }, [data]);
 
   return (
@@ -97,7 +83,12 @@ function RecentActivityWidget() {
         activities.map((a, i) => (
           <div key={i} className="recent-activity-item">
             <div className="recent-activity-dot" style={{ background: ACTIVITY_COLORS[a.type] }} />
-            <div className="recent-activity-label">{a.label}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="recent-activity-label">{a.label}</div>
+              <div className="recent-activity-type">
+                {ACTIVITY_DESCRIPTOR[a.type]}{a.amount != null ? ` · ${formatCents(a.amount)}` : ''}
+              </div>
+            </div>
           </div>
         ))
       )}
@@ -271,14 +262,16 @@ export function SnapshotPage({
     displayedFinalNetCashCents >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
 
   const visibleBanks = useMemo(() => {
-    const list = data.banks || [];
-    return showZeroCashItems ? list : list.filter((b) => (b.balanceCents || 0) !== 0);
-  }, [data.banks, showZeroCashItems]);
+    return showZeroCashItems
+      ? banksSortedByBalance
+      : banksSortedByBalance.filter((b) => (b.balanceCents || 0) !== 0);
+  }, [banksSortedByBalance, showZeroCashItems]);
 
   const visibleCards = useMemo(() => {
-    const list = data.cards || [];
-    return showZeroCreditCards ? list : list.filter((c) => (c.balanceCents || 0) !== 0);
-  }, [data.cards, showZeroCreditCards]);
+    return showZeroCreditCards
+      ? cardsSortedByBalance
+      : cardsSortedByBalance.filter((c) => (c.balanceCents || 0) !== 0);
+  }, [cardsSortedByBalance, showZeroCreditCards]);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
     setModal({ type: 'confirm', title, message, onConfirm });
@@ -617,7 +610,8 @@ export function SnapshotPage({
           Add
         </button>
       </div>
-      <>
+      {(data.pendingIn || []).length > 0 ? (
+        <>
           <PendingInboundList
             data={data}
             items={data.pendingIn || []}
@@ -661,6 +655,7 @@ export function SnapshotPage({
             </button>
           </div>
         </>
+      ) : null}
 
       <div className="snapshot-section-label">
         <span>Pending Outbound</span>
@@ -673,7 +668,8 @@ export function SnapshotPage({
           Add
         </button>
       </div>
-      <>
+      {(data.pendingOut || []).length > 0 ? (
+        <>
           <PendingOutboundList
             data={data}
             items={data.pendingOut || []}
@@ -715,9 +711,10 @@ export function SnapshotPage({
             </button>
           </div>
         </>
+      ) : null}
       </div>
 
-      <div className="summary net-cash-card" id="snapshotSummary" style={{ borderLeft: '4px solid var(--ui-add-btn, var(--accent))' }}>
+      <div className="summary net-cash-card" id="snapshotSummary">
         <div className="summary-compact">
           <div className="summary-kv">
             <span className="k">Current Cash in Checking Accounts</span>

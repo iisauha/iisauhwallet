@@ -145,7 +145,7 @@ body {
   padding: 8px 8px;
   cursor: pointer;
   border-radius: 8px;
-  border: 1px solid var(--ui-outline-btn, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 50%, transparent);
   background: var(--ui-section-bg, var(--ui-card-bg, var(--surface)));
   -webkit-tap-highlight-color: transparent;
 }
@@ -375,15 +375,15 @@ body {
   border-style: solid;
   font-size: 0.88rem;
   font-weight: 600;
-  background: #2A2A2A;
-  color: #9A9A94;
-  border-color: #333 !important;
+  background: var(--ui-card-bg, var(--surface));
+  color: var(--ui-primary-text, var(--text));
+  border-color: var(--ui-border, var(--border)) !important;
   transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 .ll-toggle.active {
-  background: #E8553E !important;
-  color: #fff !important;
-  border-color: #E8553E !important;
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 15%, transparent) !important;
+  color: var(--ui-add-btn, var(--accent)) !important;
+  border-color: var(--ui-add-btn, var(--accent)) !important;
   border-width: 1px !important;
 }
 
@@ -918,7 +918,7 @@ input[type="date"].ll-control:focus {
 }
 .hero-cta-pill:active { background: rgba(255, 255, 255, 0.25); }
 
-/* ─── Net Cash Summary Card (coral left border) ───────────────────── */
+/* ─── Net Cash Summary Card (coral left border + glow) ─────────────── */
 .net-cash-card {
   background: var(--ui-card-bg, var(--surface));
   border: 1px solid var(--ui-border, var(--border));
@@ -926,6 +926,12 @@ input[type="date"].ll-control:focus {
   border-radius: var(--radius-card);
   padding: 16px 16px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow), -4px 0 12px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent);
+}
+/* Universal accent-strip card style */
+.card-accent-strip {
+  border-left: 3px solid var(--ui-add-btn, var(--accent)) !important;
+  box-shadow: var(--shadow), -3px 0 10px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 20%, transparent) !important;
 }
 .net-cash-value {
   font-size: 1.6rem;
@@ -1173,13 +1179,10 @@ textarea.ll-control {
   outline: none !important;
 }
 
-/* ─── UI Consistency — Account card left accent ───────────────────── */
+/* ─── UI Consistency — Account card (no accent strip) ──────────────── */
 .card.ll-account-card {
-  border-left: 4px solid var(--ui-add-btn, var(--accent));
-  border-top: 1px solid var(--ui-border, var(--border));
-  border-right: 1px solid var(--ui-border, var(--border));
-  border-bottom: 1px solid var(--ui-border, var(--border));
-  box-shadow: none;
+  border: 1px solid transparent;
+  box-shadow: var(--shadow);
 }
 
 /* ─── UI Consistency — Summary card left accent ───────────────────── */
@@ -1202,7 +1205,8 @@ textarea.ll-control {
   border-radius: var(--radius-card);
   padding: 14px 16px;
   margin-bottom: 20px;
-  border-left: 3px solid var(--accent);
+  border: 1px solid transparent;
+  box-shadow: var(--shadow);
 }
 .recent-activity-item {
   display: flex;
@@ -1226,10 +1230,16 @@ textarea.ll-control {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.recent-activity-type {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 1px;
+}
 
 /* ─── Account Card Carousel ──────────────────────────────────────── */
 .card-carousel {
   display: flex;
+  align-items: flex-start;
   overflow-x: auto;
   gap: 0;
   scroll-snap-type: x mandatory;

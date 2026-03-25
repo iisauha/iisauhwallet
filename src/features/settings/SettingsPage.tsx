@@ -172,16 +172,6 @@ function loadTabOrderFromStorage(): string[] {
   } catch { return TAB_ORDER_ALL.map((t) => t.key); }
 }
 
-const GripIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="9" cy="7" r="1" fill="currentColor" stroke="none" />
-    <circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" />
-    <circle cx="9" cy="17" r="1" fill="currentColor" stroke="none" />
-    <circle cx="15" cy="7" r="1" fill="currentColor" stroke="none" />
-    <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
-    <circle cx="15" cy="17" r="1" fill="currentColor" stroke="none" />
-  </svg>
-);
 
 export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: string[]) => void } = {}) {
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -198,9 +188,7 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
   const [tabOrder, setTabOrder] = useState<string[]>(() => loadTabOrderFromStorage());
-  const dragIndexRef = useRef<number | null>(null);
-  const dragOverIndexRef = useRef<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [selectedTabKey, setSelectedTabKey] = useState<string | null>(null);
 
   const hasPasscode = loadPasscodeHash() !== null;
   const passcodePaused = loadPasscodePaused();
@@ -449,79 +437,55 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
       />
       <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
 
-      <Modal open={visibleTabsModalOpen} title="Manage Tabs" onClose={() => setVisibleTabsModalOpen(false)}>
+      <Modal open={visibleTabsModalOpen} title="Manage Tabs" onClose={() => { setVisibleTabsModalOpen(false); setSelectedTabKey(null); }}>
         <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '0 0 12px', lineHeight: 1.4 }}>
-          Drag to reorder · toggle to show/hide
+          Tap a tab to select · tap another to swap positions · toggle to show/hide
         </p>
+        {selectedTabKey && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--accent)', margin: '0 0 8px', fontWeight: 600 }}>
+            &ldquo;{TAB_ORDER_ALL.find(t => t.key === selectedTabKey)?.label}&rdquo; selected — tap another tab to swap
+          </p>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-          {tabOrder.map((key, index) => {
+          {tabOrder.map((key) => {
             const item = TAB_ORDER_ALL.find((t) => t.key === key);
             if (!item) return null;
             const visible = !hiddenTabs.includes(key);
-            function commitReorder(fromIdx: number, toIdx: number) {
-              if (fromIdx === toIdx) return;
-              const next = [...tabOrder];
-              const [dragged] = next.splice(fromIdx, 1);
-              next.splice(toIdx, 0, dragged);
-              setTabOrder(next);
-              localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(next));
-              onTabOrderChange?.(next);
-            }
+            const isSelected = selectedTabKey === key;
+            const isPending = selectedTabKey !== null && !isSelected;
             return (
               <div
                 key={key}
-                data-tab-row-index={index}
-                draggable
-                onDragStart={(e) => {
-                  dragIndexRef.current = index;
-                  e.dataTransfer.effectAllowed = 'move';
+                onClick={() => {
+                  if (selectedTabKey === null) {
+                    setSelectedTabKey(key);
+                  } else if (selectedTabKey === key) {
+                    setSelectedTabKey(null);
+                  } else {
+                    const fromIdx = tabOrder.indexOf(selectedTabKey);
+                    const toIdx = tabOrder.indexOf(key);
+                    if (fromIdx >= 0 && toIdx >= 0) {
+                      const next = [...tabOrder];
+                      [next[fromIdx], next[toIdx]] = [next[toIdx], next[fromIdx]];
+                      setTabOrder(next);
+                      localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(next));
+                      onTabOrderChange?.(next);
+                    }
+                    setSelectedTabKey(null);
+                  }
                 }}
-                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIndex(index); }}
-                onDragLeave={() => setDragOverIndex(null)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const fromIdx = dragIndexRef.current;
-                  setDragOverIndex(null);
-                  dragIndexRef.current = null;
-                  if (fromIdx === null || fromIdx === index) return;
-                  commitReorder(fromIdx, index);
-                }}
-                onDragEnd={() => { dragIndexRef.current = null; setDragOverIndex(null); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                  background: dragOverIndex === index ? 'var(--accent)' : 'var(--ui-surface-secondary, var(--surface))',
-                  borderRadius: 10, cursor: 'grab', userSelect: 'none',
+                  background: isSelected
+                    ? 'color-mix(in srgb, var(--accent) 20%, var(--ui-surface-secondary, var(--surface)))'
+                    : 'var(--ui-surface-secondary, var(--surface))',
+                  border: isSelected ? '1px solid var(--accent)' : isPending ? '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' : '1px solid transparent',
+                  borderRadius: 10, cursor: 'pointer', userSelect: 'none',
                   opacity: visible ? 1 : 0.45,
-                  transition: 'background 0.15s ease',
+                  transition: 'background 0.15s ease, border-color 0.15s ease',
                 }}
               >
-                <span
-                  style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', flexShrink: 0, touchAction: 'none' }}
-                  onTouchStart={(e) => {
-                    dragIndexRef.current = index;
-                  }}
-                  onTouchMove={(e) => {
-                    const touch = e.touches[0];
-                    const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
-                    const row = el?.closest('[data-tab-row-index]') as HTMLElement | null;
-                    if (row) {
-                      const idx = parseInt((row as HTMLElement).dataset.tabRowIndex || '', 10);
-                      if (!isNaN(idx)) { dragOverIndexRef.current = idx; setDragOverIndex(idx); }
-                    }
-                  }}
-                  onTouchEnd={() => {
-                    const fromIdx = dragIndexRef.current;
-                    const toIdx = dragOverIndexRef.current;
-                    dragIndexRef.current = null;
-                    dragOverIndexRef.current = null;
-                    setDragOverIndex(null);
-                    if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
-                      commitReorder(fromIdx, toIdx);
-                    }
-                  }}
-                >
-                  <GripIcon />
-                </span>
+                <span style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)', fontSize: '1rem', flexShrink: 0 }}>⇅</span>
                 <span style={{ flex: 1, fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))' }}>
                   {item.label}
                 </span>
@@ -538,7 +502,7 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
           })}
         </div>
         <div className="btn-row">
-          <button type="button" className="btn btn-secondary" onClick={() => setVisibleTabsModalOpen(false)}>Done</button>
+          <button type="button" className="btn btn-secondary" onClick={() => { setVisibleTabsModalOpen(false); setSelectedTabKey(null); }}>Done</button>
         </div>
       </Modal>
 

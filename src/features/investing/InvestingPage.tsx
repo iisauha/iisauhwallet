@@ -1798,12 +1798,11 @@ export function InvestingPage() {
       </button>
 
       <div
-        className="card"
+        className="card card-accent-strip"
         style={{
           marginTop: 24,
           background: 'var(--ui-surface-secondary, var(--surface))',
           borderColor: 'var(--ui-border, var(--border))',
-          borderLeft: '3px solid var(--accent)',
         }}
       >
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-title-text, var(--text))' }}>
@@ -1834,12 +1833,11 @@ export function InvestingPage() {
       </div>
 
       <div
-        className="card"
+        className="card card-accent-strip"
         style={{
           marginTop: 16,
           background: 'var(--ui-surface-secondary, var(--surface))',
           borderColor: 'var(--ui-border, var(--border))',
-          borderLeft: '3px solid var(--accent)',
         }}
       >
         <p className="section-title" style={{ marginTop: 0, marginBottom: 8, color: 'var(--ui-title-text, var(--text))' }}>
