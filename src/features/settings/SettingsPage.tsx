@@ -30,6 +30,7 @@ import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
 import { ResetPasscodeModal } from './ResetPasscodeModal';
+import { FAQModal } from './FAQModal';
 import { Modal } from '../../ui/Modal';
 import {
   IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
@@ -192,6 +193,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
   const [pausePasscodeStep, setPausePasscodeStep] = useState<0 | 1 | 2>(0);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
@@ -486,6 +488,13 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                 <option value={0}>Never</option>
               </select>
             </div>
+            <SettingsRow
+              icon={<IconLock />}
+              iconBg="#10B981"
+              label="Security FAQ"
+              sublabel="Encryption, passcode, and privacy questions"
+              onClick={() => setFaqOpen(true)}
+            />
           </div>
         </>
       )}
@@ -586,6 +595,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         save={(cfg) => saveCategoryConfig(cfg)}
       />
       <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
+      <FAQModal open={faqOpen} onClose={() => setFaqOpen(false)} />
 
       <Modal open={visibleTabsModalOpen} title="Manage Tabs" onClose={() => { setVisibleTabsModalOpen(false); setSelectedTabKey(null); }}>
         <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '0 0 12px', lineHeight: 1.4 }}>

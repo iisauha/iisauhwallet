@@ -44,7 +44,7 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'Are my backups safe to upload to cloud or email?',
-    a: 'You can if you want a copy off the device. Treat the file like any private document because the app does not add a separate password on export.',
+    a: 'Yes, if you have a passcode set. Exported backups are encrypted with your passcode using PBKDF2 and AES-256, so the file is unreadable to anyone who does not know your passcode. Without a passcode, the export is plaintext, so treat it like any private document.',
   },
   {
     q: 'Does the app require the “official link” to work?',

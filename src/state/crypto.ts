@@ -41,7 +41,7 @@ async function getOrCreateDeviceKey(): Promise<CryptoKey> {
     if (stored) {
       const raw = b64Dec(stored);
       return await crypto.subtle.importKey(
-        'raw', raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+        'raw', raw as Uint8Array<ArrayBuffer>, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
       );
     }
   } catch (_) {}
@@ -73,7 +73,7 @@ export async function decryptWithDeviceKey(stored: string): Promise<string> {
   try {
     const iv = b64Dec(rest.slice(0, dot));
     const ct = b64Dec(rest.slice(dot + 1));
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, deviceKey, ct);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv as Uint8Array<ArrayBuffer> }, deviceKey, ct as Uint8Array<ArrayBuffer>);
     return new TextDecoder().decode(plain);
   } catch (_) {
     return stored; // decryption failed — return as-is (corrupt or wrong key)
@@ -91,7 +91,7 @@ async function deriveKeyFromPasscode(passcode: string, salt: Uint8Array): Promis
     'raw', new TextEncoder().encode(passcode), 'PBKDF2', false, ['deriveKey']
   );
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: salt as Uint8Array<ArrayBuffer>, iterations: 100_000, hash: 'SHA-256' },
     baseKey,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -122,7 +122,7 @@ export async function decryptWithPasscode(jsonText: string, passcode: string): P
   const iv = b64Dec(payload.iv);
   const ct = b64Dec(payload.data);
   const key = await deriveKeyFromPasscode(passcode, salt);
-  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv as Uint8Array<ArrayBuffer> }, key, ct as Uint8Array<ArrayBuffer>);
   return new TextDecoder().decode(plain);
 }
 
