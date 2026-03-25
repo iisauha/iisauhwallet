@@ -26,8 +26,8 @@ export function IconHome() {
 export function IconArrowExchange() {
   return (
     <svg {...SVG_PROPS}>
-      <path d="M12 2v20" />
-      <path d="M16 7C16 4 8 4 8 7C8 10 16 14 16 17C16 20 8 20 8 17" />
+      <line x1="12" y1="2" x2="12" y2="22" />
+      <path d="M17 8C17 5.5 6.5 5.5 6.5 9C6.5 12.5 17.5 11.5 17.5 15C17.5 18.5 7 18.5 7 16" />
     </svg>
   );
 }
