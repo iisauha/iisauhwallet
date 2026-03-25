@@ -535,6 +535,8 @@ export function importJSON(jsonText: string) {
   if (parsed && parsed.version === 'iisauhwallet-backup-v1' && parsed.data && typeof parsed.data === 'object') {
     const data = parsed.data as Record<string, unknown>;
     Object.entries(data).forEach(([k, v]) => {
+      // Skip null/undefined — don't write the string 'null' which would corrupt the cache on next read.
+      if (v == null) return;
       // Restore strings verbatim; everything else JSON-stringified (matching localStorage storage format).
       if (typeof v === 'string') localStorage.setItem(k, v);
       else localStorage.setItem(k, JSON.stringify(v));
