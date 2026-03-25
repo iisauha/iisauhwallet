@@ -45,10 +45,10 @@ export function IconCalendar() {
 export function IconRefreshCircle() {
   return (
     <svg {...SVG_PROPS}>
-      <path d="M4 12C4 7.58 7.58 4 12 4s8 3.58 8 8" />
-      <path d="M18 9l2 3-3 1" />
-      <path d="M20 12c0 4.42-3.58 8-8 8S4 16.42 4 12" />
-      <path d="M6 15l-2-3 3-1" />
+      <path d="M1 4v6h6" />
+      <path d="M23 20v-6h-6" />
+      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10" />
+      <path d="M3.51 15A9 9 0 0 0 18.36 18.36L23 14" />
     </svg>
   );
 }
@@ -56,8 +56,14 @@ export function IconRefreshCircle() {
 export function IconBankBuilding() {
   return (
     <svg {...SVG_PROPS}>
-      <path d="M3 22h18M3 7h18M12 3L3 7h18L12 3z" />
-      <path d="M6 7v15M10 7v15M14 7v15M18 7v15" />
+      {/* Building */}
+      <path d="M3 9h18M12 3L3 9h18L12 3z" />
+      <path d="M5 9v8M9 9v8M15 9v8M19 9v8" />
+      <path d="M3 17h18" />
+      {/* Hand with coin */}
+      <path d="M7 21h6a2 2 0 0 0 0-4H9l-2 .5" />
+      <path d="M5 19l2-2" />
+      <circle cx="17" cy="19" r="2" />
     </svg>
   );
 }

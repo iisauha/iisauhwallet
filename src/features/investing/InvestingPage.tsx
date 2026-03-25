@@ -1439,9 +1439,10 @@ export function InvestingPage() {
         </div>
         {!isCollapsed ? (
           <>
+            <div className="card-carousel">
             {visibleAccounts.map((a) => {
               return (
-                <div className="card ll-account-card" key={a.id}>
+                <div className="card-carousel-item" key={a.id}><div className="card ll-account-card">
                   <div className="row ll-account-row">
                     <span className="name bank-card-name">{a.name}</span>
                     <span className="amount amount-pos">{formatCents(a.balanceCents || 0)}</span>
@@ -1540,9 +1541,10 @@ export function InvestingPage() {
                       Delete
                     </button>
                   </div>
-                </div>
+                </div></div>
               );
             })}
+            </div>
             <button
               type="button"
               className="btn btn-add"

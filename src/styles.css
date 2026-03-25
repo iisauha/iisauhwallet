@@ -209,8 +209,8 @@ body {
 .summary-kv .v.pos { color: var(--green); }
 .summary-kv .v.neg { color: var(--red); }
 .summary-kv.final-net-cash { border-radius: 8px; padding: 8px 0; }
-.summary-kv.final-net-cash.positive { background: var(--ui-surface-secondary, var(--surface)); }
-.summary-kv.final-net-cash.negative { background: var(--ui-surface-secondary, var(--surface)); }
+.summary-kv.final-net-cash.positive { background: transparent; }
+.summary-kv.final-net-cash.negative { background: transparent; }
 .summary-kv.final-net-cash .k { font-size: 1rem; }
 .summary-kv.final-net-cash .v { font-size: 1.15rem; font-weight: 800; }
 .summary-kv.amount-remaining-emphasis .k { font-size: 1rem; }
@@ -548,8 +548,8 @@ input[type="date"].ll-control:focus {
   padding: 12px 14px;
   font-size: 1rem;
   border-radius: 12px;
-  border: 1px solid #333;
-  background: #2A2A2A;
+  border: 1px solid var(--ui-border, var(--border));
+  background: var(--ui-surface-secondary, var(--surface));
   color: var(--ui-primary-text, var(--text));
   transition: border-color 0.15s ease;
 }
@@ -1156,8 +1156,8 @@ input[type="date"].ll-control:focus {
 input[type="text"].ll-control,
 input[type="number"].ll-control,
 textarea.ll-control {
-  background: #2A2A2A !important;
-  border: 1px solid #333 !important;
+  background: var(--ui-card-bg, var(--surface)) !important;
+  border: 1px solid var(--ui-border, var(--border)) !important;
   border-radius: 12px !important;
   padding: 12px 16px !important;
   font-size: 1rem !important;
@@ -1226,22 +1226,12 @@ textarea.ll-control {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.recent-activity-type {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.recent-activity-time {
-  font-size: 0.78rem;
-  color: var(--muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
 
 /* ─── Account Card Carousel ──────────────────────────────────────── */
 .card-carousel {
   display: flex;
   overflow-x: auto;
-  gap: 12px;
+  gap: 0;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -1252,8 +1242,8 @@ textarea.ll-control {
 .card-carousel-item {
   scroll-snap-align: start;
   flex-shrink: 0;
-  width: calc(88% - 12px);
-  min-width: 220px;
+  width: 100%;
+  min-width: 0;
 }
 .card-carousel-item .card { margin-bottom: 0; }
 

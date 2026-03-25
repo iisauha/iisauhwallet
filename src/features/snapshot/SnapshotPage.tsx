@@ -17,26 +17,7 @@ import {
 
 // --- Recent Activity Widget ---
 
-function timeAgo(ts: number, now: number): string {
-  const diff = now - ts;
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
-}
-
 type ActivityType = 'purchase' | 'pending-in' | 'pending-out' | 'balance';
-
-const ACTIVITY_LABELS: Record<ActivityType, string> = {
-  purchase: 'Purchase logged',
-  'pending-in': 'Pending inbound',
-  'pending-out': 'Pending outbound',
-  balance: 'Balance updated',
-};
 
 const ACTIVITY_COLORS: Record<ActivityType, string> = {
   purchase: 'var(--accent)',
@@ -47,12 +28,6 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
 
 function RecentActivityWidget() {
   const data = useLedgerStore((s) => s.data);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60000);
-    return () => clearInterval(id);
-  }, []);
 
   const activities = useMemo(() => {
     const items: { label: string; type: ActivityType; ts: number }[] = [];
@@ -122,11 +97,7 @@ function RecentActivityWidget() {
         activities.map((a, i) => (
           <div key={i} className="recent-activity-item">
             <div className="recent-activity-dot" style={{ background: ACTIVITY_COLORS[a.type] }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="recent-activity-label">{a.label}</div>
-              <div className="recent-activity-type">{ACTIVITY_LABELS[a.type]}</div>
-            </div>
-            <div className="recent-activity-time">{timeAgo(a.ts, now)}</div>
+            <div className="recent-activity-label">{a.label}</div>
           </div>
         ))
       )}
@@ -403,7 +374,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'cards'}
         >
           <div className="stat-tile-icon"><IconCreditCard /></div>
-          <div className="stat-tile-value">{formatCents(totalCardDebtCents)}</div>
+          <div className="stat-tile-value" style={{ color: totalCardDebtCents > 0 ? 'var(--red)' : 'var(--green)' }}>{formatCents(totalCardDebtCents)}</div>
           <div className="stat-tile-label">CC Balance</div>
         </button>
         <button
@@ -413,7 +384,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'cash'}
         >
           <div className="stat-tile-icon" style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--muted)', lineHeight: 1 }}>$</div>
-          <div className="stat-tile-value">{formatCents(totalCashCents)}</div>
+          <div className="stat-tile-value" style={{ color: totalCashCents > 0 ? 'var(--green)' : totalCashCents < 0 ? 'var(--red)' : undefined }}>{formatCents(totalCashCents)}</div>
           <div className="stat-tile-label">Cash</div>
         </button>
         <button
@@ -423,7 +394,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'pending'}
         >
           <div className="stat-tile-icon"><IconClock /></div>
-          <div className="stat-tile-value">{pendingCount}</div>
+          <div className="stat-tile-value" style={{ color: pendingCount > 0 ? '#f97316' : undefined }}>{pendingCount}</div>
           <div className="stat-tile-label">Pending</div>
         </button>
       </div>

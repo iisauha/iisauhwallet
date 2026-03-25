@@ -199,6 +199,8 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
   const [tabOrder, setTabOrder] = useState<string[]>(() => loadTabOrderFromStorage());
   const dragIndexRef = useRef<number | null>(null);
+  const dragOverIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const hasPasscode = loadPasscodeHash() !== null;
   const passcodePaused = loadPasscodePaused();
@@ -456,35 +458,68 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
             const item = TAB_ORDER_ALL.find((t) => t.key === key);
             if (!item) return null;
             const visible = !hiddenTabs.includes(key);
+            function commitReorder(fromIdx: number, toIdx: number) {
+              if (fromIdx === toIdx) return;
+              const next = [...tabOrder];
+              const [dragged] = next.splice(fromIdx, 1);
+              next.splice(toIdx, 0, dragged);
+              setTabOrder(next);
+              localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(next));
+              onTabOrderChange?.(next);
+            }
             return (
               <div
                 key={key}
+                data-tab-row-index={index}
                 draggable
                 onDragStart={(e) => {
                   dragIndexRef.current = index;
                   e.dataTransfer.effectAllowed = 'move';
                 }}
-                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIndex(index); }}
+                onDragLeave={() => setDragOverIndex(null)}
                 onDrop={(e) => {
                   e.preventDefault();
                   const fromIdx = dragIndexRef.current;
-                  if (fromIdx === null || fromIdx === index) return;
-                  const next = [...tabOrder];
-                  const [dragged] = next.splice(fromIdx, 1);
-                  next.splice(index, 0, dragged);
+                  setDragOverIndex(null);
                   dragIndexRef.current = null;
-                  setTabOrder(next);
-                  localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(next));
-                  onTabOrderChange?.(next);
+                  if (fromIdx === null || fromIdx === index) return;
+                  commitReorder(fromIdx, index);
                 }}
+                onDragEnd={() => { dragIndexRef.current = null; setDragOverIndex(null); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                  background: 'var(--ui-surface-secondary, var(--surface))',
+                  background: dragOverIndex === index ? 'var(--accent)' : 'var(--ui-surface-secondary, var(--surface))',
                   borderRadius: 10, cursor: 'grab', userSelect: 'none',
                   opacity: visible ? 1 : 0.45,
+                  transition: 'background 0.15s ease',
                 }}
               >
-                <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <span
+                  style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', flexShrink: 0, touchAction: 'none' }}
+                  onTouchStart={(e) => {
+                    dragIndexRef.current = index;
+                  }}
+                  onTouchMove={(e) => {
+                    const touch = e.touches[0];
+                    const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+                    const row = el?.closest('[data-tab-row-index]') as HTMLElement | null;
+                    if (row) {
+                      const idx = parseInt((row as HTMLElement).dataset.tabRowIndex || '', 10);
+                      if (!isNaN(idx)) { dragOverIndexRef.current = idx; setDragOverIndex(idx); }
+                    }
+                  }}
+                  onTouchEnd={() => {
+                    const fromIdx = dragIndexRef.current;
+                    const toIdx = dragOverIndexRef.current;
+                    dragIndexRef.current = null;
+                    dragOverIndexRef.current = null;
+                    setDragOverIndex(null);
+                    if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
+                      commitReorder(fromIdx, toIdx);
+                    }
+                  }}
+                >
                   <GripIcon />
                 </span>
                 <span style={{ flex: 1, fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))' }}>

@@ -398,7 +398,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         </button>
       </div>
 
-      <div
+      {view === 'category' ? <div
         className="card spending-summary-card"
         style={{
           marginTop: 16,
@@ -451,7 +451,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             </div>
           </div>
         </div>
-      </div>
+      </div> : null}
 
       <p className="section-title page-title" style={{ marginTop: 4 }}>
         {view === 'category' ? 'Spending distribution' : view === 'card' ? 'Spending by card' : 'Rewards overview'}
@@ -707,10 +707,11 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
+          <div className="card-carousel">
           {visiblePurchases.map((p: any) => {
             const uiId = getPurchaseUiId(p);
             return (
-            <div className="card" key={uiId}>
+            <div className="card-carousel-item" key={uiId}><div className="card">
               <div className="row">
                 <span className="name">{p.title || 'Purchase'}</span>
                 <span className="amount">{formatCents(p.amountCents || 0)}</span>
@@ -742,8 +743,9 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                   Delete
                 </button>
               </div>
-            </div>
+            </div></div>
           )})}
+          </div>
           {!showAllPurchases && hasMorePurchases ? (
             <div style={{ textAlign: 'center', marginTop: 8 }}>
               <button
