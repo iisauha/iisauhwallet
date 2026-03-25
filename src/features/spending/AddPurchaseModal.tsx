@@ -52,7 +52,7 @@ export function AddPurchaseModal(props: {
   const [notes, setNotes] = useState('');
   const [isSplit, setIsSplit] = useState(false);
   const [myPortion, setMyPortion] = useState('');
-  const [applyToSnapshot, setApplyToSnapshot] = useState(false);
+  const [applyToSnapshot, setApplyToSnapshot] = useState(true);
   const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | 'cash' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
   const [suggestedCardsOrder, setSuggestedCardsOrder] = useState<SuggestResult[]>([]);
@@ -166,7 +166,7 @@ export function AddPurchaseModal(props: {
     setNotes('');
     setIsSplit(false);
     setMyPortion('');
-    setApplyToSnapshot(false);
+    setApplyToSnapshot(true);
     setPaymentSource('');
     setPaymentTargetId('');
     setShowSuggestionPopup(false);
