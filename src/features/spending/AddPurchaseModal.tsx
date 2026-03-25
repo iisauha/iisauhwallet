@@ -258,7 +258,7 @@ export function AddPurchaseModal(props: {
   if (!props.open) return null;
 
   // Prefill when opening for edit.
-  if (currentPurchase && !title && !amount && !notes && !isSplit && !applyToSnapshot) {
+  if (currentPurchase && !title && !amount && !notes && !isSplit) {
     const p: any = currentPurchase;
     setTitle(p.title || '');
     const isSplitPurchase =
