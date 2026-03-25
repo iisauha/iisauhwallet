@@ -138,13 +138,13 @@ export function AddPurchaseModal(props: {
   }, [title, data.purchases]);
 
   useEffect(() => {
-    if (acSuppressRef.current) return;
+    if (isEditing || acSuppressRef.current) return;
     if (acSuggestions.length > 0 && title.trim().length > 0) {
       setAcOpen(true);
     } else {
       setAcOpen(false);
     }
-  }, [acSuggestions, title]);
+  }, [acSuggestions, title, isEditing]);
 
   useEffect(() => {
     if (!acOpen) return;
