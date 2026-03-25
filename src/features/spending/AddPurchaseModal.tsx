@@ -117,6 +117,7 @@ export function AddPurchaseModal(props: {
   // Merchant autocomplete
   const [acOpen, setAcOpen] = useState(false);
   const titleWrapRef = useRef<HTMLDivElement>(null);
+  const acSuppressRef = useRef(false); // prevent reopening right after a suggestion is picked
 
   const acSuggestions = useMemo(() => {
     if (!title.trim()) return [];
@@ -137,7 +138,12 @@ export function AddPurchaseModal(props: {
   }, [title, data.purchases]);
 
   useEffect(() => {
-    setAcOpen(acSuggestions.length > 0 && title.trim().length > 0);
+    if (acSuppressRef.current) return;
+    if (acSuggestions.length > 0 && title.trim().length > 0) {
+      setAcOpen(true);
+    } else {
+      setAcOpen(false);
+    }
   }, [acSuggestions, title]);
 
   useEffect(() => {
@@ -150,6 +156,35 @@ export function AddPurchaseModal(props: {
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [acOpen]);
+
+  function resetForm() {
+    setTitle('');
+    setAmount('');
+    setDateISO(todayKey());
+    setCategory('food');
+    setSubcategory('');
+    setNotes('');
+    setIsSplit(false);
+    setMyPortion('');
+    setApplyToSnapshot(false);
+    setPaymentSource('');
+    setPaymentTargetId('');
+    setShowSuggestionPopup(false);
+    setSuggestedCardsOrder([]);
+    setHasSelectedCategory(false);
+    setShowSubTrackerPopup(false);
+    setSuggestedSubTrackerCardId(null);
+    setAcOpen(false);
+    acSuppressRef.current = false;
+  }
+
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    if (prevOpenRef.current && !props.open) {
+      resetForm();
+    }
+    prevOpenRef.current = props.open;
+  }, [props.open]);
 
   useEffect(() => {
     if (props.open) setSuggestionAccepted(false);
@@ -704,7 +739,16 @@ export function AddPurchaseModal(props: {
           <div ref={titleWrapRef} style={{ position: 'relative' }}>
             <input
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setTitle(v);
+                acSuppressRef.current = false;
+                // open dropdown only if there are suggestions (will be computed next render)
+                // We just ensure suppress is cleared so suggestions can show
+              }}
+              onFocus={() => {
+                if (!acSuppressRef.current && title.trim()) setAcOpen(true);
+              }}
               placeholder="e.g. Coffee shop"
               style={{ width: '100%', boxSizing: 'border-box' }}
             />
@@ -724,7 +768,7 @@ export function AddPurchaseModal(props: {
               }}>
                 {acSuggestions.map((p: any, i: number) => {
                   const cardName = (data.cards || []).find((c: any) => c.id === p.paymentTargetId)?.name;
-                  const parts = [
+                  const meta = [
                     p.category ? getCategoryName(cfg, p.category) : null,
                     p.subcategory || null,
                     cardName || null,
@@ -735,6 +779,7 @@ export function AddPurchaseModal(props: {
                       type="button"
                       onMouseDown={(e) => {
                         e.preventDefault();
+                        acSuppressRef.current = true;
                         setTitle(p.title || '');
                         if (p.category) setCategory(p.category);
                         setSubcategory(p.subcategory || '');
@@ -746,25 +791,28 @@ export function AddPurchaseModal(props: {
                       }}
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center',
                         width: '100%',
-                        minHeight: 44,
-                        padding: '0 16px',
+                        minHeight: 52,
+                        padding: '10px 16px',
                         background: 'none',
                         border: 'none',
                         borderBottom: i < acSuggestions.length - 1 ? '1px solid var(--ui-border, var(--border))' : 'none',
                         cursor: 'pointer',
                         textAlign: 'left',
+                        gap: 3,
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--ui-primary-text, var(--text)) 8%, transparent)'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--ui-add-btn, var(--accent)) 8%, transparent)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
                     >
-                      <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--ui-primary-text, var(--text))' }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.2 }}>
                         {p.title || ''}
                       </span>
-                      {parts.length > 0 && (
-                        <span style={{ fontSize: 13, color: 'var(--muted)', marginLeft: 6 }}>
-                          {' | ' + parts.join(' | ')}
+                      {meta.length > 0 && (
+                        <span style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.3 }}>
+                          {meta.join(' · ')}
                         </span>
                       )}
                     </button>
@@ -920,11 +968,7 @@ export function AddPurchaseModal(props: {
             type="button"
             className="btn btn-secondary"
             onClick={() => {
-              setShowSuggestionPopup(false);
-              setSuggestedCardsOrder([]);
-              setShowSubTrackerPopup(false);
-              setSuggestedSubTrackerCardId(null);
-              setHasSelectedCategory(false);
+              resetForm();
               props.onClose();
             }}
           >

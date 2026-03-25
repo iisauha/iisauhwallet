@@ -147,8 +147,8 @@ export type QuickAction =
 
 function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
   const items: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
-    { icon: <IconArrowExchange />, label: 'Log a purchase', action: 'log-purchase' },
-    { icon: <IconCreditCard />, label: 'Reimbursable charge', action: 'add-reimbursable' },
+    { icon: <IconArrowExchange />, label: 'Add a purchase', action: 'log-purchase' },
+    { icon: <IconCreditCard />, label: 'Add a Purchase (Full Reimbursement Expected)', action: 'add-reimbursable' },
     { icon: <IconHome />, label: 'Add pending outbound', action: 'add-pending-out' },
     { icon: <IconHome />, label: 'Add pending inbound', action: 'add-pending-in' },
     { icon: <IconRefreshCircle />, label: 'Add recurring expense', action: 'add-recurring-expense' },

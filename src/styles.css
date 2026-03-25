@@ -489,7 +489,7 @@ input[type="date"].ll-control:focus {
   border: 1px solid var(--ui-border, var(--border));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  animation: llModalIn 0.2s ease-out;
+  animation: llModalIn 0.38s ease-out;
   box-shadow: var(--shadow-strong);
 }
 .modal:focus { outline: none; }
@@ -500,7 +500,7 @@ input[type="date"].ll-control:focus {
   to { opacity: 1; }
 }
 @keyframes llModalIn {
-  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
