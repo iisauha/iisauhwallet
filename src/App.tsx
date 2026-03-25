@@ -269,7 +269,7 @@ function MainApp() {
         onSwitchTab={(t) => setTab(t as TabKey)}
         onLogTransaction={() => { setTab('spending'); setSpendingAddTrigger((n) => n + 1); }}
         onReimbursable={() => { setTab('spending'); setSpendingReimburseAddTrigger((n) => n + 1); }}
-        onAddRecurring={() => { setTab('recurring'); setRecurringAddTrigger((n) => n + 1); }}
+        onAddRecurring={() => { setTab('recurring'); setRecurringAddExpenseTrigger((n) => n + 1); }}
         onAddBonus={() => { setTab('subtracker'); setSubtrackerAddTrigger((n) => n + 1); }}
         pendingInTrigger={snapshotPendingInTrigger}
         pendingOutTrigger={snapshotPendingOutTrigger}
