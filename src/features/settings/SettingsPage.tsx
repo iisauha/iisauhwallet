@@ -173,7 +173,7 @@ function loadTabOrderFromStorage(): string[] {
 }
 
 
-export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: string[]) => void } = {}) {
+export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrderChange?: (order: string[]) => void; exportTrigger?: number } = {}) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
@@ -192,6 +192,8 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
 
   const hasPasscode = loadPasscodeHash() !== null;
   const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
+
+  const lastExportTriggerRef = useRef(0);
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -233,6 +235,15 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
     } catch (_) {}
     downloadJsonFile(fileName, text);
   };
+
+  // Export trigger from quick-action sheet — must come after handleExportJSON
+  useEffect(() => {
+    if (exportTrigger !== lastExportTriggerRef.current) {
+      lastExportTriggerRef.current = exportTrigger;
+      if (exportTrigger > 0) handleExportJSON();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exportTrigger]);
 
   return (
     <div className="tab-panel active" id="settingsContent">

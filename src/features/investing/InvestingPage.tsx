@@ -1468,45 +1468,16 @@ export function InvestingPage() {
                           : 0;
                       const reservedCents = Math.min(reservedRaw, balance);
                       const liquidCents = Math.max(0, balance - reservedCents);
+                      const linkedBankName = h.linkedCheckingBankId
+                        ? (data.banks || []).find((b) => b.id === h.linkedCheckingBankId)?.name || 'Linked'
+                        : null;
                       return (
                         <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
                           <div>APY {h.interestRate.toFixed(2)}%</div>
                           <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
                           <div style={{ marginTop: 4 }}>
-                            <div>Total HYSA balance: {formatCents(balance)}</div>
                             <div>Reserved savings: {formatCents(reservedCents)}</div>
-                            {h.linkedCheckingBankId ? (
-                              <div>Money in HYSA Designated for Bills: {formatCents(liquidCents)}</div>
-                            ) : (
-                              <div>Money in HYSA Designated for Bills: {formatCents(0)}</div>
-                            )}
-                          </div>
-                          <div style={{ marginTop: 4 }}>
-                            <label style={{ fontSize: '0.8rem', marginRight: 6 }}>Link to checking:</label>
-                            <Select
-                              value={h.linkedCheckingBankId || ''}
-                              onChange={(e) => {
-                                const bankId = e.target.value || undefined;
-                                const accounts = investing.accounts.map((acc) => {
-                                  if (acc.id !== h.id || acc.type !== 'hysa') return acc;
-                                  const next: HysaAccount = {
-                                    ...(acc as HysaAccount),
-                                    linkedCheckingBankId: bankId || undefined
-                                  };
-                                  return next;
-                                });
-                                persist({ ...investing, accounts });
-                              }}
-                            >
-                              <option value="">None</option>
-                              {(data.banks || [])
-                                .filter((b) => b.type === 'bank')
-                                .map((b) => (
-                                  <option key={b.id} value={b.id}>
-                                    {b.name}
-                                  </option>
-                                ))}
-                            </Select>
+                            <div>Money in HYSA designated for bills: {formatCents(h.linkedCheckingBankId ? liquidCents : 0)}</div>
                           </div>
                         </div>
                       );
@@ -1521,17 +1492,31 @@ export function InvestingPage() {
                         <button
                           type="button"
                           className="btn btn-secondary"
+                          style={{ fontSize: '0.8rem', padding: '6px 10px' }}
                           onClick={() => setHysaRate(a as HysaAccount)}
                         >
                           APY
                         </button>
-                        <button
-                          type="button"
+                        <select
                           className="btn btn-secondary"
-                          onClick={() => openHysaAllocationModal(a as HysaAccount)}
+                          style={{ fontSize: '0.8rem', padding: '6px 10px', cursor: 'pointer' }}
+                          value={(a as HysaAccount).linkedCheckingBankId || ''}
+                          onChange={(e) => {
+                            const bankId = e.target.value || undefined;
+                            const accounts = investing.accounts.map((acc) => {
+                              if (acc.id !== a.id || acc.type !== 'hysa') return acc;
+                              return { ...(acc as HysaAccount), linkedCheckingBankId: bankId || undefined };
+                            });
+                            persist({ ...investing, accounts });
+                          }}
                         >
-                          Adjust HYSA Allocation
-                        </button>
+                          <option value="">Link Checking</option>
+                          {(data.banks || [])
+                            .filter((b) => b.type === 'bank')
+                            .map((b) => (
+                              <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
                       </>
                     ) : null}
                     <button

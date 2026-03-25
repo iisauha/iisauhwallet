@@ -457,8 +457,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     if (!name) return;
     setShowWelcome(true);
     setWelcomeVisible(true);
-    const t1 = setTimeout(() => setWelcomeVisible(false), 1500);
-    const t2 = setTimeout(() => setShowWelcome(false), 1900);
+    const t1 = setTimeout(() => setWelcomeVisible(false), 2400);
+    const t2 = setTimeout(() => setShowWelcome(false), 2900);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [authenticated]);
 

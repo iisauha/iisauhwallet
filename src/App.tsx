@@ -139,7 +139,8 @@ export type QuickAction =
   | 'add-reimbursable'
   | 'add-pending-out'
   | 'add-pending-in'
-  | 'add-recurring'
+  | 'add-recurring-expense'
+  | 'add-recurring-income'
   | 'update-balance'
   | 'add-bonus'
   | 'export';
@@ -150,7 +151,8 @@ function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
     { icon: <IconCreditCard />, label: 'Reimbursable charge', action: 'add-reimbursable' },
     { icon: <IconHome />, label: 'Add pending outbound', action: 'add-pending-out' },
     { icon: <IconHome />, label: 'Add pending inbound', action: 'add-pending-in' },
-    { icon: <IconRefreshCircle />, label: 'Add recurring item', action: 'add-recurring' },
+    { icon: <IconRefreshCircle />, label: 'Add recurring expense', action: 'add-recurring-expense' },
+    { icon: <IconRefreshCircle />, label: 'Add recurring income', action: 'add-recurring-income' },
     { icon: <IconHome />, label: 'Update a balance', action: 'update-balance' },
     { icon: <IconStar />, label: 'Add a bonus card', action: 'add-bonus' },
     { icon: <IconExport />, label: 'Export backup', action: 'export' },
@@ -193,8 +195,10 @@ function MainApp() {
   const [spendingReimburseAddTrigger, setSpendingReimburseAddTrigger] = useState(0);
   const [snapshotPendingInTrigger, setSnapshotPendingInTrigger] = useState(0);
   const [snapshotPendingOutTrigger, setSnapshotPendingOutTrigger] = useState(0);
-  const [recurringAddTrigger, setRecurringAddTrigger] = useState(0);
+  const [recurringAddExpenseTrigger, setRecurringAddExpenseTrigger] = useState(0);
+  const [recurringAddIncomeTrigger, setRecurringAddIncomeTrigger] = useState(0);
   const [subtrackerAddTrigger, setSubtrackerAddTrigger] = useState(0);
+  const [exportTrigger, setExportTrigger] = useState(0);
 
   useEffect(() => {
     if (tab === 'spending') setSpendingVisited(true);
@@ -214,37 +218,45 @@ function MainApp() {
   }, [tab, visibleNavOrder]);
 
   const handleQuickAction = useCallback((action: QuickAction) => {
+    // First close the sheet (140ms), then navigate. For cross-tab triggers, fire
+    // the modal trigger in a nested setTimeout so the target tab mounts first.
     setTimeout(() => {
+      const afterMount = (fn: () => void) => setTimeout(fn, 30);
       switch (action) {
         case 'log-purchase':
           setTab('spending');
-          setSpendingAddTrigger((n) => n + 1);
+          afterMount(() => setSpendingAddTrigger((n) => n + 1));
           break;
         case 'add-reimbursable':
           setTab('spending');
-          setSpendingReimburseAddTrigger((n) => n + 1);
+          afterMount(() => setSpendingReimburseAddTrigger((n) => n + 1));
           break;
         case 'add-pending-in':
           setTab('snapshot');
-          setSnapshotPendingInTrigger((n) => n + 1);
+          afterMount(() => setSnapshotPendingInTrigger((n) => n + 1));
           break;
         case 'add-pending-out':
           setTab('snapshot');
-          setSnapshotPendingOutTrigger((n) => n + 1);
+          afterMount(() => setSnapshotPendingOutTrigger((n) => n + 1));
           break;
-        case 'add-recurring':
+        case 'add-recurring-expense':
           setTab('recurring');
-          setRecurringAddTrigger((n) => n + 1);
+          afterMount(() => setRecurringAddExpenseTrigger((n) => n + 1));
+          break;
+        case 'add-recurring-income':
+          setTab('recurring');
+          afterMount(() => setRecurringAddIncomeTrigger((n) => n + 1));
           break;
         case 'update-balance':
           setTab('snapshot');
           break;
         case 'add-bonus':
           setTab('subtracker');
-          setSubtrackerAddTrigger((n) => n + 1);
+          afterMount(() => setSubtrackerAddTrigger((n) => n + 1));
           break;
         case 'export':
           setTab('settings');
+          afterMount(() => setExportTrigger((n) => n + 1));
           break;
       }
     }, 140);
@@ -266,10 +278,10 @@ function MainApp() {
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'loans') return <LoansPage />;
     if (tab === 'investing') return <InvestingPage />;
-    if (tab === 'recurring') return <RecurringPage addTrigger={recurringAddTrigger} />;
+    if (tab === 'recurring') return <RecurringPage addExpenseTrigger={recurringAddExpenseTrigger} addIncomeTrigger={recurringAddIncomeTrigger} />;
     if (tab === 'subtracker') return <SubTrackerPage addTrigger={subtrackerAddTrigger} />;
-    return <SettingsPage onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
-  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddTrigger, subtrackerAddTrigger]);
+    return <SettingsPage exportTrigger={exportTrigger} onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
+  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger]);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', String(index));

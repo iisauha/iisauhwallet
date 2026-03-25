@@ -17,8 +17,8 @@ const SVG_PROPS = {
 export function IconHome() {
   return (
     <svg {...SVG_PROPS}>
-      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
-      <path d="M9 21V12h6v9" />
+      <path d="M2 10L12 3l10 7V21a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V10z" />
+      <path d="M9 22V13h6v9" />
     </svg>
   );
 }
@@ -37,7 +37,6 @@ export function IconCalendar() {
     <svg {...SVG_PROPS}>
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
-      <rect x="8" y="14" width="4" height="4" rx="0.5" />
     </svg>
   );
 }
@@ -57,10 +56,10 @@ export function IconBankBuilding() {
   return (
     <svg {...SVG_PROPS}>
       <path d="M3 22h18" />
-      <path d="M6 18v-8" />
-      <path d="M10 18v-8" />
-      <path d="M14 18v-8" />
-      <path d="M18 18v-8" />
+      <path d="M6 22v-12" />
+      <path d="M10 22v-12" />
+      <path d="M14 22v-12" />
+      <path d="M18 22v-12" />
       <path d="M3 10h18" />
       <path d="M12 2L2 10h20L12 2z" />
     </svg>

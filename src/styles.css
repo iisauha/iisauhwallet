@@ -868,7 +868,7 @@ input[type="date"].ll-control:focus {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-height 0.28s ease-in-out, opacity 0.22s ease-in-out;
+  transition: max-height 0.42s ease-in-out, opacity 0.35s ease-in-out;
 }
 .snapshot-section-body.open {
   max-height: 3000px;

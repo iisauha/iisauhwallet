@@ -9,7 +9,7 @@ import { Select } from '../../ui/Select';
 import { OptimizerModal } from '../optimizer/OptimizerModal';
 import { ViewLastOptimizerModal } from '../optimizer/ViewLastOptimizerModal';
 
-export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) {
+export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncomeTrigger = 0 }: { addTrigger?: number; addExpenseTrigger?: number; addIncomeTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -28,6 +28,22 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
       if (addTrigger > 0) setOpen(true);
     }
   }, [addTrigger]);
+
+  const lastAddExpenseTriggerRef = useRef(addExpenseTrigger);
+  useEffect(() => {
+    if (addExpenseTrigger !== lastAddExpenseTriggerRef.current) {
+      lastAddExpenseTriggerRef.current = addExpenseTrigger;
+      if (addExpenseTrigger > 0) { setType('expense'); setOpen(true); }
+    }
+  }, [addExpenseTrigger]);
+
+  const lastAddIncomeTriggerRef = useRef(addIncomeTrigger);
+  useEffect(() => {
+    if (addIncomeTrigger !== lastAddIncomeTriggerRef.current) {
+      lastAddIncomeTriggerRef.current = addIncomeTrigger;
+      if (addIncomeTrigger > 0) { setType('income'); setOpen(true); }
+    }
+  }, [addIncomeTrigger]);
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
