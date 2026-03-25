@@ -92,16 +92,6 @@ function exportMonthlyPurchasesCsv() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-const HIDEABLE_TAB_KEYS = ['snapshot', 'spending', 'upcoming', 'loans', 'investing', 'recurring', 'subtracker'] as const;
-const HIDEABLE_TAB_LABELS: Record<string, string> = {
-  snapshot: 'Snapshot',
-  spending: 'Spending',
-  upcoming: 'Upcoming',
-  loans: 'Loans',
-  investing: 'Investing',
-  recurring: 'Recurring',
-  subtracker: 'Sign-Up Bonus Tracker',
-};
 
 function resizeImageToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -307,65 +297,12 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
         <SettingsRow
           icon={<IconLayout />}
           iconBg="#3B82F6"
-          label="Visible Tabs"
-          sublabel="Choose which tabs appear in the bar"
+          label="Manage Tabs"
+          sublabel="Reorder and show/hide navigation tabs"
           onClick={() => setVisibleTabsModalOpen(true)}
         />
       </div>
       <AppCustomizationModal open={appCustomizationOpen} onClose={() => setAppCustomizationOpen(false)} />
-
-      {/* Tab Order */}
-      <p className="settings-group-label">Tab Order</p>
-      <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '-4px 16px 10px', lineHeight: 1.4 }}>
-        Drag to reorder your navigation tabs
-      </p>
-      <div className="settings-list" style={{ gap: 2 }}>
-        {tabOrder.map((key, index) => {
-          const item = TAB_ORDER_ALL.find((t) => t.key === key);
-          if (!item) return null;
-          return (
-            <div
-              key={key}
-              draggable
-              onDragStart={(e) => {
-                dragIndexRef.current = index;
-                e.dataTransfer.effectAllowed = 'move';
-              }}
-              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const fromIdx = dragIndexRef.current;
-                if (fromIdx === null || fromIdx === index) return;
-                const next = [...tabOrder];
-                const [dragged] = next.splice(fromIdx, 1);
-                next.splice(index, 0, dragged);
-                dragIndexRef.current = null;
-                setTabOrder(next);
-                localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(next));
-                onTabOrderChange?.(next);
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                background: 'var(--ui-card-bg, var(--surface))',
-                borderRadius: 12, cursor: 'grab', userSelect: 'none',
-              }}
-            >
-              <span
-                className="settings-row-icon"
-                style={{ background: '#374151', flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
-              >
-                {item.icon}
-              </span>
-              <span style={{ flex: 1, fontSize: '1rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                {item.label}
-              </span>
-              <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center' }}>
-                <GripIcon />
-              </span>
-            </div>
-          );
-        })}
-      </div>
 
       {/* Accounts */}
       <p className="settings-group-label">Accounts</p>
@@ -510,19 +447,60 @@ export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: 
       />
       <ResetPasscodeModal open={resetPasscodeOpen} onClose={() => setResetPasscodeOpen(false)} />
 
-      <Modal open={visibleTabsModalOpen} title="Visible tabs" onClose={() => setVisibleTabsModalOpen(false)}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-          {HIDEABLE_TAB_KEYS.map((tabKey) => (
-            <label key={tabKey} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontSize: '1rem', color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
-              <input
-                type="checkbox"
-                checked={!hiddenTabs.includes(tabKey)}
-                onChange={() => toggleTabHidden(tabKey)}
-                style={{ width: 22, height: 22, flexShrink: 0, accentColor: 'var(--accent)', cursor: 'pointer' }}
-              />
-              <span>{HIDEABLE_TAB_LABELS[tabKey]}</span>
-            </label>
-          ))}
+      <Modal open={visibleTabsModalOpen} title="Manage Tabs" onClose={() => setVisibleTabsModalOpen(false)}>
+        <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '0 0 12px', lineHeight: 1.4 }}>
+          Drag to reorder · toggle to show/hide
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+          {tabOrder.map((key, index) => {
+            const item = TAB_ORDER_ALL.find((t) => t.key === key);
+            if (!item) return null;
+            const visible = !hiddenTabs.includes(key);
+            return (
+              <div
+                key={key}
+                draggable
+                onDragStart={(e) => {
+                  dragIndexRef.current = index;
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const fromIdx = dragIndexRef.current;
+                  if (fromIdx === null || fromIdx === index) return;
+                  const next = [...tabOrder];
+                  const [dragged] = next.splice(fromIdx, 1);
+                  next.splice(index, 0, dragged);
+                  dragIndexRef.current = null;
+                  setTabOrder(next);
+                  localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(next));
+                  onTabOrderChange?.(next);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                  background: 'var(--ui-surface-secondary, var(--surface))',
+                  borderRadius: 10, cursor: 'grab', userSelect: 'none',
+                  opacity: visible ? 1 : 0.45,
+                }}
+              >
+                <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <GripIcon />
+                </span>
+                <span style={{ flex: 1, fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                  {item.label}
+                </span>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={visible}
+                    onChange={() => toggleTabHidden(key)}
+                    style={{ width: 20, height: 20, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                  />
+                </label>
+              </div>
+            );
+          })}
         </div>
         <div className="btn-row">
           <button type="button" className="btn btn-secondary" onClick={() => setVisibleTabsModalOpen(false)}>Done</button>

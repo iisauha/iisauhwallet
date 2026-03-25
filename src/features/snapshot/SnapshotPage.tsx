@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
@@ -12,159 +12,124 @@ import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 import {
-  IconCreditCard, IconClock, IconPlus, IconChevronRight,
-  IconPlusCircle, IconArrowDownRight, IconArrowUpRight,
-  IconRefreshCircle, IconVault, IconGiftBox,
+  IconCreditCard, IconClock, IconPlus,
 } from '../../ui/icons';
 
-// --- Flipper Carousel ---
+// --- Recent Activity Widget ---
 
-const CHEVRON_LEFT = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="m15 18-6-6 6-6" />
-  </svg>
-);
-const CHEVRON_RIGHT_SVG = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="m9 18 6-6-6-6" />
-  </svg>
-);
+function timeAgo(ts: number, now: number): string {
+  const diff = now - ts;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
 
-function HeroFlipperCarousel({
-  onLogPurchase,
-  onReimbursable,
-  onPendingOut,
-  onPendingIn,
-  onAddRecurring,
-  onUpdateBalance,
-  onAddBonus,
-}: {
-  onLogPurchase: () => void;
-  onReimbursable: () => void;
-  onPendingOut: () => void;
-  onPendingIn: () => void;
-  onAddRecurring: () => void;
-  onUpdateBalance: () => void;
-  onAddBonus: () => void;
-}) {
-  const slides = useMemo(() => [
-    { icon: <IconPlusCircle />,    label: 'Log a Purchase',        onAction: onLogPurchase },
-    { icon: <IconCreditCard />,    label: 'Reimbursable Charge',   onAction: onReimbursable },
-    { icon: <IconArrowDownRight />,label: 'Add Pending Outbound',  onAction: onPendingOut },
-    { icon: <IconArrowUpRight />,  label: 'Add Pending Inbound',   onAction: onPendingIn },
-    { icon: <IconRefreshCircle />, label: 'Add Recurring Item',    onAction: onAddRecurring },
-    { icon: <IconVault />,         label: 'Update a Balance',      onAction: onUpdateBalance },
-    { icon: <IconGiftBox />,       label: 'Add Bonus Card',        onAction: onAddBonus },
-  ], [onLogPurchase, onReimbursable, onPendingOut, onPendingIn, onAddRecurring, onUpdateBalance, onAddBonus]);
+type ActivityType = 'purchase' | 'pending-in' | 'pending-out' | 'balance';
 
-  const [displayIndex, setDisplayIndex] = useState(0);
-  const [phase, setPhase] = useState<'idle' | 'out' | 'in'>('idle');
-  const [flipDuration, setFlipDuration] = useState(300);
-  const currentRef = useRef(0);
-  const isFlippingRef = useRef(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
-  const lastManualRef = useRef(0);
-  const touchStartXRef = useRef(0);
+const ACTIVITY_LABELS: Record<ActivityType, string> = {
+  purchase: 'Purchase logged',
+  'pending-in': 'Pending inbound',
+  'pending-out': 'Pending outbound',
+  balance: 'Balance updated',
+};
 
-  const triggerFlip = useCallback((target: number, fast: boolean) => {
-    if (isFlippingRef.current) return;
-    isFlippingRef.current = true;
-    const dur = fast ? 100 : 300;
-    setFlipDuration(dur);
-    setPhase('out');
-    setTimeout(() => {
-      currentRef.current = target;
-      setDisplayIndex(target);
-      setPhase('in');
-      setTimeout(() => {
-        setPhase('idle');
-        isFlippingRef.current = false;
-      }, dur / 2);
-    }, dur / 2);
-  }, []);
+const ACTIVITY_COLORS: Record<ActivityType, string> = {
+  purchase: 'var(--accent)',
+  'pending-in': '#22c55e',
+  'pending-out': '#f97316',
+  balance: '#818cf8',
+};
 
-  const goNext = useCallback((fast = false) => {
-    triggerFlip((currentRef.current + 1) % slides.length, fast);
-  }, [triggerFlip, slides.length]);
-
-  const goPrev = useCallback((fast = false) => {
-    triggerFlip((currentRef.current - 1 + slides.length) % slides.length, fast);
-  }, [triggerFlip, slides.length]);
-
-  const restartInterval = useCallback(() => {
-    clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      triggerFlip((currentRef.current + 1) % slides.length, false);
-    }, 10000);
-  }, [triggerFlip, slides.length]);
+function RecentActivityWidget() {
+  const data = useLedgerStore((s) => s.data);
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      triggerFlip((currentRef.current + 1) % slides.length, false);
-    }, 10000);
-    return () => clearInterval(intervalRef.current);
-  }, [triggerFlip, slides.length]);
+    const id = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
-  const handleManualNext = () => {
-    const now = Date.now();
-    const fast = now - lastManualRef.current < 600;
-    lastManualRef.current = now;
-    restartInterval();
-    goNext(fast);
-  };
+  const activities = useMemo(() => {
+    const items: { label: string; type: ActivityType; ts: number }[] = [];
 
-  const handleManualPrev = () => {
-    const now = Date.now();
-    const fast = now - lastManualRef.current < 600;
-    lastManualRef.current = now;
-    restartInterval();
-    goPrev(fast);
-  };
+    (data.purchases || []).forEach((p) => {
+      if (p.dateISO) {
+        items.push({
+          label: p.title || 'Purchase',
+          type: 'purchase',
+          ts: new Date(p.dateISO + 'T23:59:59').getTime(),
+        });
+      }
+    });
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartXRef.current = e.touches[0].clientX;
-  };
+    (data.pendingIn || []).forEach((p) => {
+      if (p.createdAt) {
+        items.push({
+          label: p.label || 'Inbound transfer',
+          type: 'pending-in',
+          ts: new Date(p.createdAt).getTime(),
+        });
+      }
+    });
 
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const dx = e.changedTouches[0].clientX - touchStartXRef.current;
-    if (Math.abs(dx) > 40) {
-      const now = Date.now();
-      const fast = now - lastManualRef.current < 600;
-      lastManualRef.current = now;
-      restartInterval();
-      if (dx < 0) goNext(fast);
-      else goPrev(fast);
-    }
-  };
+    (data.pendingOut || []).forEach((p) => {
+      if (p.createdAt) {
+        items.push({
+          label: p.label || 'Outbound transfer',
+          type: 'pending-out',
+          ts: new Date(p.createdAt).getTime(),
+        });
+      }
+    });
 
-  const slide = slides[displayIndex];
+    (data.banks || []).forEach((b) => {
+      if (b.updatedAt) {
+        items.push({
+          label: b.name || 'Bank account',
+          type: 'balance',
+          ts: new Date(b.updatedAt).getTime(),
+        });
+      }
+    });
+
+    (data.cards || []).forEach((c) => {
+      if (c.updatedAt) {
+        items.push({
+          label: c.name || 'Credit card',
+          type: 'balance',
+          ts: new Date(c.updatedAt).getTime(),
+        });
+      }
+    });
+
+    return items
+      .filter((i) => !isNaN(i.ts))
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 3);
+  }, [data]);
 
   return (
-    <div className="hero-flipper-wrap">
-      <button type="button" className="hero-flipper-nav" onClick={handleManualPrev} aria-label="Previous">
-        {CHEVRON_LEFT}
-      </button>
-      <div
-        className="hero-flipper-card"
-        data-phase={phase}
-        style={{ '--flip-dur': `${Math.round(flipDuration / 2)}ms` } as React.CSSProperties}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        <div className="hero-flipper-icon">{slide.icon}</div>
-        <div className="hero-flipper-label">{slide.label}</div>
-        <button type="button" className="hero-flipper-cta" onClick={slide.onAction}>
-          Open
-        </button>
-      </div>
-      <button type="button" className="hero-flipper-nav" onClick={handleManualNext} aria-label="Next">
-        {CHEVRON_RIGHT_SVG}
-      </button>
-      <div className="hero-flipper-dots">
-        {slides.map((_, i) => (
-          <span key={i} className={`hero-flipper-dot${i === displayIndex ? ' active' : ''}`} />
-        ))}
-      </div>
+    <div className="recent-activity-widget">
+      <p className="section-title" style={{ marginBottom: 10 }}>Recent Activity</p>
+      {activities.length === 0 ? (
+        <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>No recent activity yet</p>
+      ) : (
+        activities.map((a, i) => (
+          <div key={i} className="recent-activity-item">
+            <div className="recent-activity-dot" style={{ background: ACTIVITY_COLORS[a.type] }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="recent-activity-label">{a.label}</div>
+              <div className="recent-activity-type">{ACTIVITY_LABELS[a.type]}</div>
+            </div>
+            <div className="recent-activity-time">{timeAgo(a.ts, now)}</div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -426,16 +391,8 @@ export function SnapshotPage({
   return (
     <div className="tab-panel active" id="snapshotContent">
 
-      {/* Hero Flipper Carousel */}
-      <HeroFlipperCarousel
-        onLogPurchase={() => onLogTransaction?.()}
-        onReimbursable={() => onReimbursable?.()}
-        onPendingOut={() => setModal({ type: 'add-pending', kind: 'out', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}
-        onPendingIn={() => setModal({ type: 'add-pending', kind: 'in', label: '', amount: '', isRefund: false, depositTo: 'bank', targetCardId: '', targetBankId: '', targetInvestingAccountId: '', hysaSubBucket: '', outboundType: 'standard', sourceBankId: '', targetCardIdOut: '', outboundSourceKind: 'bank', outboundSourceHysaAccountId: '', outboundHysaSubBucket: '' })}
-        onAddRecurring={() => onAddRecurring?.()}
-        onUpdateBalance={() => { setActiveSection((prev) => prev === 'cash' ? null : 'cash'); }}
-        onAddBonus={() => onAddBonus?.()}
-      />
+      {/* Recent Activity */}
+      <RecentActivityWidget />
 
       {/* Summary Stat Tiles */}
       <div className="stat-tiles-row">
@@ -498,59 +455,59 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div>
+          <div className="card-carousel">
             {visibleBanks.map((b) => {
               const linkedLiquid = linkedHysaLiquidByBankId[b.id] || 0;
               return (
-                <div className="card ll-account-card" key={b.id}>
-                  <button
-                    type="button"
-                    className="ll-card-button"
-                    onClick={() =>
-                      setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
-                    }
-                  >
-                    <BankAccountCard bank={b} />
-                  </button>
-                  {linkedLiquid > 0 ? (
-                    <div style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                      Includes {formatCents(linkedLiquid)} available instantly from linked HYSA
-                    </div>
-                  ) : null}
-                  <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
+                <div className="card-carousel-item" key={b.id}>
+                  <div className="card ll-account-card">
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className="ll-card-button"
                       onClick={() =>
                         setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
                       }
                     >
-                      Add / Set
+                      <BankAccountCard bank={b} />
                     </button>
-                    <button
-                      type="button"
-                      className="btn clear-btn"
-                      onClick={() => {
-                        actions.updateBankBalance(b.id, 0, 'set');
-                      }}
-                    >
-                      Clear
-                    </button>
-                    {b.type !== 'physical_cash' ? (
+                    {linkedLiquid > 0 ? (
+                      <div style={{ marginTop: 4, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                        Includes {formatCents(linkedLiquid)} from linked HYSA
+                      </div>
+                    ) : null}
+                    <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                       <button
                         type="button"
-                        className="btn btn-danger"
+                        className="btn btn-secondary"
                         onClick={() =>
-                          openConfirm(
-                            'Are you sure you want to delete this?',
-                            'Are you sure you want to delete this?',
-                            () => actions.deleteBankAccount(b.id)
-                          )
+                          setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
                         }
                       >
-                        Delete
+                        Add / Set
                       </button>
-                    ) : null}
+                      <button
+                        type="button"
+                        className="btn clear-btn"
+                        onClick={() => actions.updateBankBalance(b.id, 0, 'set')}
+                      >
+                        Clear
+                      </button>
+                      {b.type !== 'physical_cash' ? (
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={() =>
+                            openConfirm(
+                              'Are you sure you want to delete this?',
+                              'Are you sure you want to delete this?',
+                              () => actions.deleteBankAccount(b.id)
+                            )
+                          }
+                        >
+                          Delete
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               );
@@ -586,91 +543,91 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div>
+          <div className="card-carousel">
             {visibleCards.map((c) => {
               const balanceCents = c.balanceCents ?? 0;
               const amountClass =
                 balanceCents > 0 ? 'amount amount-neg' : balanceCents < 0 ? 'amount amount-pos' : 'amount amount-pos';
               return (
-                <div className="card ll-account-card" key={c.id}>
-                  <div
-                    className="ll-card-button"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false });
-                      }
-                    }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className="name bank-card-name">{c.name}</span>
+                <div className="card-carousel-item" key={c.id}>
+                  <div className="card ll-account-card">
+                    <div
+                      className="ll-card-button"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false });
+                        }
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span className="name bank-card-name">{c.name}</span>
+                        <button
+                          type="button"
+                          className="info-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rules = getEffectiveRules(c);
+                            const initialRules: RewardRule[] = rules.length > 0 ? rules : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
+                            const valueInputs: Record<string, string> = {};
+                            initialRules.forEach((r) => { valueInputs[r.id] = r.value === 0 ? '' : String(r.value); });
+                            setModal({
+                              type: 'card-reward-config',
+                              cardId: c.id,
+                              rules: initialRules,
+                              valueInputs,
+                              rewardType: c.rewardType ?? (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : (c.rewardPoints != null && c.rewardPoints > 0 ? 'points' : 'cashback')),
+                              rewardBalanceStr: c.rewardType === 'cashback' || (!c.rewardType && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0))
+                                ? (typeof c.rewardCashbackCents === 'number' ? (c.rewardCashbackCents / 100).toFixed(2) : '')
+                                : c.rewardType === 'miles' || (c.rewardMiles != null && c.rewardMiles > 0)
+                                  ? String(c.rewardMiles ?? '')
+                                  : String(c.rewardPoints ?? ''),
+                              rewardCppStr: c.rewardType === 'points' || (c.rewardPoints != null && c.rewardPoints > 0) ? (typeof c.avgCentsPerPoint === 'number' ? String(c.avgCentsPerPoint) : '') : (typeof c.avgCentsPerMile === 'number' ? String(c.avgCentsPerMile) : '')
+                            });
+                          }}
+                          title="Card reward categories"
+                          aria-label="Card reward categories"
+                        >
+                          i
+                        </button>
+                      </span>
+                      <span className={amountClass}>{formatCents(balanceCents)}</span>
+                    </div>
+                    <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                       <button
                         type="button"
-                        className="info-icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rules = getEffectiveRules(c);
-                          const initialRules: RewardRule[] = rules.length > 0 ? rules : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
-                          const valueInputs: Record<string, string> = {};
-                          initialRules.forEach((r) => { valueInputs[r.id] = r.value === 0 ? '' : String(r.value); });
-                          setModal({
-                            type: 'card-reward-config',
-                            cardId: c.id,
-                            rules: initialRules,
-                            valueInputs,
-                            rewardType: c.rewardType ?? (c.rewardMiles != null && c.rewardMiles > 0 ? 'miles' : (c.rewardPoints != null && c.rewardPoints > 0 ? 'points' : 'cashback')),
-                            rewardBalanceStr: c.rewardType === 'cashback' || (!c.rewardType && (c.rewardPoints == null || c.rewardPoints === 0) && (c.rewardMiles == null || c.rewardMiles === 0))
-                              ? (typeof c.rewardCashbackCents === 'number' ? (c.rewardCashbackCents / 100).toFixed(2) : '')
-                              : c.rewardType === 'miles' || (c.rewardMiles != null && c.rewardMiles > 0)
-                                ? String(c.rewardMiles ?? '')
-                                : String(c.rewardPoints ?? ''),
-                            rewardCppStr: c.rewardType === 'points' || (c.rewardPoints != null && c.rewardPoints > 0) ? (typeof c.avgCentsPerPoint === 'number' ? String(c.avgCentsPerPoint) : '') : (typeof c.avgCentsPerMile === 'number' ? String(c.avgCentsPerMile) : '')
-                          });
-                        }}
-                        title="Card reward categories"
-                        aria-label="Card reward categories"
+                        className="btn btn-secondary"
+                        onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
                       >
-                        i
+                        Add / Set
                       </button>
-                    </span>
-                    <span className={amountClass}>{formatCents(balanceCents)}</span>
+                      <button
+                        type="button"
+                        className="btn clear-btn"
+                        onClick={() => actions.updateCardBalance(c.id, 0, 'set')}
+                      >
+                        Clear
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() =>
+                          openConfirm(
+                            'Are you sure you want to delete this?',
+                            'Are you sure you want to delete this?',
+                            () => actions.deleteCreditCard(c.id)
+                          )
+                        }
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                  >
-                    Add / Set
-                  </button>
-                  <button
-                    type="button"
-                    className="btn clear-btn"
-                    onClick={() => {
-                      actions.updateCardBalance(c.id, 0, 'set');
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() =>
-                      openConfirm(
-                        'Are you sure you want to delete this?',
-                        'Are you sure you want to delete this?',
-                        () => actions.deleteCreditCard(c.id)
-                      )
-                    }
-                  >
-                    Delete
-                  </button>
                 </div>
-              </div>
               );
             })}
           </div>

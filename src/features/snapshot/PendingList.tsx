@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem } from '../../state/models';
 import { formatCents } from '../../state/calc';
-import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 
 function escapeText(s: string): string {
   return s;
@@ -148,12 +147,8 @@ export function PendingInboundList(props: {
   onEditInbound?: (item: PendingInboundItem) => void;
   onJoinInbound?: (id1: string, id2: string, combined: Omit<PendingInboundItem, 'id'>, dateISO: string) => void;
 }) {
-  const [refundsCollapsed, setRefundsCollapsed] = useDropdownCollapsed('pending_in_refunds', true);
-  const [otherInCollapsed, setOtherInCollapsed] = useDropdownCollapsed('pending_in_other', true);
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const refunds = props.items.filter((p) => Boolean(p.isRefund || p.depositTo === 'card'));
-  const otherIn = props.items.filter((p) => !Boolean(p.isRefund || p.depositTo === 'card'));
 
   const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
   const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
@@ -197,42 +192,21 @@ export function PendingInboundList(props: {
       {joinStep !== 'idle' && 'toId' in joinStep && fromItem && toItem ? (
         <div
           className="card"
-          style={{
-            padding: '10px 12px',
-            marginBottom: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}
+          style={{ padding: '10px 12px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
             Join into one:{' '}
             <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
             — Transfer to {getInboundDestinationName(props.data, fromItem)}
           </div>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-            }}
-          >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Date</span>
               <input
                 type="date"
                 value={joinDate}
                 onChange={(e) => setJoinDate(e.target.value)}
-                style={{
-                  padding: '6px 8px',
-                  fontSize: '0.9rem',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface-hover)',
-                  color: 'var(--ui-primary-text, var(--text))',
-                }}
+                style={{ padding: '6px 8px', fontSize: '0.9rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-hover)', color: 'var(--ui-primary-text, var(--text))' }}
               />
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -246,44 +220,9 @@ export function PendingInboundList(props: {
           </div>
         </div>
       ) : null}
-      {refunds.length > 0 ? (
-        <div style={{ marginBottom: 8 }}>
-          <div
-            className="section-header"
-            onClick={() => setRefundsCollapsed(!refundsCollapsed)}
-            style={{ fontSize: '0.98rem', fontWeight: 600 }}
-          >
-            <span className="section-header-left">
-              {refunds.length === 1 ? `Refunds (${refunds.length} item)` : `Refunds (${refunds.length} items)`}
-            </span>
-            <span className="chevron">{refundsCollapsed ? '▸' : '▾'}</span>
-          </div>
-          {!refundsCollapsed ? (
-            <div className="pending-inbound-wrapper">
-              {refunds.map((p) => renderItem(p))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      {otherIn.length > 0 ? (
-        <div style={{ marginBottom: 8 }}>
-          <div
-            className="section-header"
-            onClick={() => setOtherInCollapsed(!otherInCollapsed)}
-            style={{ fontSize: '0.98rem', fontWeight: 600 }}
-          >
-            <span className="section-header-left">
-              {otherIn.length === 1 ? `Other inbound (${otherIn.length} item)` : `Other inbound (${otherIn.length} items)`}
-            </span>
-            <span className="chevron">{otherInCollapsed ? '▸' : '▾'}</span>
-          </div>
-          {!otherInCollapsed ? (
-            <div className="pending-inbound-wrapper">
-              {otherIn.map((p) => renderItem(p))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="pending-inbound-wrapper">
+        {props.items.map((p) => renderItem(p))}
+      </div>
     </div>
   );
 }
@@ -445,12 +384,8 @@ export function PendingOutboundList(props: {
   onEditOutbound?: (item: PendingOutboundItem) => void;
   onJoinOutbound?: (id1: string, id2: string, combined: Omit<PendingOutboundItem, 'id'>, dateISO: string) => void;
 }) {
-  const [ccPaymentsCollapsed, setCcPaymentsCollapsed] = useDropdownCollapsed('pending_out_cc', true);
-  const [otherOutCollapsed, setOtherOutCollapsed] = useDropdownCollapsed('pending_out_other', true);
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const ccPayments = props.items.filter((p) => p.outboundType === 'cc_payment');
-  const otherOut = props.items.filter((p) => p.outboundType !== 'cc_payment');
 
   const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
   const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
@@ -495,42 +430,21 @@ export function PendingOutboundList(props: {
       {joinStep !== 'idle' && 'toId' in joinStep && fromItem && toItem ? (
         <div
           className="card"
-          style={{
-            padding: '10px 12px',
-            marginBottom: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}
+          style={{ padding: '10px 12px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
             Join into one:{' '}
             <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
             — {getOutboundDestinationLabel(props.data, fromItem)}
           </div>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-            }}
-          >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Date</span>
               <input
                 type="date"
                 value={joinDate}
                 onChange={(e) => setJoinDate(e.target.value)}
-                style={{
-                  padding: '6px 8px',
-                  fontSize: '0.9rem',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface-hover)',
-                  color: 'var(--ui-primary-text, var(--text))',
-                }}
+                style={{ padding: '6px 8px', fontSize: '0.9rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-hover)', color: 'var(--ui-primary-text, var(--text))' }}
               />
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -544,44 +458,9 @@ export function PendingOutboundList(props: {
           </div>
         </div>
       ) : null}
-      {ccPayments.length > 0 ? (
-        <div style={{ marginBottom: 8 }}>
-          <div
-            className="section-header"
-            onClick={() => setCcPaymentsCollapsed(!ccPaymentsCollapsed)}
-            style={{ fontSize: '0.98rem', fontWeight: 600 }}
-          >
-            <span className="section-header-left">
-              {ccPayments.length === 1 ? `Credit card payments (${ccPayments.length} item)` : `Credit card payments (${ccPayments.length} items)`}
-            </span>
-            <span className="chevron">{ccPaymentsCollapsed ? '▸' : '▾'}</span>
-          </div>
-          {!ccPaymentsCollapsed ? (
-            <div className="pending-outbound-wrapper">
-              {ccPayments.map((p) => renderOutItem(p))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      {otherOut.length > 0 ? (
-        <div style={{ marginBottom: 8 }}>
-          <div
-            className="section-header"
-            onClick={() => setOtherOutCollapsed(!otherOutCollapsed)}
-            style={{ fontSize: '0.98rem', fontWeight: 600 }}
-          >
-            <span className="section-header-left">
-              {otherOut.length === 1 ? `Other pending outbound (${otherOut.length} item)` : `Other pending outbound (${otherOut.length} items)`}
-            </span>
-            <span className="chevron">{otherOutCollapsed ? '▸' : '▾'}</span>
-          </div>
-          {!otherOutCollapsed ? (
-            <div className="pending-outbound-wrapper">
-              {otherOut.map((p) => renderOutItem(p))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="pending-outbound-wrapper">
+        {props.items.map((p) => renderOutItem(p))}
+      </div>
     </div>
   );
 }

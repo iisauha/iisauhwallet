@@ -543,6 +543,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         </>
       ) : (
         <>
+      <div className="card-carousel">
       {entries.map((e) => {
         const name = entryDisplayName(e);
         const start = toDate(e.startDate);
@@ -575,7 +576,8 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         const ratio = finalTarget > 0 ? clamp(spendCents / finalTarget, 0, 1) : null;
 
         return (
-          <div className="card" key={e.id}>
+          <div className="card-carousel-item" key={e.id}>
+          <div className="card">
             <div className="row" style={{ marginBottom: 4 }}>
               <span className="name" style={{ fontSize: '1.05rem' }}>
                 {name}
@@ -862,8 +864,10 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               </div>
             ) : null}
           </div>
+          </div>
         );
       })}
+      </div>
 
       {confirmDelete ? (
         <div className="modal-overlay">

@@ -1487,9 +1487,10 @@ export function LoansPage() {
               No private loans. Track student and other private loans here. All values are manual and for estimates only.
             </p>
           ) : null}
+          <div className="card-carousel">
           {loansWithDerived.map((l) => (
+            <div className="card-carousel-item" key={l.id}>
             <LoanCard
-              key={l.id}
               loan={l}
               onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
               onDelete={() => {
@@ -1500,7 +1501,9 @@ export function LoansPage() {
                 persist({ loans: (state.loans || []).map((x) => (x.id === l.id ? { ...x, excludeFromCurrentPayment: exclude } : x)) })
               }
             />
+            </div>
           ))}
+          </div>
           <div style={{ marginTop: 12, marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div>
               <button

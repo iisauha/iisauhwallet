@@ -260,8 +260,10 @@ export function UpcomingPage() {
       </div>
       {!incomeCollapsed ? (
         <>
+          <div className="card-carousel">
           {sortedIncomeInWindow.map((i) => (
-            <div className="card" key={i.id}>
+            <div className="card-carousel-item" key={i.id}>
+            <div className="card">
               <div className="row">
                 <span className="name">{i.title}</span>
                 <span className="amount" style={{ color: 'var(--green)' }}>
@@ -304,9 +306,11 @@ export function UpcomingPage() {
                 </button>
               </div>
             </div>
+            </div>
           ))}
           {sortedRecurringIncome.map((i) => (
-            <div className="card" key={i.id}>
+            <div className="card-carousel-item" key={i.id}>
+            <div className="card">
               <div className="row">
                 <span className="name">{i.title}</span>
                 <span className="amount" style={{ color: 'var(--green)' }}>
@@ -350,7 +354,9 @@ export function UpcomingPage() {
                 </button>
               </div>
             </div>
+            </div>
           ))}
+          </div>
           <button
             type="button"
             className="btn btn-add"
@@ -386,8 +392,10 @@ export function UpcomingPage() {
       </div>
       {!costsCollapsed ? (
         <>
+          <div className="card-carousel">
           {sortedCostsInWindow.map((c) => (
-            <div className="card" key={c.id}>
+            <div className="card-carousel-item" key={c.id}>
+            <div className="card">
               <div className="row">
                 <span className="name">{c.title}</span>
                 <span className="amount" style={{ color: 'var(--red)' }}>
@@ -430,9 +438,11 @@ export function UpcomingPage() {
                 </button>
               </div>
             </div>
+            </div>
           ))}
           {sortedRecurringCosts.map((c) => (
-            <div className="card" key={c.recurringId + ':' + c.dateKey}>
+            <div className="card-carousel-item" key={c.recurringId + ':' + c.dateKey}>
+            <div className="card">
               <div className="row">
                 <span className="name">{c.recurringName}</span>
                 <span className="amount" style={{ color: 'var(--red)' }}>
@@ -482,7 +492,9 @@ export function UpcomingPage() {
                 </button>
               </div>
             </div>
+            </div>
           ))}
+          </div>
           <button
             type="button"
             className="btn btn-add"

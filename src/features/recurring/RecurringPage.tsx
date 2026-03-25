@@ -303,8 +303,10 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
             </div>
             {!collapsed ? (
               <>
+                <div className="card-carousel">
                 {items.map((r: any) => (
-                  <div className="card" key={r.id}>
+                  <div className="card-carousel-item" key={r.id}>
+                  <div className="card">
                     <div className="row">
                       <span className="name">{r.name || 'Expense'}</span>
                       <span className="amount" style={{ color: 'var(--red)' }}>
@@ -375,7 +377,9 @@ export function RecurringPage({ addTrigger = 0 }: { addTrigger?: number } = {}) 
                       </button>
                     </div>
                   </div>
+                  </div>
                 ))}
+                </div>
               </>
             ) : null}
           </div>

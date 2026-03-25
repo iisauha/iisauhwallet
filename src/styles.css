@@ -166,7 +166,7 @@ body {
   border-radius: var(--radius-card);
   padding: 14px 16px;
   margin-bottom: 12px;
-  border: 1px solid var(--ui-border, var(--border));
+  border: 1px solid transparent;
   box-shadow: var(--shadow);
   transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease;
   -webkit-tap-highlight-color: transparent;
@@ -1195,6 +1195,67 @@ textarea.ll-control {
 /* ─── UI Consistency — Card press state ──────────────────────────── */
 .card:active { transform: scale(0.97); }
 .stat-tile:active { transform: scale(0.97); }
+
+/* ─── Recent Activity Widget ──────────────────────────────────────── */
+.recent-activity-widget {
+  background: var(--ui-card-bg, var(--surface));
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border-left: 3px solid var(--accent);
+}
+.recent-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ui-border, var(--border));
+}
+.recent-activity-item:last-child { border-bottom: none; }
+.recent-activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.recent-activity-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ui-primary-text, var(--text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-activity-type {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.recent-activity-time {
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Account Card Carousel ──────────────────────────────────────── */
+.card-carousel {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+.card-carousel::-webkit-scrollbar { display: none; }
+.card-carousel-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  width: calc(88% - 12px);
+  min-width: 220px;
+}
+.card-carousel-item .card { margin-bottom: 0; }
 
 /* ─── Hero Flipper Carousel ───────────────────────────────────────── */
 .hero-flipper-wrap {
