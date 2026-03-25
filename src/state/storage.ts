@@ -57,6 +57,12 @@ import {
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode } from './crypto';
 
+// Sequence counter: each saveData call increments this. The .then() callback only
+// writes to localStorage if its seq is still the latest, preventing stale fire-and-forgets
+// from overwriting newer data (e.g. a save triggered during async decryptWithPasscode
+// completing after the import's write).
+let _writeSeq = 0;
+
 function now(): string {
   return new Date().toISOString();
 }
@@ -416,11 +422,13 @@ export function loadData(): LedgerData {
 
 export function saveData(data: LedgerData) {
   setCachedData(data); // update in-memory cache synchronously for instant reads
+  const seq = ++_writeSeq;
   const json = JSON.stringify(data);
-  // Encrypt and persist asynchronously; fall back to plaintext if encryption unavailable
+  // Encrypt and persist asynchronously; fall back to plaintext if encryption unavailable.
+  // Only write if this is still the latest save (seq guard prevents stale writes from winning).
   encryptWithDeviceKey(json)
-    .then((ct) => localStorage.setItem(STORAGE_KEY, ct))
-    .catch(() => localStorage.setItem(STORAGE_KEY, json));
+    .then((ct) => { if (_writeSeq === seq) localStorage.setItem(STORAGE_KEY, ct); })
+    .catch(() => { if (_writeSeq === seq) localStorage.setItem(STORAGE_KEY, json); });
 }
 
 /** Clears the in-memory data cache. Call before localStorage.clear() so reload() returns empty data. */
@@ -466,7 +474,17 @@ export function exportJSON(): string {
     CATEGORY_COLOR_MAP_KEY,
     EXPECTED_COSTS_KEY,
     EXPECTED_INCOME_KEY,
-    UPCOMING_WINDOW_KEY
+    UPCOMING_WINDOW_KEY,
+    // iisauhwallet-prefixed data keys (don't start with 'ledgerlite', must be explicit)
+    LOANS_KEY,
+    BIRTHDATE_KEY,
+    FEDERAL_REPAYMENT_CONFIG_KEY,
+    PUBLIC_PAYMENT_NOW_ADDED_KEY,
+    PRIVATE_PAYMENT_NOW_BASE_KEY,
+    LOANS_SECTION_SHOW_PUBLIC_KEY,
+    LOANS_SECTION_SHOW_PRIVATE_KEY,
+    PUBLIC_LOAN_SHOW_PAYMENT_ACTIONS_KEY,
+    UPCOMING_DISMISSED_OCCURRENCES_KEY,
   ]);
 
   // Main data key: always use in-memory cache (decrypted). Never export encrypted blob.
@@ -521,15 +539,13 @@ export function importJSON(jsonText: string) {
       if (typeof v === 'string') localStorage.setItem(k, v);
       else localStorage.setItem(k, JSON.stringify(v));
     });
-    // Refresh in-memory cache from the restored plaintext main key, then re-encrypt asynchronously.
+    // Refresh cache and re-encrypt via saveData() — this bumps _writeSeq so any
+    // pending fire-and-forgets from before the import cannot overwrite the imported data.
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw && !isEncrypted(raw)) {
-        const restored = JSON.parse(raw) as LedgerData;
-        setCachedData(applyDataDefaults(restored));
-        encryptWithDeviceKey(raw)
-          .then((ct) => localStorage.setItem(STORAGE_KEY, ct))
-          .catch(() => {});
+        const restored = applyDataDefaults(JSON.parse(raw) as LedgerData);
+        saveData(restored);
       }
     } catch (_) {}
     return;
