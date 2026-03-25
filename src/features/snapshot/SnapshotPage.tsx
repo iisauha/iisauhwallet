@@ -65,11 +65,6 @@ function RecentActivityWidget() {
       }
     });
 
-    (data.cards || []).forEach((c) => {
-      if (c.updatedAt) {
-        items.push({ label: c.name || 'Credit card', type: 'balance', ts: new Date(c.updatedAt).getTime(), amount: c.balanceCents ?? null });
-      }
-    });
 
     return items.filter((i) => !isNaN(i.ts)).sort((a, b) => b.ts - a.ts).slice(0, 3);
   }, [data]);
@@ -649,11 +644,6 @@ export function SnapshotPage({
               actions.addPendingInbound(combined);
             }}
           />
-          <div className="btn-row">
-            <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending inbound items?', () => actions.clearPending('in'))}>
-              Clear All
-            </button>
-          </div>
         </>
       ) : null}
 
@@ -705,11 +695,6 @@ export function SnapshotPage({
               actions.addPendingOutbound(combined);
             }}
           />
-          <div className="btn-row">
-            <button type="button" className="btn clear-btn" onClick={() => openConfirm('Clear all?', 'Clear all pending outbound items?', () => actions.clearPending('out'))}>
-              Clear All
-            </button>
-          </div>
         </>
       ) : null}
       </div>

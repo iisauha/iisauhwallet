@@ -1423,13 +1423,12 @@ export function LoansPage() {
             fontWeight: showPublic ? 600 : 500,
             borderRadius: 999,
             background: showPublic
-              ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+              ? 'color-mix(in srgb, var(--ui-add-btn, var(--accent)) 15%, transparent)'
               : 'transparent',
-            color: showPublic ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-primary-text, var(--text))',
-            border: '1px solid transparent',
-            borderColor: showPublic ? 'color-mix(in srgb, var(--accent) 50%, transparent)' : 'transparent',
+            color: showPublic ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-primary-text, var(--text))',
+            border: `1px solid ${showPublic ? 'var(--ui-add-btn, var(--accent))' : 'transparent'}`,
             cursor: 'pointer',
-            transition: 'background-color 0.18s ease, color 0.18s ease'
+            transition: 'background 150ms ease, color 150ms ease, border-color 150ms ease'
           }}
           onClick={() => {
             const nextShowPublic = !showPublic;
@@ -1452,13 +1451,12 @@ export function LoansPage() {
             fontWeight: showPrivate ? 600 : 500,
             borderRadius: 999,
             background: showPrivate
-              ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+              ? 'color-mix(in srgb, var(--ui-add-btn, var(--accent)) 15%, transparent)'
               : 'transparent',
-            color: showPrivate ? 'var(--ui-primary-text, var(--text))' : 'var(--ui-primary-text, var(--text))',
-            border: '1px solid transparent',
-            borderColor: showPrivate ? 'color-mix(in srgb, var(--accent) 50%, transparent)' : 'transparent',
+            color: showPrivate ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-primary-text, var(--text))',
+            border: `1px solid ${showPrivate ? 'var(--ui-add-btn, var(--accent))' : 'transparent'}`,
             cursor: 'pointer',
-            transition: 'background-color 0.18s ease, color 0.18s ease'
+            transition: 'background 150ms ease, color 150ms ease, border-color 150ms ease'
           }}
           onClick={() => {
             const nextShowPrivate = !showPrivate;

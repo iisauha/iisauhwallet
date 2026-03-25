@@ -1399,10 +1399,11 @@ export function InvestingPage() {
     collapsedKey: 'hysa' | 'roth' | 'k401' | 'general'
   ) {
     const isCollapsed = getCollapsed(collapsedKey);
+    const sortedAccounts = [...accounts].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
     const visibleAccounts =
       type === 'hysa' && !showZeroHysa
-        ? accounts.filter((a) => (a.balanceCents || 0) !== 0)
-        : accounts;
+        ? sortedAccounts.filter((a) => (a.balanceCents || 0) !== 0)
+        : sortedAccounts;
     return (
       <>
         <div
@@ -1783,8 +1784,13 @@ export function InvestingPage() {
 
       <button
         type="button"
-        className="btn btn-secondary"
-        style={{ width: '100%', marginTop: 24, marginBottom: 8 }}
+        className="btn btn-add"
+        style={{
+          width: '100%',
+          marginTop: 24,
+          marginBottom: 8,
+          border: '1px solid var(--ui-add-btn, var(--accent))',
+        }}
         onClick={() => {
           setTransferFrom('');
           setTransferTo('');
@@ -1833,7 +1839,7 @@ export function InvestingPage() {
       </div>
 
       <div
-        className="card card-accent-strip"
+        className="card"
         style={{
           marginTop: 16,
           background: 'var(--ui-surface-secondary, var(--surface))',
