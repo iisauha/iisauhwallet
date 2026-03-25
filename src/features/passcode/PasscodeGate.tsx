@@ -17,6 +17,7 @@ import {
   loadPasscodeLockoutUntil,
   savePasscodeLockoutUntil,
   loadPasscodePaused,
+  loadShowWelcomeScreen,
   loadAutoLockMinutes,
   loadPasscode6Digit,
   savePasscode6Digit,
@@ -477,6 +478,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authenticated || !justLoggedInRef.current) return;
     justLoggedInRef.current = false;
+    if (!loadShowWelcomeScreen()) return;
     const name = loadUserDisplayName();
     if (!name) return;
     setShowWelcome(true);
@@ -489,6 +491,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   // Show welcome screen on app load when passcode is paused
   useEffect(() => {
     if (!loadPasscodePaused()) return;
+    if (!loadShowWelcomeScreen()) return;
     const name = loadUserDisplayName();
     if (!name) return;
     setShowWelcome(true);

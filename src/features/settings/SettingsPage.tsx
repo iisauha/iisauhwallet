@@ -12,6 +12,8 @@ import {
   savePasscodePaused,
   loadAutoLockMinutes,
   saveAutoLockMinutes,
+  loadShowWelcomeScreen,
+  saveShowWelcomeScreen,
   loadUserDisplayName,
   saveUserDisplayName,
   loadUserProfileImage,
@@ -195,6 +197,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const hasPasscode = loadPasscodeHash() !== null;
   const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
   const [autoLockMinutes, setAutoLockMinutes] = useState(() => loadAutoLockMinutes());
+  const [showWelcomeScreen, setShowWelcomeScreen] = useState(() => loadShowWelcomeScreen());
 
   const lastExportTriggerRef = useRef(0);
 
@@ -305,6 +308,26 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           sublabel="Reorder and show/hide navigation tabs"
           onClick={() => setVisibleTabsModalOpen(true)}
         />
+        <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="settings-row-icon-wrap" style={{ background: '#F97316' }}>
+              <IconHome />
+            </span>
+            <div>
+              <div className="settings-row-label">Show Welcome Screen</div>
+              <div className="settings-row-sublabel">Display "Welcome back" when opening the app</div>
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={showWelcomeScreen}
+            onChange={(e) => {
+              setShowWelcomeScreen(e.target.checked);
+              saveShowWelcomeScreen(e.target.checked);
+            }}
+            style={{ width: 20, height: 20, accentColor: 'var(--ui-add-btn, var(--accent))', cursor: 'pointer', flexShrink: 0 }}
+          />
+        </div>
       </div>
       <AppCustomizationModal open={appCustomizationOpen} onClose={() => setAppCustomizationOpen(false)} />
 

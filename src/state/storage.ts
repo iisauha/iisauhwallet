@@ -45,6 +45,7 @@ import {
   SECURITY_QUIZ_COMPLETED_KEY,
   PASSCODE_PAUSED_KEY,
   PASSCODE_AUTO_LOCK_MINUTES_KEY,
+  SHOW_WELCOME_SCREEN_KEY,
   PASSCODE_6DIGIT_KEY,
   CARD_REWARD_ADJUSTMENTS_KEY,
   CARD_REWARD_ONLY_ENTRIES_KEY,
@@ -1833,6 +1834,21 @@ export function loadAutoLockMinutes(): number {
 export function saveAutoLockMinutes(minutes: number) {
   try {
     localStorage.setItem(PASSCODE_AUTO_LOCK_MINUTES_KEY, String(minutes));
+  } catch (_) {}
+}
+
+export function loadShowWelcomeScreen(): boolean {
+  try {
+    const raw = localStorage.getItem(SHOW_WELCOME_SCREEN_KEY);
+    return raw === null ? true : raw === 'true';
+  } catch (_) {
+    return true;
+  }
+}
+
+export function saveShowWelcomeScreen(show: boolean) {
+  try {
+    localStorage.setItem(SHOW_WELCOME_SCREEN_KEY, String(show));
   } catch (_) {}
 }
 
