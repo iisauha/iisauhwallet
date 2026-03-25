@@ -55,13 +55,42 @@ import {
   USER_PROFILE_IMAGE_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
-import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode } from './crypto';
+import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached } from './crypto';
 
 // Sequence counter: each saveData call increments this. The .then() callback only
 // writes to localStorage if its seq is still the latest, preventing stale fire-and-forgets
 // from overwriting newer data (e.g. a save triggered during async decryptWithPasscode
 // completing after the import's write).
 let _writeSeq = 0;
+
+// ── Aux key encrypted read/write helpers ──────────────────────────────────
+// Mirrors saveData()'s pattern: sync cache update + async encrypt + seq guard.
+
+const _auxSeqs: Record<string, number> = {};
+
+function loadEncryptedKey(key: string): string | null {
+  const cached = getAuxCached(key);
+  if (cached !== undefined) return cached; // null = key absent from localStorage
+  // initCrypto hasn't run yet — fall back to direct read (only works for plaintext)
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw || isEncrypted(raw)) return null;
+    return raw;
+  } catch (_) { return null; }
+}
+
+function saveEncryptedKey(key: string, rawValue: string): void {
+  setAuxCached(key, rawValue);
+  const seq = (_auxSeqs[key] = (_auxSeqs[key] ?? 0) + 1);
+  encryptWithDeviceKey(rawValue)
+    .then((ct) => { if (_auxSeqs[key] === seq) localStorage.setItem(key, ct); })
+    .catch(() => { if (_auxSeqs[key] === seq) localStorage.setItem(key, rawValue); });
+}
+
+function removeEncryptedKey(key: string): void {
+  setAuxCached(key, null);
+  localStorage.removeItem(key);
+}
 
 function now(): string {
   return new Date().toISOString();
@@ -287,20 +316,16 @@ export type CardRewardAdjustment = { amountCents: number; mode: 'add' | 'set' };
 export type CardRewardAdjustmentsState = Record<string, Record<string, CardRewardAdjustment>>;
 
 export function loadCardRewardAdjustments(): CardRewardAdjustmentsState {
+  const raw = loadEncryptedKey(CARD_REWARD_ADJUSTMENTS_KEY);
+  if (!raw) return {};
   try {
-    const raw = localStorage.getItem(CARD_REWARD_ADJUSTMENTS_KEY);
-    if (!raw) return {};
     const parsed = JSON.parse(raw) as CardRewardAdjustmentsState;
     return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (_) {
-    return {};
-  }
+  } catch (_) { return {}; }
 }
 
 export function saveCardRewardAdjustments(state: CardRewardAdjustmentsState): void {
-  try {
-    localStorage.setItem(CARD_REWARD_ADJUSTMENTS_KEY, JSON.stringify(state));
-  } catch (_) {}
+  try { saveEncryptedKey(CARD_REWARD_ADJUSTMENTS_KEY, JSON.stringify(state)); } catch (_) {}
 }
 
 export type CardRewardOnlyEntry = {
@@ -315,37 +340,29 @@ export type CardRewardOnlyEntry = {
 export type CardRewardOnlyEntriesState = Record<string, CardRewardOnlyEntry[]>;
 
 export function loadCardRewardOnlyEntries(): CardRewardOnlyEntriesState {
+  const raw = loadEncryptedKey(CARD_REWARD_ONLY_ENTRIES_KEY);
+  if (!raw) return {};
   try {
-    const raw = localStorage.getItem(CARD_REWARD_ONLY_ENTRIES_KEY);
-    if (!raw) return {};
     const parsed = JSON.parse(raw) as CardRewardOnlyEntriesState;
     return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (_) {
-    return {};
-  }
+  } catch (_) { return {}; }
 }
 
 export function saveCardRewardOnlyEntries(state: CardRewardOnlyEntriesState): void {
-  try {
-    localStorage.setItem(CARD_REWARD_ONLY_ENTRIES_KEY, JSON.stringify(state));
-  } catch (_) {}
+  try { saveEncryptedKey(CARD_REWARD_ONLY_ENTRIES_KEY, JSON.stringify(state)); } catch (_) {}
 }
 
 export function loadRewardsVisibleCardIds(): string[] {
+  const raw = loadEncryptedKey(REWARDS_VISIBLE_CARD_IDS_KEY);
+  if (!raw) return [];
   try {
-    const raw = localStorage.getItem(REWARDS_VISIBLE_CARD_IDS_KEY);
-    if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((id: unknown) => typeof id === 'string') : [];
-  } catch (_) {
-    return [];
-  }
+  } catch (_) { return []; }
 }
 
 export function saveRewardsVisibleCardIds(ids: string[]): void {
-  try {
-    localStorage.setItem(REWARDS_VISIBLE_CARD_IDS_KEY, JSON.stringify(ids));
-  } catch (_) {}
+  try { saveEncryptedKey(REWARDS_VISIBLE_CARD_IDS_KEY, JSON.stringify(ids)); } catch (_) {}
 }
 
 export function getLastPostedBankId(kind: 'in' | 'out'): string {
@@ -541,8 +558,7 @@ export function importJSON(jsonText: string) {
       if (typeof v === 'string') localStorage.setItem(k, v);
       else localStorage.setItem(k, JSON.stringify(v));
     });
-    // Refresh cache and re-encrypt via saveData() — this bumps _writeSeq so any
-    // pending fire-and-forgets from before the import cannot overwrite the imported data.
+    // Refresh main data cache + re-encrypt via saveData().
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw && !isEncrypted(raw)) {
@@ -550,6 +566,22 @@ export function importJSON(jsonText: string) {
         saveData(restored);
       }
     } catch (_) {}
+    // Refresh aux key caches — each key was written as plaintext by the loop above.
+    // saveEncryptedKey updates the in-memory cache synchronously and fires async encrypt.
+    for (const k of [
+      INVESTING_KEY, SUB_TRACKER_KEY, LOANS_KEY, CATEGORY_STORAGE_KEY,
+      EXPECTED_COSTS_KEY, EXPECTED_INCOME_KEY, LAST_ADJUSTMENTS_KEY, COASTFIRE_KEY,
+      FEDERAL_REPAYMENT_CONFIG_KEY, BIRTHDATE_KEY,
+      PUBLIC_PAYMENT_NOW_ADDED_KEY, PRIVATE_PAYMENT_NOW_BASE_KEY,
+      LAST_RECOMPUTE_DATE_KEY, PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
+      CARD_REWARD_ADJUSTMENTS_KEY, CARD_REWARD_ONLY_ENTRIES_KEY, REWARDS_VISIBLE_CARD_IDS_KEY,
+    ]) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw && !isEncrypted(raw)) saveEncryptedKey(k, raw);
+        else if (!raw) setAuxCached(k, null);
+      } catch (_) {}
+    }
     return;
   }
 
@@ -579,27 +611,23 @@ export async function importJSONDecrypted(jsonText: string, passcode: string): P
 }
 
 export function loadCategoryConfig(): CategoryConfig {
-  try {
-    const raw = localStorage.getItem(CATEGORY_STORAGE_KEY);
-    if (raw) {
+  const raw = loadEncryptedKey(CATEGORY_STORAGE_KEY);
+  if (raw) {
+    try {
       const parsed = JSON.parse(raw) as unknown;
       if (parsed && typeof parsed === 'object') return parsed as CategoryConfig;
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
   const initial: CategoryConfig = {};
   CATEGORIES.forEach((c) => {
     initial[c.id] = { name: c.name, sub: Array.isArray(c.sub) ? c.sub.slice() : [] };
   });
-  try {
-    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(initial));
-  } catch (_) {}
+  try { saveEncryptedKey(CATEGORY_STORAGE_KEY, JSON.stringify(initial)); } catch (_) {}
   return initial;
 }
 
 export function saveCategoryConfig(cfg: CategoryConfig) {
-  try {
-    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(cfg));
-  } catch (_) {}
+  try { saveEncryptedKey(CATEGORY_STORAGE_KEY, JSON.stringify(cfg)); } catch (_) {}
 }
 
 export function getCategoryName(cfg: CategoryConfig, id: string): string {
@@ -637,39 +665,31 @@ export type ExpectedIncome = {
 };
 
 export function loadExpectedCosts(): ExpectedCost[] {
+  const raw = loadEncryptedKey(EXPECTED_COSTS_KEY);
+  if (raw == null) return [];
   try {
-    const raw = localStorage.getItem(EXPECTED_COSTS_KEY);
-    if (raw == null) return [];
     const parsed = JSON.parse(raw);
     const arr = Array.isArray(parsed) ? parsed : [];
     return arr.map((c: any) => Object.assign({}, c, { status: c.status || 'expected' }));
-  } catch (_) {
-    return [];
-  }
+  } catch (_) { return []; }
 }
 
 export function saveExpectedCosts(arr: ExpectedCost[]) {
-  try {
-    localStorage.setItem(EXPECTED_COSTS_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
-  } catch (_) {}
+  try { saveEncryptedKey(EXPECTED_COSTS_KEY, JSON.stringify(Array.isArray(arr) ? arr : [])); } catch (_) {}
 }
 
 export function loadExpectedIncome(): ExpectedIncome[] {
+  const raw = loadEncryptedKey(EXPECTED_INCOME_KEY);
+  if (raw == null) return [];
   try {
-    const raw = localStorage.getItem(EXPECTED_INCOME_KEY);
-    if (raw == null) return [];
     const parsed = JSON.parse(raw);
     const arr = Array.isArray(parsed) ? parsed : [];
     return arr.map((i: any) => Object.assign({}, i, { status: i.status || 'expected' }));
-  } catch (_) {
-    return [];
-  }
+  } catch (_) { return []; }
 }
 
 export function saveExpectedIncome(arr: ExpectedIncome[]) {
-  try {
-    localStorage.setItem(EXPECTED_INCOME_KEY, JSON.stringify(Array.isArray(arr) ? arr : []));
-  } catch (_) {}
+  try { saveEncryptedKey(EXPECTED_INCOME_KEY, JSON.stringify(Array.isArray(arr) ? arr : [])); } catch (_) {}
 }
 
 export function loadUpcomingWindowPreference(): { days: number } {
@@ -729,9 +749,9 @@ export type SubTrackerData = {
 };
 
 export function loadSubTracker(): SubTrackerData {
+  const raw = loadEncryptedKey(SUB_TRACKER_KEY);
+  if (!raw) return { version: 1, entries: [], completedBonuses: [] };
   try {
-    const raw = localStorage.getItem(SUB_TRACKER_KEY);
-    if (!raw) return { version: 1, entries: [], completedBonuses: [] };
     const parsed = JSON.parse(raw) as any;
     const entries = Array.isArray(parsed?.entries) ? parsed.entries : Array.isArray(parsed) ? parsed : [];
     const completedBonuses = Array.isArray(parsed?.completedBonuses) ? parsed.completedBonuses : [];
@@ -749,7 +769,7 @@ export function saveSubTracker(next: Partial<SubTrackerData> & { version: 1 }) {
       entries: next.entries !== undefined ? next.entries : current.entries,
       completedBonuses: next.completedBonuses !== undefined ? next.completedBonuses : (current.completedBonuses ?? [])
     };
-    localStorage.setItem(SUB_TRACKER_KEY, JSON.stringify(merged));
+    saveEncryptedKey(SUB_TRACKER_KEY, JSON.stringify(merged));
   } catch (_) {}
 }
 
@@ -788,9 +808,9 @@ export function dismissUpcomingOccurrence(kind: 'exp' | 'inc', recurringId: stri
 export type LastAdjustmentsMap = Record<string, number>;
 
 export function loadLastAdjustments(): LastAdjustmentsMap {
+  const raw = loadEncryptedKey(LAST_ADJUSTMENTS_KEY);
+  if (!raw) return {};
   try {
-    const raw = localStorage.getItem(LAST_ADJUSTMENTS_KEY);
-    if (!raw) return {};
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return {};
     const result: LastAdjustmentsMap = {};
@@ -801,15 +821,11 @@ export function loadLastAdjustments(): LastAdjustmentsMap {
       }
     }
     return result;
-  } catch (_) {
-    return {};
-  }
+  } catch (_) { return {}; }
 }
 
 export function saveLastAdjustments(map: LastAdjustmentsMap) {
-  try {
-    localStorage.setItem(LAST_ADJUSTMENTS_KEY, JSON.stringify(map || {}));
-  } catch (_) {}
+  try { saveEncryptedKey(LAST_ADJUSTMENTS_KEY, JSON.stringify(map || {})); } catch (_) {}
 }
 
 export type InvestingAccountType = 'hysa' | 'roth' | 'k401' | 'general';
@@ -857,9 +873,9 @@ export type InvestingState = {
 };
 
 export function loadInvesting(): InvestingState {
+  const raw = loadEncryptedKey(INVESTING_KEY);
+  if (!raw) return { version: 1, accounts: [] };
   try {
-    const raw = localStorage.getItem(INVESTING_KEY);
-    if (!raw) return { version: 1, accounts: [] };
     const parsed = JSON.parse(raw) as any;
     if (parsed && Array.isArray(parsed.accounts)) {
       return { version: 1, accounts: parsed.accounts as InvestingAccount[] };
@@ -874,9 +890,7 @@ export function loadInvesting(): InvestingState {
 }
 
 export function saveInvesting(state: InvestingState) {
-  try {
-    localStorage.setItem(INVESTING_KEY, JSON.stringify(state));
-  } catch (_) {}
+  try { saveEncryptedKey(INVESTING_KEY, JSON.stringify(state)); } catch (_) {}
 }
 
 // ===== Loans =====
@@ -988,9 +1002,9 @@ export type LoansState = {
 };
 
 export function loadLoans(): LoansState {
+  const raw = loadEncryptedKey(LOANS_KEY);
+  if (!raw) return { version: 1, loans: [] };
   try {
-    const raw = localStorage.getItem(LOANS_KEY);
-    if (!raw) return { version: 1, loans: [] };
     const parsed = JSON.parse(raw) as any;
     if (Array.isArray(parsed)) {
       return { version: 1, loans: parsed as Loan[] };
@@ -1005,86 +1019,74 @@ export function loadLoans(): LoansState {
 }
 
 export function saveLoans(state: LoansState) {
-  try {
-    localStorage.setItem(LOANS_KEY, JSON.stringify(state));
-  } catch (_) {}
+  try { saveEncryptedKey(LOANS_KEY, JSON.stringify(state)); } catch (_) {}
 }
 
 export function loadPublicPaymentNowAdded(): number {
+  const raw = loadEncryptedKey(PUBLIC_PAYMENT_NOW_ADDED_KEY);
+  if (raw == null) return 0;
   try {
-    const raw = localStorage.getItem(PUBLIC_PAYMENT_NOW_ADDED_KEY);
-    if (raw == null) return 0;
     const n = parseInt(raw, 10);
     return Number.isFinite(n) && n >= 0 ? n : 0;
-  } catch (_) {
-    return 0;
-  }
+  } catch (_) { return 0; }
 }
 
 export function savePublicPaymentNowAdded(cents: number) {
   try {
     const value = Math.max(0, Math.round(cents));
-    localStorage.setItem(PUBLIC_PAYMENT_NOW_ADDED_KEY, String(value));
+    saveEncryptedKey(PUBLIC_PAYMENT_NOW_ADDED_KEY, String(value));
   } catch (_) {}
 }
 
 export function loadPrivatePaymentNowBase(): number | null {
+  const raw = loadEncryptedKey(PRIVATE_PAYMENT_NOW_BASE_KEY);
+  if (raw == null) return null;
   try {
-    const raw = localStorage.getItem(PRIVATE_PAYMENT_NOW_BASE_KEY);
-    if (raw == null) return null;
     const n = parseInt(raw, 10);
     return Number.isFinite(n) && n >= 0 ? n : null;
-  } catch (_) {
-    return null;
-  }
+  } catch (_) { return null; }
 }
 
 export function savePrivatePaymentNowBase(cents: number | null) {
   try {
     if (cents === null || cents === undefined) {
-      localStorage.removeItem(PRIVATE_PAYMENT_NOW_BASE_KEY);
+      removeEncryptedKey(PRIVATE_PAYMENT_NOW_BASE_KEY);
       return;
     }
     const value = Math.max(0, Math.round(cents));
-    localStorage.setItem(PRIVATE_PAYMENT_NOW_BASE_KEY, String(value));
+    saveEncryptedKey(PRIVATE_PAYMENT_NOW_BASE_KEY, String(value));
   } catch (_) {}
 }
 
 export function loadLastRecomputeDate(): string | null {
-  try {
-    const raw = localStorage.getItem(LAST_RECOMPUTE_DATE_KEY);
-    if (raw == null || typeof raw !== 'string') return null;
-    return raw.trim() || null;
-  } catch (_) {
-    return null;
-  }
+  const raw = loadEncryptedKey(LAST_RECOMPUTE_DATE_KEY);
+  if (raw == null || typeof raw !== 'string') return null;
+  return raw.trim() || null;
 }
 
 export function saveLastRecomputeDate(dateISO: string) {
   try {
-    if (dateISO) localStorage.setItem(LAST_RECOMPUTE_DATE_KEY, dateISO);
+    if (dateISO) saveEncryptedKey(LAST_RECOMPUTE_DATE_KEY, dateISO);
   } catch (_) {}
 }
 
 export function loadPaymentNowManualOverride(): number | null {
+  const raw = loadEncryptedKey(PAYMENT_NOW_MANUAL_OVERRIDE_KEY);
+  if (raw == null) return null;
   try {
-    const raw = localStorage.getItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY);
-    if (raw == null) return null;
     const n = parseInt(raw, 10);
     return Number.isFinite(n) && n >= 0 ? n : null;
-  } catch (_) {
-    return null;
-  }
+  } catch (_) { return null; }
 }
 
 export function savePaymentNowManualOverride(cents: number | null) {
   try {
     if (cents === null || cents === undefined) {
-      localStorage.removeItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY);
+      removeEncryptedKey(PAYMENT_NOW_MANUAL_OVERRIDE_KEY);
       return;
     }
     const value = Math.max(0, Math.round(cents));
-    localStorage.setItem(PAYMENT_NOW_MANUAL_OVERRIDE_KEY, String(value));
+    saveEncryptedKey(PAYMENT_NOW_MANUAL_OVERRIDE_KEY, String(value));
   } catch (_) {}
 }
 
@@ -1316,9 +1318,9 @@ export type FederalRepaymentConfig = {
 const DEFAULT_POVERTY_LEVEL_DOLLARS = 15650;
 
 export function loadFederalRepaymentConfig(): FederalRepaymentConfig {
+  const raw = loadEncryptedKey(FEDERAL_REPAYMENT_CONFIG_KEY);
+  if (!raw) return { povertyLevelDollars: DEFAULT_POVERTY_LEVEL_DOLLARS };
   try {
-    const raw = localStorage.getItem(FEDERAL_REPAYMENT_CONFIG_KEY);
-    if (!raw) return { povertyLevelDollars: DEFAULT_POVERTY_LEVEL_DOLLARS };
     const parsed = JSON.parse(raw) as FederalRepaymentConfig;
     if (typeof parsed.povertyLevelDollars === 'number' && parsed.povertyLevelDollars >= 0) {
       return { povertyLevelDollars: parsed.povertyLevelDollars };
@@ -1330,9 +1332,7 @@ export function loadFederalRepaymentConfig(): FederalRepaymentConfig {
 }
 
 export function saveFederalRepaymentConfig(config: FederalRepaymentConfig) {
-  try {
-    localStorage.setItem(FEDERAL_REPAYMENT_CONFIG_KEY, JSON.stringify(config));
-  } catch (_) {}
+  try { saveEncryptedKey(FEDERAL_REPAYMENT_CONFIG_KEY, JSON.stringify(config)); } catch (_) {}
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -1616,7 +1616,7 @@ const COASTFIRE_DEFAULTS: CoastFireAssumptions = {
 
 export function loadCoastFire(): CoastFireAssumptions | null {
   try {
-    const raw = localStorage.getItem(COASTFIRE_KEY);
+    const raw = loadEncryptedKey(COASTFIRE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (!parsed || typeof parsed !== 'object') return null;
@@ -1657,9 +1657,7 @@ export function loadCoastFire(): CoastFireAssumptions | null {
 }
 
 export function saveCoastFire(assumptions: CoastFireAssumptions) {
-  try {
-    localStorage.setItem(COASTFIRE_KEY, JSON.stringify(assumptions));
-  } catch (_) {}
+  try { saveEncryptedKey(COASTFIRE_KEY, JSON.stringify(assumptions)); } catch (_) {}
 }
 
 export { COASTFIRE_DEFAULTS };
@@ -1667,13 +1665,9 @@ export { COASTFIRE_DEFAULTS };
 // ===== Profile / birthdate =====
 
 export function loadBirthdateISO(): string | null {
-  try {
-    const raw = localStorage.getItem(BIRTHDATE_KEY);
-    if (typeof raw !== 'string' || !raw) return null;
-    return raw;
-  } catch (_) {
-    return null;
-  }
+  const raw = loadEncryptedKey(BIRTHDATE_KEY);
+  if (typeof raw !== 'string' || !raw) return null;
+  return raw;
 }
 
 export function loadUserDisplayName(): string | null {
@@ -1971,9 +1965,9 @@ export function wipeAllAppData(): void {
 export function saveBirthdateISO(iso: string | null) {
   try {
     if (!iso) {
-      localStorage.removeItem(BIRTHDATE_KEY);
+      removeEncryptedKey(BIRTHDATE_KEY);
     } else {
-      localStorage.setItem(BIRTHDATE_KEY, iso);
+      saveEncryptedKey(BIRTHDATE_KEY, iso);
     }
   } catch (_) {}
 }

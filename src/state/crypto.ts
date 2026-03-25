@@ -3,10 +3,50 @@
 // Passcode key: PBKDF2-derived from user passcode — used for exported backup files.
 
 import type { LedgerData } from './models';
-import { STORAGE_KEY } from './keys';
+import {
+  STORAGE_KEY,
+  INVESTING_KEY,
+  SUB_TRACKER_KEY,
+  LOANS_KEY,
+  CATEGORY_STORAGE_KEY,
+  EXPECTED_COSTS_KEY,
+  EXPECTED_INCOME_KEY,
+  LAST_ADJUSTMENTS_KEY,
+  COASTFIRE_KEY,
+  FEDERAL_REPAYMENT_CONFIG_KEY,
+  BIRTHDATE_KEY,
+  PUBLIC_PAYMENT_NOW_ADDED_KEY,
+  PRIVATE_PAYMENT_NOW_BASE_KEY,
+  LAST_RECOMPUTE_DATE_KEY,
+  PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
+  CARD_REWARD_ADJUSTMENTS_KEY,
+  CARD_REWARD_ONLY_ENTRIES_KEY,
+  REWARDS_VISIBLE_CARD_IDS_KEY,
+} from './keys';
 
 const DEVICE_KEY_LS_KEY = 'iisauhwallet_dk_v1';
 const ENC_PREFIX = 'enc1:';
+
+// All financial/sensitive keys that must be encrypted with the device key.
+const AUX_ENCRYPTED_KEYS: string[] = [
+  INVESTING_KEY,
+  SUB_TRACKER_KEY,
+  LOANS_KEY,
+  CATEGORY_STORAGE_KEY,
+  EXPECTED_COSTS_KEY,
+  EXPECTED_INCOME_KEY,
+  LAST_ADJUSTMENTS_KEY,
+  COASTFIRE_KEY,
+  FEDERAL_REPAYMENT_CONFIG_KEY,
+  BIRTHDATE_KEY,
+  PUBLIC_PAYMENT_NOW_ADDED_KEY,
+  PRIVATE_PAYMENT_NOW_BASE_KEY,
+  LAST_RECOMPUTE_DATE_KEY,
+  PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
+  CARD_REWARD_ADJUSTMENTS_KEY,
+  CARD_REWARD_ONLY_ENTRIES_KEY,
+  REWARDS_VISIBLE_CARD_IDS_KEY,
+];
 
 let deviceKey: CryptoKey | null = null;
 let dataCache: LedgerData | null = null;
@@ -19,6 +59,20 @@ export function getCachedData(): LedgerData | null {
 
 export function setCachedData(data: LedgerData | null): void {
   dataCache = data;
+}
+
+// ── Auxiliary key cache (all other encrypted financial keys) ──────────────
+// undefined (not in map) = not yet initialized; null = key absent from localStorage; string = decrypted value
+
+const auxCache = new Map<string, string | null>();
+
+/** Returns the decrypted value for an aux key, or undefined if initCrypto hasn't run yet. */
+export function getAuxCached(key: string): string | null | undefined {
+  return auxCache.has(key) ? (auxCache.get(key) ?? null) : undefined;
+}
+
+export function setAuxCached(key: string, value: string | null): void {
+  auxCache.set(key, value);
 }
 
 // ── Base64 helpers ────────────────────────────────────────────────────────
@@ -132,23 +186,39 @@ export async function initCrypto(): Promise<void> {
   try {
     deviceKey = await getOrCreateDeviceKey();
 
+    // ── Main ledger key ───────────────────────────────────────────────────
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return; // no data yet
+    if (raw) {
+      if (isEncrypted(raw)) {
+        try {
+          const plain = await decryptWithDeviceKey(raw);
+          dataCache = JSON.parse(plain) as LedgerData;
+        } catch (_) {}
+      } else {
+        try { dataCache = JSON.parse(raw) as LedgerData; } catch (_) {}
+        encryptWithDeviceKey(raw).then((ct) => localStorage.setItem(STORAGE_KEY, ct)).catch(() => {});
+      }
+    }
 
-    if (isEncrypted(raw)) {
-      // Already encrypted — decrypt into cache
+    // ── Auxiliary financial keys ──────────────────────────────────────────
+    for (const k of AUX_ENCRYPTED_KEYS) {
       try {
-        const plain = await decryptWithDeviceKey(raw);
-        dataCache = JSON.parse(plain) as LedgerData;
-      } catch (_) {}
-    } else {
-      // Plaintext data — parse into cache and migrate to encrypted (fire-and-forget)
-      try {
-        dataCache = JSON.parse(raw) as LedgerData;
-      } catch (_) {}
-      encryptWithDeviceKey(raw)
-        .then((ct) => localStorage.setItem(STORAGE_KEY, ct))
-        .catch(() => {});
+        const rawAux = localStorage.getItem(k);
+        if (!rawAux) {
+          auxCache.set(k, null);
+        } else if (isEncrypted(rawAux)) {
+          try {
+            auxCache.set(k, await decryptWithDeviceKey(rawAux));
+          } catch (_) {
+            auxCache.set(k, null); // decryption failed — treat as missing
+          }
+        } else {
+          auxCache.set(k, rawAux);
+          encryptWithDeviceKey(rawAux).then((ct) => localStorage.setItem(k, ct)).catch(() => {});
+        }
+      } catch (_) {
+        auxCache.set(k, null);
+      }
     }
   } catch (_) {
     deviceKey = null; // crypto unavailable — graceful degradation to plaintext
