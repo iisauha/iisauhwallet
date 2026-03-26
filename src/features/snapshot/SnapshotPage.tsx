@@ -122,11 +122,6 @@ function RecentActivityWidget() {
               ) : (
                 <div className="recent-activity-type">{a.descriptor ?? a.type}</div>
               )}
-              {a.notes ? (
-                <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 1, fontStyle: 'italic' }}>
-                  Note: {a.notes}
-                </div>
-              ) : null}
             </div>
           </div>
         ))
