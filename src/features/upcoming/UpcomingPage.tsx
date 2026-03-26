@@ -221,7 +221,7 @@ export function UpcomingPage() {
   return (
     <div className="tab-panel active" id="upcomingContent">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
-        <p className="section-title page-title" style={{ margin: 0 }}>Upcoming Cashflow</p>
+        <p className="section-title page-title" style={{ margin: 0 }}>Upcoming</p>
         <Select
           value={String(windowDays)}
           onChange={(e) => {
@@ -263,7 +263,7 @@ export function UpcomingPage() {
                 </span>
               </div>
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(i.expectedDate)}</div>
-              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -286,7 +286,6 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-danger"
-                  style={{ minHeight: 44 }}
                   onClick={() => {
                     if (!confirm('Remove this expected income from Upcoming?')) return;
                     const next = expectedIncome.filter((x) => x.id !== i.id);
@@ -312,7 +311,7 @@ export function UpcomingPage() {
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                 {formatExpectedTiming(i.expectedDate)} • From recurring
               </div>
-              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -335,7 +334,6 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-danger"
-                  style={{ minHeight: 44 }}
                   onClick={() => {
                     if (!confirm('Remove this occurrence from Upcoming only? Your recurring income is not changed.')) return;
                     dismissUpcomingOccurrence('inc', i.recurringId, i.expectedDate);
@@ -396,7 +394,7 @@ export function UpcomingPage() {
                 </span>
               </div>
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(c.expectedDate)}</div>
-              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -419,7 +417,6 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-danger"
-                  style={{ minHeight: 44 }}
                   onClick={() => {
                     if (!confirm('Remove this expected cost from Upcoming?')) return;
                     const next = expectedCosts.filter((x) => x.id !== c.id);
@@ -445,7 +442,7 @@ export function UpcomingPage() {
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
                 {formatExpectedTiming(c.dateKey)} • From recurring
               </div>
-              <div className="btn-row" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -474,7 +471,6 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-danger"
-                  style={{ minHeight: 44 }}
                   onClick={() => {
                     if (!confirm('Remove this occurrence from Upcoming only? Your recurring expense is not changed.')) return;
                     dismissUpcomingOccurrence('exp', c.recurringId, c.dateKey);

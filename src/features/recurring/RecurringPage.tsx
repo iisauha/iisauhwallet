@@ -126,13 +126,11 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
 
   return (
     <div className="tab-panel active" id="recurringContent">
-      <p className="section-title page-title">Recurring Items</p>
+      <p className="section-title page-title">Recurring</p>
       <div
         className="section-header"
         style={{
           marginTop: 16,
-          fontSize: '1.05rem',
-          fontWeight: 640,
           borderRadius: 10
         }}
         onClick={() => setIncomeCollapsed(!incomeCollapsed)}
@@ -288,9 +286,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
         className="section-header recurring-expenses-section-header"
         style={{
           marginTop: 24,
-          fontSize: '1.05rem',
-          fontWeight: 640,
-          padding: '8px 12px',
           borderRadius: 10
         }}
         onClick={() => setExpensesSectionCollapsed(!expensesSectionCollapsed)}
