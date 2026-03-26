@@ -1670,36 +1670,36 @@ input[type="checkbox"]:focus-visible {
 .bg-blob-1 {
   width: 90vw; height: 96vw;
   top: 8vh; left: 4vw;
-  filter: blur(62px);
+  filter: blur(54px);
   opacity: 0.17;
   border-radius: 58% 42% 54% 46% / 46% 60% 40% 54%;
-  animation: llBase 110s ease-in-out infinite;
+  animation: llBase 102s ease-in-out infinite;
 }
 
 /* ── 3 satellites — same speed, opacity, color as base ── */
 .bg-blob-2 {
   width: 34vw; height: 38vw;
   top: -8vh; left: 12vw;
-  filter: blur(60px);
+  filter: blur(52px);
   opacity: 0.17;
   border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%;
-  animation: llSat1 110s ease-in-out infinite;
+  animation: llSat1 102s ease-in-out infinite;
 }
 .bg-blob-3 {
   width: 30vw; height: 34vw;
   bottom: -6vh; right: 10vw;
-  filter: blur(60px);
+  filter: blur(52px);
   opacity: 0.17;
   border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%;
-  animation: llSat2 110s ease-in-out infinite;
+  animation: llSat2 102s ease-in-out infinite;
 }
 .bg-blob-4 {
   width: 28vw; height: 32vw;
   top: 50vh; right: -6vw;
-  filter: blur(60px);
+  filter: blur(52px);
   opacity: 0.17;
   border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%;
-  animation: llSat3 110s ease-in-out infinite;
+  animation: llSat3 102s ease-in-out infinite;
 }
 
 /* Base: slow gentle morph, minimal drift */

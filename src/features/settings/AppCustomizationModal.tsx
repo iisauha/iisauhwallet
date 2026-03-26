@@ -6,31 +6,41 @@ import type { AdvancedUIColors } from '../../state/storage';
 import { Select } from '../../ui/Select';
 
 const FONT_FAMILY_OPTIONS = [
-  // Premium modern
-  { key: 'dmsans',      label: 'DM Sans',           group: 'Premium' },
-  { key: 'manrope',     label: 'Manrope',            group: 'Premium' },
-  { key: 'outfit',      label: 'Outfit',             group: 'Premium' },
-  { key: 'jakarta',     label: 'Plus Jakarta Sans',  group: 'Premium' },
-  { key: 'spaceGrotesk',label: 'Space Grotesk',      group: 'Premium' },
-  { key: 'nunito',      label: 'Nunito',             group: 'Premium' },
-  { key: 'raleway',     label: 'Raleway',            group: 'Premium' },
-  { key: 'poppins',     label: 'Poppins',            group: 'Premium' },
+  // Iconic / brand-associated (~70% sans)
+  { key: 'system',        label: 'SF Pro / System',     group: 'Iconic' },
+  { key: 'helveticaNeue', label: 'Helvetica Neue',      group: 'Iconic' },
+  { key: 'roboto',        label: 'Roboto  (Google)',     group: 'Iconic' },
+  { key: 'inter',         label: 'Inter  (Figma/Linear)',group: 'Iconic' },
+  { key: 'montserrat',    label: 'Montserrat',           group: 'Iconic' },
+  { key: 'opensans',      label: 'Open Sans  (Google)',  group: 'Iconic' },
+  { key: 'lato',          label: 'Lato',                 group: 'Iconic' },
+  { key: 'ibmPlexSans',   label: 'IBM Plex Sans  (IBM)', group: 'Iconic' },
+  // Premium modern sans
+  { key: 'dmsans',        label: 'DM Sans',              group: 'Modern' },
+  { key: 'manrope',       label: 'Manrope',              group: 'Modern' },
+  { key: 'outfit',        label: 'Outfit',               group: 'Modern' },
+  { key: 'jakarta',       label: 'Plus Jakarta Sans',    group: 'Modern' },
+  { key: 'spaceGrotesk',  label: 'Space Grotesk',        group: 'Modern' },
+  { key: 'nunito',        label: 'Nunito',               group: 'Modern' },
+  { key: 'raleway',       label: 'Raleway',              group: 'Modern' },
+  { key: 'figtree',       label: 'Figtree',              group: 'Modern' },
+  { key: 'workSans',      label: 'Work Sans',            group: 'Modern' },
+  { key: 'sourceSans',    label: 'Source Sans 3  (Adobe)',group: 'Modern'},
+  { key: 'poppins',       label: 'Poppins',              group: 'Modern' },
   // Classic sans
-  { key: 'system',      label: 'System Default',     group: 'Classic' },
-  { key: 'inter',       label: 'Inter',              group: 'Classic' },
-  { key: 'roboto',      label: 'Roboto',             group: 'Classic' },
-  { key: 'helvetica',   label: 'Helvetica',          group: 'Classic' },
-  { key: 'arial',       label: 'Arial',              group: 'Classic' },
-  { key: 'verdana',     label: 'Verdana',            group: 'Classic' },
-  { key: 'calibri',     label: 'Calibri',            group: 'Classic' },
-  { key: 'trebuchet',   label: 'Trebuchet MS',       group: 'Classic' },
-  // Serif / editorial
-  { key: 'playfair',    label: 'Playfair Display',   group: 'Serif' },
-  { key: 'georgia',     label: 'Georgia',            group: 'Serif' },
-  { key: 'garamond',    label: 'Garamond',           group: 'Serif' },
-  { key: 'times',       label: 'Times New Roman',    group: 'Serif' },
+  { key: 'helvetica',     label: 'Helvetica',            group: 'Classic' },
+  { key: 'arial',         label: 'Arial',                group: 'Classic' },
+  { key: 'verdana',       label: 'Verdana',              group: 'Classic' },
+  { key: 'calibri',       label: 'Calibri',              group: 'Classic' },
+  { key: 'trebuchet',     label: 'Trebuchet MS',         group: 'Classic' },
+  // Serif / editorial (~30%)
+  { key: 'playfair',      label: 'Playfair Display',     group: 'Serif' },
+  { key: 'merriweather',  label: 'Merriweather',         group: 'Serif' },
+  { key: 'georgia',       label: 'Georgia',              group: 'Serif' },
+  { key: 'garamond',      label: 'Garamond',             group: 'Serif' },
+  { key: 'times',         label: 'Times New Roman',      group: 'Serif' },
   // Mono
-  { key: 'courier',     label: 'Courier New',        group: 'Mono' },
+  { key: 'courier',       label: 'Courier New',          group: 'Mono' },
 ];
 
 const FONT_SCALE_OPTIONS = [
@@ -204,9 +214,110 @@ const PRESET_THEMES: PresetTheme[] = [
       titleText: '#111111', primaryText: '#333333', outlineButton: '#333333', addButton: '#E8673A',
     },
   },
+  // ── High-contrast dark themes ──
+  {
+    id: 'cobalt',
+    name: 'Cobalt',
+    themeColor: '#080c16',
+    accentColor: '#3b82f6',
+    advancedColors: {
+      cardBg: '#111828', surfaceSecondary: '#0e1524', sectionBg: '#101726',
+      modalBg: '#182030', tabBarBg: '#0a1020', border: '#1e2e48',
+      titleText: '#e8f0ff', primaryText: '#a8c0e8', outlineButton: '#a8c0e8', addButton: '#3b82f6',
+    },
+  },
+  {
+    id: 'berry',
+    name: 'Berry',
+    themeColor: '#0e0814',
+    accentColor: '#d946ef',
+    advancedColors: {
+      cardBg: '#1a1024', surfaceSecondary: '#160d20', sectionBg: '#180f22',
+      modalBg: '#22162e', tabBarBg: '#120a1c', border: '#321848',
+      titleText: '#f5e8ff', primaryText: '#d4a8e8', outlineButton: '#d4a8e8', addButton: '#d946ef',
+    },
+  },
+  {
+    id: 'teal',
+    name: 'Deep Teal',
+    themeColor: '#060f0e',
+    accentColor: '#0d9488',
+    advancedColors: {
+      cardBg: '#0e1e1c', surfaceSecondary: '#0b1918', sectionBg: '#0d1c1a',
+      modalBg: '#142826', tabBarBg: '#081614', border: '#183028',
+      titleText: '#e0f5f2', primaryText: '#a0d4cc', outlineButton: '#a0d4cc', addButton: '#0d9488',
+    },
+  },
+  {
+    id: 'crimson',
+    name: 'Crimson',
+    themeColor: '#120606',
+    accentColor: '#ef4444',
+    advancedColors: {
+      cardBg: '#1e0e0e', surfaceSecondary: '#190b0b', sectionBg: '#1c0d0d',
+      modalBg: '#281414', tabBarBg: '#160808', border: '#3a1414',
+      titleText: '#fff0f0', primaryText: '#e8b8b8', outlineButton: '#e8b8b8', addButton: '#ef4444',
+    },
+  },
+  {
+    id: 'royal',
+    name: 'Royal',
+    themeColor: '#040812',
+    accentColor: '#d97706',
+    advancedColors: {
+      cardBg: '#0c1428', surfaceSecondary: '#091022', sectionBg: '#0a1224',
+      modalBg: '#101a30', tabBarBg: '#060c1c', border: '#182040',
+      titleText: '#fff8e8', primaryText: '#d4b87a', outlineButton: '#d4b87a', addButton: '#d97706',
+    },
+  },
+  {
+    id: 'copper',
+    name: 'Copper',
+    themeColor: '#110a04',
+    accentColor: '#ea580c',
+    advancedColors: {
+      cardBg: '#1c1008', surfaceSecondary: '#180d06', sectionBg: '#1a0f07',
+      modalBg: '#26180c', tabBarBg: '#140c04', border: '#381a0c',
+      titleText: '#fff4ec', primaryText: '#e0bca0', outlineButton: '#e0bca0', addButton: '#ea580c',
+    },
+  },
+  {
+    id: 'aurora',
+    name: 'Aurora',
+    themeColor: '#060c10',
+    accentColor: '#06b6d4',
+    advancedColors: {
+      cardBg: '#0e1c22', surfaceSecondary: '#0b181e', sectionBg: '#0d1a20',
+      modalBg: '#14242c', tabBarBg: '#08141a', border: '#16303a',
+      titleText: '#e0f8ff', primaryText: '#90d0e0', outlineButton: '#90d0e0', addButton: '#06b6d4',
+    },
+  },
+  // ── Light themes ──
+  {
+    id: 'frost',
+    name: 'Frost',
+    themeColor: '#eef2ff',
+    accentColor: '#1d4ed8',
+    advancedColors: {
+      cardBg: '#ffffff', surfaceSecondary: '#e4e8f8', sectionBg: '#f0f3fc',
+      modalBg: '#ffffff', tabBarBg: '#e8ecf8', border: '#c0c8e8',
+      titleText: '#0a0e2a', primaryText: '#1e2a5a', outlineButton: '#1e2a5a', addButton: '#1d4ed8',
+    },
+  },
+  {
+    id: 'mono',
+    name: 'Mono',
+    themeColor: '#f8f8f8',
+    accentColor: '#18181b',
+    advancedColors: {
+      cardBg: '#ffffff', surfaceSecondary: '#efefef', sectionBg: '#f4f4f4',
+      modalBg: '#ffffff', tabBarBg: '#f0f0f0', border: '#d4d4d8',
+      titleText: '#09090b', primaryText: '#27272a', outlineButton: '#27272a', addButton: '#18181b',
+    },
+  },
 ];
 
-const FONT_GROUPS = ['Premium', 'Classic', 'Serif', 'Mono'] as const;
+const FONT_GROUPS = ['Iconic', 'Modern', 'Classic', 'Serif', 'Mono'] as const;
 
 export function AppCustomizationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { themeColor, setThemeColor, setAccentColor } = useTheme();
