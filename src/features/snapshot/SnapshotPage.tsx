@@ -575,7 +575,13 @@ export function SnapshotPage({
                           onClick={(e) => {
                             e.stopPropagation();
                             const rules = getEffectiveRules(c);
-                            const initialRules: RewardRule[] = rules.length > 0 ? rules : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
+                            // Migrate legacy single-category rules to categories[] format
+                            const migrateRule = (r: RewardRule): RewardRule => {
+                              if ((r.categories?.length ?? 0) > 0) return r;
+                              if (r.isCatchAll || !r.category) return { ...r, categories: [] };
+                              return { ...r, categories: [{ category: r.category, subcategory: r.subcategory || undefined }] };
+                            };
+                            const initialRules: RewardRule[] = rules.length > 0 ? rules.map(migrateRule) : [{ id: uid(), category: '', subcategory: '', categories: [], value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
                             const valueInputs: Record<string, string> = {};
                             initialRules.forEach((r) => { valueInputs[r.id] = r.value === 0 ? '' : String(r.value); });
                             setModal({
@@ -993,7 +999,7 @@ export function SnapshotPage({
                 setModal({ ...modal, rules: next });
               };
               const addRule = () => {
-                const newRule: RewardRule = { id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false };
+                const newRule: RewardRule = { id: uid(), category: '', subcategory: '', categories: [], value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false };
                 setModal({
                   ...modal,
                   rules: [...modal.rules, newRule],
@@ -1002,7 +1008,7 @@ export function SnapshotPage({
               };
               const removeRule = (idx: number) => {
                 const next = modal.rules.filter((_, i) => i !== idx);
-                const newRules: RewardRule[] = next.length > 0 ? next : [{ id: uid(), category: '', subcategory: '', value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
+                const newRules: RewardRule[] = next.length > 0 ? next : [{ id: uid(), category: '', subcategory: '', categories: [], value: 1.5, unit: 'cashback_percent' as RewardUnitType, isCatchAll: false }];
                 const nextInputs = { ...modal.valueInputs };
                 if (modal.rules[idx]) delete nextInputs[modal.rules[idx].id];
                 if (next.length === 0) nextInputs[newRules[0].id] = '';
@@ -1013,7 +1019,7 @@ export function SnapshotPage({
                 setModal({ ...modal, rules: next });
               };
               const validRules = modal.rules
-                .filter((r) => r.isCatchAll || (r.category && r.category.trim()))
+                .filter((r) => r.isCatchAll || (r.categories && r.categories.length > 0) || (r.category && r.category.trim()))
                 .map((r) => ({
                   ...r,
                   value: (() => { const n = parseFloat(modal.valueInputs[r.id] ?? String(r.value)); return Number.isNaN(n) ? 0 : n; })()
@@ -1025,75 +1031,97 @@ export function SnapshotPage({
                     Add rules for category/subcategory. Exact match wins; catch-all applies when no rule matches.
                   </p>
                   {modal.rules.map((rule, idx) => {
-                    const subs = getCategorySubcategories(cfg, rule.category);
+                    const pairs = rule.categories ?? [];
                     return (
-                      <div key={rule.id} className="card" style={{ padding: 10, marginBottom: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Rule {idx + 1}</span>
-                          <button type="button" className="btn clear-btn" style={{ padding: '2px 8px', fontSize: '0.8rem' }} onClick={() => removeRule(idx)}>Remove</button>
+                      <div key={rule.id} style={{ background: 'var(--ui-surface-secondary, var(--surface))', border: '1px solid var(--ui-border, var(--border))', borderRadius: 12, padding: '10px 12px', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rule {idx + 1}</span>
+                          <button type="button" className="btn clear-btn" style={{ padding: '2px 8px', fontSize: '0.75rem', minHeight: 'unset' }} onClick={() => removeRule(idx)}>Remove</button>
                         </div>
-                        <div className="field">
-                          <label>Category</label>
-                          <Select
-                            value={rule.category}
-                            onChange={(e) => updateRule(idx, { category: e.target.value, subcategory: '' })}
-                          >
-                            <option value="">None</option>
-                            {Object.keys(cfg).map((id) => (
-                              <option key={id} value={id}>{getCategoryName(cfg, id)}</option>
-                            ))}
-                          </Select>
-                        </div>
-                        {subs.length > 0 ? (
-                          <div className="field">
-                            <label>Subcategory (blank = whole category)</label>
-                            <Select
-                              value={rule.subcategory || ''}
-                              onChange={(e) => updateRule(idx, { subcategory: e.target.value })}
-                            >
-                              <option value="">None</option>
-                              {subs.map((s) => (
-                                <option key={s} value={s}>{s}</option>
-                              ))}
-                            </Select>
-                          </div>
-                        ) : null}
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <div className="field" style={{ flex: '1 1 80px' }}>
-                            <label>Value</label>
+
+                        {/* Rate row: value + unit inline */}
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-end' }}>
+                          <div style={{ flex: '0 0 80px' }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Rate</label>
                             <input
                               type="text"
                               inputMode="decimal"
-                              placeholder="e.g. 4 or 1.5"
+                              placeholder="1.5"
                               value={modal.valueInputs[rule.id] ?? (rule.value === 0 ? '' : String(rule.value))}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setModal({ ...modal, valueInputs: { ...modal.valueInputs, [rule.id]: v } });
-                              }}
-                              style={{ width: '100%' }}
+                              onChange={(e) => setModal({ ...modal, valueInputs: { ...modal.valueInputs, [rule.id]: e.target.value } })}
+                              style={{ width: '100%', padding: '6px 8px', fontSize: '0.9rem', borderRadius: 8, border: '1px solid var(--ui-border, var(--border))', background: 'var(--ui-card-bg, var(--surface))', color: 'var(--ui-primary-text, var(--text))' }}
                             />
                           </div>
-                          <div className="field" style={{ flex: '1 1 120px' }}>
-                            <label>Type</label>
-                            <Select
-                              value={rule.unit}
-                              onChange={(e) => updateRule(idx, { unit: e.target.value as RewardRule['unit'] })}
-                            >
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Type</label>
+                            <Select value={rule.unit} onChange={(e) => updateRule(idx, { unit: e.target.value as RewardRule['unit'] })}>
                               <option value="cashback_percent">% cashback</option>
                               <option value="points_multiplier">× points</option>
                               <option value="miles_multiplier">× miles</option>
                             </Select>
                           </div>
                         </div>
-                        <div className="toggle-row" style={{ marginTop: 6 }}>
-                          <input
-                            type="checkbox"
-                            id={`catchAll-${idx}`}
-                            checked={!!rule.isCatchAll}
-                            onChange={(e) => setCatchAll(idx, e.target.checked)}
-                          />
-                          <label htmlFor={`catchAll-${idx}`}>Catch-all (use when no other rule matches)</label>
+
+                        {/* Catch-all toggle */}
+                        <div className="toggle-row" style={{ margin: '0 0 8px' }}>
+                          <input type="checkbox" id={`catchAll-${idx}`} checked={!!rule.isCatchAll} onChange={(e) => setCatchAll(idx, e.target.checked)} />
+                          <label htmlFor={`catchAll-${idx}`} style={{ fontSize: '0.82rem' }}>Catch-all (fallback when no other rule matches)</label>
                         </div>
+
+                        {/* Multi-category pairs */}
+                        {!rule.isCatchAll && (
+                          <div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 5 }}>
+                              Categories ({pairs.length === 0 ? 'none — add below' : `${pairs.length} selected`})
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
+                              {pairs.map((pair, pi) => (
+                                <span key={pi} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: 'color-mix(in srgb, var(--ui-add-btn, var(--accent)) 14%, transparent)', color: 'var(--ui-add-btn, var(--accent))', fontSize: '0.75rem', fontWeight: 600 }}>
+                                  {getCategoryName(cfg, pair.category)}{pair.subcategory ? ` → ${pair.subcategory}` : ''}
+                                  <button type="button" onClick={() => updateRule(idx, { categories: pairs.filter((_, i) => i !== pi) })} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', fontSize: '0.85rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>×</button>
+                                </span>
+                              ))}
+                            </div>
+                            {/* Inline add pair */}
+                            {(() => {
+                              const [addCat, setAddCat] = [
+                                (modal as any)[`_addCat_${rule.id}`] ?? '',
+                                (v: string) => setModal({ ...modal, [`_addCat_${rule.id}`]: v, [`_addSub_${rule.id}`]: '' } as any),
+                              ];
+                              const addSub = (modal as any)[`_addSub_${rule.id}`] ?? '';
+                              const addSubSetter = (v: string) => setModal({ ...modal, [`_addSub_${rule.id}`]: v } as any);
+                              const addSubs = getCategorySubcategories(cfg, addCat);
+                              return (
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                                  <Select value={addCat} onChange={(e) => setAddCat(e.target.value)} style={{ flex: '1 1 120px', fontSize: '0.82rem', padding: '5px 8px', minHeight: 'unset' }}>
+                                    <option value="">+ Category</option>
+                                    {Object.keys(cfg).map((id) => <option key={id} value={id}>{getCategoryName(cfg, id)}</option>)}
+                                  </Select>
+                                  {addSubs.length > 0 && (
+                                    <Select value={addSub} onChange={(e) => addSubSetter(e.target.value)} style={{ flex: '1 1 100px', fontSize: '0.82rem', padding: '5px 8px', minHeight: 'unset' }}>
+                                      <option value="">Any sub</option>
+                                      {addSubs.map((s) => <option key={s} value={s}>{s}</option>)}
+                                    </Select>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="snapshot-add-btn"
+                                    style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                                    disabled={!addCat}
+                                    onClick={() => {
+                                      if (!addCat) return;
+                                      const newPair = { category: addCat, subcategory: addSub || undefined };
+                                      updateRule(idx, { categories: [...pairs, newPair] });
+                                      setModal({ ...modal, [`_addCat_${rule.id}`]: '', [`_addSub_${rule.id}`]: '' } as any);
+                                    }}
+                                  >
+                                    Add
+                                  </button>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

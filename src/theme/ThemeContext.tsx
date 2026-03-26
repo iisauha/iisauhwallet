@@ -22,6 +22,11 @@ function applyThemeColor(appBackgroundHex: string) {
   const root = document.documentElement.style;
   const defaults = getThemeColorsFromHex(DEFAULT_THEME_COLOR);
   root.setProperty('--bg', appBackgroundHex);
+  // Sync browser chrome / status bar color so there's no dark strip on iOS Safari refresh
+  try {
+    const mt = document.querySelector('meta[name="theme-color"]');
+    if (mt) mt.setAttribute('content', appBackgroundHex);
+  } catch (_) {}
   root.setProperty('--bg-secondary', defaults.bgSecondary);
   root.setProperty('--surface', defaults.surface);
   root.setProperty('--surface-hover', defaults.surfaceHover);

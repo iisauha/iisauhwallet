@@ -23,6 +23,39 @@ export function getEffectiveRules(card: CreditCard): RewardRule[] {
   ];
 }
 
+/** Check if a rule matches the given category/subcategory (supports multi-category rules). */
+function ruleMatchesCatSub(r: RewardRule, cat: string, sub: string): boolean {
+  if (r.isCatchAll) return false;
+  // Multi-category path (new format)
+  if (r.categories && r.categories.length > 0) {
+    return r.categories.some(
+      (p) => p.category === cat && (sub === '' || (p.subcategory || '').trim() === sub || !(p.subcategory || '').trim())
+    );
+  }
+  // Legacy single-category path
+  return r.category === cat;
+}
+
+/** Check if a rule matches category+subcategory exactly (exact sub match). */
+function ruleMatchesExact(r: RewardRule, cat: string, sub: string): boolean {
+  if (r.isCatchAll) return false;
+  if (r.categories && r.categories.length > 0) {
+    return r.categories.some(
+      (p) => p.category === cat && (p.subcategory || '').trim() === sub
+    );
+  }
+  return r.category === cat && (r.subcategory || '').trim() === sub;
+}
+
+/** Check if a rule matches the whole category (no subcategory restriction). */
+function ruleMatchesCategoryOnly(r: RewardRule, cat: string): boolean {
+  if (r.isCatchAll) return false;
+  if (r.categories && r.categories.length > 0) {
+    return r.categories.some((p) => p.category === cat && !(p.subcategory || '').trim());
+  }
+  return r.category === cat && !(r.subcategory || '').trim();
+}
+
 /** Match rule by category/subcategory or catch-all. Used for recommendation only. */
 export function matchRule(
   rules: RewardRule[],
@@ -32,22 +65,16 @@ export function matchRule(
   const sub = (subcategory || '').trim();
   const cat = (category || '').trim();
   if (!cat) {
-    const catchAll = rules.find((r) => r.isCatchAll);
-    return catchAll || null;
+    return rules.find((r) => r.isCatchAll) || null;
   }
 
-  const exact = rules.find(
-    (r) => !r.isCatchAll && r.category === cat && (r.subcategory || '').trim() === sub
-  );
+  const exact = rules.find((r) => ruleMatchesExact(r, cat, sub));
   if (exact) return exact;
 
-  const categoryOnly = rules.find(
-    (r) => !r.isCatchAll && r.category === cat && !(r.subcategory || '').trim()
-  );
+  const categoryOnly = rules.find((r) => ruleMatchesCategoryOnly(r, cat));
   if (categoryOnly) return categoryOnly;
 
-  const catchAll = rules.find((r) => r.isCatchAll);
-  return catchAll || null;
+  return rules.find((r) => r.isCatchAll) || null;
 }
 
 /** Percentage value for comparing rules (recommendation priority). Higher = better. */

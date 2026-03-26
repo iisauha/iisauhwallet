@@ -7,6 +7,18 @@
     <link rel="apple-touch-icon" href="/iisauhwallet/icon.png" />
     <meta name="theme-color" content="#0b0b0f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <script>
+      (function() {
+        try {
+          var bg = localStorage.getItem('iisauhwallet_app_theme_color_v1');
+          if (bg && /^#[0-9A-Fa-f]{6}$/.test(bg)) {
+            document.documentElement.style.setProperty('--bg', bg);
+            var mt = document.querySelector('meta[name="theme-color"]');
+            if (mt) mt.setAttribute('content', bg);
+          }
+        } catch(e) {}
+      })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- CSP: allow Plaid Link and reCAPTCHA (required for bank connection flow) -->

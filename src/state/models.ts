@@ -15,9 +15,16 @@ export type RewardUnitType = 'cashback_percent' | 'points_multiplier' | 'miles_m
 
 export interface RewardRule {
   id: string;
+  /** Legacy single-category field. Prefer categories[] for new rules. */
   category: string;
-  /** Omit or empty = category-only rule (matches any subcategory under category). */
+  /** Legacy single-subcategory field. */
   subcategory?: string;
+  /**
+   * Multi-category pairs. When present and non-empty, takes precedence over
+   * the legacy category/subcategory fields. Allows grouping e.g. Food AND
+   * Home Necessities under the same 2x rate in a single rule.
+   */
+  categories?: { category: string; subcategory?: string }[];
   /** Numeric value: % for cashback, multiplier for points/miles (e.g. 4 = 4%, 3 = 3x). */
   value: number;
   unit: RewardUnitType;

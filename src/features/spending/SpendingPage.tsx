@@ -677,13 +677,14 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
 
       {view === 'category' && drilldownCategoryId ? (
-        <div style={{ marginTop: 12, marginBottom: 0 }}>
+        <div style={{ marginTop: 8 }}>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="snapshot-add-btn"
             onClick={() => setDrilldownCategoryId(null)}
+            style={{ fontSize: '0.78rem' }}
           >
-            Show all categories
+            ← All categories
           </button>
         </div>
       ) : null}

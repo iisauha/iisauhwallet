@@ -34,6 +34,7 @@
 html {
   -webkit-tap-highlight-color: transparent;
   font-size: calc(16px * var(--app-font-scale));
+  background: var(--bg);
 }
 body {
   margin: 0;
@@ -485,7 +486,7 @@ input[type="date"].ll-control:focus {
   font-family: var(--app-font-family);
   background: var(--ui-modal-bg, var(--ui-card-bg, var(--surface)));
   border-radius: 20px;
-  padding: 24px 20px 20px;
+  padding: 20px 18px 16px;
   border: 1px solid var(--ui-border, var(--border));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -539,23 +540,38 @@ input[type="date"].ll-control:focus {
   .section-header:active { background: var(--ui-section-bg, var(--ui-card-bg, var(--surface))); }
   .icon-btn:hover { background: transparent; }
 }
-.modal h3 { margin: 0 0 18px 0; font-size: 1.2rem; color: var(--ui-title-text, var(--text)); font-weight: 700; }
-.modal .field { margin-bottom: 16px; }
-.modal label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; letter-spacing: 0.02em; }
-.modal input, .modal select, .modal textarea {
+.modal h3 { margin: 0 0 12px 0; font-size: 1.1rem; color: var(--ui-title-text, var(--text)); font-weight: 700; }
+.modal .field { margin-bottom: 12px; }
+.modal label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 500; letter-spacing: 0.02em; }
+.modal input:not([type="checkbox"]):not([type="radio"]),
+.modal select,
+.modal textarea {
   width: 100%;
-  min-height: 48px;
-  padding: 12px 14px;
-  font-size: 1rem;
-  border-radius: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  border-radius: 10px;
   border: 1px solid var(--ui-border, var(--border));
   background: var(--ui-surface-secondary, var(--surface));
   color: var(--ui-primary-text, var(--text));
-  transition: border-color 0.15s ease;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
-.modal input:focus, .modal select:focus, .modal textarea:focus {
+.modal input:not([type="checkbox"]):not([type="radio"]):focus,
+.modal select:focus,
+.modal textarea:focus {
   outline: none;
   border-color: var(--ui-add-btn, var(--accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 18%, transparent);
+}
+/* Checkboxes inside modals must NOT get the full-width override */
+.modal input[type="checkbox"],
+.modal input[type="radio"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  min-width: 18px !important;
+  align-self: center;
+  flex-shrink: 0;
 }
 
 /* Spending: remove the small caret that looks like an "upside down range". */
@@ -584,8 +600,7 @@ input[type="date"].ll-control:focus {
 
 .section-title { font-size: 1.125rem; font-weight: 600; font-family: var(--app-font-family); color: var(--ui-title-text, var(--text)); margin: 0 0 12px 0; }
 .settings-section { margin-bottom: 24px; }
-.toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
-.toggle-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+.toggle-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
 
 .settings-outline-trigger {
   display: block;
@@ -1381,9 +1396,9 @@ textarea.ll-control {
 input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
   border: 1.5px solid var(--ui-border, var(--border));
   border-radius: 6px;
   background: var(--ui-card-bg, var(--surface));
@@ -1434,11 +1449,9 @@ input[type="checkbox"]:focus-visible {
   background: var(--ui-tabbar-bg, var(--bg));
 }
 
-/* ─── Tab bar glass effect ────────────────────────────────────────── */
+/* ─── Tab bar: fully opaque to prevent background bleed-through ────── */
 .tabs {
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 88%, transparent);
+  background: var(--ui-tabbar-bg, var(--surface));
 }
 
 /* ─── Modal glass effect ──────────────────────────────────────────── */

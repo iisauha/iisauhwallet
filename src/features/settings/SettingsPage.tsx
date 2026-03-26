@@ -194,6 +194,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [resetPasscodeOpen, setResetPasscodeOpen] = useState(false);
   const [pausePasscodeStep, setPausePasscodeStep] = useState<0 | 1 | 2>(0);
   const [aboutCreatorOpen, setAboutCreatorOpen] = useState(false);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
@@ -569,6 +570,12 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       <p className="settings-group-label">About</p>
       <div className="settings-list">
         <SettingsRow
+          icon={<IconQuestionMark />}
+          iconBg="#0EA5E9"
+          label="How This App Works"
+          onClick={() => setHowItWorksOpen(true)}
+        />
+        <SettingsRow
           icon={<IconUser />}
           iconBg="#8B5CF6"
           label="About the Creator"
@@ -738,6 +745,50 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               {challengeCountdown > 0 ? `Try again in ${challengeCountdown}s…` : 'Confirm'}
             </button>
           </div>
+        </Modal>
+      )}
+
+      {howItWorksOpen && (
+        <Modal open={true} title="How This App Works" onClose={() => setHowItWorksOpen(false)}>
+          {(() => {
+            const s = { margin: '0 0 14px 0', fontSize: '0.9rem', lineHeight: 1.55, color: 'var(--ui-primary-text, var(--text))' } as const;
+            const h = { margin: '18px 0 6px', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--muted)' };
+            return (
+              <div style={{ color: 'var(--ui-primary-text, var(--text))' }}>
+                <p style={h}>Snapshot</p>
+                <p style={s}>Your financial home base. See all your bank accounts, credit card balances, and current net cash in one place. The top number is your true available cash: total bank money minus what you owe on credit cards, adjusted for pending transactions. Tap any account to update its balance.</p>
+
+                <p style={h}>Pending Inbound and Outbound</p>
+                <p style={s}>Pending Inbound is money on its way to you (paycheck just arrived, Venmo incoming, refund). Pending Outbound is money you have committed but not yet paid (bill due, transfer in progress). Both affect your net cash so you always see your real position, not a stale one.</p>
+
+                <p style={h}>Spending</p>
+                <p style={s}>Log every purchase. Purchases are grouped by category (Food, Travel, etc.) and shown in a pie chart. Tap a slice to drill into that category. The app suggests which credit card earns the best reward for each purchase based on the rules you set. You can split purchases and track what is being reimbursed to you.</p>
+
+                <p style={h}>Upcoming</p>
+                <p style={s}>Plan ahead. Add one-time income or costs you expect in the next 30, 60, or 90 days. Recurring items from your Recurring tab appear here automatically. When something happens, tap Move to Pending and it flows into your Snapshot. Shows a running total of what you will have left after expected bills.</p>
+
+                <p style={h}>Recurring</p>
+                <p style={s}>Set up regular income and expenses: paychecks, rent, subscriptions. Enter the amount, frequency, and start date. Income entries support pre-tax deductions like 401k or health insurance, and can link to an investing account. Expenses can auto-pay from a specific bank or card.</p>
+
+                <p style={h}>Loans</p>
+                <p style={s}>Track student loans and private loans. See current balance, estimated monthly payment, and loan type. Public loans can be imported and linked to income-driven repayment estimates. Private loans track principal and can be linked to a recurring payment so the balance reduces automatically when you post a payment.</p>
+
+                <p style={h}>Investing</p>
+                <p style={s}>Track HYSA (high-yield savings) and general investment accounts. You can mark a portion of your HYSA as reserved for specific bills so it does not show as free cash. General accounts track contributions and current value.</p>
+
+                <p style={h}>Bonuses (SUB Tracker)</p>
+                <p style={s}>Track credit card sign-up bonuses. Enter the total spend required and the deadline. The app computes your required daily pace and compares it to your actual daily pace from purchases logged against that card. Shows whether you are on pace and the estimated date you will hit the bonus at your current rate.</p>
+
+                <p style={h}>Rewards</p>
+                <p style={s}>Each credit card can have reward rules. Set a rate (3% on Food, 2x points on Travel, 1x everything else) and the app automatically recommends which card to use at checkout. You can group multiple categories under one rule so similar spending earns the same rate. Reward balances are tracked manually and shown in the Spending tab.</p>
+
+                <p style={h}>Passcode and Privacy</p>
+                <p style={s}>Set a 4-digit PIN to lock the app. All data is stored only on your device in the browser's local storage. Nothing is uploaded to any server. The developer has no access to your data.</p>
+
+                <p style={{ ...s, margin: 0 }}>Export backs up all your data as a JSON file you can re-import later. The CSV export gives you a spreadsheet of all purchases with amounts, categories, and notes.</p>
+              </div>
+            );
+          })()}
         </Modal>
       )}
 
