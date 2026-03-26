@@ -50,7 +50,13 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   const [rateInput, setRateInput] = useState('');
   const [showPaymentActions, setShowPaymentActions] = useState(true);
   const [carouselIdx, setCarouselIdx] = useState(0);
+  const [publicCarouselHeight, setPublicCarouselHeight] = useState<number | undefined>(undefined);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const firstItem = carouselRef.current?.children[0] as HTMLElement | undefined;
+    if (firstItem) setPublicCarouselHeight(firstItem.offsetHeight);
+  }, []);
 
   useEffect(() => {
     const s = loadPublicLoanSummary();
@@ -145,6 +151,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
 
   return (
     <div style={{ marginBottom: 16 }}>
+      <div style={publicCarouselHeight != null ? { height: publicCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
       <div
         ref={carouselRef}
         className="card-carousel"
@@ -153,6 +160,8 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
           const el = e.currentTarget;
           const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
           setCarouselIdx(idx);
+          const item = el.children[idx] as HTMLElement | undefined;
+          if (item) setPublicCarouselHeight(item.offsetHeight);
         }}
       >
         {/* Card 1: FSA link, payment entry, payment actions */}
@@ -170,7 +179,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
               className="btn btn-secondary"
               style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none' }}
             >
-              Estimate payment (FSA)
+              Estimate Payment
             </a>
 
             <div className="field" style={{ marginBottom: 10 }}>
@@ -341,6 +350,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Page dot indicators */}

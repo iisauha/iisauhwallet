@@ -1499,31 +1499,31 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                       );
                     })()
                   ) : null}
-                  <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 6, marginTop: 8, alignItems: 'center' }}>
-                    <button type="button" className="snapshot-add-btn" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }} onClick={() => openInvestingBalanceModal(a)}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                    <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }} onClick={() => openInvestingBalanceModal(a)}>
                       Add / Set
                     </button>
                     {a.type === 'hysa' ? (
                       <>
                         <button
                           type="button"
-                          className="snapshot-add-btn"
-                          style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                           onClick={() => setHysaRate(a as HysaAccount)}
                         >
                           APY
                         </button>
                         <button
                           type="button"
-                          className="snapshot-add-btn"
-                          style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                           onClick={() => openHysaAllocationModal(a as HysaAccount)}
                         >
                           Adjust Alloc
                         </button>
                         <select
-                          className="snapshot-add-btn"
-                          style={{ fontSize: '0.78rem', cursor: 'pointer', whiteSpace: 'nowrap', paddingRight: 8 }}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', cursor: 'pointer' }}
                           value={(a as HysaAccount).linkedCheckingBankId || ''}
                           onChange={(e) => {
                             const bankId = e.target.value || undefined;
@@ -1545,8 +1545,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                     ) : null}
                     <button
                       type="button"
-                      className="snapshot-add-btn"
-                      style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', color: 'var(--red, #e05)', borderColor: 'color-mix(in srgb, var(--red, #e05) 40%, transparent)', background: 'color-mix(in srgb, var(--red, #e05) 10%, transparent)' }}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', color: 'var(--red, #e05)', borderColor: 'color-mix(in srgb, var(--red, #e05) 40%, transparent)' }}
                       onClick={() => deleteAccount(a)}
                     >
                       Delete

@@ -523,7 +523,7 @@ export function SnapshotPage({
             })}
           </div>
           {visibleBanks.length > 1 && (
-            <div className="carousel-dots">
+            <div className="carousel-dots" style={{ marginBottom: 8 }}>
               {visibleBanks.map((_, idx) => (
                 <button
                   key={idx}
@@ -667,7 +667,7 @@ export function SnapshotPage({
             })}
           </div>
           {visibleCards.length > 1 && (
-            <div className="carousel-dots">
+            <div className="carousel-dots" style={{ marginBottom: 8 }}>
               {visibleCards.map((_, idx) => (
                 <button
                   key={idx}

@@ -235,6 +235,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                   <button
                     type="button"
                     className="btn btn-secondary"
+                    style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                     onClick={() => actions.updateRecurringItem(r.id, { isActive: true })}
                   >
                     Resume
@@ -242,7 +243,8 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 ) : (
                   <button
                     type="button"
-                    className="btn btn-secondary btn-outline-neutral"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                     onClick={() => actions.updateRecurringItem(r.id, { isActive: false })}
                   >
                     Pause
@@ -251,6 +253,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     setEditingId(r.id);
                     setType(r.type || 'income');
@@ -357,7 +360,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
       </div>
       {!expensesSectionCollapsed ? (
       <>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
           <button type="button" className="snapshot-add-btn"
             onClick={() => { resetModalState(); setType('expense'); setOpen(true); }}>
             <IconPlus /> Add
@@ -1259,18 +1262,12 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="row" style={{ marginBottom: 8 }}>
-          <span className="name" style={{ fontWeight: 700 }}>Income</span>
-          <span style={{ display: 'flex', gap: 16 }}>
-            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly)}/mo</span>
-            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly * 12)}/yr</span>
-          </span>
+          <span className="name" style={{ fontWeight: 700 }}>Total Recurring Income</span>
+          <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly)}/mo</span>
         </div>
         <div className="row">
-          <span className="name" style={{ fontWeight: 700 }}>Expenses</span>
-          <span style={{ display: 'flex', gap: 16 }}>
-            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly)}/mo</span>
-            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly * 12)}/yr</span>
-          </span>
+          <span className="name" style={{ fontWeight: 700 }}>Total Recurring Expenses</span>
+          <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly)}/mo</span>
         </div>
       </div>
     </div>

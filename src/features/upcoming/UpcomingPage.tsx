@@ -275,33 +275,33 @@ export function UpcomingPage() {
           Expected Income
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            className="snapshot-add-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setModal({
-                type: 'add-expected',
-                kind: 'income',
-                title: '',
-                date: todayKey(),
-                notes: '',
-                useRange: false,
-                amount: '',
-                minAmount: '',
-                maxAmount: '',
-                targetBankId: '',
-              });
-            }}
-          >
-            <IconPlus />
-            Add
-          </button>
           <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
         </span>
       </div>
       {!incomeCollapsed ? (
         <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <button
+              type="button"
+              className="snapshot-add-btn"
+              onClick={() => {
+                setModal({
+                  type: 'add-expected',
+                  kind: 'income',
+                  title: '',
+                  date: todayKey(),
+                  notes: '',
+                  useRange: false,
+                  amount: '',
+                  minAmount: '',
+                  maxAmount: '',
+                  targetBankId: '',
+                });
+              }}
+            >
+              <IconPlus /> Add
+            </button>
+          </div>
           <div
             className="card-carousel"
             ref={incomeCarouselRef}
@@ -440,33 +440,33 @@ export function UpcomingPage() {
           Expected Costs
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            className="snapshot-add-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setModal({
-                type: 'add-expected',
-                kind: 'cost',
-                title: '',
-                date: todayKey(),
-                notes: '',
-                useRange: false,
-                amount: '',
-                minAmount: '',
-                maxAmount: '',
-                targetBankId: '',
-              });
-            }}
-          >
-            <IconPlus />
-            Add
-          </button>
           <span className="chevron">{costsCollapsed ? '▸' : '▾'}</span>
         </span>
       </div>
       {!costsCollapsed ? (
         <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <button
+              type="button"
+              className="snapshot-add-btn"
+              onClick={() => {
+                setModal({
+                  type: 'add-expected',
+                  kind: 'cost',
+                  title: '',
+                  date: todayKey(),
+                  notes: '',
+                  useRange: false,
+                  amount: '',
+                  minAmount: '',
+                  maxAmount: '',
+                  targetBankId: '',
+                });
+              }}
+            >
+              <IconPlus /> Add
+            </button>
+          </div>
           <div
             className="card-carousel"
             ref={costsCarouselRef}

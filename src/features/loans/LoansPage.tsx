@@ -1119,6 +1119,7 @@ export function LoansPage() {
     }
   }, []);
   const [showConsolidationModal, setShowConsolidationModal] = useState(false);
+  const [showLoanToolsModal, setShowLoanToolsModal] = useState(false);
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<LoanWithDerived | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
@@ -1182,7 +1183,7 @@ export function LoansPage() {
     if (!carousel) return;
     const firstItem = carousel.children[0] as HTMLElement | undefined;
     if (firstItem) setPrivateCarouselHeight(firstItem.offsetHeight);
-  }, [loansWithDerived.length]);
+  }, [loansWithDerived.length, showPrivate]);
 
   const summary = useMemo(() => {
     let totalBalance = 0;
@@ -1547,52 +1548,15 @@ export function LoansPage() {
               ))}
             </div>
           ) : null}
-          <div style={{ marginTop: 12, marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                onClick={() => setShowRecomputeConfirm(true)}
-              >
-                Recalculate monthly payment
-              </button>
-              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                Recalculates based on your current balances, rates, and payment schedule.
-              </p>
-            </div>
-            <div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
-                onClick={() => {
-                  const current = summary.totalMonthlyNow;
-                  const addCents = summary.derivedPrivatePaymentNowBase ?? 0;
-                  const newValue = current + addCents;
-                  savePaymentNowManualOverride(newValue);
-                  setPaymentNowOverride(newValue);
-                }}
-              >
-                Add private loan payments to total
-              </button>
-              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                Adds all private loan payments into your monthly total. Does not change balances or loan data.
-              </p>
-            </div>
-            <div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
-                onClick={() => setShowConsolidationModal(true)}
-              >
-                See consolidated loan
-              </button>
-              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                Simulate one consolidated private loan (rate and term). Does not change any real loan data.
-              </p>
-            </div>
+          <div style={{ marginTop: 12, marginBottom: 8 }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+              onClick={() => setShowLoanToolsModal(true)}
+            >
+              Loan Tools
+            </button>
           </div>
           <button
             type="button"
@@ -1609,6 +1573,61 @@ export function LoansPage() {
           </button>
         </>
       ) : null}
+
+      <Modal
+        open={showLoanToolsModal}
+        title="Loan Tools"
+        onClose={() => setShowLoanToolsModal(false)}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              onClick={() => { setShowLoanToolsModal(false); setShowRecomputeConfirm(true); }}
+            >
+              Recalculate monthly payment
+            </button>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              Recalculates based on your current balances, rates, and payment schedule.
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              onClick={() => {
+                const current = summary.totalMonthlyNow;
+                const addCents = summary.derivedPrivatePaymentNowBase ?? 0;
+                const newValue = current + addCents;
+                savePaymentNowManualOverride(newValue);
+                setPaymentNowOverride(newValue);
+                setShowLoanToolsModal(false);
+              }}
+            >
+              Add private loan payments to total
+            </button>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              Adds all private loan payments into your monthly total. Does not change balances or loan data.
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              onClick={() => { setShowLoanToolsModal(false); setShowConsolidationModal(true); }}
+            >
+              See consolidated loan
+            </button>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              Simulate one consolidated private loan (rate and term). Does not change any real loan data.
+            </p>
+          </div>
+        </div>
+      </Modal>
 
       {showConsolidationModal ? (
         <ConsolidatedLoanSimulatorModal
