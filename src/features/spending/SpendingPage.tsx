@@ -6,6 +6,7 @@ import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
+import { IconMagnify } from '../../ui/icons';
 import { AddPurchaseModal } from './AddPurchaseModal';
 import { getCategoryColor, renderSpendingPieChart } from './charts';
 import { computeRewardDeltaForPurchase, type RewardDelta } from '../rewards/rewardMatching';
@@ -724,7 +725,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           aria-label="Search purchases"
           title="Search"
         >
-          🔍
+          <IconMagnify />
         </button>
       </div>
       {searchOpen ? (
@@ -818,18 +819,12 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               ))}
             </div>
           )}
-          {!showAllPurchases && hasMorePurchases ? (
-            <div style={{
-              textAlign: 'center',
-              marginTop: 8,
-              opacity: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 1 : 0,
-              pointerEvents: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 'auto' : 'none',
-              transition: 'opacity 0.2s ease',
-            }}>
+          {!showAllPurchases && hasMorePurchases && purchasesCarouselIdx >= visiblePurchases.length - 1 ? (
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
               <button
                 type="button"
-                className="snapshot-add-btn"
-                style={{ margin: '0 auto' }}
+                className="btn btn-secondary"
+                style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }}
                 onClick={() => setShowAllPurchases(true)}
               >
                 See more

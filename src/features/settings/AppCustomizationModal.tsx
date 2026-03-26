@@ -41,6 +41,7 @@ const FONT_FAMILY_OPTIONS = [
   { key: 'garamond',      label: 'Garamond',             group: 'Serif' },
   { key: 'times',         label: 'Times New Roman',      group: 'Serif' },
   // Mono
+  { key: 'firaCode',      label: 'Fira Code',            group: 'Mono' },
   { key: 'courier',       label: 'Courier New',          group: 'Mono' },
 ];
 

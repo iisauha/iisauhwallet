@@ -202,94 +202,6 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
                 </p>
               ) : null}
             </div>
-
-            <Modal
-              open={showPaymentActionsModal}
-              title="Payment Actions"
-              onClose={() => setShowPaymentActionsModal(false)}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                    onClick={() => { handleAddToPaymentNow(); setShowPaymentActionsModal(false); }}
-                    disabled={publicEstimateCents <= 0}
-                  >
-                    Add to monthly total
-                  </button>
-                  <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                    Adds your estimated public loan payment to your monthly payment total.
-                  </p>
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                    onClick={() => { handleUseAsCurrentPayment(); setShowPaymentActionsModal(false); }}
-                  >
-                    Set as current
-                  </button>
-                  <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                    Sets this estimate as your current active payment amount.
-                  </p>
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-                    onClick={() => {
-                      setShowFirstPaymentDetails((v) => !v);
-                      if (!showFirstPaymentDetails) {
-                        persist({ ...summary, paymentMode: 'first_payment_date' });
-                      }
-                    }}
-                  >
-                    {showFirstPaymentDetails ? 'Hide start date' : 'Set start date'}
-                  </button>
-                  <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                    Set a date when payments will automatically begin.
-                  </p>
-                </div>
-                {showFirstPaymentDetails && (
-                  <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-                    <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-                      First payment date
-                    </label>
-                    <input
-                      type="date"
-                      className="ll-control"
-                      value={firstPaymentDateInput}
-                      onChange={(e) => setFirstPaymentDateInput(e.target.value)}
-                      onBlur={handleSaveFirstPaymentDate}
-                      style={inputStyle}
-                    />
-                    <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                      When this date is reached, your estimated payment will automatically be added to your monthly total.
-                    </p>
-                    <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Auto-add when date reached:</span>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '4px 10px', fontSize: '0.85rem' }}
-                        onClick={() => persist({ ...summary, firstPaymentDateAutoAddPaused: !summary.firstPaymentDateAutoAddPaused })}
-                      >
-                        {summary.firstPaymentDateAutoAddPaused ? 'Paused' : 'Active'}
-                      </button>
-                    </div>
-                    {summary.firstPaymentDateAutoAddPaused ? (
-                      <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                        Paused. Tap "Add to monthly total" manually to include this loan.
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            </Modal>
           </div>
         </div>
 
@@ -379,6 +291,94 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
           />
         ))}
       </div>
+
+      <Modal
+        open={showPaymentActionsModal}
+        title="Payment Actions"
+        onClose={() => setShowPaymentActionsModal(false)}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              onClick={() => { handleAddToPaymentNow(); setShowPaymentActionsModal(false); }}
+              disabled={publicEstimateCents <= 0}
+            >
+              Add to monthly total
+            </button>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              Adds your estimated public loan payment to your monthly payment total.
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              onClick={() => { handleUseAsCurrentPayment(); setShowPaymentActionsModal(false); }}
+            >
+              Set as current
+            </button>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              Sets this estimate as your current active payment amount.
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              onClick={() => {
+                setShowFirstPaymentDetails((v) => !v);
+                if (!showFirstPaymentDetails) {
+                  persist({ ...summary, paymentMode: 'first_payment_date' });
+                }
+              }}
+            >
+              {showFirstPaymentDetails ? 'Hide start date' : 'Set start date'}
+            </button>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              Set a date when payments will automatically begin.
+            </p>
+          </div>
+          {showFirstPaymentDetails && (
+            <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
+                First payment date
+              </label>
+              <input
+                type="date"
+                className="ll-control"
+                value={firstPaymentDateInput}
+                onChange={(e) => setFirstPaymentDateInput(e.target.value)}
+                onBlur={handleSaveFirstPaymentDate}
+                style={inputStyle}
+              />
+              <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                When this date is reached, your estimated payment will automatically be added to your monthly total.
+              </p>
+              <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Auto-add when date reached:</span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+                  onClick={() => persist({ ...summary, firstPaymentDateAutoAddPaused: !summary.firstPaymentDateAutoAddPaused })}
+                >
+                  {summary.firstPaymentDateAutoAddPaused ? 'Paused' : 'Active'}
+                </button>
+              </div>
+              {summary.firstPaymentDateAutoAddPaused ? (
+                <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                  Paused. Tap "Add to monthly total" manually to include this loan.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -1198,7 +1198,11 @@ export function saveAppAccentColor(hex: string) {
 
 const VALID_FONT_FAMILIES = new Set([
   'system', 'inter', 'arial', 'helvetica', 'calibri', 'times', 'georgia',
-  'verdana', 'trebuchet', 'garamond', 'courier', 'roboto', 'poppins'
+  'verdana', 'trebuchet', 'garamond', 'courier', 'roboto', 'poppins', 'firaCode',
+  'claude', 'helveticaNeue', 'montserrat', 'opensans', 'lato', 'ibmPlexSans',
+  'dmsans', 'manrope', 'outfit', 'jakarta', 'spaceGrotesk', 'nunito', 'raleway',
+  'figtree', 'workSans', 'sourceSans', 'helvetica', 'arial', 'verdana', 'calibri',
+  'trebuchet', 'playfair', 'merriweather', 'georgia', 'garamond', 'times',
 ]);
 
 export function loadAppFontFamily(): string {

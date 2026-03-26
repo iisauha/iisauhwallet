@@ -20,7 +20,7 @@ import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './sta
 import {
   IconSnapshot, IconArrowExchange, IconCalendar, IconRefreshCircle,
   IconBankBuilding, IconBarChartTrend, IconStar,
-  IconCreditCard, IconExport, IconCoin,
+  IconExport,
   IconChevronRight, IconPlus,
 } from './ui/icons';
 
@@ -173,8 +173,8 @@ function incrementActionFreq(action: QuickAction): void {
 
 function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
   const allItems: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
-    { icon: <IconCoin />, label: 'Add a purchase', action: 'log-purchase' },
-    { icon: <IconCreditCard />, label: 'Add a Purchase (Full Reimbursement Expected)', action: 'add-reimbursable' },
+    { icon: <IconArrowExchange />, label: 'Add a purchase', action: 'log-purchase' },
+    { icon: <IconArrowExchange />, label: 'Add a Purchase (Full Reimbursement Expected)', action: 'add-reimbursable' },
     { icon: <IconSnapshot />, label: 'Add pending outbound', action: 'add-pending-out' },
     { icon: <IconSnapshot />, label: 'Add pending inbound', action: 'add-pending-in' },
     { icon: <IconRefreshCircle />, label: 'Add recurring expense', action: 'add-recurring-expense' },

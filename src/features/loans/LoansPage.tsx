@@ -32,6 +32,7 @@ import type { RecurringItem } from '../../state/models';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
+import { IconPlus } from '../../ui/icons';
 import { loadPublicLoanSummary, savePublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { PublicLoanSimpleCard } from '../federalLoans/PublicLoanSimpleCard';
 
@@ -1021,7 +1022,7 @@ function LoanCard(props: {
         </div>
       ) : null}
       <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
-        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem' }} onClick={onEdit}>Edit</button>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem', borderRadius: 8, minHeight: 'unset' }} onClick={onEdit}>Edit</button>
         <button type="button" className="btn btn-danger" style={{ padding: '4px 10px', fontSize: '0.85rem', minHeight: 'unset' }} onClick={onDelete}>Delete</button>
       </div>
     </div>
@@ -1561,19 +1562,20 @@ export function LoansPage() {
               Loan Tools
             </button>
           </div>
-          <button
-            type="button"
-            className="btn btn-add"
-            style={{ width: '100%', marginTop: 8 }}
-            onClick={() =>
-              setEditor({
-                mode: 'add',
-                value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
-              })
-            }
-          >
-            + Add Private Loan
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+            <button
+              type="button"
+              className="snapshot-add-btn"
+              onClick={() =>
+                setEditor({
+                  mode: 'add',
+                  value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
+                })
+              }
+            >
+              <IconPlus /> Add
+            </button>
+          </div>
         </>
       ) : null}
 
