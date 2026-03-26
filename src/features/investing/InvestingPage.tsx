@@ -1483,23 +1483,23 @@ export function InvestingPage() {
                       );
                     })()
                   ) : null}
-                  <div className="btn-row" style={{ marginTop: 8 }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => openInvestingBalanceModal(a)}>
+                  <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 6, marginTop: 8, alignItems: 'center' }}>
+                    <button type="button" className="snapshot-add-btn" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }} onClick={() => openInvestingBalanceModal(a)}>
                       Add / Set
                     </button>
                     {a.type === 'hysa' ? (
                       <>
                         <button
                           type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                          className="snapshot-add-btn"
+                          style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
                           onClick={() => setHysaRate(a as HysaAccount)}
                         >
                           APY
                         </button>
                         <select
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.8rem', padding: '6px 10px', cursor: 'pointer' }}
+                          className="snapshot-add-btn"
+                          style={{ fontSize: '0.78rem', cursor: 'pointer', whiteSpace: 'nowrap', paddingRight: 8 }}
                           value={(a as HysaAccount).linkedCheckingBankId || ''}
                           onChange={(e) => {
                             const bankId = e.target.value || undefined;
@@ -1521,7 +1521,8 @@ export function InvestingPage() {
                     ) : null}
                     <button
                       type="button"
-                      className="btn btn-danger"
+                      className="snapshot-add-btn"
+                      style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', color: 'var(--danger, #e05)' }}
                       onClick={() => deleteAccount(a)}
                     >
                       Delete

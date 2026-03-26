@@ -316,6 +316,11 @@ function MainApp() {
 
   return (
     <>
+      {/* Lava-lamp ambient background blobs */}
+      <div className="bg-blob bg-blob-1" aria-hidden="true" />
+      <div className="bg-blob bg-blob-2" aria-hidden="true" />
+      <div className="bg-blob bg-blob-3" aria-hidden="true" />
+
       <GlobalHeader onAvatarClick={() => {
         if (tab === 'settings') {
           setTab(prevTab);

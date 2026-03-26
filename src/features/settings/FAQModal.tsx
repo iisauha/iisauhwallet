@@ -4,7 +4,7 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data?',
-    a: 'Yes. All financial data is encrypted with AES-256 in your browser storage. Exported backup files are also encrypted with your passcode (PBKDF2 + AES-256) — they cannot be read without it.',
+    a: 'Yes. All financial data is encrypted with AES-256 in your browser storage. Exported backup files are also encrypted with your passcode (PBKDF2 + AES-256). They cannot be read without it.',
   },
   {
     q: 'If someone gets my device, what can they see?',
@@ -16,7 +16,7 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'Are my backup files safe to store in the cloud?',
-    a: 'Yes, if you have a passcode set. Backups are encrypted so they are unreadable without your passcode. Without a passcode the export is plain text — treat it like any sensitive document.',
+    a: 'Yes, if you have a passcode set. Backups are encrypted so they are unreadable without your passcode. Without a passcode the export is plain text, so treat it like any sensitive document.',
   },
   {
     q: 'Does the developer have access to my passcode or data?',

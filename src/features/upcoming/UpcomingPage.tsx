@@ -220,18 +220,8 @@ export function UpcomingPage() {
 
   return (
     <div className="tab-panel active" id="upcomingContent">
-      <p className="section-title page-title">Upcoming Cashflow</p>
-      <div className="settings-section">
-        <label
-          style={{
-            display: 'block',
-            fontSize: '0.9rem',
-            color: 'var(--ui-primary-text, var(--text))',
-            marginBottom: 6,
-          }}
-        >
-          Time window
-        </label>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
+        <p className="section-title page-title" style={{ margin: 0 }}>Upcoming Cashflow</p>
         <Select
           value={String(windowDays)}
           onChange={(e) => {
@@ -241,17 +231,18 @@ export function UpcomingPage() {
             saveUpcomingWindowPreference({ days });
           }}
           className="upcoming-window-select"
+          style={{ fontSize: '0.82rem', padding: '6px 10px', minHeight: 'unset', flexShrink: 0 }}
         >
-          <option value="14">Next 14 days</option>
-          <option value="21">Next 21 days</option>
-          <option value="30">Next 30 days</option>
-          <option value="45">Next 45 days</option>
+          <option value="14">14 days</option>
+          <option value="21">21 days</option>
+          <option value="30">30 days</option>
+          <option value="45">45 days</option>
         </Select>
       </div>
 
       <div
         className="section-header"
-        style={{ marginTop: 24 }}
+        style={{ marginTop: 0 }}
         onClick={() => setIncomeCollapsed(!incomeCollapsed)}
       >
         <span className="section-header-left" style={{ color: 'var(--ui-title-text, var(--green))' }}>

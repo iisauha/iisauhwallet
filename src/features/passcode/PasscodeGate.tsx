@@ -126,7 +126,7 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
         </div>
         <div
           style={{
-            fontSize: '30px', fontWeight: 700, color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))',
+            fontSize: '30px', fontWeight: 700, color: 'var(--accent)',
             fontFamily: 'var(--app-font-family)',
             opacity: nameVisible ? 1 : 0,
             transform: nameVisible ? 'translateY(0)' : 'translateY(10px)',

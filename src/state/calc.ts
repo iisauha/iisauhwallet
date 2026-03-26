@@ -70,8 +70,9 @@ export function calcFinalNetCashCents(data: LedgerData): {
 
   // For net cash, only subtract true outbound costs. Credit card payments are transfers
   // that pay down an already-counted card balance, so we exclude them here to avoid
-  // double-counting the liability.
-  const finalNetCashCents = bankTotalCents + pendingInCents - pendingOutNonCcCents - ccDebtCents + ccCreditCents;
+  // double-counting the liability. CC credit (negative card balances) is excluded from
+  // net cash so it is not counted as available money.
+  const finalNetCashCents = bankTotalCents + pendingInCents - pendingOutNonCcCents - ccDebtCents;
 
   return {
     bankTotalCents,

@@ -1650,3 +1650,110 @@ input[type="checkbox"]:focus-visible {
   transition: background 0.18s ease, transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease;
 }
 .snapshot-add-btn:active { transform: scale(0.93); }
+
+/* ─── Lava lamp ambient background blobs ─────────────────────────── */
+.bg-blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.07;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 40% 40%, var(--accent), color-mix(in srgb, var(--accent) 50%, #7c3aed));
+  will-change: transform;
+}
+.bg-blob-1 {
+  width: 380px;
+  height: 380px;
+  top: -100px;
+  left: -100px;
+  animation: blobFloat1 24s ease-in-out infinite;
+}
+.bg-blob-2 {
+  width: 300px;
+  height: 300px;
+  bottom: 80px;
+  right: -80px;
+  opacity: 0.055;
+  animation: blobFloat2 30s ease-in-out infinite;
+}
+.bg-blob-3 {
+  width: 220px;
+  height: 220px;
+  top: 45%;
+  left: 55%;
+  opacity: 0.045;
+  animation: blobFloat3 20s ease-in-out infinite;
+}
+@keyframes blobFloat1 {
+  0%   { transform: translate(0px,   0px)   scale(1);    }
+  25%  { transform: translate(60px,  90px)  scale(1.08); }
+  50%  { transform: translate(20px,  160px) scale(1.15); }
+  75%  { transform: translate(-40px, 80px)  scale(1.05); }
+  100% { transform: translate(0px,   0px)   scale(1);    }
+}
+@keyframes blobFloat2 {
+  0%   { transform: translate(0px,    0px)    scale(1);    }
+  30%  { transform: translate(-70px, -80px)   scale(1.12); }
+  60%  { transform: translate(30px,  -140px)  scale(0.92); }
+  80%  { transform: translate(-20px, -60px)   scale(1.06); }
+  100% { transform: translate(0px,    0px)    scale(1);    }
+}
+@keyframes blobFloat3 {
+  0%   { transform: translate(-50%, -50%) scale(1);    }
+  35%  { transform: translate(calc(-50% + 90px), calc(-50% - 70px)) scale(1.18); }
+  70%  { transform: translate(calc(-50% - 50px), calc(-50% + 50px)) scale(0.88); }
+  100% { transform: translate(-50%, -50%) scale(1);    }
+}
+/* html/body need a stacking context for z-index:-1 blobs to be visible */
+html { position: relative; }
+body { position: relative; }
+
+/* ─── Enhanced card padding & spacing ────────────────────────────── */
+.card {
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.ll-account-card { padding: 14px 16px; }
+
+/* ─── Tab panel breathing room ───────────────────────────────────── */
+.tab-panel {
+  padding: 24px 18px;
+  padding-bottom: 48px;
+}
+
+/* ─── Section header vertical rhythm ─────────────────────────────── */
+.section-header {
+  margin-bottom: 14px;
+  padding: 14px 18px;
+}
+
+/* ─── Tighter modal inputs with better spacing ───────────────────── */
+.modal {
+  padding: 22px 20px 18px;
+}
+
+/* ─── Summary KV row spacing ──────────────────────────────────────── */
+.summary-kv {
+  padding: 5px 0;
+}
+
+/* ─── Upcoming window select polish ──────────────────────────────── */
+.upcoming-window-select {
+  border-radius: 10px !important;
+  background: var(--ui-card-bg, var(--surface)) !important;
+  border: 1px solid var(--ui-border, var(--border)) !important;
+  color: var(--ui-primary-text, var(--text)) !important;
+  font-weight: 500;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+/* ─── Settings section card ──────────────────────────────────────── */
+.settings-card {
+  padding: 6px 4px;
+}
+
+/* ─── Net cash card spacious ─────────────────────────────────────── */
+.net-cash-card {
+  padding: 20px 20px 18px;
+}

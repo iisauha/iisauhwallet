@@ -570,12 +570,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       <p className="settings-group-label">About</p>
       <div className="settings-list">
         <SettingsRow
-          icon={<IconQuestionMark />}
-          iconBg="#0EA5E9"
-          label="How This App Works"
-          onClick={() => setHowItWorksOpen(true)}
-        />
-        <SettingsRow
           icon={<IconUser />}
           iconBg="#8B5CF6"
           label="About the Creator"
