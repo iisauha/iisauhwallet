@@ -105,7 +105,7 @@ function RecentActivityWidget() {
       ) : (
         activities.map((a, i) => (
           <div key={i} className="recent-activity-item">
-            <div className="recent-activity-dot" style={{ background: ACTIVITY_COLORS[a.type] }} />
+            <div className="recent-activity-dot" style={{ background: 'var(--accent)' }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="recent-activity-label" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span>{a.label}</span>
