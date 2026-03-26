@@ -52,6 +52,7 @@ export function UpcomingPage() {
         amount: string;
         minAmount: string;
         maxAmount: string;
+        targetBankId: string;
       }
      | {
          type: 'adjust-amount';
@@ -370,7 +371,8 @@ export function UpcomingPage() {
                 useRange: false,
                 amount: '',
                 minAmount: '',
-                maxAmount: ''
+                maxAmount: '',
+                targetBankId: '',
               });
             }}
             style={{ marginTop: 8 }}
@@ -508,7 +510,8 @@ export function UpcomingPage() {
                 useRange: false,
                 amount: '',
                 minAmount: '',
-                maxAmount: ''
+                maxAmount: '',
+                targetBankId: '',
               });
             }}
             style={{ marginTop: 8 }}
@@ -592,6 +595,21 @@ export function UpcomingPage() {
               <textarea value={modal.notes} onChange={(e) => setModal({ ...modal, notes: e.target.value })} placeholder="Optional" />
             </div>
 
+            {modal.kind === 'income' && (
+              <div className="field">
+                <label>Deposit to bank</label>
+                <Select
+                  value={modal.targetBankId}
+                  onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}
+                >
+                  <option value="">Select bank...</option>
+                  {(data.banks || []).map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
             {(() => {
               const titleOk = modal.title.trim().length > 0;
               const dateOk = modal.date.trim().length > 0;
@@ -628,6 +646,7 @@ export function UpcomingPage() {
                             minCents: modal.useRange ? minCents : undefined,
                             maxCents: modal.useRange ? maxCents : undefined,
                             notes,
+                            targetBankId: modal.targetBankId || undefined,
                             status: 'expected' as const
                           }
                         ];
@@ -747,7 +766,7 @@ export function UpcomingPage() {
                   if (source.kind === 'expected-income') {
                     const item = (expectedIncome as any[]).find((x) => x.id === source.id);
                     if (item) {
-                      actions.addPendingInbound({ label: item.title, amountCents: cents, depositTo: 'bank' });
+                      actions.addPendingInbound({ label: item.title, amountCents: cents, depositTo: 'bank', targetBankId: item.targetBankId || undefined });
                       const next = (expectedIncome as any[]).map((x) =>
                         x.id === item.id ? { ...x, status: 'moved_to_pending' as const } : x
                       );

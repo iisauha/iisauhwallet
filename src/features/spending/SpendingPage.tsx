@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
-import { getCategoryName, loadCategoryConfig } from '../../state/storage';
+import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry } from '../../state/storage';
+import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
@@ -82,6 +83,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     balance: number;
     cpp: number | undefined;
   } | null>(null);
+  const [hideZeroRewards, setHideZeroRewards] = useState(() => loadBoolPref(SHOW_ZERO_REWARDS_KEY, true));
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -494,11 +496,38 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           </div>
         ) : (
           <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+                onClick={() => {
+                  const next = !hideZeroRewards;
+                  setHideZeroRewards(next);
+                  saveBoolPref(SHOW_ZERO_REWARDS_KEY, next);
+                }}
+              >
+                {hideZeroRewards ? 'Show $0 rewards' : 'Hide $0 rewards'}
+              </button>
+            </div>
             {(data.cards || []).length === 0 ? (
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
             ) : (
               <>
-                {(data.cards || []).map((c: any) => {
+                {(data.cards || []).filter((c: any) => {
+                  if (!hideZeroRewards) return true;
+                  const type =
+                    c.rewardType ??
+                    (c.rewardCashbackCents != null &&
+                    (c.rewardPoints == null || c.rewardPoints === 0) &&
+                    (c.rewardMiles == null || c.rewardMiles === 0)
+                      ? 'cashback'
+                      : c.rewardMiles != null && c.rewardMiles > 0
+                        ? 'miles'
+                        : 'points');
+                  const bal = type === 'cashback' ? (c.rewardCashbackCents ?? 0) : type === 'miles' ? (c.rewardMiles ?? 0) : (c.rewardPoints ?? 0);
+                  return bal > 0;
+                }).map((c: any) => {
                   const type =
                     c.rewardType ??
                     (c.rewardCashbackCents != null &&
@@ -718,6 +747,11 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 </span>
                 {p.subcategory ? <span> • {p.subcategory}</span> : null}
               </div>
+              {p.notes ? (
+                <div style={{ color: 'var(--muted)', fontSize: '0.82rem', marginTop: 4, fontStyle: 'italic' }}>
+                  {p.notes}
+                </div>
+              ) : null}
               <div className="btn-row">
                 <button
                   type="button"
@@ -826,6 +860,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                   const purchase = (data.purchases || []).find((x: any) => x.id === confirmDelete.id);
                   const rewardInfo = getRewardDeltaAndCardForPurchase(purchase);
                   actions.deletePurchase(confirmDelete.id);
+                  logActivityEntry({ type: 'delete_purchase', label: confirmDelete.label, amountCents: purchase?.amountCents ?? undefined, ts: new Date().toISOString() });
                   setConfirmDelete(null);
 
                   if (!rewardInfo) return;

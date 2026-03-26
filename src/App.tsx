@@ -18,7 +18,7 @@ import { ReminderProvider } from './state/ReminderContext';
 import { TAB_ORDER_KEY } from './state/keys';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
 import {
-  IconHome, IconArrowExchange, IconCalendar, IconRefreshCircle,
+  IconSnapshot, IconArrowExchange, IconCalendar, IconRefreshCircle,
   IconBankBuilding, IconBarChartTrend, IconStar,
   IconCreditCard, IconExport,
   IconChevronRight, IconPlus,
@@ -68,7 +68,7 @@ const TAB_LABELS: Record<TabKey, string> = {
 };
 
 const TAB_ICONS: Record<TabKey, React.ReactNode> = {
-  snapshot: <IconHome />,
+  snapshot: <IconSnapshot />,
   spending: <IconArrowExchange />,
   upcoming: <IconCalendar />,
   loans: <IconBankBuilding />,

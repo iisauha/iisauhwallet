@@ -1991,3 +1991,36 @@ export function saveHiddenTabs(tabKeys: string[]) {
   } catch (_) {}
 }
 
+// --- Recent Activity Log ---
+
+export type ActivityLogEntry = {
+  id: string;
+  type: 'delete_purchase' | 'hysa_transfer' | string;
+  label: string;
+  amountCents?: number;
+  ts: string;
+};
+
+const RECENT_ACTIVITY_LOG_KEY_LOCAL = 'iisauhwallet_recent_activity_log_v1';
+
+export function loadActivityLog(): ActivityLogEntry[] {
+  try {
+    const raw = localStorage.getItem(RECENT_ACTIVITY_LOG_KEY_LOCAL);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch (_) {
+    return [];
+  }
+}
+
+export function logActivityEntry(entry: Omit<ActivityLogEntry, 'id'>): void {
+  try {
+    const log = loadActivityLog();
+    const newEntry: ActivityLogEntry = { ...entry, id: String(Date.now()) + Math.random().toString(36).slice(2) };
+    log.unshift(newEntry);
+    localStorage.setItem(RECENT_ACTIVITY_LOG_KEY_LOCAL, JSON.stringify(log.slice(0, 50)));
+  } catch (_) {}
+}
+

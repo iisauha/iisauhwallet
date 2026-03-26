@@ -103,6 +103,12 @@ export const PASSCODE_6DIGIT_KEY = 'iisauhwallet_passcode_6digit_v1';
 // UI-only: advanced UI surface colors (card, section, modal, dropdown, border, muted).
 export const UI_ADVANCED_COLORS_KEY = 'iisauhwallet_ui_advanced_colors_v1';
 
+// UI-only: whether to show $0 reward cards in the rewards overview.
+export const SHOW_ZERO_REWARDS_KEY = 'iisauhwallet_show_zero_rewards_v1';
+
+// Recent activity log: records significant user actions (deletions, transfers, etc.).
+export const RECENT_ACTIVITY_LOG_KEY = 'iisauhwallet_recent_activity_log_v1';
+
 // Rewards: manual category amount adjustments for by-card rewards view (cardId -> categoryKey -> { amountCents, mode }).
 export const CARD_REWARD_ADJUSTMENTS_KEY = 'iisauhwallet_card_reward_adjustments_v1';
 // Rewards: manual reward-only entries per card (not real purchases; rewards-view only; do not affect snapshot/net cash).

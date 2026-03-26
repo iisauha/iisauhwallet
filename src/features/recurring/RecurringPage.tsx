@@ -4,7 +4,7 @@ import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
-import { useDropdownCollapsed, useDropdownState } from '../../state/DropdownStateContext';
+import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { OptimizerModal } from '../optimizer/OptimizerModal';
 import { ViewLastOptimizerModal } from '../optimizer/ViewLastOptimizerModal';
@@ -122,7 +122,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
   }, [expenses]);
   const [incomeCollapsed, setIncomeCollapsed] = useDropdownCollapsed('recurring_income', true);
   const [expensesSectionCollapsed, setExpensesSectionCollapsed] = useDropdownCollapsed('recurring_expenses_main', false);
-  const { getDropdownCollapsed, setDropdownCollapsed } = useDropdownState();
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
   return (
@@ -303,26 +302,24 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
       <>
       {expensesByCategory.map(([catId, items]) => {
         const headerLabel = getCategoryName(cfg, catId);
-        const id = `recurring_expenses_${catId}`;
-        const collapsed = getDropdownCollapsed(id, true);
         return (
-          <div key={catId} style={{ marginBottom: 8 }}>
-            <div
-              className="section-header"
-              onClick={() => setDropdownCollapsed(id, !collapsed)}
-              style={{ fontSize: '0.98rem', fontWeight: 600 }}
-            >
-              <span className="section-header-left">
-                {items.length === 1 ? headerLabel : `${headerLabel} (${items.length} items)`}
-              </span>
-              <span className="chevron">{collapsed ? '▸' : '▾'}</span>
+          <div key={catId} style={{ marginBottom: 16 }}>
+            <div style={{
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: 'var(--muted)',
+              padding: '4px 0 6px 2px',
+              borderBottom: '1px solid var(--ui-border, var(--border))',
+              marginBottom: 8,
+            }}>
+              {headerLabel}
             </div>
-            {!collapsed ? (
-              <>
-                <div className="card-carousel">
-                {items.map((r: any) => (
-                  <div className="card-carousel-item" key={r.id}>
-                  <div className="card">
+            <div className="card-carousel">
+            {items.map((r: any) => (
+              <div className="card-carousel-item" key={r.id}>
+              <div className="card">
                     <div className="row">
                       <span className="name">{r.name || 'Expense'}</span>
                       <span className="amount" style={{ color: 'var(--red)' }}>
@@ -395,9 +392,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                   </div>
                   </div>
                 ))}
-                </div>
-              </>
-            ) : null}
+            </div>
           </div>
         );
       })}
@@ -472,20 +467,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 readOnly={useLoanEstimatedPayment && totalVisiblePaymentNowCents > 0}
               />
             </div>
-            <div className="field">
-              <label>Expected min ($) optional</label>
-              <input value={expectedMin} onChange={(e) => setExpectedMin(e.target.value)} inputMode="decimal" placeholder="e.g. 90" />
-            </div>
-            <div className="field">
-              <label>Expected max ($) optional</label>
-              <input
-                value={expectedMax}
-                onChange={(e) => setExpectedMax(e.target.value)}
-                inputMode="decimal"
-                placeholder="e.g. 150"
-              />
-            </div>
-
             {type === 'income' ? (
               <>
                 <div className="toggle-row">

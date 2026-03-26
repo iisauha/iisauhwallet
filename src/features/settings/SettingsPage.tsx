@@ -36,7 +36,7 @@ import {
   IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
   IconExport, IconChevronRight, IconTrash,
   IconHome, IconArrowExchange, IconCalendar, IconBankBuilding,
-  IconBarChartTrend, IconRefreshCircle, IconStar,
+  IconBarChartTrend, IconRefreshCircle, IconStar, IconQuestionMark,
 } from '../../ui/icons';
 
 /** Returns export filename: Month_Day_Year.json */
@@ -79,13 +79,14 @@ function exportMonthlyPurchasesCsv() {
   });
   const cfg = loadCategoryConfig();
   const rows = [
-    ['Title', 'Date', 'Amount', 'Category', 'Subcategory'],
-    ...purchases.map((p: { title?: string; dateISO?: string; amountCents?: number; category?: string; subcategory?: string }) => [
+    ['Title', 'Date', 'Amount', 'Category', 'Subcategory', 'Notes'],
+    ...purchases.map((p: { title?: string; dateISO?: string; amountCents?: number; category?: string; subcategory?: string; notes?: string }) => [
       escapeCsvCell(String(p.title ?? '')),
       escapeCsvCell(p.dateISO ?? ''),
       String((p.amountCents ?? 0) / 100),
       escapeCsvCell(getCategoryName(cfg, p.category ?? 'uncategorized')),
       escapeCsvCell(String(p.subcategory ?? '')),
+      escapeCsvCell(String(p.notes ?? '')),
     ]),
   ];
   const csv = rows.map((r) => r.join(',')).join('\r\n');
@@ -497,7 +498,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               </select>
             </div>
             <SettingsRow
-              icon={<IconLock />}
+              icon={<IconQuestionMark />}
               iconBg="#10B981"
               label="Security FAQ"
               sublabel="Encryption, passcode, and privacy questions"

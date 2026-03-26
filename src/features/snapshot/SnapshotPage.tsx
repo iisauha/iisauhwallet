@@ -4,7 +4,7 @@ import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from 
 import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
-import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid } from '../../state/storage';
+import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid, loadActivityLog } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import type { PendingInboundItem, PendingOutboundItem, RewardRule, RewardUnitType } from '../../state/models';
 import { getEffectiveRules } from '../rewards/rewardMatching';
@@ -12,61 +12,89 @@ import { Select } from '../../ui/Select';
 import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 import {
-  IconCreditCard, IconClock, IconPlus,
+  IconCreditCard, IconClock, IconPlus, IconArrowExchange,
 } from '../../ui/icons';
 
 // --- Recent Activity Widget ---
 
-type ActivityType = 'purchase' | 'pending-in' | 'pending-out' | 'balance';
+type ActivityType = 'purchase' | 'pending-in' | 'pending-out' | 'balance' | 'logged';
 
 const ACTIVITY_COLORS: Record<ActivityType, string> = {
   purchase: 'var(--ui-add-btn, var(--accent))',
-  'pending-in': 'var(--ui-add-btn, var(--accent))',
-  'pending-out': 'var(--ui-add-btn, var(--accent))',
+  'pending-in': 'var(--green)',
+  'pending-out': 'var(--red)',
   balance: 'var(--ui-add-btn, var(--accent))',
+  logged: 'var(--muted)',
 };
 
-const ACTIVITY_DESCRIPTOR: Record<ActivityType, string> = {
-  purchase: 'Added purchase',
-  'pending-in': 'Pending inbound',
-  'pending-out': 'Pending outbound',
-  balance: 'Updated balance to',
+type ActivityItem = {
+  label: string;
+  type: ActivityType;
+  ts: number;
+  amount: number | null;
+  notes?: string;
+  category?: string;
+  subcategory?: string;
+  descriptor?: string;
 };
-
-type ActivityItem = { label: string; type: ActivityType; ts: number; amount: number | null };
 
 function RecentActivityWidget() {
   const data = useLedgerStore((s) => s.data);
+  const cfg = useMemo(() => loadCategoryConfig(), []);
 
   const activities = useMemo(() => {
     const items: ActivityItem[] = [];
 
-    (data.purchases || []).forEach((p) => {
+    (data.purchases || []).forEach((p: any) => {
       if (p.dateISO) {
-        items.push({ label: p.title || 'Purchase', type: 'purchase', ts: new Date(p.dateISO + 'T23:59:59').getTime(), amount: p.amountCents ?? null });
+        items.push({
+          label: p.title || 'Purchase',
+          type: 'purchase',
+          ts: new Date(p.dateISO + 'T23:59:59').getTime(),
+          amount: p.amountCents ?? null,
+          notes: p.notes || undefined,
+          category: p.category || undefined,
+          subcategory: p.subcategory || undefined,
+          descriptor: 'Purchase',
+        });
       }
     });
 
-    (data.pendingIn || []).forEach((p) => {
+    (data.pendingIn || []).forEach((p: any) => {
       if (p.createdAt) {
-        items.push({ label: p.label || 'Inbound transfer', type: 'pending-in', ts: new Date(p.createdAt).getTime(), amount: p.amountCents ?? null });
+        const isHysa = p.depositTo === 'hysa';
+        const descriptor = isHysa ? 'HYSA deposit' : 'Pending inbound';
+        items.push({ label: p.label || 'Inbound transfer', type: 'pending-in', ts: new Date(p.createdAt).getTime(), amount: p.amountCents ?? null, descriptor });
       }
     });
 
-    (data.pendingOut || []).forEach((p) => {
+    (data.pendingOut || []).forEach((p: any) => {
       if (p.createdAt) {
-        items.push({ label: p.label || 'Outbound transfer', type: 'pending-out', ts: new Date(p.createdAt).getTime(), amount: p.amountCents ?? null });
+        const isHysa = p.meta?.recurringHysaSource || (p.paymentSource === 'hysa');
+        const isCcPayment = p.outboundType === 'cc_payment';
+        const descriptor = isHysa ? 'HYSA transfer' : isCcPayment ? 'CC payment pending' : 'Pending outbound';
+        items.push({ label: p.label || 'Outbound transfer', type: 'pending-out', ts: new Date(p.createdAt).getTime(), amount: p.amountCents ?? null, descriptor });
       }
     });
 
-    (data.banks || []).forEach((b) => {
+    (data.banks || []).forEach((b: any) => {
       if (b.updatedAt) {
-        items.push({ label: b.name || 'Bank account', type: 'balance', ts: new Date(b.updatedAt).getTime(), amount: b.balanceCents ?? null });
+        items.push({ label: b.name || 'Bank account', type: 'balance', ts: new Date(b.updatedAt).getTime(), amount: b.balanceCents ?? null, descriptor: 'Balance updated' });
       }
     });
 
+    // Logged actions (deletions, etc.)
+    loadActivityLog().forEach((entry) => {
+      items.push({
+        label: entry.label,
+        type: 'logged',
+        ts: new Date(entry.ts).getTime(),
+        amount: entry.amountCents ?? null,
+        descriptor: entry.type === 'delete_purchase' ? 'Deleted purchase' : entry.type,
+      });
+    });
 
-    return items.filter((i) => !isNaN(i.ts)).sort((a, b) => b.ts - a.ts).slice(0, 3);
+    return items.filter((i) => !isNaN(i.ts)).sort((a, b) => b.ts - a.ts).slice(0, 5);
   }, [data]);
 
   return (
@@ -81,8 +109,19 @@ function RecentActivityWidget() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="recent-activity-label">{a.label}</div>
               <div className="recent-activity-type">
-                {ACTIVITY_DESCRIPTOR[a.type]}{a.amount != null ? ` · ${formatCents(a.amount)}` : ''}
+                {a.descriptor ?? a.type}{a.amount != null ? ` · ${formatCents(a.amount)}` : ''}
               </div>
+              {(a.category || a.subcategory) ? (
+                <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 1 }}>
+                  {a.category ? getCategoryName(cfg, a.category) : ''}
+                  {a.subcategory ? ` · ${a.subcategory}` : ''}
+                </div>
+              ) : null}
+              {a.notes ? (
+                <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 1, fontStyle: 'italic' }}>
+                  {a.notes}
+                </div>
+              ) : null}
             </div>
           </div>
         ))
@@ -371,7 +410,7 @@ export function SnapshotPage({
           onClick={() => toggleSection('cash')}
           aria-expanded={activeSection === 'cash'}
         >
-          <div className="stat-tile-icon" style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--muted)', lineHeight: 1 }}>$</div>
+          <div className="stat-tile-icon"><IconArrowExchange /></div>
           <div className="stat-tile-value" style={{ color: totalCashCents > 0 ? 'var(--green)' : totalCashCents < 0 ? 'var(--red)' : undefined }}>{formatCents(totalCashCents)}</div>
           <div className="stat-tile-label">Cash</div>
         </button>
@@ -1246,7 +1285,7 @@ export function SnapshotPage({
                       </>
                     ) : (
                       <div className="field">
-                        <label>Bank (optional)</label>
+                        <label>Bank</label>
                         <Select value={modal.targetBankId || ''} onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}>
                           <option value="">Select...</option>
                           {banksSortedByBalance.map((b) => (

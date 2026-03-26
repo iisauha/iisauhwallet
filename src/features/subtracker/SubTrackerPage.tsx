@@ -859,10 +859,23 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               </button>
             </div>
             {requiredPace != null && currentPace != null ? (
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <span className={currentPace >= requiredPace ? 'upcoming-status-ok' : 'upcoming-status-warn'}>
                   {currentPace >= requiredPace ? 'On pace' : 'Not on pace'}
                 </span>
+                {(() => {
+                  const dailyPace = elapsedDays != null && elapsedDays > 0 ? spendCents / elapsedDays : null;
+                  if (!dailyPace || dailyPace <= 0 || finalTarget <= spendCents) return null;
+                  const daysToHit = (finalTarget - spendCents) / dailyPace;
+                  const hitDate = new Date();
+                  hitDate.setDate(hitDate.getDate() + Math.ceil(daysToHit));
+                  const label = hitDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                  return (
+                    <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
+                      Est. hit: {label}
+                    </span>
+                  );
+                })()}
               </div>
             ) : null}
           </div>

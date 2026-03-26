@@ -403,3 +403,23 @@ export function IconLock() {
     </svg>
   );
 }
+
+export function IconSnapshot() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <circle cx="12" cy="14" r="3.5" />
+      <path d="M8.5 7l1.5-3h4l1.5 3" />
+    </svg>
+  );
+}
+
+export function IconQuestionMark() {
+  return (
+    <svg {...SVG_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
