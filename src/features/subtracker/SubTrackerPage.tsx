@@ -377,6 +377,11 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
 
+  const [completedCarouselHeight, setCompletedCarouselHeight] = useState<number | undefined>(undefined);
+  const completedCarouselRef = useRef<HTMLDivElement>(null);
+  const [entriesCarouselHeight, setEntriesCarouselHeight] = useState<number | undefined>(undefined);
+  const entriesCarouselRef = useRef<HTMLDivElement>(null);
+
   const lastAddTriggerRef = useRef(addTrigger);
   useEffect(() => {
     if (addTrigger !== lastAddTriggerRef.current) {
@@ -421,6 +426,20 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     // so we can show a rewards-addition confirmation prompt.
   }, []);
 
+  useEffect(() => {
+    const carousel = completedCarouselRef.current;
+    if (!carousel) return;
+    const firstItem = carousel.children[0] as HTMLElement | undefined;
+    if (firstItem) setCompletedCarouselHeight(firstItem.offsetHeight);
+  }, [completedBonuses.length]);
+
+  useEffect(() => {
+    const carousel = entriesCarouselRef.current;
+    if (!carousel) return;
+    const firstItem = carousel.children[0] as HTMLElement | undefined;
+    if (firstItem) setEntriesCarouselHeight(firstItem.offsetHeight);
+  }, [entries.length]);
+
   function entryDisplayName(e: SubTrackerEntry) {
     return e.cardRef.type === 'card' ? cardNameById.get(e.cardRef.cardId) || 'Card' : e.cardRef.name || 'Card';
   }
@@ -449,7 +468,22 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           </div>
           {!completedBonusesCollapsed ? (
           <>
-          <div className="card-carousel">
+          <div
+            style={completedCarouselHeight != null
+              ? { height: completedCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' }
+              : { overflow: 'hidden' }}
+          >
+          <div
+            ref={completedCarouselRef}
+            className="card-carousel"
+            style={{ marginBottom: 0 }}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+              const item = el.children[idx] as HTMLElement | undefined;
+              if (item) setCompletedCarouselHeight(item.offsetHeight);
+            }}
+          >
           {completedBonuses.map((b) => {
             const cashCents = completedBonusCashValueCents(b);
             const isPointsOrMiles = b.unitType === 'points' || b.unitType === 'miles';
@@ -495,6 +529,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               </div></div>
             );
           })}
+          </div>
           </div>
           <button
             type="button"
@@ -545,7 +580,22 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         </>
       ) : (
         <>
-      <div className="card-carousel">
+      <div
+        style={entriesCarouselHeight != null
+          ? { height: entriesCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' }
+          : { overflow: 'hidden' }}
+      >
+      <div
+        ref={entriesCarouselRef}
+        className="card-carousel"
+        style={{ marginBottom: 0 }}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+          const item = el.children[idx] as HTMLElement | undefined;
+          if (item) setEntriesCarouselHeight(item.offsetHeight);
+        }}
+      >
       {entries.map((e) => {
         const name = entryDisplayName(e);
         const start = toDate(e.startDate);
@@ -595,76 +645,8 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
             </div>
             {ratio != null ? (
               <><div style={{ marginTop: 12, marginBottom: 4 }}>
-                <div style={{ position: 'relative', height: 10, borderRadius: 999, background: 'color-mix(in srgb, var(--border) 60%, transparent)', overflow: 'visible' }}>
-                  {/* Tier marker lines */}
-                  {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t) => {
-                    const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
-                    return (
-                      <div
-                        key={t.id}
-                        style={{
-                          position: 'absolute',
-                          left: `${left}%`,
-                          top: -3,
-                          bottom: -3,
-                          width: 2,
-                          borderRadius: 1,
-                          background: 'var(--bg)',
-                          zIndex: 4,
-                          transform: 'translateX(-1px)',
-                          boxShadow: '0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent)'
-                        }}
-                      />
-                    );
-                  })}
-                  {/* Fill bar */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      height: '100%',
-                      width: `${Math.min(ratio * 100, 100)}%`,
-                      borderRadius: 999,
-                      background: ratio >= 1
-                        ? 'var(--green)'
-                        : `linear-gradient(90deg, var(--green), var(--ui-add-btn, var(--accent)))`,
-                      transition: 'width 600ms cubic-bezier(0.34, 1.56, 0.64, 1)',
-                      boxShadow: ratio > 0 ? '0 0 8px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 50%, transparent)' : 'none',
-                      zIndex: 2,
-                    }}
-                  />
-                  {/* Pulse dot at leading edge */}
-                  {ratio > 0 && ratio < 1 ? (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: `${Math.min(ratio * 100, 100)}%`,
-                        transform: 'translate(-50%, -50%)',
-                        width: 14,
-                        height: 14,
-                        borderRadius: '50%',
-                        background: 'var(--ui-add-btn, var(--accent))',
-                        zIndex: 5,
-                        boxShadow: '0 0 0 3px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent)',
-                        animation: 'progress-pulse 2s ease-in-out infinite',
-                      }}
-                    />
-                  ) : null}
-                </div>
-                {/* Percentage label */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.75rem', color: 'var(--muted)' }}>
-                  <span>$0</span>
-                  <span style={{ color: ratio >= 1 ? 'var(--green)' : 'var(--ui-add-btn, var(--accent))', fontWeight: 600 }}>
-                    {Math.round(ratio * 100)}%
-                  </span>
-                  <span>${(finalTarget / 100).toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Tier reward labels */}
-              <div style={{ position: 'relative', width: '100%', height: 20 }}>
+                {/* Tier reward labels */}
+                <div style={{ position: 'relative', width: '100%', height: 20, marginBottom: 4 }}>
                   {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t, idx) => {
                     const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
                     const clampedLeft = clamp(left, 2, 98);
@@ -722,6 +704,73 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                     );
                   })() : null}
                 </div>
+                <div style={{ position: 'relative', height: 10, borderRadius: 999, background: 'color-mix(in srgb, var(--border) 60%, transparent)', overflow: 'visible' }}>
+                  {/* Tier marker lines */}
+                  {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t) => {
+                    const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
+                    return (
+                      <div
+                        key={t.id}
+                        style={{
+                          position: 'absolute',
+                          left: `${left}%`,
+                          top: -3,
+                          bottom: -3,
+                          width: 2,
+                          borderRadius: 1,
+                          background: 'var(--bg)',
+                          zIndex: 4,
+                          transform: 'translateX(-1px)',
+                          boxShadow: '0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent)'
+                        }}
+                      />
+                    );
+                  })}
+                  {/* Fill bar */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      height: '100%',
+                      width: `${Math.min(ratio * 100, 100)}%`,
+                      borderRadius: 999,
+                      background: ratio >= 1
+                        ? 'var(--green)'
+                        : 'linear-gradient(90deg, #86efac, #16a34a)',
+                      transition: 'width 600ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      boxShadow: ratio > 0 ? '0 0 8px color-mix(in srgb, var(--green) 50%, transparent)' : 'none',
+                      zIndex: 2,
+                    }}
+                  />
+                  {/* Pulse dot at leading edge */}
+                  {ratio > 0 && ratio < 1 ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: `${Math.min(ratio * 100, 100)}%`,
+                        transform: 'translate(-50%, -50%)',
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        background: 'var(--green)',
+                        zIndex: 5,
+                        boxShadow: '0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent)',
+                        animation: 'progress-pulse-green 2s ease-in-out infinite',
+                      }}
+                    />
+                  ) : null}
+                </div>
+                {/* Percentage label */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.75rem', color: 'var(--muted)' }}>
+                  <span>$0</span>
+                  <span style={{ color: 'var(--green)', fontWeight: 600 }}>
+                    {Math.round(ratio * 100)}%
+                  </span>
+                  <span>${(finalTarget / 100).toLocaleString()}</span>
+                </div>
+              </div>
             </>) : null}
             <div
               className="btn-row"
@@ -904,6 +953,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           </div>
         );
       })}
+      </div>
       </div>
 
       {confirmDelete ? (

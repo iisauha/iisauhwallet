@@ -675,7 +675,7 @@ function CoastFireProjectionChart({
   );
 }
 
-export function InvestingPage({ openTransferTrigger = 0 }: { openTransferTrigger?: number }) {
+export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 0 }: { openTransferTrigger?: number; openHysaAllocTrigger?: number }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -706,6 +706,13 @@ export function InvestingPage({ openTransferTrigger = 0 }: { openTransferTrigger
   );
   const [transferOpen, setTransferOpen] = useState(false);
   useEffect(() => { if (openTransferTrigger > 0) setTransferOpen(true); }, [openTransferTrigger]);
+  useEffect(() => {
+    if (openHysaAllocTrigger > 0) {
+      // Open HYSA allocation for the first HYSA account
+      const firstHysa = investing.accounts.find(a => a.type === 'hysa') as HysaAccount | undefined;
+      if (firstHysa) openHysaAllocationModal(firstHysa);
+    }
+  }, [openHysaAllocTrigger]);
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -1424,36 +1431,31 @@ export function InvestingPage({ openTransferTrigger = 0 }: { openTransferTrigger
           <span className="section-header-left">
             {label}
           </span>
-          <button
-            type="button"
-            className="snapshot-add-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              addAccount(type);
-            }}
-          >
-            <IconPlus />
-            Add
-          </button>
           <span className="chevron">{isCollapsed ? '▸' : '▾'}</span>
         </div>
         {!isCollapsed ? (
           <>
-            {type === 'hysa' ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
+              {type === 'hysa' && (
                 <button
                   type="button"
                   className="snapshot-add-btn"
                   onClick={() => {
-                    const next = !showZeroHysa;
-                    setShowZeroHysa(next);
-                    saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, next);
+                    setShowZeroHysa(!showZeroHysa);
+                    saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, !showZeroHysa);
                   }}
                 >
                   {showZeroHysa ? 'Hide $0' : 'Show $0'}
                 </button>
-              </div>
-            ) : null}
+              )}
+              <button
+                type="button"
+                className="snapshot-add-btn"
+                onClick={() => addAccount(type)}
+              >
+                <IconPlus /> Add
+              </button>
+            </div>
             <div className="card-carousel">
             {visibleAccounts.map((a) => {
               return (
@@ -1510,6 +1512,14 @@ export function InvestingPage({ openTransferTrigger = 0 }: { openTransferTrigger
                           onClick={() => setHysaRate(a as HysaAccount)}
                         >
                           APY
+                        </button>
+                        <button
+                          type="button"
+                          className="snapshot-add-btn"
+                          style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                          onClick={() => openHysaAllocationModal(a as HysaAccount)}
+                        >
+                          Adjust Alloc
                         </button>
                         <select
                           className="snapshot-add-btn"

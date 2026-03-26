@@ -214,6 +214,10 @@ export function SnapshotPage({
 
   // Which detail section is expanded: 'cash' | 'cards' | 'pending' | null (accordion)
   const [activeSection, setActiveSection] = useState<'cash' | 'cards' | 'pending' | null>(null);
+  const [banksIdx, setBanksIdx] = useState(0);
+  const [cardsIdx, setCardsIdx] = useState(0);
+  const banksCarouselRef = useRef<HTMLDivElement>(null);
+  const cardsCarouselRef = useRef<HTMLDivElement>(null);
 
   function toggleSection(s: 'cash' | 'cards' | 'pending') {
     setActiveSection((prev) => (prev === s ? null : s));
@@ -453,7 +457,14 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div className="card-carousel">
+          <div
+            className="card-carousel"
+            ref={banksCarouselRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              setBanksIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+            }}
+          >
             {visibleBanks.map((b) => {
               const linkedLiquid = linkedHysaLiquidByBankId[b.id] || 0;
               return (
@@ -511,6 +522,19 @@ export function SnapshotPage({
               );
             })}
           </div>
+          {visibleBanks.length > 1 && (
+            <div className="carousel-dots">
+              {visibleBanks.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`carousel-dot${banksIdx === idx ? ' active' : ''}`}
+                  aria-label={`Go to bank ${idx + 1}`}
+                  onClick={() => { const el = banksCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+                />
+              ))}
+            </div>
+          )}
         </>
       </div>
 
@@ -541,7 +565,14 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div className="card-carousel">
+          <div
+            className="card-carousel"
+            ref={cardsCarouselRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              setCardsIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+            }}
+          >
             {visibleCards.map((c) => {
               const balanceCents = c.balanceCents ?? 0;
               const amountClass =
@@ -635,6 +666,19 @@ export function SnapshotPage({
               );
             })}
           </div>
+          {visibleCards.length > 1 && (
+            <div className="carousel-dots">
+              {visibleCards.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`carousel-dot${cardsIdx === idx ? ' active' : ''}`}
+                  aria-label={`Go to card ${idx + 1}`}
+                  onClick={() => { const el = cardsCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+                />
+              ))}
+            </div>
+          )}
         </>
       </div>
 

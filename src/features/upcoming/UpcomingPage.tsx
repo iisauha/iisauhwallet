@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { IconPlus } from '../../ui/icons';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
@@ -41,6 +41,10 @@ export function UpcomingPage() {
   const [expectedIncome, setExpectedIncome] = useState(() => loadExpectedIncome());
   const [lastAdjustments, setLastAdjustments] = useState(() => loadLastAdjustments());
   const [dismissedOccurrences, setDismissedOccurrences] = useState(() => loadUpcomingDismissedOccurrences());
+  const [incomeCarouselIdx, setIncomeCarouselIdx] = useState(0);
+  const [costsCarouselIdx, setCostsCarouselIdx] = useState(0);
+  const incomeCarouselRef = useRef<HTMLDivElement>(null);
+  const costsCarouselRef = useRef<HTMLDivElement>(null);
   const [modal, setModal] = useState<
     | { type: 'none' }
     | {
@@ -114,11 +118,22 @@ export function UpcomingPage() {
   );
 
   const costsInWindow = useMemo(() => {
-    return expectedCosts.filter((c) => (c.status === 'expected' || c.status == null) && c.expectedDate);
-  }, [expectedCosts]);
+    const end = new Date();
+    end.setDate(end.getDate() + windowDays);
+    const endKey = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    return expectedCosts.filter((c) =>
+      (c.status === 'expected' || c.status == null) && c.expectedDate && c.expectedDate <= endKey
+    );
+  }, [expectedCosts, windowDays]);
+
   const incomeInWindow = useMemo(() => {
-    return expectedIncome.filter((i) => (i.status === 'expected' || i.status == null) && i.expectedDate);
-  }, [expectedIncome]);
+    const end = new Date();
+    end.setDate(end.getDate() + windowDays);
+    const endKey = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    return expectedIncome.filter((i) =>
+      (i.status === 'expected' || i.status == null) && i.expectedDate && i.expectedDate <= endKey
+    );
+  }, [expectedIncome, windowDays]);
 
   const totalExpectedCostsCents = useMemo(() => {
     const mid = (min: number | null, max: number | null, amt: number) => {
@@ -219,6 +234,16 @@ export function UpcomingPage() {
     (a, b) => sortKeyForDate(a.dateKey || '') - sortKeyForDate(b.dateKey || '')
   );
 
+  const allIncomeItems = [
+    ...sortedIncomeInWindow.map(i => ({ kind: 'expected' as const, item: i, days: sortKeyForDate(i.expectedDate || '') })),
+    ...sortedRecurringIncome.map(i => ({ kind: 'recurring' as const, item: i, days: sortKeyForDate(i.expectedDate || '') }))
+  ].sort((a, b) => a.days - b.days);
+
+  const allCostItems = [
+    ...sortedCostsInWindow.map(c => ({ kind: 'expected' as const, item: c, days: sortKeyForDate(c.expectedDate || '') })),
+    ...sortedRecurringCosts.map(c => ({ kind: 'recurring' as const, item: c, days: sortKeyForDate(c.dateKey || '') }))
+  ].sort((a, b) => a.days - b.days);
+
   return (
     <div className="tab-panel active" id="upcomingContent">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
@@ -277,105 +302,132 @@ export function UpcomingPage() {
       </div>
       {!incomeCollapsed ? (
         <>
-          <div className="card-carousel">
-          {sortedIncomeInWindow.map((i) => (
-            <div className="card-carousel-item" key={i.id}>
-            <div className="card">
-              <div className="row">
-                <span className="name">{i.title}</span>
-                <span className="amount" style={{ color: 'var(--green)' }}>
-                  {formatCents(i.amountCents || 0)}
-                </span>
-              </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(i.expectedDate)}</div>
-              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                    onClick={() => {
-                      const initialCents = i.amountCents || 0;
-                      const last = lastAdjustments[i.id];
-                      setModal({
-                        type: 'adjust-amount',
-                        direction: 'in',
-                        label: i.title,
-                        originalCents: initialCents,
-                        amount: (initialCents / 100).toFixed(2),
-                        error: null,
-                        source: { kind: 'expected-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
-                      } as any);
-                    }}
-                >
-                  Move to Pending Inbound
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                  onClick={() => {
-                    if (!confirm('Remove this expected income from Upcoming?')) return;
-                    const next = expectedIncome.filter((x) => x.id !== i.id);
-                    setExpectedIncome(next);
-                    saveExpectedIncome(next);
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            </div>
-          ))}
-          {sortedRecurringIncome.map((i) => (
-            <div className="card-carousel-item" key={i.id}>
-            <div className="card">
-              <div className="row">
-                <span className="name">{i.title}</span>
-                <span className="amount" style={{ color: 'var(--green)' }}>
-                  {formatCents(i.amountCents || 0)}
-                </span>
-              </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
-                {formatExpectedTiming(i.expectedDate)} • From recurring
-              </div>
-              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                  onClick={() => {
-                    const initialCents = i.amountCents || 0;
-                    const last = lastAdjustments[i.id];
-                    setModal({
-                      type: 'adjust-amount',
-                      direction: 'in',
-                      label: i.title,
-                      originalCents: initialCents,
-                      amount: (initialCents / 100).toFixed(2),
-                      error: null,
-                      source: { kind: 'recurring-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
-                    } as any);
-                  }}
-                >
-                  Move to Pending Inbound
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                  onClick={() => {
-                    if (!confirm('Remove this occurrence from Upcoming only? Your recurring income is not changed.')) return;
-                    dismissUpcomingOccurrence('inc', i.recurringId, i.expectedDate);
-                    setDismissedOccurrences(loadUpcomingDismissedOccurrences());
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            </div>
-          ))}
+          <div
+            className="card-carousel"
+            ref={incomeCarouselRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              setIncomeCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+            }}
+          >
+          {allIncomeItems.map((entry) => {
+            if (entry.kind === 'expected') {
+              const i = entry.item;
+              return (
+                <div className="card-carousel-item" key={i.id}>
+                <div className="card">
+                  <div className="row">
+                    <span className="name">{i.title}</span>
+                    <span className="amount" style={{ color: 'var(--green)' }}>
+                      {formatCents(i.amountCents || 0)}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(i.expectedDate)}</div>
+                  <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        onClick={() => {
+                          const initialCents = i.amountCents || 0;
+                          const last = lastAdjustments[i.id];
+                          setModal({
+                            type: 'adjust-amount',
+                            direction: 'in',
+                            label: i.title,
+                            originalCents: initialCents,
+                            amount: (initialCents / 100).toFixed(2),
+                            error: null,
+                            source: { kind: 'expected-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
+                          } as any);
+                        }}
+                    >
+                      Move to Pending Inbound
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                      onClick={() => {
+                        if (!confirm('Remove this expected income from Upcoming?')) return;
+                        const next = expectedIncome.filter((x) => x.id !== i.id);
+                        setExpectedIncome(next);
+                        saveExpectedIncome(next);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                </div>
+              );
+            } else {
+              const i = entry.item;
+              return (
+                <div className="card-carousel-item" key={i.id}>
+                <div className="card">
+                  <div className="row">
+                    <span className="name">{i.title}</span>
+                    <span className="amount" style={{ color: 'var(--green)' }}>
+                      {formatCents(i.amountCents || 0)}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
+                    {formatExpectedTiming(i.expectedDate)} • From recurring
+                  </div>
+                  <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                      onClick={() => {
+                        const initialCents = i.amountCents || 0;
+                        const last = lastAdjustments[i.id];
+                        setModal({
+                          type: 'adjust-amount',
+                          direction: 'in',
+                          label: i.title,
+                          originalCents: initialCents,
+                          amount: (initialCents / 100).toFixed(2),
+                          error: null,
+                          source: { kind: 'recurring-income', id: i.id, lastCents: typeof last === 'number' ? last : undefined }
+                        } as any);
+                      }}
+                    >
+                      Move to Pending Inbound
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                      onClick={() => {
+                        if (!confirm('Remove this occurrence from Upcoming only? Your recurring income is not changed.')) return;
+                        dismissUpcomingOccurrence('inc', i.recurringId, i.expectedDate);
+                        setDismissedOccurrences(loadUpcomingDismissedOccurrences());
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                </div>
+              );
+            }
+          })}
           </div>
+          {allIncomeItems.length > 1 && (
+            <div className="carousel-dots">
+              {allIncomeItems.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`carousel-dot${incomeCarouselIdx === idx ? ' active' : ''}`}
+                  aria-label={`Go to income ${idx + 1}`}
+                  onClick={() => { const el = incomeCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+                />
+              ))}
+            </div>
+          )}
         </>
       ) : null}
 
@@ -415,111 +467,138 @@ export function UpcomingPage() {
       </div>
       {!costsCollapsed ? (
         <>
-          <div className="card-carousel">
-          {sortedCostsInWindow.map((c) => (
-            <div className="card-carousel-item" key={c.id}>
-            <div className="card">
-              <div className="row">
-                <span className="name">{c.title}</span>
-                <span className="amount" style={{ color: 'var(--red)' }}>
-                  {formatCents(c.amountCents || 0)}
-                </span>
-              </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(c.expectedDate)}</div>
-              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                    onClick={() => {
-                      const initialCents = c.amountCents || 0;
-                      const last = lastAdjustments[c.id];
-                      setModal({
-                        type: 'adjust-amount',
-                        direction: 'out',
-                        label: c.title,
-                        originalCents: initialCents,
-                        amount: (initialCents / 100).toFixed(2),
-                        error: null,
-                        source: { kind: 'expected-cost', id: c.id, lastCents: typeof last === 'number' ? last : undefined }
-                      } as any);
-                    }}
-                >
-                  Move to Pending Outbound
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                  onClick={() => {
-                    if (!confirm('Remove this expected cost from Upcoming?')) return;
-                    const next = expectedCosts.filter((x) => x.id !== c.id);
-                    setExpectedCosts(next);
-                    saveExpectedCosts(next);
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            </div>
-          ))}
-          {sortedRecurringCosts.map((c) => (
-            <div className="card-carousel-item" key={c.recurringId + ':' + c.dateKey}>
-            <div className="card">
-              <div className="row">
-                <span className="name">{c.recurringName}</span>
-                <span className="amount" style={{ color: 'var(--red)' }}>
-                  {formatCents(c.amountCents || 0)}
-                </span>
-              </div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
-                {formatExpectedTiming(c.dateKey)} • From recurring
-              </div>
-              <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                  onClick={() => {
-                    const initialCents = c.amountCents || 0;
-                    const key = `${c.recurringId}:${c.dateKey}`;
-                    const last = lastAdjustments[key];
-                    setModal({
-                      type: 'adjust-amount',
-                      direction: 'out',
-                      label: c.recurringName,
-                      originalCents: initialCents,
-                      amount: (initialCents / 100).toFixed(2),
-                      error: null,
-                      source: {
-                        kind: 'recurring-cost',
-                        recurringId: c.recurringId,
-                        dateKey: c.dateKey,
-                        lastCents: typeof last === 'number' ? last : undefined
-                      }
-                    } as any);
-                  }}
-                >
-                  Move to Pending Outbound
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                  onClick={() => {
-                    if (!confirm('Remove this occurrence from Upcoming only? Your recurring expense is not changed.')) return;
-                    dismissUpcomingOccurrence('exp', c.recurringId, c.dateKey);
-                    setDismissedOccurrences(loadUpcomingDismissedOccurrences());
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            </div>
-          ))}
+          <div
+            className="card-carousel"
+            ref={costsCarouselRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              setCostsCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+            }}
+          >
+          {allCostItems.map((entry) => {
+            if (entry.kind === 'expected') {
+              const c = entry.item;
+              return (
+                <div className="card-carousel-item" key={c.id}>
+                <div className="card">
+                  <div className="row">
+                    <span className="name">{c.title}</span>
+                    <span className="amount" style={{ color: 'var(--red)' }}>
+                      {formatCents(c.amountCents || 0)}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(c.expectedDate)}</div>
+                  <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        onClick={() => {
+                          const initialCents = c.amountCents || 0;
+                          const last = lastAdjustments[c.id];
+                          setModal({
+                            type: 'adjust-amount',
+                            direction: 'out',
+                            label: c.title,
+                            originalCents: initialCents,
+                            amount: (initialCents / 100).toFixed(2),
+                            error: null,
+                            source: { kind: 'expected-cost', id: c.id, lastCents: typeof last === 'number' ? last : undefined }
+                          } as any);
+                        }}
+                    >
+                      Move to Pending Outbound
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                      onClick={() => {
+                        if (!confirm('Remove this expected cost from Upcoming?')) return;
+                        const next = expectedCosts.filter((x) => x.id !== c.id);
+                        setExpectedCosts(next);
+                        saveExpectedCosts(next);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                </div>
+              );
+            } else {
+              const c = entry.item;
+              return (
+                <div className="card-carousel-item" key={c.recurringId + ':' + c.dateKey}>
+                <div className="card">
+                  <div className="row">
+                    <span className="name">{c.recurringName}</span>
+                    <span className="amount" style={{ color: 'var(--red)' }}>
+                      {formatCents(c.amountCents || 0)}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
+                    {formatExpectedTiming(c.dateKey)} • From recurring
+                  </div>
+                  <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                      onClick={() => {
+                        const initialCents = c.amountCents || 0;
+                        const key = `${c.recurringId}:${c.dateKey}`;
+                        const last = lastAdjustments[key];
+                        setModal({
+                          type: 'adjust-amount',
+                          direction: 'out',
+                          label: c.recurringName,
+                          originalCents: initialCents,
+                          amount: (initialCents / 100).toFixed(2),
+                          error: null,
+                          source: {
+                            kind: 'recurring-cost',
+                            recurringId: c.recurringId,
+                            dateKey: c.dateKey,
+                            lastCents: typeof last === 'number' ? last : undefined
+                          }
+                        } as any);
+                      }}
+                    >
+                      Move to Pending Outbound
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                      onClick={() => {
+                        if (!confirm('Remove this occurrence from Upcoming only? Your recurring expense is not changed.')) return;
+                        dismissUpcomingOccurrence('exp', c.recurringId, c.dateKey);
+                        setDismissedOccurrences(loadUpcomingDismissedOccurrences());
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                </div>
+              );
+            }
+          })}
           </div>
+          {allCostItems.length > 1 && (
+            <div className="carousel-dots">
+              {allCostItems.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`carousel-dot${costsCarouselIdx === idx ? ' active' : ''}`}
+                  aria-label={`Go to cost ${idx + 1}`}
+                  onClick={() => { const el = costsCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+                />
+              ))}
+            </div>
+          )}
         </>
       ) : null}
 

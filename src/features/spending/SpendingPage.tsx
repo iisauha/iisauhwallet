@@ -84,6 +84,9 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     cpp: number | undefined;
   } | null>(null);
   const [hideZeroRewards, setHideZeroRewards] = useState(() => loadBoolPref(SHOW_ZERO_REWARDS_KEY, true));
+  const [purchasesCarouselRef, setPurchasesCarouselRef] = useState<HTMLDivElement | null>(null);
+  const [purchasesCarouselHeight, setPurchasesCarouselHeight] = useState<number | null>(null);
+  const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -290,6 +293,12 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     const list: any[] = data.purchases || [];
     return list.find((p) => getPurchaseUiId(p) === editingPurchaseKey) || null;
   }, [editingPurchaseKey, data.purchases]);
+
+  useEffect(() => {
+    if (!purchasesCarouselRef) return;
+    const firstItem = purchasesCarouselRef.children[0] as HTMLElement | undefined;
+    if (firstItem) setPurchasesCarouselHeight(firstItem.offsetHeight);
+  }, [purchasesCarouselRef, visiblePurchases.length]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -734,7 +743,19 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          <div className="card-carousel">
+          <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
+          <div
+            className="card-carousel"
+            style={{ marginBottom: 0 }}
+            ref={(el) => setPurchasesCarouselRef(el)}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+              setPurchasesCarouselIdx(idx);
+              const item = el.children[idx] as HTMLElement | undefined;
+              if (item) setPurchasesCarouselHeight(item.offsetHeight);
+            }}
+          >
           {visiblePurchases.map((p: any) => {
             const uiId = getPurchaseUiId(p);
             return (
@@ -778,6 +799,24 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             </div></div>
           )})}
           </div>
+          </div>
+          {visiblePurchases.length > 1 && (
+            <div className="carousel-dots">
+              {visiblePurchases.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`carousel-dot${purchasesCarouselIdx === idx ? ' active' : ''}`}
+                  aria-label={`Go to purchase ${idx + 1}`}
+                  onClick={() => {
+                    if (purchasesCarouselRef) {
+                      purchasesCarouselRef.scrollTo({ left: idx * purchasesCarouselRef.clientWidth, behavior: 'smooth' });
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          )}
           {!showAllPurchases && hasMorePurchases ? (
             <div style={{ textAlign: 'center', marginTop: 8 }}>
               <button

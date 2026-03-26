@@ -1287,6 +1287,24 @@ textarea.ll-control {
   min-width: 0;
 }
 .card-carousel-item .card { margin-bottom: 0; }
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ui-border, var(--border));
+  transition: background 200ms ease, transform 200ms ease;
+  cursor: pointer;
+}
+.carousel-dot.active {
+  background: var(--ui-add-btn, var(--accent));
+  transform: scale(1.3);
+}
 
 /* ─── Hero Flipper Carousel ───────────────────────────────────────── */
 .hero-flipper-wrap {
@@ -1823,6 +1841,11 @@ input[type="checkbox"]:focus-visible {
 @keyframes progress-pulse {
   0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent); }
   50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 10%, transparent); }
+}
+
+@keyframes progress-pulse-green {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--green) 10%, transparent); }
 }
 
 /* ─── Luxury micro-shimmer on cards ─────────────────────────────── */

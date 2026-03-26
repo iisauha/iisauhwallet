@@ -124,6 +124,8 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
   const [incomeCollapsed, setIncomeCollapsed] = useDropdownCollapsed('recurring_income', true);
   const [expensesSectionCollapsed, setExpensesSectionCollapsed] = useDropdownCollapsed('recurring_expenses_main', false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
+  const [expenseCatIdx, setExpenseCatIdx] = useState<Record<string, number>>({});
+  const expenseCatRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   function toMonthlyCents(r: any): number {
     if (r.isActive === false) return 0;
@@ -181,23 +183,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
     <div className="tab-panel active" id="recurringContent">
       <p className="section-title page-title">Recurring</p>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="row" style={{ marginBottom: 8 }}>
-          <span className="name" style={{ fontWeight: 700 }}>Income</span>
-          <span style={{ display: 'flex', gap: 16 }}>
-            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly)}/mo</span>
-            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly * 12)}/yr</span>
-          </span>
-        </div>
-        <div className="row">
-          <span className="name" style={{ fontWeight: 700 }}>Expenses</span>
-          <span style={{ display: 'flex', gap: 16 }}>
-            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly)}/mo</span>
-            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly * 12)}/yr</span>
-          </span>
-        </div>
-      </div>
-
       <div
         className="section-header"
         style={{
@@ -209,20 +194,16 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
         <span className="section-header-left">
           Recurring Income
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            className="snapshot-add-btn"
-            onClick={(e) => { e.stopPropagation(); resetModalState(); setType('income'); setOpen(true); }}
-          >
-            <IconPlus />
-            Add
-          </button>
-          <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
-        </span>
+        <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
       </div>
       {!incomeCollapsed ? (
         <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <button type="button" className="snapshot-add-btn"
+              onClick={() => { resetModalState(); setType('income'); setOpen(true); }}>
+              <IconPlus /> Add
+            </button>
+          </div>
           {income.map((r: any) => {
             const inactive = r.isActive === false;
             return (
@@ -372,20 +353,16 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
         onClick={() => setExpensesSectionCollapsed(!expensesSectionCollapsed)}
       >
         <span className="section-header-left">Recurring Expenses</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            className="snapshot-add-btn"
-            onClick={(e) => { e.stopPropagation(); resetModalState(); setType('expense'); setOpen(true); }}
-          >
-            <IconPlus />
-            Add
-          </button>
-          <span className="chevron">{expensesSectionCollapsed ? '▸' : '▾'}</span>
-        </span>
+        <span className="chevron">{expensesSectionCollapsed ? '▸' : '▾'}</span>
       </div>
       {!expensesSectionCollapsed ? (
       <>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <button type="button" className="snapshot-add-btn"
+            onClick={() => { resetModalState(); setType('expense'); setOpen(true); }}>
+            <IconPlus /> Add
+          </button>
+        </div>
       {expensesByCategory.map(([catId, items]) => {
         const headerLabel = getCategoryName(cfg, catId);
         return (
@@ -402,7 +379,15 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
             }}>
               {headerLabel}
             </div>
-            <div className="card-carousel">
+            <div
+              className="card-carousel"
+              ref={(el) => { expenseCatRefs.current[catId] = el; }}
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+                setExpenseCatIdx((prev) => ({ ...prev, [catId]: idx }));
+              }}
+            >
             {items.map((r: any) => (
               <div className="card-carousel-item" key={r.id}>
               <div className="card">
@@ -479,6 +464,19 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                   </div>
                 ))}
             </div>
+            {items.length > 1 && (
+              <div className="carousel-dots">
+                {items.map((_: any, idx: number) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`carousel-dot${(expenseCatIdx[catId] ?? 0) === idx ? ' active' : ''}`}
+                    aria-label={`Go to expense ${idx + 1}`}
+                    onClick={() => { const el = expenseCatRefs.current[catId]; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
@@ -1258,6 +1256,23 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
         recurring={recurring}
       />
       <ViewLastOptimizerModal open={viewLastOptimizerOpen} onClose={() => setViewLastOptimizerOpen(false)} />
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="row" style={{ marginBottom: 8 }}>
+          <span className="name" style={{ fontWeight: 700 }}>Income</span>
+          <span style={{ display: 'flex', gap: 16 }}>
+            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly)}/mo</span>
+            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly * 12)}/yr</span>
+          </span>
+        </div>
+        <div className="row">
+          <span className="name" style={{ fontWeight: 700 }}>Expenses</span>
+          <span style={{ display: 'flex', gap: 16 }}>
+            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly)}/mo</span>
+            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly * 12)}/yr</span>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

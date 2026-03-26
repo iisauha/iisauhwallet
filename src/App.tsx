@@ -20,7 +20,7 @@ import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './sta
 import {
   IconSnapshot, IconArrowExchange, IconCalendar, IconRefreshCircle,
   IconBankBuilding, IconBarChartTrend, IconStar,
-  IconCreditCard, IconExport,
+  IconCreditCard, IconExport, IconCoin,
   IconChevronRight, IconPlus,
 } from './ui/icons';
 
@@ -144,7 +144,8 @@ export type QuickAction =
   | 'update-balance'
   | 'add-bonus'
   | 'export'
-  | 'transfer-investing';
+  | 'transfer-investing'
+  | 'adjust-hysa-alloc';
 
 const QUICK_ACTION_FREQ_KEY = 'iisauhwallet_quick_action_freq_v1';
 
@@ -172,14 +173,15 @@ function incrementActionFreq(action: QuickAction): void {
 
 function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
   const allItems: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
-    { icon: <IconArrowExchange />, label: 'Add a purchase', action: 'log-purchase' },
+    { icon: <IconCoin />, label: 'Add a purchase', action: 'log-purchase' },
     { icon: <IconCreditCard />, label: 'Add a Purchase (Full Reimbursement Expected)', action: 'add-reimbursable' },
-    { icon: <IconCalendar />, label: 'Add pending outbound', action: 'add-pending-out' },
-    { icon: <IconCalendar />, label: 'Add pending inbound', action: 'add-pending-in' },
+    { icon: <IconSnapshot />, label: 'Add pending outbound', action: 'add-pending-out' },
+    { icon: <IconSnapshot />, label: 'Add pending inbound', action: 'add-pending-in' },
     { icon: <IconRefreshCircle />, label: 'Add recurring expense', action: 'add-recurring-expense' },
     { icon: <IconRefreshCircle />, label: 'Add recurring income', action: 'add-recurring-income' },
     { icon: <IconSnapshot />, label: 'Update a balance', action: 'update-balance' },
     { icon: <IconBarChartTrend />, label: 'Transfer to Investing', action: 'transfer-investing' },
+    { icon: <IconBarChartTrend />, label: 'Adjust HYSA Allocation', action: 'adjust-hysa-alloc' },
     { icon: <IconStar />, label: 'Add a bonus card', action: 'add-bonus' },
     { icon: <IconExport />, label: 'Export backup', action: 'export' },
   ];
@@ -254,6 +256,7 @@ function MainApp() {
   const [subtrackerAddTrigger, setSubtrackerAddTrigger] = useState(0);
   const [exportTrigger, setExportTrigger] = useState(0);
   const [investingTransferTrigger, setInvestingTransferTrigger] = useState(0);
+  const [investingHysaAllocTrigger, setInvestingHysaAllocTrigger] = useState(0);
 
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {
@@ -323,6 +326,10 @@ function MainApp() {
           setTab('investing');
           afterMount(() => setInvestingTransferTrigger((n) => n + 1));
           break;
+        case 'adjust-hysa-alloc':
+          setTab('investing');
+          afterMount(() => setInvestingHysaAllocTrigger((n) => n + 1));
+          break;
       }
     }, 140);
   }, []);
@@ -342,11 +349,11 @@ function MainApp() {
     );
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'loans') return <LoansPage />;
-    if (tab === 'investing') return <InvestingPage openTransferTrigger={investingTransferTrigger} />;
+    if (tab === 'investing') return <InvestingPage openTransferTrigger={investingTransferTrigger} openHysaAllocTrigger={investingHysaAllocTrigger} />;
     if (tab === 'recurring') return <RecurringPage addExpenseTrigger={recurringAddExpenseTrigger} addIncomeTrigger={recurringAddIncomeTrigger} />;
     if (tab === 'subtracker') return <SubTrackerPage addTrigger={subtrackerAddTrigger} />;
     return <SettingsPage exportTrigger={exportTrigger} onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
-  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger, investingTransferTrigger]);
+  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger, investingTransferTrigger, investingHysaAllocTrigger]);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', String(index));
