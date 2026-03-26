@@ -429,11 +429,17 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   }, []);
 
   useEffect(() => {
-    const carousel = completedCarouselRef.current;
-    if (!carousel) return;
-    const firstItem = carousel.children[0] as HTMLElement | undefined;
-    if (firstItem) setCompletedCarouselHeight(firstItem.offsetHeight);
-  }, [completedBonuses.length]);
+    if (completedBonusesCollapsed) {
+      setCompletedCarouselHeight(undefined);
+      return;
+    }
+    requestAnimationFrame(() => {
+      const carousel = completedCarouselRef.current;
+      if (!carousel) return;
+      const firstItem = carousel.children[0] as HTMLElement | undefined;
+      if (firstItem) setCompletedCarouselHeight(firstItem.offsetHeight);
+    });
+  }, [completedBonuses.length, completedBonusesCollapsed]);
 
   useEffect(() => {
     const carousel = entriesCarouselRef.current;

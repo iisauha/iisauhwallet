@@ -819,10 +819,17 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             </div>
           )}
           {!showAllPurchases && hasMorePurchases ? (
-            <div style={{ textAlign: 'center', marginTop: 8 }}>
+            <div style={{
+              textAlign: 'center',
+              marginTop: 8,
+              opacity: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 1 : 0,
+              pointerEvents: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 'auto' : 'none',
+              transition: 'opacity 0.2s ease',
+            }}>
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="snapshot-add-btn"
+                style={{ margin: '0 auto' }}
                 onClick={() => setShowAllPurchases(true)}
               >
                 See more

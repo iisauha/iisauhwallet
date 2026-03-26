@@ -328,14 +328,15 @@ body {
   background: rgba(22, 163, 74, 0.12);
 }
 .btn-private-loan-delete {
-  background: transparent;
+  background: var(--red-light);
   color: var(--red);
   border: 1px solid var(--red);
+  border-radius: 8px;
 }
 .btn-private-loan-delete:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.1);
+  background: rgba(220, 38, 38, 0.2);
 }
-.btn-danger { color: var(--danger); border: 1px solid var(--danger); background: transparent; }
+.btn-danger { color: var(--danger); border: 1px solid var(--danger); background: var(--red-light); border-radius: 8px; }
 .btn-add {
   background: color-mix(in srgb, var(--ui-add-btn, #2563EB) 18%, transparent);
   color: var(--ui-add-btn, #2563EB);
@@ -1129,7 +1130,9 @@ input[type="date"].ll-control:focus {
   cursor: pointer;
   font-family: var(--app-font-family);
   -webkit-tap-highlight-color: transparent;
+  line-height: 1;
 }
+.snapshot-add-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
 .snapshot-add-btn:active { opacity: 0.75; }
 
 @media (hover: hover) and (pointer: fine) {

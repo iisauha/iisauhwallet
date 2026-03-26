@@ -1545,8 +1545,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                     ) : null}
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', color: 'var(--red, #e05)', borderColor: 'color-mix(in srgb, var(--red, #e05) 40%, transparent)' }}
+                      className="btn btn-danger"
+                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                       onClick={() => deleteAccount(a)}
                     >
                       Delete
