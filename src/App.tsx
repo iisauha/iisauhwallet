@@ -200,6 +200,12 @@ function MainApp() {
   const [subtrackerAddTrigger, setSubtrackerAddTrigger] = useState(0);
   const [exportTrigger, setExportTrigger] = useState(0);
 
+  // Random animation start offsets so blobs begin at a different point each refresh
+  const blobDelays = useMemo(() => {
+    const durations = [52, 22, 17, 14, 19, 13, 16];
+    return durations.map((d) => `-${(Math.random() * d).toFixed(2)}s`);
+  }, []);
+
   useEffect(() => {
     if (tab === 'spending') setSpendingVisited(true);
   }, [tab]);
@@ -316,14 +322,15 @@ function MainApp() {
 
   return (
     <>
-      {/* Lava-lamp ambient background blobs — 7 blobs covering full screen */}
-      <div className="bg-blob bg-blob-1" aria-hidden="true" />
-      <div className="bg-blob bg-blob-2" aria-hidden="true" />
-      <div className="bg-blob bg-blob-3" aria-hidden="true" />
-      <div className="bg-blob bg-blob-4" aria-hidden="true" />
-      <div className="bg-blob bg-blob-5" aria-hidden="true" />
-      <div className="bg-blob bg-blob-6" aria-hidden="true" />
-      <div className="bg-blob bg-blob-7" aria-hidden="true" />
+      {/* Lava-lamp: 1 large base blob + 6 satellites, randomized start per refresh */}
+      {blobDelays.map((delay, i) => (
+        <div
+          key={i}
+          className={`bg-blob bg-blob-${i + 1}`}
+          aria-hidden="true"
+          style={{ animationDelay: delay }}
+        />
+      ))}
 
       <GlobalHeader onAvatarClick={() => {
         if (tab === 'settings') {
