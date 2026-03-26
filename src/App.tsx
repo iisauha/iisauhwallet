@@ -202,7 +202,7 @@ function MainApp() {
 
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {
-    const durations = [118, 50, 39, 32, 44, 30, 37];
+    const durations = [110, 45, 38, 52];
     return durations.map((d) => `-${(Math.random() * d).toFixed(2)}s`);
   }, []);
 
@@ -322,7 +322,7 @@ function MainApp() {
 
   return (
     <>
-      {/* Lava-lamp: 1 large base blob + 6 satellites, randomized start per refresh */}
+      {/* Lava-lamp: 1 large base blob + 3 satellites, randomized start per refresh */}
       {blobDelays.map((delay, i) => (
         <div
           key={i}
