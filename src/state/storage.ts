@@ -514,20 +514,33 @@ export function exportJSON(): string {
     if (raw && !isEncrypted(raw)) payload.data[STORAGE_KEY] = safeJsonParse(raw).value;
   }
 
+  // Keys whose localStorage value may be an encrypted blob tied to this device's crypto key.
+  // We must export the *decrypted* plaintext from the in-memory cache so the backup can be
+  // imported into any context (e.g. browser → PWA) which has a different device key.
+  const auxExportKeys = new Set([
+    INVESTING_KEY, SUB_TRACKER_KEY, LOANS_KEY, CATEGORY_STORAGE_KEY,
+    EXPECTED_COSTS_KEY, EXPECTED_INCOME_KEY, LAST_ADJUSTMENTS_KEY, COASTFIRE_KEY,
+    FEDERAL_REPAYMENT_CONFIG_KEY, BIRTHDATE_KEY,
+    PUBLIC_PAYMENT_NOW_ADDED_KEY, PRIVATE_PAYMENT_NOW_BASE_KEY,
+    LAST_RECOMPUTE_DATE_KEY, PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
+    CARD_REWARD_ADJUSTMENTS_KEY, CARD_REWARD_ONLY_ENTRIES_KEY, REWARDS_VISIBLE_CARD_IDS_KEY,
+  ]);
+
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k || k === STORAGE_KEY || EXPORT_NEVER_KEYS.has(k)) continue;
       if (k.startsWith('ledgerlite') || allow.has(k) || k.includes('snapshot_') || k.includes('expected') || k.includes('upcoming')) {
-        const v = localStorage.getItem(k);
-        payload.data[k] = safeJsonParse(v).value;
+        // For encrypted aux keys, read from the decrypted cache — not the raw encrypted blob.
+        const v = auxExportKeys.has(k) ? loadEncryptedKey(k) : localStorage.getItem(k);
+        if (v !== null) payload.data[k] = safeJsonParse(v).value;
       }
     }
   } catch (_) {
     allow.forEach((k) => {
       if (k === STORAGE_KEY || EXPORT_NEVER_KEYS.has(k)) return;
       try {
-        const v = localStorage.getItem(k);
+        const v = auxExportKeys.has(k) ? loadEncryptedKey(k) : localStorage.getItem(k);
         if (v !== null) payload.data[k] = safeJsonParse(v).value;
       } catch (_) {
         // ignore
@@ -579,6 +592,12 @@ export function importJSON(jsonText: string) {
       try {
         const raw = localStorage.getItem(k);
         if (raw && !isEncrypted(raw)) saveEncryptedKey(k, raw);
+        else if (raw && isEncrypted(raw)) {
+          // Encrypted blob from a different device/context — can't decrypt with this device key.
+          // Write plaintext null to cache so the app doesn't serve garbled data after reload.
+          setAuxCached(k, null);
+          localStorage.removeItem(k);
+        }
         else if (!raw) setAuxCached(k, null);
       } catch (_) {}
     }
