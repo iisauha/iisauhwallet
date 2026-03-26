@@ -476,8 +476,16 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                   setAutoLockMinutes(v);
                   saveAutoLockMinutes(v);
                 }}
-                className="ll-control"
-                style={{ width: 'auto', minWidth: 110, textAlign: 'right' }}
+                style={{
+                  width: 'auto', minWidth: 90, textAlign: 'right',
+                  padding: '5px 8px', fontSize: '0.85rem', lineHeight: 1.4,
+                  background: 'var(--ui-card-bg, var(--surface))',
+                  border: '1px solid var(--ui-border, var(--border))',
+                  borderRadius: 8,
+                  color: 'var(--ui-primary-text, var(--text))',
+                  fontFamily: 'var(--app-font-family)',
+                  cursor: 'pointer',
+                }}
               >
                 <option value={1}>1 minute</option>
                 <option value={2}>2 minutes</option>

@@ -1030,7 +1030,8 @@ input[type="date"].ll-control:focus {
 }
 .settings-row:last-child { border-bottom: none; }
 .settings-row:active { background: var(--surface-hover); }
-.settings-row-icon {
+.settings-row-icon,
+.settings-row-icon-wrap {
   width: 30px;
   height: 30px;
   border-radius: 8px;
