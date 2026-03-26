@@ -1651,65 +1651,166 @@ input[type="checkbox"]:focus-visible {
 }
 .snapshot-add-btn:active { transform: scale(0.93); }
 
-/* ─── Lava lamp ambient background blobs ─────────────────────────── */
+/* ─── Lava lamp: 7 blobs covering the full screen ────────────────── */
 .bg-blob {
   position: fixed;
-  filter: blur(55px);
-  opacity: 0.22;
+  filter: blur(58px);
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 40% 40%, var(--accent), color-mix(in srgb, var(--accent) 60%, #7c3aed));
   will-change: transform, border-radius;
+  background: radial-gradient(circle at 38% 38%,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, #7c3aed) 60%,
+    transparent 100%
+  );
 }
+/* top-left */
 .bg-blob-1 {
-  width: 380px;
-  height: 460px;
-  top: -80px;
-  left: -80px;
-  animation: blobFloat1 38s ease-in-out infinite;
-  border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+  width: 52vw; height: 52vw;
+  top: -12vh; left: -14vw;
+  opacity: 0.19;
+  border-radius: 62% 38% 58% 42% / 46% 62% 38% 54%;
+  animation: llBlob1 44s ease-in-out infinite;
 }
+/* top-right */
 .bg-blob-2 {
-  width: 300px;
-  height: 360px;
-  bottom: 40px;
-  right: -60px;
-  opacity: 0.17;
-  animation: blobFloat2 46s ease-in-out infinite;
-  border-radius: 45% 55% 40% 60% / 60% 45% 55% 40%;
+  width: 44vw; height: 48vw;
+  top: -8vh; right: -12vw;
+  opacity: 0.16;
+  border-radius: 42% 58% 38% 62% / 60% 40% 56% 44%;
+  animation: llBlob2 55s ease-in-out infinite;
 }
+/* upper-center */
 .bg-blob-3 {
-  width: 220px;
-  height: 280px;
-  top: 40%;
-  left: 50%;
+  width: 38vw; height: 42vw;
+  top: 18vh; left: 30vw;
   opacity: 0.14;
-  animation: blobFloat3 28s ease-in-out infinite;
-  border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%;
+  border-radius: 54% 46% 62% 38% / 44% 58% 42% 56%;
+  animation: llBlob3 36s ease-in-out infinite;
 }
-@keyframes blobFloat1 {
-  0%   { transform: translate(0px,   0px)    scale(1);    border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; }
-  20%  { transform: translate(40px,  120px)  scale(1.06); border-radius: 40% 60% 45% 55% / 60% 40% 55% 45%; }
-  40%  { transform: translate(80px,  240px)  scale(1.12); border-radius: 55% 45% 60% 40% / 45% 55% 40% 60%; }
-  60%  { transform: translate(20px,  320px)  scale(1.08); border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; }
-  80%  { transform: translate(-30px, 180px)  scale(0.96); border-radius: 60% 40% 50% 50% / 40% 60% 45% 55%; }
-  100% { transform: translate(0px,   0px)    scale(1);    border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; }
+/* mid-left */
+.bg-blob-4 {
+  width: 46vw; height: 44vw;
+  top: 38vh; left: -16vw;
+  opacity: 0.15;
+  border-radius: 48% 52% 44% 56% / 58% 44% 56% 42%;
+  animation: llBlob4 49s ease-in-out infinite;
 }
-@keyframes blobFloat2 {
-  0%   { transform: translate(0px,   0px)    scale(1);    border-radius: 45% 55% 40% 60% / 60% 45% 55% 40%; }
-  25%  { transform: translate(-60px, -100px) scale(1.10); border-radius: 60% 40% 55% 45% / 45% 60% 40% 55%; }
-  50%  { transform: translate(-20px, -220px) scale(1.18); border-radius: 40% 60% 50% 50% / 55% 40% 60% 45%; }
-  75%  { transform: translate(40px,  -140px) scale(1.05); border-radius: 55% 45% 60% 40% / 40% 55% 45% 60%; }
-  100% { transform: translate(0px,   0px)    scale(1);    border-radius: 45% 55% 40% 60% / 60% 45% 55% 40%; }
+/* mid-right */
+.bg-blob-5 {
+  width: 40vw; height: 46vw;
+  top: 44vh; right: -14vw;
+  opacity: 0.13;
+  border-radius: 60% 40% 52% 48% / 40% 60% 44% 56%;
+  animation: llBlob5 38s ease-in-out infinite;
 }
-@keyframes blobFloat3 {
-  0%   { transform: translate(-50%, -50%) scale(1);    border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; }
-  30%  { transform: translate(calc(-50% + 70px), calc(-50% - 140px)) scale(1.15); border-radius: 60% 40% 45% 55% / 55% 45% 60% 40%; }
-  60%  { transform: translate(calc(-50% - 50px), calc(-50% - 60px))  scale(0.90); border-radius: 40% 60% 55% 45% / 60% 40% 45% 55%; }
-  85%  { transform: translate(calc(-50% + 30px), calc(-50% + 80px))  scale(1.08); border-radius: 55% 45% 40% 60% / 45% 55% 60% 40%; }
-  100% { transform: translate(-50%, -50%) scale(1);    border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; }
+/* bottom-left */
+.bg-blob-6 {
+  width: 48vw; height: 50vw;
+  bottom: -14vh; left: -10vw;
+  opacity: 0.17;
+  border-radius: 44% 56% 60% 40% / 56% 44% 60% 40%;
+  animation: llBlob6 58s ease-in-out infinite;
 }
+/* bottom-right */
+.bg-blob-7 {
+  width: 42vw; height: 44vw;
+  bottom: -10vh; right: -8vw;
+  opacity: 0.15;
+  border-radius: 56% 44% 40% 60% / 42% 58% 48% 52%;
+  animation: llBlob7 32s ease-in-out infinite;
+}
+
+@keyframes llBlob1 {
+  0%   { transform: translate(0,0) scale(1);         border-radius: 62% 38% 58% 42% / 46% 62% 38% 54%; }
+  18%  { transform: translate(38vw,22vh) scale(1.1); border-radius: 42% 58% 44% 56% / 60% 40% 54% 46%; }
+  38%  { transform: translate(22vw,58vh) scale(0.92);border-radius: 58% 42% 62% 38% / 44% 56% 40% 60%; }
+  58%  { transform: translate(52vw,72vh) scale(1.08);border-radius: 46% 54% 48% 52% / 56% 44% 58% 42%; }
+  78%  { transform: translate(12vw,40vh) scale(1.04);border-radius: 60% 40% 54% 46% / 42% 58% 46% 54%; }
+  100% { transform: translate(0,0) scale(1);         border-radius: 62% 38% 58% 42% / 46% 62% 38% 54%; }
+}
+@keyframes llBlob2 {
+  0%   { transform: translate(0,0) scale(1);          border-radius: 42% 58% 38% 62% / 60% 40% 56% 44%; }
+  22%  { transform: translate(-44vw,30vh) scale(1.12);border-radius: 60% 40% 52% 48% / 44% 56% 42% 58%; }
+  44%  { transform: translate(-28vw,65vh) scale(0.9); border-radius: 50% 50% 60% 40% / 58% 42% 48% 52%; }
+  66%  { transform: translate(-56vw,44vh) scale(1.06);border-radius: 44% 56% 46% 54% / 40% 60% 54% 46%; }
+  88%  { transform: translate(-20vw,18vh) scale(1.02);border-radius: 56% 44% 40% 60% / 62% 38% 50% 50%; }
+  100% { transform: translate(0,0) scale(1);          border-radius: 42% 58% 38% 62% / 60% 40% 56% 44%; }
+}
+@keyframes llBlob3 {
+  0%   { transform: translate(0,0) scale(1);          border-radius: 54% 46% 62% 38% / 44% 58% 42% 56%; }
+  25%  { transform: translate(-30vw,-28vh) scale(1.1);border-radius: 40% 60% 48% 52% / 58% 42% 56% 44%; }
+  50%  { transform: translate(28vw,32vh) scale(0.88); border-radius: 62% 38% 44% 56% / 46% 54% 60% 40%; }
+  75%  { transform: translate(-14vw,60vh) scale(1.14);border-radius: 48% 52% 58% 42% / 54% 46% 44% 56%; }
+  100% { transform: translate(0,0) scale(1);          border-radius: 54% 46% 62% 38% / 44% 58% 42% 56%; }
+}
+@keyframes llBlob4 {
+  0%   { transform: translate(0,0) scale(1);          border-radius: 48% 52% 44% 56% / 58% 44% 56% 42%; }
+  20%  { transform: translate(50vw,20vh) scale(1.08); border-radius: 62% 38% 56% 44% / 44% 56% 42% 58%; }
+  45%  { transform: translate(70vw,-18vh) scale(0.94);border-radius: 44% 56% 60% 40% / 56% 44% 48% 52%; }
+  68%  { transform: translate(38vw,50vh) scale(1.12); border-radius: 56% 44% 42% 58% / 40% 60% 54% 46%; }
+  85%  { transform: translate(18vw,28vh) scale(1.0);  border-radius: 50% 50% 48% 52% / 58% 42% 56% 44%; }
+  100% { transform: translate(0,0) scale(1);          border-radius: 48% 52% 44% 56% / 58% 44% 56% 42%; }
+}
+@keyframes llBlob5 {
+  0%   { transform: translate(0,0) scale(1);           border-radius: 60% 40% 52% 48% / 40% 60% 44% 56%; }
+  28%  { transform: translate(-48vw,-22vh) scale(1.1); border-radius: 44% 56% 60% 40% / 54% 46% 58% 42%; }
+  52%  { transform: translate(-62vw,16vh) scale(0.92); border-radius: 58% 42% 44% 56% / 42% 58% 46% 54%; }
+  76%  { transform: translate(-32vw,46vh) scale(1.06); border-radius: 40% 60% 56% 44% / 60% 40% 50% 50%; }
+  100% { transform: translate(0,0) scale(1);           border-radius: 60% 40% 52% 48% / 40% 60% 44% 56%; }
+}
+@keyframes llBlob6 {
+  0%   { transform: translate(0,0) scale(1);          border-radius: 44% 56% 60% 40% / 56% 44% 60% 40%; }
+  15%  { transform: translate(30vw,-50vh) scale(1.1); border-radius: 60% 40% 44% 56% / 40% 60% 48% 52%; }
+  35%  { transform: translate(62vw,-30vh) scale(0.9); border-radius: 50% 50% 56% 44% / 58% 42% 44% 56%; }
+  55%  { transform: translate(50vw,-65vh) scale(1.14);border-radius: 44% 56% 62% 38% / 46% 54% 56% 44%; }
+  75%  { transform: translate(20vw,-40vh) scale(1.02);border-radius: 56% 44% 48% 52% / 60% 40% 42% 58%; }
+  100% { transform: translate(0,0) scale(1);          border-radius: 44% 56% 60% 40% / 56% 44% 60% 40%; }
+}
+@keyframes llBlob7 {
+  0%   { transform: translate(0,0) scale(1);           border-radius: 56% 44% 40% 60% / 42% 58% 48% 52%; }
+  30%  { transform: translate(-40vw,-30vh) scale(1.08);border-radius: 42% 58% 54% 46% / 56% 44% 60% 40%; }
+  60%  { transform: translate(-60vw,-58vh) scale(0.94);border-radius: 60% 40% 46% 54% / 44% 56% 42% 58%; }
+  90%  { transform: translate(-22vw,-40vh) scale(1.06);border-radius: 48% 52% 58% 42% / 60% 40% 50% 50%; }
+  100% { transform: translate(0,0) scale(1);           border-radius: 56% 44% 40% 60% / 42% 58% 48% 52%; }
+}
+
 /* Blobs at z-index:0; content wrappers at z-index:1 keep UI above blobs */
+
+/* ─── Luxury micro-shimmer on cards ─────────────────────────────── */
+@keyframes cardShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .card:hover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      color-mix(in srgb, var(--accent) 6%, transparent) 50%,
+      transparent 60%
+    );
+    background-size: 200% 100%;
+    animation: cardShimmer 0.7s ease-out forwards;
+    pointer-events: none;
+  }
+  .card { position: relative; overflow: hidden; }
+}
+
+/* ─── Refined scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 65%, var(--border));
+}
 
 /* ─── Enhanced card padding & spacing ────────────────────────────── */
 .card {

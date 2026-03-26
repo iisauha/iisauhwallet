@@ -316,10 +316,14 @@ function MainApp() {
 
   return (
     <>
-      {/* Lava-lamp ambient background blobs */}
+      {/* Lava-lamp ambient background blobs — 7 blobs covering full screen */}
       <div className="bg-blob bg-blob-1" aria-hidden="true" />
       <div className="bg-blob bg-blob-2" aria-hidden="true" />
       <div className="bg-blob bg-blob-3" aria-hidden="true" />
+      <div className="bg-blob bg-blob-4" aria-hidden="true" />
+      <div className="bg-blob bg-blob-5" aria-hidden="true" />
+      <div className="bg-blob bg-blob-6" aria-hidden="true" />
+      <div className="bg-blob bg-blob-7" aria-hidden="true" />
 
       <GlobalHeader onAvatarClick={() => {
         if (tab === 'settings') {
