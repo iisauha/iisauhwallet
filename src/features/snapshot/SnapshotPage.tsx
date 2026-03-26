@@ -218,6 +218,8 @@ export function SnapshotPage({
   const [cardsIdx, setCardsIdx] = useState(0);
   const banksCarouselRef = useRef<HTMLDivElement>(null);
   const cardsCarouselRef = useRef<HTMLDivElement>(null);
+  const [banksCarouselHeight, setBanksCarouselHeight] = useState<number | undefined>(undefined);
+  const [cardsCarouselHeight, setCardsCarouselHeight] = useState<number | undefined>(undefined);
 
   function toggleSection(s: 'cash' | 'cards' | 'pending') {
     setActiveSection((prev) => (prev === s ? null : s));
@@ -310,6 +312,28 @@ export function SnapshotPage({
       ? cardsSortedByBalance
       : cardsSortedByBalance.filter((c) => (c.balanceCents || 0) !== 0);
   }, [cardsSortedByBalance, showZeroCreditCards]);
+
+  // Set dynamic height of banks carousel to the currently visible item's height
+  useEffect(() => {
+    if (activeSection !== 'cash') return;
+    requestAnimationFrame(() => {
+      const carousel = banksCarouselRef.current;
+      if (!carousel) return;
+      const firstItem = carousel.children[0] as HTMLElement | undefined;
+      if (firstItem) setBanksCarouselHeight(firstItem.offsetHeight);
+    });
+  }, [activeSection, visibleBanks.length]);
+
+  // Set dynamic height of cards carousel to the currently visible item's height
+  useEffect(() => {
+    if (activeSection !== 'cards') return;
+    requestAnimationFrame(() => {
+      const carousel = cardsCarouselRef.current;
+      if (!carousel) return;
+      const firstItem = carousel.children[0] as HTMLElement | undefined;
+      if (firstItem) setCardsCarouselHeight(firstItem.offsetHeight);
+    });
+  }, [activeSection, visibleCards.length]);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
     setModal({ type: 'confirm', title, message, onConfirm });
@@ -457,12 +481,16 @@ export function SnapshotPage({
         </div>
       </div>
       <>
+          <div style={banksCarouselHeight != null ? { height: banksCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
           <div
             className="card-carousel"
             ref={banksCarouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
-              setBanksIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+              setBanksIdx(idx);
+              const item = el.children[idx] as HTMLElement | undefined;
+              if (item) setBanksCarouselHeight(item.offsetHeight);
             }}
           >
             {visibleBanks.map((b) => {
@@ -488,6 +516,7 @@ export function SnapshotPage({
                       <button
                         type="button"
                         className="btn btn-secondary"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() =>
                           setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
                         }
@@ -497,6 +526,7 @@ export function SnapshotPage({
                       <button
                         type="button"
                         className="btn clear-btn"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => actions.updateBankBalance(b.id, 0, 'set')}
                       >
                         Clear
@@ -505,6 +535,7 @@ export function SnapshotPage({
                         <button
                           type="button"
                           className="btn btn-danger"
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                           onClick={() =>
                             openConfirm(
                               'Are you sure you want to delete this?',
@@ -522,15 +553,21 @@ export function SnapshotPage({
               );
             })}
           </div>
+          </div>
           {visibleBanks.length > 1 && (
-            <div className="carousel-dots" style={{ marginBottom: 8 }}>
-              {visibleBanks.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`carousel-dot${banksIdx === idx ? ' active' : ''}`}
-                  aria-label={`Go to bank ${idx + 1}`}
-                  onClick={() => { const el = banksCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {visibleBanks.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === banksIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
                 />
               ))}
             </div>
@@ -565,12 +602,16 @@ export function SnapshotPage({
         </div>
       </div>
       <>
+          <div style={cardsCarouselHeight != null ? { height: cardsCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
           <div
             className="card-carousel"
             ref={cardsCarouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
-              setCardsIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+              setCardsIdx(idx);
+              const item = el.children[idx] as HTMLElement | undefined;
+              if (item) setCardsCarouselHeight(item.offsetHeight);
             }}
           >
             {visibleCards.map((c) => {
@@ -636,6 +677,7 @@ export function SnapshotPage({
                       <button
                         type="button"
                         className="btn btn-secondary"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
                       >
                         Add / Set
@@ -643,6 +685,7 @@ export function SnapshotPage({
                       <button
                         type="button"
                         className="btn clear-btn"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => actions.updateCardBalance(c.id, 0, 'set')}
                       >
                         Clear
@@ -650,6 +693,7 @@ export function SnapshotPage({
                       <button
                         type="button"
                         className="btn btn-danger"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() =>
                           openConfirm(
                             'Are you sure you want to delete this?',
@@ -666,15 +710,21 @@ export function SnapshotPage({
               );
             })}
           </div>
+          </div>
           {visibleCards.length > 1 && (
-            <div className="carousel-dots" style={{ marginBottom: 8 }}>
-              {visibleCards.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`carousel-dot${cardsIdx === idx ? ' active' : ''}`}
-                  aria-label={`Go to card ${idx + 1}`}
-                  onClick={() => { const el = cardsCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {visibleCards.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === cardsIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
                 />
               ))}
             </div>

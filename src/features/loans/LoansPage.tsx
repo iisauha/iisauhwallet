@@ -1179,10 +1179,13 @@ export function LoansPage() {
 
   // Set initial height of private loans carousel to the first item's height
   useEffect(() => {
-    const carousel = privateCarouselRef.current;
-    if (!carousel) return;
-    const firstItem = carousel.children[0] as HTMLElement | undefined;
-    if (firstItem) setPrivateCarouselHeight(firstItem.offsetHeight);
+    if (!showPrivate) return;
+    requestAnimationFrame(() => {
+      const carousel = privateCarouselRef.current;
+      if (!carousel) return;
+      const firstItem = carousel.children[0] as HTMLElement | undefined;
+      if (firstItem) setPrivateCarouselHeight(firstItem.offsetHeight);
+    });
   }, [loansWithDerived.length, showPrivate]);
 
   const summary = useMemo(() => {

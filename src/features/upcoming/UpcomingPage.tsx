@@ -416,14 +416,19 @@ export function UpcomingPage() {
           })}
           </div>
           {allIncomeItems.length > 1 && (
-            <div className="carousel-dots">
-              {allIncomeItems.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`carousel-dot${incomeCarouselIdx === idx ? ' active' : ''}`}
-                  aria-label={`Go to income ${idx + 1}`}
-                  onClick={() => { const el = incomeCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {allIncomeItems.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === incomeCarouselIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
                 />
               ))}
             </div>
@@ -587,14 +592,19 @@ export function UpcomingPage() {
           })}
           </div>
           {allCostItems.length > 1 && (
-            <div className="carousel-dots">
-              {allCostItems.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`carousel-dot${costsCarouselIdx === idx ? ' active' : ''}`}
-                  aria-label={`Go to cost ${idx + 1}`}
-                  onClick={() => { const el = costsCarouselRef.current; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {allCostItems.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === costsCarouselIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
                 />
               ))}
             </div>

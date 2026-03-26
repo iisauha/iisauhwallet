@@ -54,8 +54,10 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const firstItem = carouselRef.current?.children[0] as HTMLElement | undefined;
-    if (firstItem) setPublicCarouselHeight(firstItem.offsetHeight);
+    requestAnimationFrame(() => {
+      const firstItem = carouselRef.current?.children[0] as HTMLElement | undefined;
+      if (firstItem) setPublicCarouselHeight(firstItem.offsetHeight);
+    });
   }, []);
 
   useEffect(() => {

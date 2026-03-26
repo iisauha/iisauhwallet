@@ -801,17 +801,18 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           </div>
           </div>
           {visiblePurchases.length > 1 && (
-            <div className="carousel-dots">
-              {visiblePurchases.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`carousel-dot${purchasesCarouselIdx === idx ? ' active' : ''}`}
-                  aria-label={`Go to purchase ${idx + 1}`}
-                  onClick={() => {
-                    if (purchasesCarouselRef) {
-                      purchasesCarouselRef.scrollTo({ left: idx * purchasesCarouselRef.clientWidth, behavior: 'smooth' });
-                    }
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {visiblePurchases.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === purchasesCarouselIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block',
+                    flexShrink: 0,
                   }}
                 />
               ))}

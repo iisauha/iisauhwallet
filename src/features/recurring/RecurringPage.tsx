@@ -468,14 +468,19 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 ))}
             </div>
             {items.length > 1 && (
-              <div className="carousel-dots">
-                {items.map((_: any, idx: number) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`carousel-dot${(expenseCatIdx[catId] ?? 0) === idx ? ' active' : ''}`}
-                    aria-label={`Go to expense ${idx + 1}`}
-                    onClick={() => { const el = expenseCatRefs.current[catId]; if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' }); }}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                {items.map((_: any, i: number) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: '50%',
+                      background: i === (expenseCatIdx[catId] ?? 0) ? 'var(--accent)' : 'var(--border)',
+                      transition: 'background 0.2s',
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }}
                   />
                 ))}
               </div>

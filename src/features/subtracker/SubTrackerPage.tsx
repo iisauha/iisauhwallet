@@ -379,8 +379,10 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
 
   const [completedCarouselHeight, setCompletedCarouselHeight] = useState<number | undefined>(undefined);
   const completedCarouselRef = useRef<HTMLDivElement>(null);
+  const [completedCarouselIdx, setCompletedCarouselIdx] = useState(0);
   const [entriesCarouselHeight, setEntriesCarouselHeight] = useState<number | undefined>(undefined);
   const entriesCarouselRef = useRef<HTMLDivElement>(null);
+  const [entriesCarouselIdx, setEntriesCarouselIdx] = useState(0);
 
   const lastAddTriggerRef = useRef(addTrigger);
   useEffect(() => {
@@ -482,6 +484,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
               const item = el.children[idx] as HTMLElement | undefined;
               if (item) setCompletedCarouselHeight(item.offsetHeight);
+              setCompletedCarouselIdx(idx);
             }}
           >
           {completedBonuses.map((b) => {
@@ -531,6 +534,24 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           })}
           </div>
           </div>
+          {completedBonuses.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {completedBonuses.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === completedCarouselIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
+                />
+              ))}
+            </div>
+          )}
           <button
             type="button"
             className="btn btn-add"
@@ -594,6 +615,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
           const item = el.children[idx] as HTMLElement | undefined;
           if (item) setEntriesCarouselHeight(item.offsetHeight);
+          setEntriesCarouselIdx(idx);
         }}
       >
       {entries.map((e) => {
@@ -955,6 +977,24 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       })}
       </div>
       </div>
+      {entries.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+          {entries.map((_, i) => (
+            <span
+              key={i}
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: i === entriesCarouselIdx ? 'var(--accent)' : 'var(--border)',
+                transition: 'background 0.2s',
+                display: 'inline-block',
+                flexShrink: 0,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {confirmDelete ? (
         <div className="modal-overlay">

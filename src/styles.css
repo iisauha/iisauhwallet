@@ -1295,18 +1295,21 @@ textarea.ll-control {
   margin-top: 8px;
 }
 .carousel-dot {
-  width: 6px;
-  height: 6px;
+  border: none;
+  padding: 0;
+  width: 7px;
+  height: 7px;
+  min-width: 7px;
+  min-height: 7px;
   border-radius: 50%;
   background: var(--ui-border, var(--border));
-  transition: background 200ms ease, transform 200ms ease;
+  transition: background 200ms ease;
   cursor: pointer;
   flex-shrink: 0;
   display: block;
 }
 .carousel-dot.active {
   background: var(--ui-add-btn, var(--accent));
-  transform: scale(1.15);
 }
 
 /* ─── Hero Flipper Carousel ───────────────────────────────────────── */
