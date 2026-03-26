@@ -143,10 +143,35 @@ export type QuickAction =
   | 'add-recurring-income'
   | 'update-balance'
   | 'add-bonus'
-  | 'export';
+  | 'export'
+  | 'transfer-investing';
+
+const QUICK_ACTION_FREQ_KEY = 'iisauhwallet_quick_action_freq_v1';
+
+function loadActionFreq(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(QUICK_ACTION_FREQ_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, number>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function incrementActionFreq(action: QuickAction): void {
+  try {
+    const freq = loadActionFreq();
+    freq[action] = (freq[action] ?? 0) + 1;
+    localStorage.setItem(QUICK_ACTION_FREQ_KEY, JSON.stringify(freq));
+  } catch (_) {}
+}
 
 function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
-  const items: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
+  const allItems: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
     { icon: <IconArrowExchange />, label: 'Add a purchase', action: 'log-purchase' },
     { icon: <IconCreditCard />, label: 'Add a Purchase (Full Reimbursement Expected)', action: 'add-reimbursable' },
     { icon: <IconCalendar />, label: 'Add pending outbound', action: 'add-pending-out' },
@@ -154,9 +179,26 @@ function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
     { icon: <IconRefreshCircle />, label: 'Add recurring expense', action: 'add-recurring-expense' },
     { icon: <IconRefreshCircle />, label: 'Add recurring income', action: 'add-recurring-income' },
     { icon: <IconSnapshot />, label: 'Update a balance', action: 'update-balance' },
+    { icon: <IconBarChartTrend />, label: 'Transfer to Investing', action: 'transfer-investing' },
     { icon: <IconStar />, label: 'Add a bonus card', action: 'add-bonus' },
     { icon: <IconExport />, label: 'Export backup', action: 'export' },
   ];
+
+  const [showAll, setShowAll] = useState(false);
+
+  const freq = loadActionFreq();
+  const hasFreqData = Object.keys(freq).length > 0;
+
+  // Sort by frequency descending if we have data, otherwise keep default order
+  const sortedItems = hasFreqData
+    ? [...allItems].sort((a, b) => (freq[b.action] ?? 0) - (freq[a.action] ?? 0))
+    : allItems;
+
+  const VISIBLE_COUNT = 5;
+  const items = (showAll || !hasFreqData || allItems.length <= VISIBLE_COUNT)
+    ? sortedItems
+    : sortedItems.slice(0, VISIBLE_COUNT);
+  const hasMore = hasFreqData && !showAll && allItems.length > VISIBLE_COUNT;
 
   return (
     <>
@@ -170,6 +212,7 @@ function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
             type="button"
             className="quick-sheet-item"
             onClick={() => {
+              incrementActionFreq(item.action);
               onAction(item.action);
               onClose();
             }}
@@ -179,6 +222,17 @@ function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
             <span className="quick-sheet-chevron"><IconChevronRight /></span>
           </button>
         ))}
+        {hasMore && (
+          <button
+            type="button"
+            className="quick-sheet-item"
+            onClick={() => setShowAll(true)}
+          >
+            <span className="quick-sheet-icon"><IconChevronRight /></span>
+            <span>See all actions</span>
+            <span className="quick-sheet-chevron"><IconChevronRight /></span>
+          </button>
+        )}
       </div>
     </>
   );
@@ -199,6 +253,7 @@ function MainApp() {
   const [recurringAddIncomeTrigger, setRecurringAddIncomeTrigger] = useState(0);
   const [subtrackerAddTrigger, setSubtrackerAddTrigger] = useState(0);
   const [exportTrigger, setExportTrigger] = useState(0);
+  const [investingTransferTrigger, setInvestingTransferTrigger] = useState(0);
 
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {
@@ -264,6 +319,10 @@ function MainApp() {
           setTab('settings');
           afterMount(() => setExportTrigger((n) => n + 1));
           break;
+        case 'transfer-investing':
+          setTab('investing');
+          afterMount(() => setInvestingTransferTrigger((n) => n + 1));
+          break;
       }
     }, 140);
   }, []);
@@ -283,11 +342,11 @@ function MainApp() {
     );
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'loans') return <LoansPage />;
-    if (tab === 'investing') return <InvestingPage />;
+    if (tab === 'investing') return <InvestingPage openTransferTrigger={investingTransferTrigger} />;
     if (tab === 'recurring') return <RecurringPage addExpenseTrigger={recurringAddExpenseTrigger} addIncomeTrigger={recurringAddIncomeTrigger} />;
     if (tab === 'subtracker') return <SubTrackerPage addTrigger={subtrackerAddTrigger} />;
     return <SettingsPage exportTrigger={exportTrigger} onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
-  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger]);
+  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger, investingTransferTrigger]);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', String(index));

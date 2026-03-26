@@ -262,8 +262,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     } else if (mode === 'import' && pendingJson) {
       try {
         await importJSONDecrypted(pendingJson, confirmedInput);
-        actions.reload();
-        alert('Import done.');
+        alert('Import done. Reloading…');
+        window.location.reload();
       } catch (_) {
         alert('Wrong passcode or corrupt file.');
       }
@@ -547,8 +547,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             const text = String(r.result || '');
             try {
               importJSON(text);
-              actions.reload();
-              alert('Import done.');
+              alert('Import done. Reloading…');
+              window.location.reload();
             } catch (err: any) {
               if (err?.message === ENCRYPTED_IMPORT) {
                 if (!hasPasscode) {

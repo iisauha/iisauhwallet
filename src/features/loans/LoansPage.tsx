@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLedgerStore } from '../../state/store';
 import { formatCents } from '../../state/calc';
 import {
@@ -1129,6 +1129,9 @@ export function LoansPage() {
   const [paymentNowOverride, setPaymentNowOverride] = useState<number | null>(() => loadPaymentNowManualOverride());
   const [showEditPaymentNow, setShowEditPaymentNow] = useState(false);
   const [editPaymentInput, setEditPaymentInput] = useState('');
+  const privateCarouselRef = useRef<HTMLDivElement>(null);
+  const [privateCarouselHeight, setPrivateCarouselHeight] = useState<number | undefined>(undefined);
+  const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -1172,6 +1175,14 @@ export function LoansPage() {
       deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents, null)
     );
   }, [state.loans, privateLoans, detectedAnnualIncomeCents]);
+
+  // Set initial height of private loans carousel to the first item's height
+  useEffect(() => {
+    const carousel = privateCarouselRef.current;
+    if (!carousel) return;
+    const firstItem = carousel.children[0] as HTMLElement | undefined;
+    if (firstItem) setPrivateCarouselHeight(firstItem.offsetHeight);
+  }, [loansWithDerived.length]);
 
   const summary = useMemo(() => {
     let totalBalance = 0;
@@ -1387,7 +1398,7 @@ export function LoansPage() {
                   setShowAfterGraceBreakdown(true);
                 }}
               >
-                i
+                ?
               </button>
             </span>
             <span className="v" style={{ color: paymentNowAmountColor }}>
@@ -1485,7 +1496,23 @@ export function LoansPage() {
               No private loans. Track student and other private loans here. All values are manual and for estimates only.
             </p>
           ) : null}
-          <div className="card-carousel">
+          <div
+            style={privateCarouselHeight != null
+              ? { height: privateCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' }
+              : { overflow: 'hidden' }}
+          >
+          <div
+            ref={privateCarouselRef}
+            className="card-carousel"
+            style={{ marginBottom: 0 }}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+              setPrivateCarouselIdx(idx);
+              const item = el.children[idx] as HTMLElement | undefined;
+              if (item) setPrivateCarouselHeight(item.offsetHeight);
+            }}
+          >
           {loansWithDerived.map((l) => (
             <div className="card-carousel-item" key={l.id}>
             <LoanCard
@@ -1502,6 +1529,24 @@ export function LoansPage() {
             </div>
           ))}
           </div>
+          </div>
+          {loansWithDerived.length > 1 ? (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {loansWithDerived.map((l, i) => (
+                <span
+                  key={l.id}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === privateCarouselIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block'
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
           <div style={{ marginTop: 12, marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div>
               <button

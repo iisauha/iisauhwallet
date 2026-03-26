@@ -55,16 +55,18 @@ Log purchases manually with amount, category, subcategory, and optional notes. V
 
 ### Upcoming
 
-Shows expected income and expenses in a time window, and “amount remaining” after expected costs. Uses recurring income and recurring expenses to build the timeline. **Linked HYSA liquidity:** If you have an HYSA with a linked checking account, the “money in HYSA designated for bills” portion is added to your effective cash for this view so you see how much you have including that liquid HYSA portion. You can move expected income or expected costs into **pending** (e.g. “Add to pending inbound” or “Add to pending outbound”); moving a cost to pending can optionally add a spending entry when you later post it.
+Shows expected income and expenses in a time window, and “amount remaining” after expected costs. Uses recurring income and recurring expenses to build the timeline. **Linked HYSA liquidity:** If you have an HYSA with a linked checking account, the “money in HYSA designated for bills” portion is added to your effective cash for this view so you see how much you have including that liquid HYSA portion. You can move expected income or expected costs into **pending** (e.g. “Add to pending inbound” or “Add to pending outbound”); moving a cost to pending can optionally add a spending entry when you later post it. Each section header has a **+ Add** chip to add expected income or expected costs inline.
 
 ### Recurring
 
-Track repeating income and expenses: salary, rent, subscriptions, loan payments. Recurring items feed into **Upcoming** (expected income/costs) and can be linked to loans so the planned expense uses the loan’s current estimated payment. You can set:
+Track repeating income and expenses: salary, rent, subscriptions, loan payments. Recurring items feed into **Upcoming** (expected income/costs) and can be linked to loans so the planned expense uses the loan’s current estimated payment. A **summary card** at the top shows total recurring income and expenses (monthly and yearly). You can set:
 
-- Frequency (monthly, weekly, biweekly, yearly, custom interval)  
-- Payment source/target (bank, card, or HYSA; if HYSA, which sub-bucket)  
-- Whether to “apply to snapshot” (when you run “Process recurring up to today,” income can update bank balances and expenses can create purchases and update snapshot)  
-- Optional link to a loan so the recurring amount uses that loan’s estimated payment  
+- Frequency (monthly, weekly, biweekly, yearly, custom interval)
+- Payment source/target (bank, card, or HYSA; if HYSA, which sub-bucket)
+- Whether to “apply to snapshot” (when you run “Process recurring up to today,” income can update bank balances and expenses can create purchases and update snapshot)
+- Optional link to a loan so the recurring amount uses that loan’s estimated payment
+
+Each section (Recurring Income, Recurring Expenses) has its own **+ Add** chip button in the header so you can add income-only or expense-only items directly.
 
 **Optimizer:** From Recurring you can open the **457(b) optimizer** (Run optimizer / View last result). It uses your recurring data for autofill and computes take-home, taxes, and expenses (including public/private loan amounts). You can override assumptions and public loan payment; results are saved so you can view “last result” without re-running.
 
@@ -77,14 +79,15 @@ Track repeating income and expenses: salary, rent, subscriptions, loan payments.
 
 ### Investing / HYSA
 
-- **HYSA:** Balance, APY, “reserved savings” vs “money in HYSA designated for bills.” You can link an HYSA to a checking account; only the “bills” portion is then treated as liquid in Upcoming (and when choosing HYSA source for pending outbound). **Adjust HYSA Allocation** moves money between reserved and bills without changing total balance.  
-- **Roth IRA, 401k, general investing:** Track balances and optionally transfers between bank and investing.  
-- **Coast FIRE / projections:** Investing page includes projection sections with info icons (e.g. Coast FIRE) that explain assumptions in a popup.  
+- **HYSA:** Balance, APY, “reserved savings” vs “money in HYSA designated for bills.” You can link an HYSA to a checking account; only the “bills” portion is then treated as liquid in Upcoming (and when choosing HYSA source for pending outbound). **Adjust HYSA Allocation** moves money between reserved and bills without changing total balance. Each account section has a **+ Add** chip in the header to add accounts inline; the HYSA section also has a **Hide $0** chip.
+- **Roth IRA, 401k, general investing:** Track balances and optionally transfers between bank and investing.
+- **Transfer to Investing:** Transfer money between a bank account and an investing account. Also accessible from the **+ FAB** quick-action sheet.
+- **Coast FIRE / projections:** Investing page includes projection sections with help icons (e.g. Coast FIRE) that explain assumptions in a popup.
 - All balances are entered by you; no automatic pull from brokers.
 
 ### Sign-up bonus tracker (Sub Tracker)
 
-Track credit card sign-up bonuses and progress toward spend targets. Add cards, set tiers and reward text (e.g. cash back, points), and mark progress. Useful for managing multiple cards and bonus deadlines.
+Track credit card sign-up bonuses and progress toward spend targets. Add cards, set tiers and reward text (e.g. cash back, points), and mark progress. An animated progress bar with tier markers shows spend progress at a glance. Useful for managing multiple cards and bonus deadlines.
 
 ### Settings
 
@@ -204,8 +207,8 @@ See the in-app **Security Policy** for exact wording and official site URL.
 
 ## Loans: federal vs private, payment modes, recompute
 
-- **Federal (public):** Parameters (e.g. balance, interest, repayment plan), IDR estimates, and payment modes such as “current payment” vs “first payment date.” Summary cards show estimated payment and payoff. Public loan monthly amount can be overridden for the optimizer.  
-- **Private:** Balances, interest, payment schedules, and payment range modes. When posting pending outbound with loan adjustments, you can override how much goes to each private loan.  
+- **Federal (public):** Parameters (e.g. balance, interest, repayment plan), IDR estimates, and payment modes such as “current payment” vs “first payment date.” The public loans card is split into two swipeable cards — card 1 covers FSA links and payment actions; card 2 covers optional summary fields and notes.
+- **Private:** Balances, interest, payment schedules, and payment range modes. When posting pending outbound with loan adjustments, you can override how much goes to each private loan. The private loans card carousel dynamically adjusts height per card so buttons always appear directly below the current card's content.
 - **Recompute:** Private loan balances can be recomputed from payment history; last recompute date and cycle are stored. Useful after batch posting.
 
 ---
@@ -237,18 +240,19 @@ See the in-app **Security Policy** for exact wording and official site URL.
 
 ## Backup and export
 
-- **Export JSON** — A backup of wallet/ledger-related data (accounts, balances, pending, purchases, recurring, loans, investing, categories, settings/UI prefs, etc.). The export is allow-listed; your profile name/photo are stored locally but may not be included.  
-- **Import JSON** — Restores from a previously exported file and **replaces** current data on the device. Only import backups you trust. Treat backups as sensitive files (balances and transactions).
-- **Export monthly purchases CSV** — Current month’s purchases as CSV.  
+- **Export JSON** — A full backup including accounts, balances, pending, purchases, recurring, loans, investing, categories, settings/UI prefs, and your display name. Can optionally be encrypted with your passcode.
+- **Import JSON** — Restores from a previously exported file and **replaces** current data on the device. After import the app reloads automatically so all tabs (including Investing, Loans, and Bonuses) load fresh data correctly — this also fixes PWA (Add to Home Screen) mode where those tabs would otherwise show empty after import.
+- **Export monthly purchases CSV** — Current month’s purchases as CSV.
 - Backing up regularly is recommended so you don’t lose data if the browser or device is cleared. After a wipe (e.g. too many failed passcode attempts), you can re-import a JSON backup.
 
 ---
 
 ## UI customization and hidden UI
 
-- **App Customization** (Settings): Theme, accent color, font stack, surface styles.  
-- **Tab order:** Tabs can be reordered by drag-and-drop; order is persisted.  
-- **Info icons:** Some sections (e.g. Investing Coast FIRE) have a small circular “i” icon that opens a short explanation or the Security Policy modal.  
+- **App Customization** (Settings): Theme, accent color, font stack (including monospace options like Fira Code), surface styles.
+- **Tab order:** Tabs can be reordered by drag-and-drop; order is persisted.
+- **Help icons:** Some sections (e.g. Investing Coast FIRE) have a small `?` icon that opens a short explanation or the Security Policy modal.
+- **Quick actions (+ FAB):** The floating `+` button gives fast access to common actions. The top 5 are sorted by how often you use them; tap “See all actions” to view the full list. Includes “Transfer to Investing.”
 - **Security Policy** and **FAQ** in Settings; **App Guide** for a concise overview and link to full docs on GitHub.
 
 ---

@@ -502,6 +502,8 @@ export function exportJSON(): string {
     LOANS_SECTION_SHOW_PRIVATE_KEY,
     PUBLIC_LOAN_SHOW_PAYMENT_ACTIONS_KEY,
     UPCOMING_DISMISSED_OCCURRENCES_KEY,
+    USER_DISPLAY_NAME_KEY,
+    'iisauhwallet_quick_action_freq_v1',
   ]);
 
   // Main data key: always use in-memory cache (decrypted). Never export encrypted blob.

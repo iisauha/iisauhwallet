@@ -16,8 +16,10 @@ export function Modal(props: {
   onClose?: () => void;
   /** Optional styles for the title heading (e.g. match App Customization "All Other Text"). */
   titleStyle?: CSSProperties;
+  /** Optional extra CSS class(es) applied to the .modal element. */
+  className?: string;
 }) {
-  const { open, title, children, onClose, titleStyle } = props;
+  const { open, title, children, onClose, titleStyle, className } = props;
 
   useEffect(() => {
     if (!open || !onClose) return;
@@ -36,7 +38,7 @@ export function Modal(props: {
       aria-modal="true"
       onClick={onClose ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
     >
-      <div className="modal" onClick={onClose ? (e) => e.stopPropagation() : undefined}>
+      <div className={className ? `modal ${className}` : 'modal'} onClick={onClose ? (e) => e.stopPropagation() : undefined}>
         {(title || onClose) ? (
           <div
             style={{

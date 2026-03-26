@@ -594,54 +594,77 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               <span>{formatCents(spendCents)}{finalTarget ? ` / ${formatCents(finalTarget)}` : ''}</span>
             </div>
             {ratio != null ? (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ position: 'relative', width: '100%', height: 30 }}>
+              <><div style={{ marginTop: 12, marginBottom: 4 }}>
+                <div style={{ position: 'relative', height: 10, borderRadius: 999, background: 'color-mix(in srgb, var(--border) 60%, transparent)', overflow: 'visible' }}>
+                  {/* Tier marker lines */}
+                  {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t) => {
+                    const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
+                    return (
+                      <div
+                        key={t.id}
+                        style={{
+                          position: 'absolute',
+                          left: `${left}%`,
+                          top: -3,
+                          bottom: -3,
+                          width: 2,
+                          borderRadius: 1,
+                          background: 'var(--bg)',
+                          zIndex: 4,
+                          transform: 'translateX(-1px)',
+                          boxShadow: '0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent)'
+                        }}
+                      />
+                    );
+                  })}
+                  {/* Fill bar */}
                   <div
-                    className="sub-tracker-progress-track"
                     style={{
                       position: 'absolute',
                       left: 0,
-                      right: 0,
-                      top: 12,
-                      height: 14,
+                      top: 0,
+                      height: '100%',
+                      width: `${Math.min(ratio * 100, 100)}%`,
                       borderRadius: 999,
-                      background: 'color-mix(in srgb, var(--muted) 30%, transparent)',
-                      overflow: 'hidden'
+                      background: ratio >= 1
+                        ? 'var(--green)'
+                        : `linear-gradient(90deg, var(--green), var(--ui-add-btn, var(--accent)))`,
+                      transition: 'width 600ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      boxShadow: ratio > 0 ? '0 0 8px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 50%, transparent)' : 'none',
+                      zIndex: 2,
                     }}
-                  >
-                    {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t) => {
-                      const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
-                      return (
-                        <div
-                          key={t.id}
-                          style={{
-                            position: 'absolute',
-                            left: `${left}%`,
-                            top: 0,
-                            bottom: 0,
-                            width: 2,
-                            background: 'var(--ui-outline-btn, var(--ui-primary-text, var(--text)))',
-                            transform: 'translateX(-1px)',
-                            zIndex: 3
-                          }}
-                        />
-                      );
-                    })}
+                  />
+                  {/* Pulse dot at leading edge */}
+                  {ratio > 0 && ratio < 1 ? (
                     <div
                       style={{
-                        width: `${ratio * 100}%`,
-                        height: '100%',
-                        background: 'var(--green)',
-                        borderRadius: 999,
-                        position: 'relative',
-                        zIndex: 2,
-                        display: 'flex'
+                        position: 'absolute',
+                        top: '50%',
+                        left: `${Math.min(ratio * 100, 100)}%`,
+                        transform: 'translate(-50%, -50%)',
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        background: 'var(--ui-add-btn, var(--accent))',
+                        zIndex: 5,
+                        boxShadow: '0 0 0 3px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent)',
+                        animation: 'progress-pulse 2s ease-in-out infinite',
                       }}
-                    >
-                      {/* Intentionally no percent text here; milestones are labeled externally below. */}
-                    </div>
-                  </div>
+                    />
+                  ) : null}
+                </div>
+                {/* Percentage label */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.75rem', color: 'var(--muted)' }}>
+                  <span>$0</span>
+                  <span style={{ color: ratio >= 1 ? 'var(--green)' : 'var(--ui-add-btn, var(--accent))', fontWeight: 600 }}>
+                    {Math.round(ratio * 100)}%
+                  </span>
+                  <span>${(finalTarget / 100).toLocaleString()}</span>
+                </div>
+              </div>
 
+              {/* Tier reward labels */}
+              <div style={{ position: 'relative', width: '100%', height: 20 }}>
                   {tiers.slice(0, Math.max(0, tiers.length - 1)).map((t, idx) => {
                     const left = finalTarget > 0 ? (t.spendTargetCents / finalTarget) * 100 : 0;
                     const clampedLeft = clamp(left, 2, 98);
@@ -699,8 +722,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                     );
                   })() : null}
                 </div>
-              </div>
-            ) : null}
+            </>) : null}
             <div
               className="btn-row"
               style={{

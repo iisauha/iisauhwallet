@@ -644,7 +644,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       </div>
 
       {view === 'category' ? (
-        <Modal open={legendOpen} title="Legend" onClose={() => setLegendOpen(false)}>
+        <Modal open={legendOpen} title="Legend" onClose={() => setLegendOpen(false)} className="modal-legend">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {byCategory.length === 0 ? (
               <p style={{ color: 'var(--ui-primary-text, var(--text))', margin: 0 }}>No spending in this period.</p>

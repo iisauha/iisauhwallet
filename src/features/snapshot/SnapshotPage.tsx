@@ -596,7 +596,7 @@ export function SnapshotPage({
                           title="Card reward categories"
                           aria-label="Card reward categories"
                         >
-                          i
+                          ?
                         </button>
                       </span>
                       <span className={amountClass}>{formatCents(balanceCents)}</span>

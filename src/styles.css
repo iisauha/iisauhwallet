@@ -61,15 +61,17 @@ body {
   z-index: 100;
 }
 .info-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 1.5px solid var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
+  border: 1.5px solid currentColor;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
   line-height: 1;
+  letter-spacing: 0;
   background: transparent;
   color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
   cursor: pointer;
@@ -312,10 +314,10 @@ body {
   border-radius: 999px;
   padding: 12px 24px;
 }
-/* Pause: orange outline (ignores custom outline-button color) */
+/* Pause button: uses muted/neutral outline */
 .btn-secondary.btn-outline-neutral {
-  color: #ea580c !important;
-  border-color: #ea580c !important;
+  color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
+  border-color: var(--ui-border, var(--border));
 }
 .btn-complete-green {
   background: transparent;
@@ -344,6 +346,18 @@ body {
 .btn:focus { outline: none; }
 .btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 80%, transparent); outline-offset: 2px; }
 .clear-btn { background: var(--red-light) !important; color: var(--red) !important; border: 1px solid var(--red) !important; }
+/* Size variants */
+.btn-sm {
+  min-height: unset;
+  padding: 7px 14px;
+  font-size: 0.875rem;
+}
+.btn-xs {
+  min-height: unset;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
 .btn-delete {
   min-width: 90px;
   min-height: 32px;
@@ -1805,6 +1819,12 @@ input[type="checkbox"]:focus-visible {
 
 /* Blobs at z-index:0; content wrappers at z-index:1 keep UI above blobs */
 
+/* ─── Progress bar pulse ─────────────────────────────────────────── */
+@keyframes progress-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 10%, transparent); }
+}
+
 /* ─── Luxury micro-shimmer on cards ─────────────────────────────── */
 @keyframes cardShimmer {
   0%   { background-position: -200% center; }
@@ -1862,6 +1882,38 @@ input[type="checkbox"]:focus-visible {
 /* ─── Tighter modal inputs with better spacing ───────────────────── */
 .modal {
   padding: 22px 20px 18px;
+}
+
+/* ─── Modal safe area / mobile nav clearance ─────────────────────── */
+.modal-overlay {
+  padding-top: calc(16px + env(safe-area-inset-top));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 200;
+}
+.modal {
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* ─── Legend modal — compact map-legend style ─────────────────────── */
+.modal-legend {
+  max-width: 260px;
+  padding: 12px 16px;
+}
+.modal-legend .modal-header-row {
+  margin-bottom: 10px;
+}
+.modal-legend .row {
+  font-size: 0.78rem;
+}
+.modal-legend .row .name {
+  font-size: 0.78rem;
+}
+.modal-legend .row .amount {
+  font-size: 0.78rem;
 }
 
 /* ─── Summary KV row spacing ──────────────────────────────────────── */

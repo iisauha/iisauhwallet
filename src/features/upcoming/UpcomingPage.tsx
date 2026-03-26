@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { IconPlus } from '../../ui/icons';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
@@ -248,7 +249,31 @@ export function UpcomingPage() {
         <span className="section-header-left" style={{ color: 'var(--ui-title-text, var(--green))' }}>
           Expected Income
         </span>
-        <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModal({
+                type: 'add-expected',
+                kind: 'income',
+                title: '',
+                date: todayKey(),
+                notes: '',
+                useRange: false,
+                amount: '',
+                minAmount: '',
+                maxAmount: '',
+                targetBankId: '',
+              });
+            }}
+          >
+            <IconPlus />
+            Add
+          </button>
+          <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
+        </span>
       </div>
       {!incomeCollapsed ? (
         <>
@@ -267,6 +292,7 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                     onClick={() => {
                       const initialCents = i.amountCents || 0;
                       const last = lastAdjustments[i.id];
@@ -286,6 +312,7 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-danger"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     if (!confirm('Remove this expected income from Upcoming?')) return;
                     const next = expectedIncome.filter((x) => x.id !== i.id);
@@ -315,6 +342,7 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     const initialCents = i.amountCents || 0;
                     const last = lastAdjustments[i.id];
@@ -334,6 +362,7 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-danger"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     if (!confirm('Remove this occurrence from Upcoming only? Your recurring income is not changed.')) return;
                     dismissUpcomingOccurrence('inc', i.recurringId, i.expectedDate);
@@ -347,27 +376,6 @@ export function UpcomingPage() {
             </div>
           ))}
           </div>
-          <button
-            type="button"
-            className="btn btn-add"
-            onClick={() => {
-              setModal({
-                type: 'add-expected',
-                kind: 'income',
-                title: '',
-                date: todayKey(),
-                notes: '',
-                useRange: false,
-                amount: '',
-                minAmount: '',
-                maxAmount: '',
-                targetBankId: '',
-              });
-            }}
-            style={{ marginTop: 8 }}
-          >
-            Add expected income
-          </button>
         </>
       ) : null}
 
@@ -379,7 +387,31 @@ export function UpcomingPage() {
         <span className="section-header-left" style={{ color: 'var(--ui-title-text, var(--red))' }}>
           Expected Costs
         </span>
-        <span className="chevron">{costsCollapsed ? '▸' : '▾'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModal({
+                type: 'add-expected',
+                kind: 'cost',
+                title: '',
+                date: todayKey(),
+                notes: '',
+                useRange: false,
+                amount: '',
+                minAmount: '',
+                maxAmount: '',
+                targetBankId: '',
+              });
+            }}
+          >
+            <IconPlus />
+            Add
+          </button>
+          <span className="chevron">{costsCollapsed ? '▸' : '▾'}</span>
+        </span>
       </div>
       {!costsCollapsed ? (
         <>
@@ -398,6 +430,7 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                     onClick={() => {
                       const initialCents = c.amountCents || 0;
                       const last = lastAdjustments[c.id];
@@ -412,11 +445,12 @@ export function UpcomingPage() {
                       } as any);
                     }}
                 >
-                  Move to Pending Inbound
+                  Move to Pending Outbound
                 </button>
                 <button
                   type="button"
                   className="btn btn-danger"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     if (!confirm('Remove this expected cost from Upcoming?')) return;
                     const next = expectedCosts.filter((x) => x.id !== c.id);
@@ -446,6 +480,7 @@ export function UpcomingPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     const initialCents = c.amountCents || 0;
                     const key = `${c.recurringId}:${c.dateKey}`;
@@ -466,11 +501,12 @@ export function UpcomingPage() {
                     } as any);
                   }}
                 >
-                  Move to Pending Inbound
+                  Move to Pending Outbound
                 </button>
                 <button
                   type="button"
                   className="btn btn-danger"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     if (!confirm('Remove this occurrence from Upcoming only? Your recurring expense is not changed.')) return;
                     dismissUpcomingOccurrence('exp', c.recurringId, c.dateKey);
@@ -484,27 +520,6 @@ export function UpcomingPage() {
             </div>
           ))}
           </div>
-          <button
-            type="button"
-            className="btn btn-add"
-            onClick={() => {
-              setModal({
-                type: 'add-expected',
-                kind: 'cost',
-                title: '',
-                date: todayKey(),
-                notes: '',
-                useRange: false,
-                amount: '',
-                minAmount: '',
-                maxAmount: '',
-                targetBankId: '',
-              });
-            }}
-            style={{ marginTop: 8 }}
-          >
-            Add expected cost
-          </button>
         </>
       ) : null}
 

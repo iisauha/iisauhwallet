@@ -35,6 +35,7 @@ export const FONT_FAMILY_STACKS: Record<string, string> = {
   garamond:     'Garamond, "Times New Roman", serif',
   times:        '"Times New Roman", Times, Georgia, serif',
   // ── Mono ───────────────────────────────────────────────────
+  firaCode:     '"Fira Code", "Fira Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace',
   courier:      '"Courier New", Courier, monospace',
 };
 

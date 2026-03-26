@@ -8,6 +8,7 @@ import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { OptimizerModal } from '../optimizer/OptimizerModal';
 import { ViewLastOptimizerModal } from '../optimizer/ViewLastOptimizerModal';
+import { IconPlus } from '../../ui/icons';
 
 export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncomeTrigger = 0 }: { addTrigger?: number; addExpenseTrigger?: number; addIncomeTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
@@ -124,9 +125,79 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
   const [expensesSectionCollapsed, setExpensesSectionCollapsed] = useDropdownCollapsed('recurring_expenses_main', false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
 
+  function toMonthlyCents(r: any): number {
+    if (r.isActive === false) return 0;
+    const amtCents = r.amountCents || 0;
+    const freq = r.frequency || 'monthly';
+    if (freq === 'monthly') return amtCents;
+    if (freq === 'biweekly') return Math.round(amtCents * 26 / 12);
+    if (freq === 'weekly') return Math.round(amtCents * 52 / 12);
+    if (freq === 'yearly') return Math.round(amtCents / 12);
+    if (freq === 'every_n_days' || freq === 'custom') {
+      const nDays = r.everyNDays || r.intervalDays || 30;
+      return Math.round(amtCents * (365 / nDays) / 12);
+    }
+    return amtCents;
+  }
+
+  const totalIncomeMonthly = useMemo(() => income.reduce((sum: number, r: any) => sum + toMonthlyCents(r), 0), [income]);
+  const totalExpensesMonthly = useMemo(() => expenses.reduce((sum: number, r: any) => sum + toMonthlyCents(r), 0), [expenses]);
+
+  function resetModalState() {
+    setEditingId(null);
+    setName('');
+    setAmount('');
+    setExpectedMin('');
+    setExpectedMax('');
+    setFrequency('monthly');
+    setEveryNDays('30');
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    setStartDate(`${y}-${m}-${dd}`);
+    setActive(true);
+    setAutoPay(false);
+    setPaymentSource('');
+    setPaymentTargetId('');
+    setHysaSubBucket('');
+    setCategory('food');
+    setSubcategory('');
+    setNotes('');
+    setIsSplit(false);
+    setMyPortion('');
+    setUseLastDayOfMonth(false);
+    setIsFullTimeJob(false);
+    setPreTaxDeductions([]);
+    setInvestingTransferEnabled(false);
+    setInvestingFromBankId('');
+    setInvestingTargetAccountId('');
+    setInvestingTargetType('');
+    setUseLoanEstimatedPayment(false);
+    setLinkedLoanId('');
+  }
+
   return (
     <div className="tab-panel active" id="recurringContent">
       <p className="section-title page-title">Recurring</p>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="row" style={{ marginBottom: 8 }}>
+          <span className="name" style={{ fontWeight: 700 }}>Income</span>
+          <span style={{ display: 'flex', gap: 16 }}>
+            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly)}/mo</span>
+            <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly * 12)}/yr</span>
+          </span>
+        </div>
+        <div className="row">
+          <span className="name" style={{ fontWeight: 700 }}>Expenses</span>
+          <span style={{ display: 'flex', gap: 16 }}>
+            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly)}/mo</span>
+            <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(totalExpensesMonthly * 12)}/yr</span>
+          </span>
+        </div>
+      </div>
+
       <div
         className="section-header"
         style={{
@@ -138,7 +209,17 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
         <span className="section-header-left">
           Recurring Income
         </span>
-        <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={(e) => { e.stopPropagation(); resetModalState(); setType('income'); setOpen(true); }}
+          >
+            <IconPlus />
+            Add
+          </button>
+          <span className="chevron">{incomeCollapsed ? '▸' : '▾'}</span>
+        </span>
       </div>
       {!incomeCollapsed ? (
         <>
@@ -291,7 +372,17 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
         onClick={() => setExpensesSectionCollapsed(!expensesSectionCollapsed)}
       >
         <span className="section-header-left">Recurring Expenses</span>
-        <span className="chevron">{expensesSectionCollapsed ? '▸' : '▾'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={(e) => { e.stopPropagation(); resetModalState(); setType('expense'); setOpen(true); }}
+          >
+            <IconPlus />
+            Add
+          </button>
+          <span className="chevron">{expensesSectionCollapsed ? '▸' : '▾'}</span>
+        </span>
       </div>
       {!expensesSectionCollapsed ? (
       <>
@@ -394,48 +485,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
       </>
       ) : null}
 
-      <button
-        type="button"
-        className="btn btn-add"
-        style={{ marginTop: 16, width: '100%' }}
-        onClick={() => {
-          setEditingId(null);
-          setType('expense');
-          setName('');
-          setAmount('');
-          setExpectedMin('');
-          setExpectedMax('');
-          setFrequency('monthly');
-          setEveryNDays('30');
-          const d = new Date();
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, '0');
-          const dd = String(d.getDate()).padStart(2, '0');
-          setStartDate(`${y}-${m}-${dd}`);
-          setActive(true);
-          setAutoPay(false);
-          setPaymentSource('');
-          setPaymentTargetId('');
-          setHysaSubBucket('');
-          setCategory('food');
-          setSubcategory('');
-          setNotes('');
-          setIsSplit(false);
-          setMyPortion('');
-          setUseLastDayOfMonth(false);
-          setIsFullTimeJob(false);
-          setPreTaxDeductions([]);
-          setInvestingTransferEnabled(false);
-          setInvestingFromBankId('');
-          setInvestingTargetAccountId('');
-          setInvestingTargetType('');
-          setUseLoanEstimatedPayment(false);
-          setLinkedLoanId('');
-          setOpen(true);
-        }}
-      >
-        Add Recurring Item
-      </button>
 
       {open ? (
         <div className="modal-overlay">

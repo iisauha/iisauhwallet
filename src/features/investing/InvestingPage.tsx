@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
+import { IconPlus } from '../../ui/icons';
 import {
   loadInvesting,
   saveInvesting,
@@ -114,7 +115,7 @@ function CoastFireInfoIcon({
           fontSize: '0.8rem',
         }}
       >
-        ⓘ
+        ?
       </button>
       {open ? (
         <div
@@ -674,7 +675,7 @@ function CoastFireProjectionChart({
   );
 }
 
-export function InvestingPage() {
+export function InvestingPage({ openTransferTrigger = 0 }: { openTransferTrigger?: number }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -704,6 +705,7 @@ export function InvestingPage() {
     loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
   );
   const [transferOpen, setTransferOpen] = useState(false);
+  useEffect(() => { if (openTransferTrigger > 0) setTransferOpen(true); }, [openTransferTrigger]);
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -1422,24 +1424,36 @@ export function InvestingPage() {
           <span className="section-header-left">
             {label}
           </span>
-          {type === 'hysa' ? (
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                const next = !showZeroHysa;
-                setShowZeroHysa(next);
-                saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, next);
-              }}
-            >
-              {showZeroHysa ? 'Hide $0 HYSA' : 'Show $0 HYSA'}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              addAccount(type);
+            }}
+          >
+            <IconPlus />
+            Add
+          </button>
           <span className="chevron">{isCollapsed ? '▸' : '▾'}</span>
         </div>
         {!isCollapsed ? (
           <>
+            {type === 'hysa' ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="snapshot-add-btn"
+                  onClick={() => {
+                    const next = !showZeroHysa;
+                    setShowZeroHysa(next);
+                    saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, next);
+                  }}
+                >
+                  {showZeroHysa ? 'Hide $0' : 'Show $0'}
+                </button>
+              </div>
+            ) : null}
             <div className="card-carousel">
             {visibleAccounts.map((a) => {
               return (
@@ -1522,7 +1536,7 @@ export function InvestingPage() {
                     <button
                       type="button"
                       className="snapshot-add-btn"
-                      style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', color: 'var(--danger, #e05)' }}
+                      style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', color: 'var(--red, #e05)', borderColor: 'color-mix(in srgb, var(--red, #e05) 40%, transparent)', background: 'color-mix(in srgb, var(--red, #e05) 10%, transparent)' }}
                       onClick={() => deleteAccount(a)}
                     >
                       Delete
@@ -1532,14 +1546,6 @@ export function InvestingPage() {
               );
             })}
             </div>
-            <button
-              type="button"
-              className="btn btn-add"
-              style={{ marginTop: 8, width: '100%' }}
-              onClick={() => addAccount(type)}
-            >
-              Add {label} account
-            </button>
           </>
         ) : null}
       </>
@@ -1767,27 +1773,6 @@ export function InvestingPage() {
       {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
       {renderSection('General Investing', 'general', generalAccounts, 'general')}
       {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, 'k401')}
-
-      <button
-        type="button"
-        className="btn btn-add"
-        style={{
-          width: '100%',
-          marginTop: 24,
-          marginBottom: 8,
-          border: '1px solid var(--ui-add-btn, var(--accent))',
-        }}
-        onClick={() => {
-          setTransferFrom('');
-          setTransferTo('');
-          setTransferAmount('');
-          setTransferNote('');
-          setTransferError(null);
-          setTransferOpen(true);
-        }}
-      >
-        Transfer between Cash and Investing
-      </button>
 
       <div
         className="card card-accent-strip"

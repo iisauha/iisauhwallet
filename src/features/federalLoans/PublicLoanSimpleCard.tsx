@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   type PublicLoanSummary,
   loadPublicLoanSummary,
@@ -49,6 +49,8 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   const [balanceInput, setBalanceInput] = useState('');
   const [rateInput, setRateInput] = useState('');
   const [showPaymentActions, setShowPaymentActions] = useState(true);
+  const [carouselIdx, setCarouselIdx] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const s = loadPublicLoanSummary();
@@ -123,7 +125,6 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
     persist({ ...summary, firstPaymentDate: v || undefined });
   };
 
-  const estimatedCents = summary.estimatedMonthlyPaymentCents;
   const currentCents = summary.currentPaymentCents;
 
   const publicEstimateCents =
@@ -143,180 +144,220 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   };
 
   return (
-    <div className="card" style={{ marginBottom: 16, padding: '14px 16px' }}>
-      <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loans</h4>
-      <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 14 }}>
-        Use the official Federal Student Aid simulator to estimate your public loan payment, then enter your monthly amount here.
-      </p>
-
-      <a
-        href={LOAN_SIMULATOR_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn btn-secondary"
-        style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none' }}
+    <div style={{ marginBottom: 16 }}>
+      <div
+        ref={carouselRef}
+        className="card-carousel"
+        style={{ marginBottom: 0 }}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+          setCarouselIdx(idx);
+        }}
       >
-        Estimate your public loan payment
-      </a>
-
-      <div className="field" style={{ marginBottom: 10 }}>
-        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-          My estimated monthly public loan payment ($)
-        </label>
-        <input
-          type="text"
-          inputMode="decimal"
-          className="ll-control"
-          value={paymentInput}
-          onChange={(e) => setPaymentInput(e.target.value)}
-          onBlur={handleSavePayment}
-          placeholder="0.00"
-          style={inputStyle}
-        />
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ marginBottom: showPaymentActions ? 8 : 0, fontSize: '0.85rem', padding: '4px 10px' }}
-          onClick={() => persistPaymentActionsOpen(!showPaymentActions)}
-        >
-          {showPaymentActions ? 'Hide payment actions' : 'Show payment actions'}
-        </button>
-        {showPaymentActions ? (
-          <>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleAddToPaymentNow}
-                disabled={publicEstimateCents <= 0}
-              >
-                Add to monthly payment
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleUseAsCurrentPayment}
-              >
-                Use as current payment
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setShowFirstPaymentDetails((v) => !v);
-                  if (!showFirstPaymentDetails) {
-                    persist({ ...summary, paymentMode: 'first_payment_date' });
-                  }
-                }}
-              >
-                {showFirstPaymentDetails ? 'Hide first payment date' : 'Use first payment date'}
-              </button>
-            </div>
-            {showFirstPaymentDetails && (
-          <div style={{ marginTop: 12, padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-            <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-              First payment date
-            </label>
-            <input
-              type="date"
-              className="ll-control"
-              value={firstPaymentDateInput}
-              onChange={(e) => setFirstPaymentDateInput(e.target.value)}
-              onBlur={handleSaveFirstPaymentDate}
-              style={inputStyle}
-            />
-            <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-              When this date is reached, your estimated public loan payment will automatically be added to your monthly payment total.
+        {/* Card 1: FSA link, payment entry, payment actions */}
+        <div className="card-carousel-item">
+          <div className="card" style={{ marginBottom: 0, padding: '14px 16px' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loans</h4>
+            <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 14 }}>
+              Use the official Federal Student Aid simulator to estimate your public loan payment, then enter your monthly amount here.
             </p>
-            <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Auto-add when date reached:</span>
+
+            <a
+              href={LOAN_SIMULATOR_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none' }}
+            >
+              Estimate payment (FSA)
+            </a>
+
+            <div className="field" style={{ marginBottom: 10 }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
+                My estimated monthly payment ($)
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="ll-control"
+                value={paymentInput}
+                onChange={(e) => setPaymentInput(e.target.value)}
+                onBlur={handleSavePayment}
+                placeholder="0.00"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: 4 }}>
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ padding: '4px 10px', fontSize: '0.85rem' }}
-                onClick={() => persist({ ...summary, firstPaymentDateAutoAddPaused: !summary.firstPaymentDateAutoAddPaused })}
+                style={{ marginBottom: showPaymentActions ? 8 : 0, fontSize: '0.85rem', padding: '4px 10px' }}
+                onClick={() => persistPaymentActionsOpen(!showPaymentActions)}
               >
-                {summary.firstPaymentDateAutoAddPaused ? 'Paused' : 'Active'}
+                {showPaymentActions ? 'Hide payment actions' : 'Show payment actions'}
               </button>
+              {showPaymentActions ? (
+                <>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleAddToPaymentNow}
+                      disabled={publicEstimateCents <= 0}
+                    >
+                      Add to monthly total
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleUseAsCurrentPayment}
+                    >
+                      Set as current
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setShowFirstPaymentDetails((v) => !v);
+                        if (!showFirstPaymentDetails) {
+                          persist({ ...summary, paymentMode: 'first_payment_date' });
+                        }
+                      }}
+                    >
+                      {showFirstPaymentDetails ? 'Hide start date' : 'Set start date'}
+                    </button>
+                  </div>
+                  {showFirstPaymentDetails && (
+                    <div style={{ marginTop: 12, padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                      <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
+                        First payment date
+                      </label>
+                      <input
+                        type="date"
+                        className="ll-control"
+                        value={firstPaymentDateInput}
+                        onChange={(e) => setFirstPaymentDateInput(e.target.value)}
+                        onBlur={handleSaveFirstPaymentDate}
+                        style={inputStyle}
+                      />
+                      <p style={{ marginTop: 6, marginBottom: 8, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                        When this date is reached, your estimated public loan payment will automatically be added to your monthly payment total.
+                      </p>
+                      <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Auto-add when date reached:</span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+                          onClick={() => persist({ ...summary, firstPaymentDateAutoAddPaused: !summary.firstPaymentDateAutoAddPaused })}
+                        >
+                          {summary.firstPaymentDateAutoAddPaused ? 'Paused' : 'Active'}
+                        </button>
+                      </div>
+                      {summary.firstPaymentDateAutoAddPaused ? (
+                        <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                          Paused. Tap "Add to monthly total" manually to include this loan.
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+                  {summary.paymentMode === 'current_payment' && currentCents != null && currentCents > 0 ? (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 0 }}>
+                      Current payment (now): {formatCents(currentCents)}/mo
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
             </div>
-            {summary.firstPaymentDateAutoAddPaused ? (
-              <p style={{ marginTop: 6, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                Paused. Tap "Add to monthly payment" manually to include this loan in your total.
-              </p>
-            ) : null}
           </div>
-        )}
-        {summary.paymentMode === 'current_payment' && currentCents != null && currentCents > 0 ? (
-          <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 0 }}>
-            Current payment (now): {formatCents(currentCents)}/mo
-          </p>
-        ) : null}
-          </>
-        ) : null}
+        </div>
+
+        {/* Card 2: Optional summary fields and notes */}
+        <div className="card-carousel-item">
+          <div className="card" style={{ marginBottom: 0, padding: '14px 16px' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loans — Details</h4>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 10 }}>
+                Optional summary (for dashboard totals)
+              </p>
+              <div className="field" style={{ marginBottom: 10 }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
+                  Total balance ($)
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className="ll-control"
+                  value={balanceInput}
+                  onChange={(e) => setBalanceInput(e.target.value)}
+                  onBlur={handleSaveBalance}
+                  placeholder="Optional"
+                  style={inputStyle}
+                />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
+                  Avg interest rate (%)
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className="ll-control"
+                  value={rateInput}
+                  onChange={(e) => setRateInput(e.target.value)}
+                  onBlur={handleSaveRate}
+                  placeholder="Optional"
+                  style={{ ...inputStyle, maxWidth: 140 }}
+                />
+              </div>
+            </div>
+
+            <div className="field" style={{ marginTop: 4 }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
+                Notes
+              </label>
+              <textarea
+                className="ll-control"
+                value={notesInput}
+                onChange={(e) => setNotesInput(e.target.value)}
+                onBlur={handleSaveNotes}
+                placeholder="Optional text notes..."
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
+                  background: 'var(--ui-card-bg, var(--surface))',
+                  color: 'var(--ui-primary-text, var(--text))',
+                  fontSize: '0.95rem',
+                  resize: 'vertical',
+                  minHeight: 80
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginBottom: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-        <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 10 }}>
-          Optional summary (for dashboard totals)
-        </p>
-        <div className="field" style={{ marginBottom: 10 }}>
-          <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-            Total public loan balance ($)
-          </label>
-          <input
-            type="text"
-            inputMode="decimal"
-            className="ll-control"
-            value={balanceInput}
-            onChange={(e) => setBalanceInput(e.target.value)}
-            onBlur={handleSaveBalance}
-            placeholder="Optional"
-            style={inputStyle}
+      {/* Page dot indicators */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+        {[0, 1].map((i) => (
+          <span
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: i === carouselIdx ? 'var(--accent)' : 'var(--border)',
+              transition: 'background 0.2s',
+              display: 'inline-block'
+            }}
           />
-        </div>
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-            Average public interest rate (%)
-          </label>
-          <input
-            type="text"
-            inputMode="decimal"
-            className="ll-control"
-            value={rateInput}
-            onChange={(e) => setRateInput(e.target.value)}
-            onBlur={handleSaveRate}
-            placeholder="Optional"
-            style={{ ...inputStyle, maxWidth: 140 }}
-          />
-        </div>
-      </div>
-
-      <div className="field" style={{ marginTop: 4 }}>
-        <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-          Notes
-        </label>
-        <textarea
-          className="ll-control"
-          value={notesInput}
-          onChange={(e) => setNotesInput(e.target.value)}
-          onBlur={handleSaveNotes}
-          placeholder="Optional text notes..."
-          rows={3}
-          style={{
-            width: '100%',
-            padding: '10px 14px',
-            borderRadius: 10,
-            border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
-            background: 'var(--ui-card-bg, var(--surface))',
-            color: 'var(--ui-primary-text, var(--text))',
-            fontSize: '0.95rem',
-            resize: 'vertical',
-            minHeight: 80
-          }}
-        />
+        ))}
       </div>
     </div>
   );
