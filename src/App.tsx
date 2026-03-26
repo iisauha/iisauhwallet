@@ -149,11 +149,11 @@ function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
   const items: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
     { icon: <IconArrowExchange />, label: 'Add a purchase', action: 'log-purchase' },
     { icon: <IconCreditCard />, label: 'Add a Purchase (Full Reimbursement Expected)', action: 'add-reimbursable' },
-    { icon: <IconHome />, label: 'Add pending outbound', action: 'add-pending-out' },
-    { icon: <IconHome />, label: 'Add pending inbound', action: 'add-pending-in' },
+    { icon: <IconCalendar />, label: 'Add pending outbound', action: 'add-pending-out' },
+    { icon: <IconCalendar />, label: 'Add pending inbound', action: 'add-pending-in' },
     { icon: <IconRefreshCircle />, label: 'Add recurring expense', action: 'add-recurring-expense' },
     { icon: <IconRefreshCircle />, label: 'Add recurring income', action: 'add-recurring-income' },
-    { icon: <IconHome />, label: 'Update a balance', action: 'update-balance' },
+    { icon: <IconSnapshot />, label: 'Update a balance', action: 'update-balance' },
     { icon: <IconStar />, label: 'Add a bonus card', action: 'add-bonus' },
     { icon: <IconExport />, label: 'Export backup', action: 'export' },
   ];
