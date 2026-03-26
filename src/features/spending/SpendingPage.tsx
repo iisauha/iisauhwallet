@@ -497,18 +497,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         ) : (
           <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '4px 10px' }}
-                onClick={() => {
-                  const next = !hideZeroRewards;
-                  setHideZeroRewards(next);
-                  saveBoolPref(SHOW_ZERO_REWARDS_KEY, next);
-                }}
-              >
-                {hideZeroRewards ? 'Show $0 rewards' : 'Hide $0 rewards'}
-              </button>
             </div>
             {(data.cards || []).length === 0 ? (
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
@@ -609,8 +597,22 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                     marginTop: 4,
                   };
                   return (
-                    <div style={{ paddingTop: 12, marginTop: 8, borderTop: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Total current</div>
+                    <div style={{ paddingTop: 12, marginTop: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Total current</div>
+                        <button
+                          type="button"
+                          className={`ll-toggle${hideZeroRewards ? ' active' : ''}`}
+                          style={{ fontSize: '0.75rem', padding: '4px 10px', minHeight: 'unset' }}
+                          onClick={() => {
+                            const next = !hideZeroRewards;
+                            setHideZeroRewards(next);
+                            saveBoolPref(SHOW_ZERO_REWARDS_KEY, next);
+                          }}
+                        >
+                          {hideZeroRewards ? 'Show $0' : 'Hide $0'}
+                        </button>
+                      </div>
                       {(totalCashback || 0) > 0 ? (
                         <div style={lineStyle}>
                           <span style={{ color: 'var(--green)' }}>{formatCents(totalCashback)}</span> cash back

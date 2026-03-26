@@ -1372,3 +1372,268 @@ textarea.ll-control {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADVANCED UI — Apple / Robinhood grade polish
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Global checkbox ─────────────────────────────────────────────── */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 1.5px solid var(--ui-border, var(--border));
+  border-radius: 6px;
+  background: var(--ui-card-bg, var(--surface));
+  cursor: pointer;
+  position: relative;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+  flex-shrink: 0;
+}
+input[type="checkbox"]:checked {
+  background: var(--ui-add-btn, var(--accent));
+  border-color: var(--ui-add-btn, var(--accent));
+}
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+input[type="checkbox"]:active { transform: scale(0.9); }
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* ─── Global input / textarea / select focus glow ────────────────── */
+.modal input:focus,
+.modal select:focus,
+.modal textarea:focus {
+  border-color: var(--ui-add-btn, var(--accent)) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 18%, transparent) !important;
+}
+
+/* ─── Smooth modal input transitions ─────────────────────────────── */
+.modal input,
+.modal select,
+.modal textarea {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+/* ─── Header gradient shimmer (app header) ────────────────────────── */
+.app-header {
+  background: var(--ui-tabbar-bg, var(--bg));
+}
+
+/* ─── Tab bar glass effect ────────────────────────────────────────── */
+.tabs {
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 88%, transparent);
+}
+
+/* ─── Modal glass effect ──────────────────────────────────────────── */
+.modal {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px color-mix(in srgb, var(--ui-border, var(--border)) 60%, transparent);
+}
+
+/* ─── Card enhanced shadow & micro-lift on hover ─────────────────── */
+.card {
+  transition: box-shadow 0.28s cubic-bezier(0.34,1.56,0.64,1), transform 0.28s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s ease, background-color 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-2px) scale(1.005);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+  }
+}
+
+/* ─── Stat tile spring animation ──────────────────────────────────── */
+.stat-tile {
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s ease;
+}
+.stat-tile:active { transform: scale(0.94) !important; }
+@media (hover: hover) and (pointer: fine) {
+  .stat-tile:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 6px 20px rgba(0,0,0,0.22); }
+}
+
+/* ─── FAB spring + glow pulse ─────────────────────────────────────── */
+.fab {
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease;
+}
+.fab:active { transform: scale(0.88) !important; }
+@media (hover: hover) and (pointer: fine) {
+  .fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 28px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent);
+  }
+}
+
+/* ─── Button micro spring ─────────────────────────────────────────── */
+.btn {
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.btn:active, .btn-primary:active, .btn-secondary:active, .btn-add:active {
+  transform: scale(0.95) !important;
+}
+.btn-primary {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 40%, transparent);
+  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover { box-shadow: 0 6px 20px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 55%, transparent); transform: translateY(-1px); }
+}
+
+/* ─── Tab active pill glow ────────────────────────────────────────── */
+.tab-active-pill {
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 50%, transparent);
+  transition: box-shadow 0.28s ease, background-color 0.28s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* ─── Settings row smooth hover ────────────────────────────────────── */
+.settings-row {
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+.settings-row:active { transform: scale(0.985) !important; }
+
+/* ─── Section header lift ──────────────────────────────────────────── */
+.section-header {
+  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .section-header:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+}
+
+/* ─── Quick sheet item spring ─────────────────────────────────────── */
+.quick-sheet-item {
+  transition: background-color 0.14s ease, transform 0.14s cubic-bezier(0.34,1.56,0.64,1);
+}
+.quick-sheet-item:active { transform: scale(0.97) !important; }
+
+/* ─── Snapshot section body animate ──────────────────────────────── */
+.snapshot-section-body {
+  transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+}
+
+/* ─── Net cash card glow on positive ─────────────────────────────── */
+.net-cash-value.positive {
+  text-shadow: 0 0 24px color-mix(in srgb, var(--green) 35%, transparent);
+}
+
+/* ─── Recent activity item slide-in ──────────────────────────────── */
+.recent-activity-item {
+  animation: activitySlideIn 0.32s ease-out both;
+}
+@keyframes activitySlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.recent-activity-item:nth-child(2) { animation-delay: 0.05s; }
+.recent-activity-item:nth-child(3) { animation-delay: 0.10s; }
+
+/* ─── Card entry stagger ──────────────────────────────────────────── */
+@keyframes cardEntryFade {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Gradient shimmer on net-cash-card ──────────────────────────── */
+.net-cash-card {
+  background: linear-gradient(
+    135deg,
+    var(--ui-card-bg, var(--surface)) 0%,
+    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 5%, var(--ui-card-bg, var(--surface))) 100%
+  );
+  transition: box-shadow 0.3s ease;
+}
+
+/* ─── Summary card gradient ──────────────────────────────────────── */
+.summary {
+  background: linear-gradient(
+    135deg,
+    var(--ui-surface-secondary, var(--surface)) 0%,
+    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 4%, var(--ui-surface-secondary, var(--surface))) 100%
+  );
+}
+
+/* ─── Hero CTA card gradient overlay ─────────────────────────────── */
+.hero-cta-card {
+  background: linear-gradient(
+    135deg,
+    var(--ui-add-btn, var(--accent)) 0%,
+    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, #ff6b35) 100%
+  );
+}
+
+/* ─── Progress bar gradient ───────────────────────────────────────── */
+.ll-progress-bar {
+  background: linear-gradient(90deg, var(--green) 0%, color-mix(in srgb, var(--green) 70%, #22d3ee) 100%);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── ll-toggle spring ────────────────────────────────────────────── */
+.ll-toggle {
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+}
+.ll-toggle:active { transform: scale(0.94); }
+
+/* ─── Upcoming status chip glow ───────────────────────────────────── */
+.upcoming-status-ok {
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.25);
+  transition: box-shadow 0.2s ease;
+}
+.upcoming-status-warn {
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.25);
+  transition: box-shadow 0.2s ease;
+}
+
+/* ─── Page-level content fade in ─────────────────────────────────── */
+.tab-panel {
+  animation: llTabIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes llTabIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Modal slide in refined ─────────────────────────────────────── */
+@keyframes llModalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal { animation: llModalIn 0.32s cubic-bezier(0.34, 1.3, 0.64, 1); }
+
+/* ─── Sheet slide up refined ──────────────────────────────────────── */
+@keyframes sheetSlideUp {
+  from { transform: translateY(110%); }
+  to   { transform: translateY(0); }
+}
+.quick-sheet { animation: sheetSlideUp 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* ─── Pending item micro hover ───────────────────────────────────── */
+.pending-item {
+  transition: background-color 0.15s ease;
+  border-radius: 8px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pending-item:hover { background: var(--surface-hover); }
+}
+
+/* ─── Snapshot add button spring ─────────────────────────────────── */
+.snapshot-add-btn {
+  transition: background 0.18s ease, transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease;
+}
+.snapshot-add-btn:active { transform: scale(0.93); }

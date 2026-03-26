@@ -872,7 +872,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   const label = hitDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                   return (
                     <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
-                      Est. hit: {label}
+                      Estimated to Complete: {label}
                     </span>
                   );
                 })()}

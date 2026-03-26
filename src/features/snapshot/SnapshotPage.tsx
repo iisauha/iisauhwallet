@@ -94,7 +94,7 @@ function RecentActivityWidget() {
       });
     });
 
-    return items.filter((i) => !isNaN(i.ts)).sort((a, b) => b.ts - a.ts).slice(0, 5);
+    return items.filter((i) => !isNaN(i.ts)).sort((a, b) => b.ts - a.ts).slice(0, 3);
   }, [data]);
 
   return (
@@ -107,19 +107,24 @@ function RecentActivityWidget() {
           <div key={i} className="recent-activity-item">
             <div className="recent-activity-dot" style={{ background: ACTIVITY_COLORS[a.type] }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="recent-activity-label">{a.label}</div>
-              <div className="recent-activity-type">
-                {a.descriptor ?? a.type}{a.amount != null ? ` · ${formatCents(a.amount)}` : ''}
+              <div className="recent-activity-label" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span>{a.label}</span>
+                {a.category ? (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 400 }}>
+                    {getCategoryName(cfg, a.category)}{a.subcategory ? ` · ${a.subcategory}` : ''}
+                  </span>
+                ) : null}
               </div>
-              {(a.category || a.subcategory) ? (
-                <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 1 }}>
-                  {a.category ? getCategoryName(cfg, a.category) : ''}
-                  {a.subcategory ? ` · ${a.subcategory}` : ''}
+              {a.amount != null ? (
+                <div className="recent-activity-type">
+                  {a.descriptor ?? a.type} · {formatCents(a.amount)}
                 </div>
-              ) : null}
+              ) : (
+                <div className="recent-activity-type">{a.descriptor ?? a.type}</div>
+              )}
               {a.notes ? (
                 <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 1, fontStyle: 'italic' }}>
-                  {a.notes}
+                  Note: {a.notes}
                 </div>
               ) : null}
             </div>
@@ -753,10 +758,6 @@ export function SnapshotPage({
           <div className="summary-kv">
             <span className="k">Total Credit Card Balance</span>
             <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.ccDebtCents)}</span>
-          </div>
-          <div className="summary-kv">
-            <span className="k">Credit Card Credit</span>
-            <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.ccCreditCents)}</span>
           </div>
           <div className="summary-kv">
             <span className="k">Total Pending Inbound</span>
