@@ -1,6 +1,7 @@
 /** Maps stored font family key to CSS font-family value. */
 export const FONT_FAMILY_STACKS: Record<string, string> = {
   // ── Iconic / brand-associated ──────────────────────────────
+  claude:       '"Söhne", "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif', // Claude (Söhne / DM Sans fallback)
   system:       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', // SF Pro on Apple
   helveticaNeue:'"Helvetica Neue", Helvetica, Arial, sans-serif', // Apple / Swiss design
   roboto:       'Roboto, -apple-system, sans-serif',              // Google / Android

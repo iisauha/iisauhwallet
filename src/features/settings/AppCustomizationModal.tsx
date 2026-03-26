@@ -7,7 +7,8 @@ import { Select } from '../../ui/Select';
 
 const FONT_FAMILY_OPTIONS = [
   // Iconic / brand-associated (~70% sans)
-  { key: 'system',        label: 'SF Pro / System',     group: 'Iconic' },
+  { key: 'claude',        label: 'Claude  (Söhne)',      group: 'Iconic' },
+  { key: 'system',        label: 'SF Pro / System',      group: 'Iconic' },
   { key: 'helveticaNeue', label: 'Helvetica Neue',      group: 'Iconic' },
   { key: 'roboto',        label: 'Roboto  (Google)',     group: 'Iconic' },
   { key: 'inter',         label: 'Inter  (Figma/Linear)',group: 'Iconic' },
@@ -44,11 +45,9 @@ const FONT_FAMILY_OPTIONS = [
 ];
 
 const FONT_SCALE_OPTIONS = [
-  { value: 0.88, label: 'XS' },
-  { value: 0.94, label: 'S' },
-  { value: 1,    label: 'M' },
-  { value: 1.06, label: 'L' },
-  { value: 1.12, label: 'XL' },
+  { value: 0.94, label: 'Small' },
+  { value: 1,    label: 'Medium' },
+  { value: 1.06, label: 'Large' },
 ];
 
 type PresetTheme = {
@@ -327,6 +326,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
     const match = PRESET_THEMES.find((p) => p.themeColor === themeColor);
     return match?.id ?? null;
   });
+  const [showAllThemes, setShowAllThemes] = useState(false);
 
   if (!open) return null;
 
@@ -353,8 +353,8 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
 
         {/* ── Themes ───────────────────────────────────────── */}
         <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>Theme</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 22 }}>
-          {PRESET_THEMES.map((preset) => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+          {(showAllThemes ? PRESET_THEMES : PRESET_THEMES.slice(0, 6)).map((preset) => {
             const isActive = activeId === preset.id;
             return (
               <button
@@ -425,6 +425,23 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
             );
           })}
         </div>
+        <button
+          type="button"
+          onClick={() => setShowAllThemes((v) => !v)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--accent)',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: '4px 0',
+            marginBottom: 18,
+            letterSpacing: '0.01em',
+          }}
+        >
+          {showAllThemes ? '↑ Show fewer themes' : `+ See more themes (${PRESET_THEMES.length - 6} more)`}
+        </button>
 
         {/* ── Typography ───────────────────────────────────── */}
         <p className="section-title" style={{ marginTop: 4, marginBottom: 10 }}>Typography</p>
