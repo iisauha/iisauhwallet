@@ -332,14 +332,14 @@ function MainApp() {
 
       {(spendingVisited || tab === 'spending') && (
         <div
-          style={{ display: tab === 'spending' ? 'block' : 'none', position: 'relative', minHeight: '100%' }}
+          style={{ display: tab === 'spending' ? 'block' : 'none', position: 'relative', zIndex: 1, minHeight: '100%' }}
           aria-hidden={tab !== 'spending'}
         >
           <SpendingPage tabVisible={tab === 'spending'} addTrigger={spendingAddTrigger} reimburseAddTrigger={spendingReimburseAddTrigger} />
         </div>
       )}
       {tab !== 'spending' && (
-        <div key={tab} style={{ position: 'relative', minHeight: '100%' }}>
+        <div key={tab} style={{ position: 'relative', zIndex: 1, minHeight: '100%' }}>
           {otherTabContent}
         </div>
       )}

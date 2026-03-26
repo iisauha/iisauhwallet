@@ -1655,34 +1655,34 @@ input[type="checkbox"]:focus-visible {
 .bg-blob {
   position: fixed;
   border-radius: 50%;
-  filter: blur(72px);
-  opacity: 0.07;
-  z-index: -1;
+  filter: blur(80px);
+  opacity: 0.13;
+  z-index: 0;
   pointer-events: none;
   background: radial-gradient(circle at 40% 40%, var(--accent), color-mix(in srgb, var(--accent) 50%, #7c3aed));
   will-change: transform;
 }
 .bg-blob-1 {
-  width: 380px;
-  height: 380px;
-  top: -100px;
-  left: -100px;
+  width: 420px;
+  height: 420px;
+  top: -120px;
+  left: -120px;
   animation: blobFloat1 24s ease-in-out infinite;
 }
 .bg-blob-2 {
-  width: 300px;
-  height: 300px;
-  bottom: 80px;
-  right: -80px;
-  opacity: 0.055;
+  width: 320px;
+  height: 320px;
+  bottom: 60px;
+  right: -100px;
+  opacity: 0.10;
   animation: blobFloat2 30s ease-in-out infinite;
 }
 .bg-blob-3 {
-  width: 220px;
-  height: 220px;
+  width: 240px;
+  height: 240px;
   top: 45%;
   left: 55%;
-  opacity: 0.045;
+  opacity: 0.08;
   animation: blobFloat3 20s ease-in-out infinite;
 }
 @keyframes blobFloat1 {
@@ -1705,9 +1705,7 @@ input[type="checkbox"]:focus-visible {
   70%  { transform: translate(calc(-50% - 50px), calc(-50% + 50px)) scale(0.88); }
   100% { transform: translate(-50%, -50%) scale(1);    }
 }
-/* html/body need a stacking context for z-index:-1 blobs to be visible */
-html { position: relative; }
-body { position: relative; }
+/* Blobs at z-index:0; content wrappers at z-index:1 keep UI above blobs */
 
 /* ─── Enhanced card padding & spacing ────────────────────────────── */
 .card {
