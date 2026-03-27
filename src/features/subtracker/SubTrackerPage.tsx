@@ -478,8 +478,8 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           <>
           <div
             style={completedCarouselHeight != null
-              ? { height: completedCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' }
-              : { overflow: 'hidden' }}
+              ? { minHeight: completedCarouselHeight, transition: 'min-height 0.2s ease' }
+              : {}}
           >
           <div
             ref={completedCarouselRef}
@@ -609,8 +609,8 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         <>
       <div
         style={entriesCarouselHeight != null
-          ? { height: entriesCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' }
-          : { overflow: 'hidden' }}
+          ? { minHeight: entriesCarouselHeight, transition: 'min-height 0.2s ease' }
+          : {}}
       >
       <div
         ref={entriesCarouselRef}

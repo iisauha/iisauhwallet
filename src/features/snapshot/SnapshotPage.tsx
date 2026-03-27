@@ -481,7 +481,7 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={banksCarouselHeight != null ? { height: banksCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
+          <div style={banksCarouselHeight != null ? { minHeight: banksCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
           <div
             className="card-carousel"
             ref={banksCarouselRef}
@@ -602,7 +602,7 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={cardsCarouselHeight != null ? { height: cardsCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
+          <div style={cardsCarouselHeight != null ? { minHeight: cardsCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
           <div
             className="card-carousel"
             ref={cardsCarouselRef}

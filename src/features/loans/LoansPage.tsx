@@ -1524,8 +1524,8 @@ export function LoansPage() {
           </div>
           <div
             style={privateCarouselHeight != null
-              ? { height: privateCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' }
-              : { overflow: 'hidden' }}
+              ? { minHeight: privateCarouselHeight, transition: 'min-height 0.2s ease' }
+              : {}}
           >
           <div
             ref={privateCarouselRef}

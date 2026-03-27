@@ -1471,7 +1471,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             <IconPlus /> Add
           </button>
         </div>
-        <div style={carouselHeight != null ? { height: carouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
+        <div style={carouselHeight != null ? { minHeight: carouselHeight, transition: 'min-height 0.2s ease' } : {}}>
         <div
           ref={carouselRef}
           className="card-carousel"

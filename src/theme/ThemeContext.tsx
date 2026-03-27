@@ -17,6 +17,16 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/** Returns true if the hex color is perceptually light (luminance > 0.5). */
+function isLightHex(hex: string): boolean {
+  try {
+    const m = hex.slice(1).match(/.{2}/g);
+    if (!m || m.length < 3) return false;
+    const [r, g, b] = m.map((x) => parseInt(x, 16));
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
+  } catch (_) { return false; }
+}
+
 /** App background only: --bg from user choice. All other theme vars from fixed default so surface colors stay independent. */
 function applyThemeColor(appBackgroundHex: string) {
   const root = document.documentElement.style;
@@ -32,7 +42,8 @@ function applyThemeColor(appBackgroundHex: string) {
   root.setProperty('--surface-hover', defaults.surfaceHover);
   root.setProperty('--border', defaults.border);
   root.setProperty('--border-subtle', defaults.borderSubtle);
-  root.setProperty('--text', defaults.text);
+  // For light backgrounds, use a dark text color so inputs/text remain readable
+  root.setProperty('--text', isLightHex(appBackgroundHex) ? '#111111' : defaults.text);
   root.setProperty('--muted', defaults.muted);
   root.setProperty('--shadow', defaults.shadow);
   root.setProperty('--shadow-strong', defaults.shadowStrong);

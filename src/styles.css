@@ -381,6 +381,9 @@ body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background-color 180ms ease, color 180ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ll-toggle {
@@ -699,7 +702,7 @@ input[type="date"].ll-control:focus {
   margin-bottom: 1px;
 }
 .app-header-name {
-  font-size: 1.18rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--ui-title-text, var(--text));
   line-height: 1.2;
@@ -754,6 +757,7 @@ input[type="date"].ll-control:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 0;
   box-shadow: 0 4px 18px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 55%, transparent);
   z-index: 80;
   -webkit-tap-highlight-color: transparent;

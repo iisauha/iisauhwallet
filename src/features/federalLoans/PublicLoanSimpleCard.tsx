@@ -139,7 +139,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={publicCarouselHeight != null ? { height: publicCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
+      <div style={publicCarouselHeight != null ? { minHeight: publicCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
       <div
         ref={carouselRef}
         className="card-carousel"

@@ -10,6 +10,8 @@ export function ManageCategoriesModal(props: {
   const initial = useMemo(() => props.load(), [props]);
   const [cfg, setCfg] = useState<CategoryConfig>(initial);
   const [newCatName, setNewCatName] = useState('');
+  const [addSubOpen, setAddSubOpen] = useState<Record<string, boolean>>({});
+  const [addSubText, setAddSubText] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState<
     | null
     | { kind: 'category'; catId: string; label: string }
@@ -45,6 +47,18 @@ export function ManageCategoriesModal(props: {
     commit({ ...cfg, [id]: { name: trimmed, sub: [] } });
   }
 
+  function addSubcategory(catId: string) {
+    const trimmed = (addSubText[catId] || '').trim();
+    if (!trimmed) return;
+    const entry = cfg[catId];
+    const exists = (entry.sub || []).some((x) => (x || '').trim().toLowerCase() === trimmed.toLowerCase());
+    if (exists) return;
+    const next = { ...cfg, [catId]: { ...entry, sub: [...(entry.sub || []), trimmed] } };
+    commit(next);
+    setAddSubText((prev) => ({ ...prev, [catId]: '' }));
+    setAddSubOpen((prev) => ({ ...prev, [catId]: false }));
+  }
+
   return (
     <div className="modal-overlay">
       <div className="modal">
@@ -53,7 +67,13 @@ export function ManageCategoriesModal(props: {
         <div className="field">
           <label>Add category</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} placeholder="Category name" style={{ flex: 1, minWidth: 180 }} />
+            <input
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { addCategoryByName(newCatName); setNewCatName(''); } }}
+              placeholder="Category name"
+              style={{ flex: 1, minWidth: 180 }}
+            />
             <button
               type="button"
               className="btn btn-secondary"
@@ -111,22 +131,34 @@ export function ManageCategoriesModal(props: {
                   )}
                 </div>
                 <div style={{ marginTop: 10 }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      const sub = prompt('Add subcategory');
-                      const trimmed = (sub || '').trim();
-                      if (!trimmed) return;
-                      const entry = cfg[id];
-                      const exists = (entry.sub || []).some((x) => (x || '').trim().toLowerCase() === trimmed.toLowerCase());
-                      if (exists) return;
-                      const next = { ...cfg, [id]: { ...entry, sub: [...(entry.sub || []), trimmed] } };
-                      commit(next);
-                    }}
-                  >
-                    Add subcategory
-                  </button>
+                  {addSubOpen[id] ? (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <input
+                        value={addSubText[id] || ''}
+                        onChange={(e) => setAddSubText((prev) => ({ ...prev, [id]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') addSubcategory(id); }}
+                        placeholder="Subcategory name"
+                        style={{ flex: 1, minWidth: 160 }}
+                        autoFocus
+                      />
+                      <button type="button" className="btn btn-secondary" onClick={() => addSubcategory(id)}>Add</button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => { setAddSubOpen((prev) => ({ ...prev, [id]: false })); setAddSubText((prev) => ({ ...prev, [id]: '' })); }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setAddSubOpen((prev) => ({ ...prev, [id]: true }))}
+                    >
+                      Add subcategory
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

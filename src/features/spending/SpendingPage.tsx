@@ -745,7 +745,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
+          <div style={purchasesCarouselHeight != null ? { minHeight: purchasesCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
           <div
             className="card-carousel"
             style={{ marginBottom: 0 }}
