@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { OnboardingGuide, isOnboardingDone, markOnboardingDone } from '../onboarding/OnboardingGuide';
 import {
   loadPasscodeHash,
   savePasscodeHash,
@@ -145,6 +146,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const justLoggedInRef = useRef(false);
 
   // Auto-lock on inactivity
@@ -315,8 +317,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   const handleRecoveryKeyShowDone = useCallback(() => {
     saveRecoverySetupDone(true);
-    setAuthenticated(true);
     setGeneratedRecoveryKey('');
+    if (!isOnboardingDone()) {
+      setShowOnboarding(true);
+    } else {
+      setAuthenticated(true);
+    }
   }, []);
 
   const handleEnter = useCallback(async () => {
@@ -525,6 +531,18 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     const t2 = setTimeout(() => setShowWelcome(false), 1950);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+
+  if (showOnboarding) {
+    return (
+      <OnboardingGuide
+        onDone={() => {
+          markOnboardingDone();
+          setShowOnboarding(false);
+          setAuthenticated(true);
+        }}
+      />
+    );
+  }
 
   if (showWelcome) {
     return (
