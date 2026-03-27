@@ -147,6 +147,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showSkipWarning, setShowSkipWarning] = useState(false);
   const justLoggedInRef = useRef(false);
 
   // Auto-lock on inactivity
@@ -484,6 +485,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const handleMigrationSkip = useCallback(() => {
     saveRecoverySetupDone(true);
     markOnboardingDone();
+    setShowSkipWarning(false);
     setStep('enter');
     setInput('');
     setError('');
@@ -612,7 +614,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Migration prompt */}
-      {step === 'migration-prompt' && (
+      {step === 'migration-prompt' && !showSkipWarning && (
         <>
           <h1 style={{ margin: '0 0 12px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>
             Finish security setup
@@ -631,8 +633,35 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             >
               Set up recovery
             </button>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowSkipWarning(true)}>
+              Skip
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Skip confirmation warning */}
+      {step === 'migration-prompt' && showSkipWarning && (
+        <>
+          <h1 style={{ margin: '0 0 12px 0', fontSize: '1.2rem', fontWeight: 600, textAlign: 'center' }}>
+            Are you sure?
+          </h1>
+          <div style={{ margin: '0 0 20px 0', padding: '14px 16px', background: 'color-mix(in srgb, var(--red, #ef4444) 12%, transparent)', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--red, #ef4444) 30%, transparent)' }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.92rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.55 }}>
+              By skipping, you acknowledge:
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.65 }}>
+              <li>Without a recovery key or security questions, <strong>there is no way to reset your passcode</strong> if you forget it.</li>
+              <li>Forgetting your passcode will require <strong>wiping all your app data</strong> to regain access.</li>
+              <li>You can set this up later in <strong>Settings</strong> at any time.</li>
+            </ul>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button type="button" className="btn btn-primary" onClick={() => setShowSkipWarning(false)}>
+              Go back and set up recovery
+            </button>
             <button type="button" className="btn btn-secondary" onClick={handleMigrationSkip}>
-              Skip for now
+              I understand, skip anyway
             </button>
           </div>
         </>
