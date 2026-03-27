@@ -337,6 +337,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 <button
                   type="button"
                   className="btn btn-danger"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring income' })}
                 >
                   Delete
@@ -413,6 +414,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                       <button
                         type="button"
                         className="btn btn-secondary"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => {
                           setEditingId(r.id);
                           setType((r.type as any) || 'expense');
@@ -458,6 +460,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                       <button
                         type="button"
                         className="btn btn-danger"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => setConfirmDelete({ id: r.id, label: r.name || 'Recurring' })}
                       >
                         Delete

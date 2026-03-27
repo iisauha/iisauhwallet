@@ -509,7 +509,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem' }}
+                    style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                     onClick={() => setCompletedEditor({ mode: 'edit', id: b.id })}
                   >
                     Edit
@@ -816,7 +816,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem', flexShrink: 0 }}
+                style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', flexShrink: 0 }}
                 onClick={() => {
                   // Open edit modal with this entry's values.
                   const ref = e.cardRef;
@@ -870,7 +870,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               <button
                 type="button"
                 className="btn btn-danger"
-                style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem', flexShrink: 0 }}
+                style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', flexShrink: 0 }}
                 onClick={() => setConfirmDelete({ kind: 'entry', entryId: e.id, label: name })}
               >
                 Delete
@@ -878,7 +878,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               <button
                 type="button"
                 className="btn btn-complete-green"
-                style={{ minHeight: 40, padding: '10px 16px', fontSize: '0.95rem', flexShrink: 0 }}
+                style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', flexShrink: 0 }}
                 onClick={() => {
                   const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
                   if (!achievedTiers.length) return;

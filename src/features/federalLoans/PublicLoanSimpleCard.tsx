@@ -302,7 +302,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
               onClick={() => { handleAddToPaymentNow(); setShowPaymentActionsModal(false); }}
               disabled={publicEstimateCents <= 0}
             >
@@ -316,7 +316,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
               onClick={() => { handleUseAsCurrentPayment(); setShowPaymentActionsModal(false); }}
             >
               Set as current
@@ -329,7 +329,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
               onClick={() => {
                 setShowFirstPaymentDetails((v) => !v);
                 if (!showFirstPaymentDetails) {

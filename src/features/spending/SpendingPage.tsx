@@ -781,6 +781,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => {
                     setEditingPurchaseKey(uiId);
                     setReimbursementMode(false);
@@ -792,6 +793,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 <button
                   type="button"
                   className="btn btn-danger"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                   onClick={() => setConfirmDelete({ id: p.id, label: p.title || 'Purchase' })}
                 >
                   Delete

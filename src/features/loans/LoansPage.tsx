@@ -1022,7 +1022,7 @@ function LoanCard(props: {
         </div>
       ) : null}
       <div className="btn-row" style={{ marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
-        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem', borderRadius: 8, minHeight: 'unset' }} onClick={onEdit}>Edit</button>
+        <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem', minHeight: 'unset' }} onClick={onEdit}>Edit</button>
         <button type="button" className="btn btn-danger" style={{ padding: '4px 10px', fontSize: '0.85rem', minHeight: 'unset' }} onClick={onDelete}>Delete</button>
       </div>
     </div>
@@ -1501,6 +1501,28 @@ export function LoansPage() {
               No private loans. Track student and other private loans here. All values are manual and for estimates only.
             </p>
           ) : null}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+              onClick={() => setShowLoanToolsModal(true)}
+            >
+              Loan Tools
+            </button>
+            <button
+              type="button"
+              className="snapshot-add-btn"
+              onClick={() =>
+                setEditor({
+                  mode: 'add',
+                  value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
+                })
+              }
+            >
+              <IconPlus /> Add
+            </button>
+          </div>
           <div
             style={privateCarouselHeight != null
               ? { height: privateCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' }
@@ -1552,30 +1574,6 @@ export function LoansPage() {
               ))}
             </div>
           ) : null}
-          <div style={{ marginTop: 12, marginBottom: 8 }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-              onClick={() => setShowLoanToolsModal(true)}
-            >
-              Loan Tools
-            </button>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-            <button
-              type="button"
-              className="snapshot-add-btn"
-              onClick={() =>
-                setEditor({
-                  mode: 'add',
-                  value: { ...loanToEditor(null, hasRecurringIncome), category: 'private' }
-                })
-              }
-            >
-              <IconPlus /> Add
-            </button>
-          </div>
         </>
       ) : null}
 

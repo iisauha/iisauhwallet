@@ -115,7 +115,7 @@ function CoastFireInfoIcon({
           fontSize: '0.8rem',
         }}
       >
-        ?
+        +
       </button>
       {open ? (
         <div
@@ -700,6 +700,38 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     dropdownState.getDropdownCollapsed(`investing_${key}`, true);
   const setCollapsed = (key: 'hysa' | 'roth' | 'k401' | 'general', collapsed: boolean) =>
     dropdownState.setDropdownCollapsed(`investing_${key}`, collapsed);
+
+  const liquidCollapsed = dropdownState.getDropdownCollapsed('investing_liquid', false);
+  const setLiquidCollapsed = (v: boolean) => dropdownState.setDropdownCollapsed('investing_liquid', v);
+  const longtermCollapsed = dropdownState.getDropdownCollapsed('investing_longterm', false);
+  const setLongtermCollapsed = (v: boolean) => dropdownState.setDropdownCollapsed('investing_longterm', v);
+
+  // Per-section carousel state
+  const [hysaCarouselIdx, setHysaCarouselIdx] = useState(0);
+  const [hysaCarouselHeight, setHysaCarouselHeight] = useState<number | undefined>(undefined);
+  const hysaCarouselRef = useRef<HTMLDivElement>(null);
+  const [generalCarouselIdx, setGeneralCarouselIdx] = useState(0);
+  const [generalCarouselHeight, setGeneralCarouselHeight] = useState<number | undefined>(undefined);
+  const generalCarouselRef = useRef<HTMLDivElement>(null);
+  const [rothCarouselIdx, setRothCarouselIdx] = useState(0);
+  const [rothCarouselHeight, setRothCarouselHeight] = useState<number | undefined>(undefined);
+  const rothCarouselRef = useRef<HTMLDivElement>(null);
+  const [k401CarouselIdx, setK401CarouselIdx] = useState(0);
+  const [k401CarouselHeight, setK401CarouselHeight] = useState<number | undefined>(undefined);
+  const k401CarouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      const initHeight = (ref: React.RefObject<HTMLDivElement>, set: (h: number | undefined) => void) => {
+        const first = ref.current?.children[0] as HTMLElement | undefined;
+        if (first) set(first.offsetHeight);
+      };
+      initHeight(hysaCarouselRef, setHysaCarouselHeight);
+      initHeight(generalCarouselRef, setGeneralCarouselHeight);
+      initHeight(rothCarouselRef, setRothCarouselHeight);
+      initHeight(k401CarouselRef, setK401CarouselHeight);
+    });
+  }, []);
 
   const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
     loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
@@ -1405,9 +1437,12 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     label: string,
     type: 'hysa' | 'roth' | 'k401' | 'general',
     accounts: InvestingAccount[],
-    collapsedKey: 'hysa' | 'roth' | 'k401' | 'general'
+    carouselRef: React.RefObject<HTMLDivElement>,
+    carouselIdx: number,
+    setCarouselIdx: (i: number) => void,
+    carouselHeight: number | undefined,
+    setCarouselHeight: (h: number | undefined) => void
   ) {
-    const isCollapsed = getCollapsed(collapsedKey);
     const sortedAccounts = [...accounts].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
     const visibleAccounts =
       type === 'hysa' && !showZeroHysa
@@ -1415,66 +1450,58 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
         : sortedAccounts;
     return (
       <>
-        <div
-          className="section-header investing-section-header"
-          style={{
-            marginTop: 24,
-            padding: '10px 14px',
-            borderRadius: 10,
-          }}
-          onClick={() =>
-            collapsedKey === 'hysa'
-              ? handleOpenHysa()
-              : setCollapsed(collapsedKey, !isCollapsed)
-          }
-        >
-          <span className="section-header-left">
-            {label}
-          </span>
-          <span className="chevron">{isCollapsed ? '▸' : '▾'}</span>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
+          {type === 'hysa' && (
+            <button
+              type="button"
+              className="snapshot-add-btn"
+              onClick={() => {
+                setShowZeroHysa(!showZeroHysa);
+                saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, !showZeroHysa);
+              }}
+            >
+              {showZeroHysa ? 'Hide $0' : 'Show $0'}
+            </button>
+          )}
+          <button
+            type="button"
+            className="snapshot-add-btn"
+            onClick={() => addAccount(type)}
+          >
+            <IconPlus /> Add
+          </button>
         </div>
-        {!isCollapsed ? (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
-              {type === 'hysa' && (
-                <button
-                  type="button"
-                  className="snapshot-add-btn"
-                  onClick={() => {
-                    setShowZeroHysa(!showZeroHysa);
-                    saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, !showZeroHysa);
-                  }}
-                >
-                  {showZeroHysa ? 'Hide $0' : 'Show $0'}
-                </button>
-              )}
-              <button
-                type="button"
-                className="snapshot-add-btn"
-                onClick={() => addAccount(type)}
-              >
-                <IconPlus /> Add
-              </button>
-            </div>
-            <div className="card-carousel">
-            {visibleAccounts.map((a) => {
-              return (
-                <div className="card-carousel-item" key={a.id}><div className="card ll-account-card">
-                  <div className="row ll-account-row">
-                    <span className="name bank-card-name">{a.name}</span>
-                    <span className="amount amount-pos">{formatCents(a.balanceCents || 0)}</span>
-                  </div>
-                  {(a.type === 'roth' || a.type === 'k401') && accountContributionsFromRecurring[a.id] ? (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
-                      <div>Employee contrib: {formatCents(accountContributionsFromRecurring[a.id].employeeCents)}</div>
-                      {accountContributionsFromRecurring[a.id].employerMatchCents > 0 ? (
-                        <div>Employer match: {formatCents(accountContributionsFromRecurring[a.id].employerMatchCents)}</div>
-                      ) : null}
-                    </div>
+        <div style={carouselHeight != null ? { height: carouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : { overflow: 'hidden' }}>
+        <div
+          ref={carouselRef}
+          className="card-carousel"
+          style={{ marginBottom: 0 }}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+            setCarouselIdx(idx);
+            const item = el.children[idx] as HTMLElement | undefined;
+            if (item) setCarouselHeight(item.offsetHeight);
+          }}
+        >
+        {visibleAccounts.map((a) => {
+          return (
+            <div className="card-carousel-item" key={a.id}><div className="card ll-account-card">
+              <div className="row ll-account-row">
+                <span className="name bank-card-name">{a.name}</span>
+                <span className="amount amount-pos">{formatCents(a.balanceCents || 0)}</span>
+              </div>
+              {(a.type === 'roth' || a.type === 'k401') && accountContributionsFromRecurring[a.id] ? (
+                <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
+                  <div>Employee contrib: {formatCents(accountContributionsFromRecurring[a.id].employeeCents)}</div>
+                  {accountContributionsFromRecurring[a.id].employerMatchCents > 0 ? (
+                    <div>Employer match: {formatCents(accountContributionsFromRecurring[a.id].employerMatchCents)}</div>
                   ) : null}
-                  {a.type === 'hysa' ? (
-                    (() => {
-                      const h = a as HysaAccount;
+                </div>
+              ) : null}
+              {a.type === 'hysa' ? (
+                (() => {
+                  const h = a as HysaAccount;
                       const { interestAccruedThisMonthCents, projectedInterestThisMonthCents } =
                         computeHysaMonthlyInterest(h, Date.now());
                       const balance = typeof h.balanceCents === 'number' ? h.balanceCents : 0;
@@ -1552,12 +1579,28 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                       Delete
                     </button>
                   </div>
-                </div></div>
-              );
-            })}
+              </div></div>
+            );
+          })}
+          </div>
+          </div>
+          {visibleAccounts.length > 1 ? (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {visibleAccounts.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: i === carouselIdx ? 'var(--accent)' : 'var(--border)',
+                    transition: 'background 0.2s',
+                    display: 'inline-block'
+                  }}
+                />
+              ))}
             </div>
-          </>
-        ) : null}
+          ) : null}
       </>
     );
   }
@@ -1779,10 +1822,77 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
         ) : null}
       </Modal>
 
-      {renderSection('HYSA', 'hysa', hysaAccounts, 'hysa')}
-      {renderSection('Roth IRA', 'roth', rothAccounts, 'roth')}
-      {renderSection('General Investing', 'general', generalAccounts, 'general')}
-      {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, 'k401')}
+      {/* ── Liquid group ── */}
+      <div
+        className="section-header investing-section-header"
+        style={{ marginTop: 24, padding: '10px 14px', borderRadius: 10 }}
+        onClick={() => setLiquidCollapsed(!liquidCollapsed)}
+      >
+        <span className="section-header-left">Liquid</span>
+        <span className="chevron">{liquidCollapsed ? '▸' : '▾'}</span>
+      </div>
+      {!liquidCollapsed ? (
+        <>
+          <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginBottom: 12, paddingBottom: 4 }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>HYSA</span>
+          </div>
+          {renderSection('HYSA', 'hysa', hysaAccounts, hysaCarouselRef, hysaCarouselIdx, setHysaCarouselIdx, hysaCarouselHeight, setHysaCarouselHeight)}
+          <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>General Investing</span>
+          </div>
+          {renderSection('General Investing', 'general', generalAccounts, generalCarouselRef, generalCarouselIdx, setGeneralCarouselIdx, generalCarouselHeight, setGeneralCarouselHeight)}
+        </>
+      ) : null}
+
+      {/* ── Long Term group ── */}
+      <div
+        className="section-header investing-section-header"
+        style={{ marginTop: 24, padding: '10px 14px', borderRadius: 10 }}
+        onClick={() => setLongtermCollapsed(!longtermCollapsed)}
+      >
+        <span className="section-header-left">Long Term</span>
+        <span className="chevron">{longtermCollapsed ? '▸' : '▾'}</span>
+      </div>
+      {!longtermCollapsed ? (
+        <>
+          <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginBottom: 12, paddingBottom: 4 }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Roth IRA</span>
+          </div>
+          {renderSection('Roth IRA', 'roth', rothAccounts, rothCarouselRef, rothCarouselIdx, setRothCarouselIdx, rothCarouselHeight, setRothCarouselHeight)}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, marginBottom: 4 }}>
+            <button
+              type="button"
+              className="snapshot-add-btn"
+              onClick={() => {
+                const source = coastFireAssumptions || coastFireForm;
+                setCoastFireForm({ ...source });
+                setCoastFireFormStrings(coastFireAssumptionsToFormStrings(source));
+                setCoastFireOpen(true);
+              }}
+            >
+              See more: Coast FIRE
+            </button>
+          </div>
+          <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Employer-Based Retirement Accounts</span>
+          </div>
+          {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, k401CarouselRef, k401CarouselIdx, setK401CarouselIdx, k401CarouselHeight, setK401CarouselHeight)}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, marginBottom: 4 }}>
+            <button
+              type="button"
+              className="snapshot-add-btn"
+              onClick={() => {
+                const source = coastFireAssumptions || coastFireForm;
+                setCoastFireForm({ ...source });
+                setCoastFireFormStrings(coastFireAssumptionsToFormStrings(source));
+                setCoastFireOpen(true);
+              }}
+            >
+              See more: Coast FIRE
+            </button>
+          </div>
+        </>
+      ) : null}
 
       <div
         className="card card-accent-strip"
@@ -1883,22 +1993,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             </div>
           </div>
         )}
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ width: '100%' }}
-          onClick={() => {
-            const source = coastFireAssumptions || coastFireForm;
-            setCoastFireForm({ ...source });
-            setCoastFireFormStrings(coastFireAssumptionsToFormStrings(source));
-            setCoastFireOpen(true);
-          }}
-        >
-          See more: Coast FIRE
-        </button>
       </div>
 
       {coastFireOpen ? (
