@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Modal } from '../../ui/Modal';
 
 type Section = { title: string; content: React.ReactNode };
 
@@ -208,6 +209,93 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
     if (!isFirst) setIdx(idx - 1);
   }
 
+  const inner = (
+    <>
+      {/* Progress dots */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: 16, flexShrink: 0 }}>
+        {SECTIONS.map((_, i) => (
+          <div
+            key={i}
+            style={{
+              width: i === idx ? 18 : 6,
+              height: 6,
+              borderRadius: 3,
+              background: i === idx
+                ? 'var(--ui-add-btn, var(--accent))'
+                : i < idx
+                  ? 'color-mix(in srgb, var(--ui-add-btn, var(--accent)) 45%, transparent)'
+                  : 'var(--ui-border, var(--border))',
+              transition: 'width 0.2s ease, background 0.2s ease',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Card */}
+      <div
+        style={{
+          background: 'var(--ui-card-bg, var(--surface))',
+          borderRadius: 16,
+          border: '1px solid var(--ui-border, var(--border))',
+          padding: '20px 20px 16px',
+          flex: 1,
+          overflowY: 'auto',
+          minHeight: 0,
+        }}
+      >
+        <h2
+          style={{
+            margin: '0 0 14px 0',
+            fontSize: '1.15rem',
+            fontWeight: 700,
+            color: 'var(--ui-title-text, var(--text))',
+            lineHeight: 1.3,
+          }}
+        >
+          {section.title}
+        </h2>
+        {section.content}
+      </div>
+
+      {/* Step counter */}
+      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', margin: '10px 0 8px', flexShrink: 0 }}>
+        {idx + 1} of {SECTIONS.length}
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        {!isFirst && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ flex: '0 0 auto', minWidth: 72 }}
+            onClick={handleBack}
+          >
+            Back
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ flex: 1 }}
+          onClick={handleNext}
+        >
+          {isLast ? (canClose ? 'Done' : 'Enter App') : 'Next'}
+        </button>
+      </div>
+    </>
+  );
+
+  if (canClose) {
+    return (
+      <Modal open title="App Guide" onClose={onClose}>
+        <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '70vh' }}>
+          {inner}
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <div
       style={{
@@ -231,93 +319,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           maxHeight: 'calc(100vh - 40px)',
         }}
       >
-        {/* Top row: progress dots + optional close button */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 16, flexShrink: 0, position: 'relative' }}>
-          {SECTIONS.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: i === idx ? 18 : 6,
-                height: 6,
-                borderRadius: 3,
-                background: i === idx
-                  ? 'var(--ui-add-btn, var(--accent))'
-                  : i < idx
-                    ? 'color-mix(in srgb, var(--ui-add-btn, var(--accent)) 45%, transparent)'
-                    : 'var(--ui-border, var(--border))',
-                transition: 'width 0.2s ease, background 0.2s ease',
-              }}
-            />
-          ))}
-          {canClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--muted)', fontSize: '1.3rem', lineHeight: 1,
-                padding: '2px 4px',
-              }}
-              aria-label="Close guide"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* Card */}
-        <div
-          style={{
-            background: 'var(--ui-card-bg, var(--surface))',
-            borderRadius: 16,
-            border: '1px solid var(--ui-border, var(--border))',
-            padding: '20px 20px 16px',
-            flex: 1,
-            overflowY: 'auto',
-            minHeight: 0,
-          }}
-        >
-          <h2
-            style={{
-              margin: '0 0 14px 0',
-              fontSize: '1.15rem',
-              fontWeight: 700,
-              color: 'var(--ui-title-text, var(--text))',
-              lineHeight: 1.3,
-            }}
-          >
-            {section.title}
-          </h2>
-          {section.content}
-        </div>
-
-        {/* Step counter */}
-        <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', margin: '10px 0 8px', flexShrink: 0 }}>
-          {idx + 1} of {SECTIONS.length}
-        </div>
-
-        {/* Buttons */}
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          {!isFirst && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ flex: '0 0 auto', minWidth: 72 }}
-              onClick={handleBack}
-            >
-              Back
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ flex: 1 }}
-            onClick={handleNext}
-          >
-            {isLast ? (canClose ? 'Done' : 'Enter App') : 'Next'}
-          </button>
-        </div>
+        {inner}
       </div>
     </div>
   );
