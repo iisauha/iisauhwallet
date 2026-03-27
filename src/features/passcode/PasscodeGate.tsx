@@ -100,7 +100,7 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
     >
       <div
         style={{
-          width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+          width: 110, height: 110, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
           opacity: photoVisible ? 1 : 0, transition: 'opacity 0.6s ease, transform 0.6s ease',
           transform: photoVisible ? 'scale(1)' : 'scale(0.85)',
           background: profileImage ? 'transparent' : 'var(--surface)',
@@ -109,13 +109,13 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
       >
         {profileImage
           ? <img src={profileImage} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-          : <span style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--app-font-family)' }}>{name.charAt(0).toUpperCase()}</span>
+          : <span style={{ fontSize: '2.8rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--app-font-family)' }}>{name.charAt(0).toUpperCase()}</span>
         }
       </div>
-      <div style={{ textAlign: 'center', lineHeight: 1.25 }}>
+      <div style={{ textAlign: 'center', lineHeight: 1.3 }}>
         <div
           style={{
-            fontSize: '14px', fontWeight: 400, color: 'var(--muted)',
+            fontSize: '20px', fontWeight: 400, color: 'var(--muted)',
             fontFamily: 'var(--app-font-family)',
             opacity: greetVisible ? 1 : 0,
             transform: greetVisible ? 'translateY(0)' : 'translateY(8px)',
@@ -126,7 +126,7 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
         </div>
         <div
           style={{
-            fontSize: '24px', fontWeight: 700, color: 'var(--accent)',
+            fontSize: '38px', fontWeight: 700, color: 'var(--accent)',
             fontFamily: 'var(--app-font-family)',
             opacity: nameVisible ? 1 : 0,
             transform: nameVisible ? 'translateY(0)' : 'translateY(10px)',
