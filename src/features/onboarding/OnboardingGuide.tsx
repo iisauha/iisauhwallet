@@ -189,7 +189,7 @@ export function isOnboardingDone(): boolean {
   try { return localStorage.getItem(ONBOARDING_DONE_KEY) === '1'; } catch (_) { return true; }
 }
 
-export function OnboardingGuide({ onDone }: { onDone: () => void }) {
+export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => void; canClose?: boolean; onClose?: () => void }) {
   const [idx, setIdx] = useState(0);
   const section = SECTIONS[idx];
   const isLast = idx === SECTIONS.length - 1;
@@ -231,8 +231,8 @@ export function OnboardingGuide({ onDone }: { onDone: () => void }) {
           maxHeight: 'calc(100vh - 40px)',
         }}
       >
-        {/* Progress dots */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: 16, flexShrink: 0 }}>
+        {/* Top row: progress dots + optional close button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 16, flexShrink: 0, position: 'relative' }}>
           {SECTIONS.map((_, i) => (
             <div
               key={i}
@@ -249,6 +249,21 @@ export function OnboardingGuide({ onDone }: { onDone: () => void }) {
               }}
             />
           ))}
+          {canClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--muted)', fontSize: '1.3rem', lineHeight: 1,
+                padding: '2px 4px',
+              }}
+              aria-label="Close guide"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Card */}
@@ -300,7 +315,7 @@ export function OnboardingGuide({ onDone }: { onDone: () => void }) {
             style={{ flex: 1 }}
             onClick={handleNext}
           >
-            {isLast ? 'Enter App' : 'Next'}
+            {isLast ? (canClose ? 'Done' : 'Enter App') : 'Next'}
           </button>
         </div>
       </div>

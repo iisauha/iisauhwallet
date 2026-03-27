@@ -483,6 +483,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   const handleMigrationSkip = useCallback(() => {
     saveRecoverySetupDone(true);
+    markOnboardingDone();
     setStep('enter');
     setInput('');
     setError('');
