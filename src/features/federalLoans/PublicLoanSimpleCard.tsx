@@ -38,8 +38,13 @@ function todayISO(): string {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymentNow?: () => void }) {
-  const { onSave, onAddToPaymentNow } = props;
+export function PublicLoanSimpleCard(props: {
+  onSave?: () => void;
+  onAddToPaymentNow?: () => void;
+  onRemoveFromPaymentNow?: () => void;
+  isIncludedInTotal?: boolean;
+}) {
+  const { onSave, onAddToPaymentNow, onRemoveFromPaymentNow, isIncludedInTotal } = props;
   const [summary, setSummary] = useState<PublicLoanSummary>(() => loadPublicLoanSummary());
   const [paymentInput, setPaymentInput] = useState('');
   const [firstPaymentDateInput, setFirstPaymentDateInput] = useState('');
@@ -62,14 +67,25 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   useEffect(() => {
     const el = carouselRef.current;
     if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const observeCurrent = () => {
+      ro?.disconnect();
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (!item) return;
+      ro = new ResizeObserver(() => setPublicCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro.observe(item);
+    };
     const handler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
       if (item) setPublicCarouselHeight(item.offsetHeight);
+      observeCurrent();
     };
+    observeCurrent();
     el.addEventListener('scrollend', handler);
-    return () => el.removeEventListener('scrollend', handler);
+    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
   }, []);
 
   useEffect(() => {
@@ -145,14 +161,18 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
 
   const handleAddToPaymentNow = () => {
     if (publicEstimateCents <= 0) return;
-    const current = loadPublicPaymentNowAdded();
-    savePublicPaymentNowAdded(current + publicEstimateCents);
+    savePublicPaymentNowAdded(publicEstimateCents); // flag: included (exact value, not accumulated)
     onAddToPaymentNow?.();
+  };
+
+  const handleRemoveFromPaymentNow = () => {
+    savePublicPaymentNowAdded(0);
+    onRemoveFromPaymentNow?.();
   };
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={publicCarouselHeight != null ? { minHeight: publicCarouselHeight } : {}}>
+      <div style={publicCarouselHeight != null ? { height: publicCarouselHeight, overflow: 'hidden' } : {}}>
       <div
         ref={carouselRef}
         className="card-carousel"
@@ -312,20 +332,36 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
         onClose={() => setShowPaymentActionsModal(false)}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-              onClick={() => { handleAddToPaymentNow(); setShowPaymentActionsModal(false); }}
-              disabled={publicEstimateCents <= 0}
-            >
-              Add to monthly total
-            </button>
-            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-              Adds your estimated public loan payment to your monthly payment total.
-            </p>
-          </div>
+          {isIncludedInTotal ? (
+            <div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                onClick={() => { handleRemoveFromPaymentNow(); setShowPaymentActionsModal(false); }}
+              >
+                Remove from monthly total
+              </button>
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                Removes your public loan payment from your monthly payment total.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                onClick={() => { handleAddToPaymentNow(); setShowPaymentActionsModal(false); }}
+                disabled={publicEstimateCents <= 0}
+              >
+                Add to monthly total
+              </button>
+              <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                Adds your estimated public loan payment to your monthly payment total.
+              </p>
+            </div>
+          )}
           <div>
             <button
               type="button"

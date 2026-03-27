@@ -451,27 +451,49 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   useEffect(() => {
     const el = completedCarouselRef.current;
     if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const observeCurrent = () => {
+      ro?.disconnect();
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (!item) return;
+      ro = new ResizeObserver(() => setCompletedCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro.observe(item);
+    };
     const handler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setCompletedCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
       if (item) setCompletedCarouselHeight(item.offsetHeight);
+      observeCurrent();
     };
+    observeCurrent();
     el.addEventListener('scrollend', handler);
-    return () => el.removeEventListener('scrollend', handler);
+    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
   }, []);
 
   useEffect(() => {
     const el = entriesCarouselRef.current;
     if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const observeCurrent = () => {
+      ro?.disconnect();
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (!item) return;
+      ro = new ResizeObserver(() => setEntriesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro.observe(item);
+    };
     const handler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setEntriesCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
       if (item) setEntriesCarouselHeight(item.offsetHeight);
+      observeCurrent();
     };
+    observeCurrent();
     el.addEventListener('scrollend', handler);
-    return () => el.removeEventListener('scrollend', handler);
+    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
   }, []);
 
   function entryDisplayName(e: SubTrackerEntry) {
@@ -503,7 +525,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           {!completedBonusesCollapsed ? (
           <>
           <div
-            style={completedCarouselHeight != null ? { minHeight: completedCarouselHeight } : {}}
+            style={completedCarouselHeight != null ? { height: completedCarouselHeight, overflow: 'hidden' } : {}}
           >
           <div
             ref={completedCarouselRef}
@@ -635,7 +657,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       ) : (
         <>
       <div
-        style={entriesCarouselHeight != null ? { minHeight: entriesCarouselHeight } : {}}
+        style={entriesCarouselHeight != null ? { height: entriesCarouselHeight, overflow: 'hidden' } : {}}
       >
       <div
         ref={entriesCarouselRef}

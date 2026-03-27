@@ -1191,14 +1191,25 @@ export function LoansPage() {
   useEffect(() => {
     const el = privateCarouselRef.current;
     if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const observeCurrent = () => {
+      ro?.disconnect();
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (!item) return;
+      ro = new ResizeObserver(() => setPrivateCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro.observe(item);
+    };
     const handler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setPrivateCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
       if (item) setPrivateCarouselHeight(item.offsetHeight);
+      observeCurrent();
     };
+    observeCurrent();
     el.addEventListener('scrollend', handler);
-    return () => el.removeEventListener('scrollend', handler);
+    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
   }, []);
 
   const summary = useMemo(() => {
@@ -1236,11 +1247,11 @@ export function LoansPage() {
         : (estimated > 0 ? estimated : 0);
     })();
 
-    // Total is always the direct sum of each loan card's Payment(now) value.
-    // Never use stored overrides or cached totals — those can accumulate stale/wrong
-    // values across imports and manual edits and cause blown-up numbers.
+    // Private base always derived live from each loan card's Payment(now) value.
+    // Public loan is only included when the user has explicitly opted in via
+    // "Add to monthly total" in the Payment Actions modal (publicPaymentNowAdded > 0).
     const privatePaymentNowBase = derivedPrivatePaymentNowBase;
-    const totalMonthlyNow = derivedPrivatePaymentNowBase + publicEstimateCents;
+    const totalMonthlyNow = derivedPrivatePaymentNowBase + (publicPaymentNowAdded > 0 ? publicEstimateCents : 0);
 
     const privateTotalBalance = totalBalance;
     const publicBalanceCents = publicSummary.totalBalanceCents ?? 0;
@@ -1287,7 +1298,7 @@ export function LoansPage() {
       publicPaymentNowAdded,
       publicEstimateCents
     };
-  }, [loansWithDerived, birthdateISO, publicSummary]);
+  }, [loansWithDerived, birthdateISO, publicSummary, publicPaymentNowAdded]);
 
   /** After-grace: per private loan use first future value (custom → full repayment → interest-only). */
   const afterGraceBreakdown = useMemo(() => {
@@ -1499,6 +1510,8 @@ export function LoansPage() {
           <PublicLoanSimpleCard
             onSave={() => setPublicSummary(loadPublicLoanSummary())}
             onAddToPaymentNow={() => setPublicPaymentNowAdded(loadPublicPaymentNowAdded())}
+            onRemoveFromPaymentNow={() => { savePublicPaymentNowAdded(0); setPublicPaymentNowAdded(0); }}
+            isIncludedInTotal={publicPaymentNowAdded > 0}
           />
         </div>
       ) : null}
@@ -1531,7 +1544,7 @@ export function LoansPage() {
             </button>
           </div>
           <div
-            style={privateCarouselHeight != null ? { minHeight: privateCarouselHeight } : {}}
+            style={privateCarouselHeight != null ? { height: privateCarouselHeight, overflow: 'hidden' } : {}}
           >
           <div
             ref={privateCarouselRef}

@@ -335,31 +335,53 @@ export function SnapshotPage({
     });
   }, [activeSection, visibleCards.length]);
 
-  // Dot-indicator index updates only when scroll fully snaps to a card
+  // Dot-indicator index updates only when scroll fully snaps; ResizeObserver tracks current card height
   useEffect(() => {
     const el = banksCarouselRef.current;
     if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const observeCurrent = () => {
+      ro?.disconnect();
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (!item) return;
+      ro = new ResizeObserver(() => setBanksCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro.observe(item);
+    };
     const handler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setBanksIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
       if (item) setBanksCarouselHeight(item.offsetHeight);
+      observeCurrent();
     };
+    observeCurrent();
     el.addEventListener('scrollend', handler);
-    return () => el.removeEventListener('scrollend', handler);
+    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
   }, []);
 
   useEffect(() => {
     const el = cardsCarouselRef.current;
     if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const observeCurrent = () => {
+      ro?.disconnect();
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (!item) return;
+      ro = new ResizeObserver(() => setCardsCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro.observe(item);
+    };
     const handler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setCardsIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
       if (item) setCardsCarouselHeight(item.offsetHeight);
+      observeCurrent();
     };
+    observeCurrent();
     el.addEventListener('scrollend', handler);
-    return () => el.removeEventListener('scrollend', handler);
+    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
   }, []);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
@@ -508,7 +530,7 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={banksCarouselHeight != null ? { minHeight: banksCarouselHeight } : {}}>
+          <div style={banksCarouselHeight != null ? { height: banksCarouselHeight, overflow: 'hidden' } : {}}>
           <div
             className="card-carousel"
             ref={banksCarouselRef}
@@ -632,7 +654,7 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={cardsCarouselHeight != null ? { minHeight: cardsCarouselHeight } : {}}>
+          <div style={cardsCarouselHeight != null ? { height: cardsCarouselHeight, overflow: 'hidden' } : {}}>
           <div
             className="card-carousel"
             ref={cardsCarouselRef}

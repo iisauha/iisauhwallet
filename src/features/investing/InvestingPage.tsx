@@ -733,7 +733,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     });
   }, []);
 
-  // Dot-indicator index updates only when scroll fully snaps to a card
+  // Dot-indicator index updates only when scroll fully snaps; ResizeObserver tracks current card height
   useEffect(() => {
     const pairs: [React.RefObject<HTMLDivElement>, (i: number) => void, (h: number | undefined) => void][] = [
       [hysaCarouselRef, setHysaCarouselIdx, setHysaCarouselHeight],
@@ -744,14 +744,25 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     const cleanups = pairs.map(([ref, setIdx, setHeight]) => {
       const el = ref.current;
       if (!el) return () => {};
+      let ro: ResizeObserver | null = null;
+      const observeCurrent = () => {
+        ro?.disconnect();
+        const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+        const item = el.children[idx] as HTMLElement | undefined;
+        if (!item) return;
+        ro = new ResizeObserver(() => setHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+        ro.observe(item);
+      };
       const handler = () => {
         const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
         setIdx(idx);
         const item = el.children[idx] as HTMLElement | undefined;
         if (item) setHeight(item.offsetHeight);
+        observeCurrent();
       };
+      observeCurrent();
       el.addEventListener('scrollend', handler);
-      return () => el.removeEventListener('scrollend', handler);
+      return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
     });
     return () => cleanups.forEach((fn) => fn());
   }, []);
@@ -1494,7 +1505,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             <IconPlus /> Add
           </button>
         </div>
-        <div style={carouselHeight != null ? { minHeight: carouselHeight } : {}}>
+        <div style={carouselHeight != null ? { height: carouselHeight, overflow: 'hidden' } : {}}>
         <div
           ref={carouselRef}
           className="card-carousel"

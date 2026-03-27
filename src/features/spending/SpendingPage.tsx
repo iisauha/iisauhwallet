@@ -304,14 +304,25 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   useEffect(() => {
     const el = purchasesCarouselRef;
     if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const observeCurrent = () => {
+      ro?.disconnect();
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (!item) return;
+      ro = new ResizeObserver(() => setPurchasesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro.observe(item);
+    };
     const handler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setPurchasesCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
       if (item) setPurchasesCarouselHeight(item.offsetHeight);
+      observeCurrent();
     };
+    observeCurrent();
     el.addEventListener('scrollend', handler);
-    return () => el.removeEventListener('scrollend', handler);
+    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
   }, [purchasesCarouselRef]);
 
   useEffect(() => {
@@ -758,7 +769,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          <div style={purchasesCarouselHeight != null ? { minHeight: purchasesCarouselHeight } : {}}>
+          <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden' } : {}}>
           <div
             className="card-carousel"
             style={{ marginBottom: 0 }}
