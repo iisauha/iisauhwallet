@@ -1,4 +1,5 @@
 import { PUBLIC_LOAN_ESTIMATOR_KEY } from '../../state/keys';
+import { loadEncryptedKey, saveEncryptedKey } from '../../state/storage';
 
 export interface PublicLoanEstimatorState {
   totalBalanceCents: number;
@@ -40,7 +41,7 @@ function parseState(raw: unknown): PublicLoanEstimatorState | null {
 
 export function loadPublicLoanEstimator(): PublicLoanEstimatorState {
   try {
-    const raw = localStorage.getItem(PUBLIC_LOAN_ESTIMATOR_KEY);
+    const raw = loadEncryptedKey(PUBLIC_LOAN_ESTIMATOR_KEY);
     if (!raw) return getDefaultPublicLoanEstimatorState();
     const parsed = JSON.parse(raw) as unknown;
     const state = parseState(parsed);
@@ -65,7 +66,7 @@ export function getDefaultPublicLoanEstimatorState(): PublicLoanEstimatorState {
 
 export function savePublicLoanEstimator(state: PublicLoanEstimatorState): void {
   try {
-    localStorage.setItem(PUBLIC_LOAN_ESTIMATOR_KEY, JSON.stringify(state));
+    saveEncryptedKey(PUBLIC_LOAN_ESTIMATOR_KEY, JSON.stringify(state));
   } catch {}
 }
 

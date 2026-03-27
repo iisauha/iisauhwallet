@@ -31,13 +31,11 @@ The app sits behind a **6-digit passcode** that you create the first time you op
 
 ### What encryption actually does
 
-When you export your data as a JSON backup, you can choose to encrypt it with your passcode. Here is what encryption means in plain terms: it scrambles your data into complete gibberish that is unreadable without the exact passcode. Without your passcode, the exported file looks something like this:
+**Data at rest (in your browser storage):** All financial data is encrypted with AES-256-GCM. The encryption key is itself protected by your passcode using PBKDF2 (100,000 iterations) — it is never stored in plaintext alongside your data. Someone who extracted your browser storage without your passcode would have encrypted data and an encrypted key, and no way to read either.
 
-```
-U2FsdGVkX1+kZ3xQ8pM2V7nRtYwJhF0B...4gX9cLm1pQ6nWsKdA8vBzRy
-```
+**Exported backup files:** When you export a backup, you can encrypt it with your passcode. The result is a file that looks like gibberish and is mathematically unreadable without the exact passcode. This uses PBKDF2 + AES-256-GCM, which is intentionally slow and computationally expensive to crack even with a fast computer.
 
-There is no way to reverse that back into real data without the correct passcode. This also protects you against brute-force attacks (someone just trying every combination) because the encryption is intentionally slow and computationally expensive to crack.
+**Passcode storage:** Your passcode is never stored — only a slow cryptographic hash (PBKDF2, 100,000 iterations) is kept, making brute-force guessing impractical even if someone extracted the hash.
 
 ### How safe is it really
 
@@ -46,7 +44,7 @@ Think about what a bad actor would actually have to do to get to your data:
 1. **They would need your physical phone.** Your phone's own lock screen (Face ID, fingerprint, PIN) is the first wall.
 2. **Then they would need to know this app exists and find it.** It is not a famous app with millions of users. It is a personal tool hosted on GitHub.
 3. **Then they would need to get past the passcode screen.** 6 digits with lockout after too many attempts. After 10 wrong tries the app locks for 24 hours or wipes itself.
-4. **If somehow they bypassed all of that and opened browser developer tools** (which is genuinely difficult on a mobile phone) the raw data in local storage is encrypted.
+4. **If somehow they bypassed all of that and opened browser developer tools** (which is genuinely difficult on a mobile phone) the raw data in local storage is encrypted, and the decryption key is protected by your passcode — so the data is still unreadable without it.
 5. **And after all of that, what they would find is** a personal finance journal with balances you typed in by hand. Not your actual bank credentials. Not your card numbers. Not your Social Security number. Not your login info for anything.
 
 There is no connection to any bank. Nothing here could be used to access your accounts.

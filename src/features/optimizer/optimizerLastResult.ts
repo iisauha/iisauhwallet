@@ -1,4 +1,5 @@
 import { OPTIMIZER_LAST_RESULT_KEY } from '../../state/keys';
+import { loadEncryptedKey, saveEncryptedKey } from '../../state/storage';
 import type { OptimizerResult } from './optimize457b';
 import type { OptimizerAssumptions } from './optimizerAssumptions';
 
@@ -17,7 +18,7 @@ type ParsedOptimizerLastResult = {
 
 export function loadLastOptimizerResult(): SavedOptimizerResult | null {
   try {
-    const raw = localStorage.getItem(OPTIMIZER_LAST_RESULT_KEY);
+    const raw = loadEncryptedKey(OPTIMIZER_LAST_RESULT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ParsedOptimizerLastResult;
     if (!parsed || !parsed.result) return null;
@@ -28,5 +29,5 @@ export function loadLastOptimizerResult(): SavedOptimizerResult | null {
 }
 
 export function saveLastOptimizerResult(payload: SavedOptimizerResult): void {
-  localStorage.setItem(OPTIMIZER_LAST_RESULT_KEY, JSON.stringify({ ...payload, timestamp: Date.now() }));
+  saveEncryptedKey(OPTIMIZER_LAST_RESULT_KEY, JSON.stringify({ ...payload, timestamp: Date.now() }));
 }

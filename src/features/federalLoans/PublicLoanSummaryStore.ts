@@ -1,4 +1,5 @@
 import { PUBLIC_LOAN_SUMMARY_KEY } from '../../state/keys';
+import { loadEncryptedKey, saveEncryptedKey } from '../../state/storage';
 
 export type PublicLoanPaymentMode = 'current_payment' | 'first_payment_date';
 
@@ -76,7 +77,7 @@ function parse(raw: unknown): PublicLoanSummary {
 
 export function loadPublicLoanSummary(): PublicLoanSummary {
   try {
-    const raw = localStorage.getItem(PUBLIC_LOAN_SUMMARY_KEY);
+    const raw = loadEncryptedKey(PUBLIC_LOAN_SUMMARY_KEY);
     if (!raw) return { ...DEFAULT };
     return parse(JSON.parse(raw));
   } catch {
@@ -86,6 +87,6 @@ export function loadPublicLoanSummary(): PublicLoanSummary {
 
 export function savePublicLoanSummary(summary: PublicLoanSummary): void {
   try {
-    localStorage.setItem(PUBLIC_LOAN_SUMMARY_KEY, JSON.stringify(summary));
+    saveEncryptedKey(PUBLIC_LOAN_SUMMARY_KEY, JSON.stringify(summary));
   } catch {}
 }

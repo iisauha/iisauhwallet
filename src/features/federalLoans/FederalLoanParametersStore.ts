@@ -1,4 +1,5 @@
 import { FEDERAL_LOAN_PARAMETERS_KEY } from '../../state/keys';
+import { loadEncryptedKey, saveEncryptedKey } from '../../state/storage';
 
 export type FilingStatus = 'single' | 'mfj' | 'mfs';
 export type RepaymentPlanOption = 'IBR' | 'PAYE' | 'ICR';
@@ -74,7 +75,7 @@ function parseParams(raw: unknown): FederalLoanParameters | null {
 
 export function loadFederalLoanParameters(): FederalLoanParameters | null {
   try {
-    const raw = localStorage.getItem(FEDERAL_LOAN_PARAMETERS_KEY);
+    const raw = loadEncryptedKey(FEDERAL_LOAN_PARAMETERS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     return parseParams(parsed);
@@ -85,7 +86,7 @@ export function loadFederalLoanParameters(): FederalLoanParameters | null {
 
 export function saveFederalLoanParameters(params: FederalLoanParameters): void {
   try {
-    localStorage.setItem(FEDERAL_LOAN_PARAMETERS_KEY, JSON.stringify(params));
+    saveEncryptedKey(FEDERAL_LOAN_PARAMETERS_KEY, JSON.stringify(params));
   } catch {}
 }
 

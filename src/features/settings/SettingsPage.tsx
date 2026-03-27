@@ -25,7 +25,7 @@ import {
   hashPasscode,
   clearDataCache,
 } from '../../state/storage';
-import { encryptWithPasscode } from '../../state/crypto';
+import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
@@ -702,7 +702,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setPausePasscodeStep(0)}>Cancel</button>
-                <button type="button" className="btn btn-primary" onClick={() => { savePasscodePaused(true); setPasscodePaused(true); setPausePasscodeStep(0); }}>Pause passcode</button>
+                <button type="button" className="btn btn-primary" onClick={async () => { await exportDeviceKeyToStorage(); savePasscodePaused(true); setPasscodePaused(true); setPausePasscodeStep(0); }}>Pause passcode</button>
               </div>
             </Modal>
           ) : null}

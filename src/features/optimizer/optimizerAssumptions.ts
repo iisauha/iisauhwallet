@@ -4,6 +4,7 @@
  */
 
 import { OPTIMIZER_ASSUMPTIONS_KEY } from '../../state/keys';
+import { loadEncryptedKey, saveEncryptedKey } from '../../state/storage';
 
 export type OptimizerAssumptions = {
   socialSecurityRate: number;
@@ -66,7 +67,7 @@ function parseNumberArray(arr: unknown, fallback: number[]): number[] {
 
 export function loadOptimizerAssumptions(): OptimizerAssumptions {
   try {
-    const raw = localStorage.getItem(OPTIMIZER_ASSUMPTIONS_KEY);
+    const raw = loadEncryptedKey(OPTIMIZER_ASSUMPTIONS_KEY);
     if (!raw) return getDefaultOptimizerAssumptions();
     const o = JSON.parse(raw) as Record<string, unknown>;
     const def = getDefaultOptimizerAssumptions();
@@ -98,5 +99,5 @@ export function loadOptimizerAssumptions(): OptimizerAssumptions {
 }
 
 export function saveOptimizerAssumptions(a: OptimizerAssumptions): void {
-  localStorage.setItem(OPTIMIZER_ASSUMPTIONS_KEY, JSON.stringify(a));
+  saveEncryptedKey(OPTIMIZER_ASSUMPTIONS_KEY, JSON.stringify(a));
 }

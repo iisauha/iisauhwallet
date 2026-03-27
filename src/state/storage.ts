@@ -55,7 +55,7 @@ import {
   USER_PROFILE_IMAGE_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
-import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached } from './crypto';
+import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached, b64Enc, b64Dec } from './crypto';
 
 // Sequence counter: each saveData call increments this. The .then() callback only
 // writes to localStorage if its seq is still the latest, preventing stale fire-and-forgets
@@ -68,7 +68,7 @@ let _writeSeq = 0;
 
 const _auxSeqs: Record<string, number> = {};
 
-function loadEncryptedKey(key: string): string | null {
+export function loadEncryptedKey(key: string): string | null {
   const cached = getAuxCached(key);
   if (cached !== undefined) return cached; // null = key absent from localStorage
   // initCrypto hasn't run yet — fall back to direct read (only works for plaintext)
@@ -79,7 +79,7 @@ function loadEncryptedKey(key: string): string | null {
   } catch (_) { return null; }
 }
 
-function saveEncryptedKey(key: string, rawValue: string): void {
+export function saveEncryptedKey(key: string, rawValue: string): void {
   setAuxCached(key, rawValue);
   const seq = (_auxSeqs[key] = (_auxSeqs[key] ?? 0) + 1);
   encryptWithDeviceKey(rawValue)
@@ -87,7 +87,7 @@ function saveEncryptedKey(key: string, rawValue: string): void {
     .catch(() => { if (_auxSeqs[key] === seq) localStorage.setItem(key, rawValue); });
 }
 
-function removeEncryptedKey(key: string): void {
+export function removeEncryptedKey(key: string): void {
   setAuxCached(key, null);
   localStorage.removeItem(key);
 }
@@ -1697,7 +1697,7 @@ export function loadBirthdateISO(): string | null {
 
 export function loadUserDisplayName(): string | null {
   try {
-    const raw = localStorage.getItem(USER_DISPLAY_NAME_KEY);
+    const raw = loadEncryptedKey(USER_DISPLAY_NAME_KEY);
     if (typeof raw !== 'string' || !raw) return null;
     return raw;
   } catch (_) {
@@ -1708,16 +1708,16 @@ export function loadUserDisplayName(): string | null {
 export function saveUserDisplayName(name: string | null) {
   try {
     if (!name || !name.trim()) {
-      localStorage.removeItem(USER_DISPLAY_NAME_KEY);
+      removeEncryptedKey(USER_DISPLAY_NAME_KEY);
     } else {
-      localStorage.setItem(USER_DISPLAY_NAME_KEY, name.trim());
+      saveEncryptedKey(USER_DISPLAY_NAME_KEY, name.trim());
     }
   } catch (_) {}
 }
 
 export function loadUserProfileImage(): string | null {
   try {
-    const raw = localStorage.getItem(USER_PROFILE_IMAGE_KEY);
+    const raw = loadEncryptedKey(USER_PROFILE_IMAGE_KEY);
     if (typeof raw !== 'string' || !raw) return null;
     return raw;
   } catch (_) {
@@ -1728,9 +1728,9 @@ export function loadUserProfileImage(): string | null {
 export function saveUserProfileImage(dataUrl: string | null) {
   try {
     if (!dataUrl || !dataUrl.startsWith('data:')) {
-      localStorage.removeItem(USER_PROFILE_IMAGE_KEY);
+      removeEncryptedKey(USER_PROFILE_IMAGE_KEY);
     } else {
-      localStorage.setItem(USER_PROFILE_IMAGE_KEY, dataUrl);
+      saveEncryptedKey(USER_PROFILE_IMAGE_KEY, dataUrl);
     }
   } catch (_) {}
 }
@@ -1756,13 +1756,61 @@ export function clearPasscodeHash() {
   } catch (_) {}
 }
 
-/** Hash passcode for storage/comparison. Uses SHA-256 and returns hex string. App requires 6-digit passcode. */
+/** Hash passcode with bare SHA-256. Kept for verifying legacy stored hashes only. */
 export async function hashPasscode(passcode: string): Promise<string> {
   const msg = new TextEncoder().encode(passcode);
   const buf = await crypto.subtle.digest('SHA-256', msg);
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+const PBKDF2_HASH_PREFIX = 'pbkdf2v1:';
+
+/**
+ * Create a new PBKDF2-based passcode hash (random salt, 100k iterations).
+ * Format: "pbkdf2v1:<b64salt>:<b64derivedKey>"
+ */
+export async function createPasscodeHash(passcode: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const baseKey = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(passcode), 'PBKDF2', false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt as Uint8Array<ArrayBuffer>, iterations: 100_000, hash: 'SHA-256' },
+    baseKey, 256
+  );
+  return PBKDF2_HASH_PREFIX + b64Enc(salt) + ':' + b64Enc(new Uint8Array(bits));
+}
+
+/**
+ * Verify a passcode against a stored hash. Handles both legacy SHA-256 and new PBKDF2 formats.
+ * Returns true on match.
+ */
+export async function verifyPasscode(passcode: string, storedHash: string): Promise<boolean> {
+  if (storedHash.startsWith(PBKDF2_HASH_PREFIX)) {
+    const rest = storedHash.slice(PBKDF2_HASH_PREFIX.length);
+    const colonIdx = rest.indexOf(':');
+    if (colonIdx === -1) return false;
+    const salt = b64Dec(rest.slice(0, colonIdx));
+    const storedDk = b64Dec(rest.slice(colonIdx + 1));
+    const baseKey = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(passcode), 'PBKDF2', false, ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: salt as Uint8Array<ArrayBuffer>, iterations: 100_000, hash: 'SHA-256' },
+      baseKey, 256
+    );
+    const derived = new Uint8Array(bits);
+    if (derived.length !== storedDk.length) return false;
+    // Constant-time comparison
+    let diff = 0;
+    for (let i = 0; i < derived.length; i++) diff |= derived[i] ^ storedDk[i];
+    return diff === 0;
+  }
+  // Legacy SHA-256 path
+  const hash = await hashPasscode(passcode);
+  return hash === storedHash;
 }
 
 /** Hash any string (recovery key, security answers) for local comparison. SHA-256 hex. */

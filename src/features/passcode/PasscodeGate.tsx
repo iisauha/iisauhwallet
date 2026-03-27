@@ -3,8 +3,9 @@ import { OnboardingGuide, isOnboardingDone, markOnboardingDone } from '../onboar
 import {
   loadPasscodeHash,
   savePasscodeHash,
-  hashPasscode,
   hashForStorage,
+  createPasscodeHash,
+  verifyPasscode,
   loadPasscodeHint,
   savePasscodeHint,
   loadRecoveryKeyHash,
@@ -28,6 +29,16 @@ import {
   loadUserProfileImage,
   type SecurityQA,
 } from '../../state/storage';
+import {
+  lockCrypto,
+  unlockWithPasscode,
+  unlockWithRecoveryKey,
+  rewrapDeviceKeyWithPasscode,
+  wrapDeviceKeyWithPasscode,
+  wrapDeviceKeyWithRecoveryKey,
+  resetDeviceKey,
+} from '../../state/crypto';
+import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 
 const MAX_FAILED_ATTEMPTS = 10;
@@ -160,6 +171,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     function resetTimer() {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = setTimeout(() => {
+        lockCrypto();
         setAuthenticated(false);
       }, ms);
     }
@@ -283,10 +295,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setError('Passcodes do not match');
       return;
     }
-    const hash = await hashPasscode(input);
+    const hash = await createPasscodeHash(input);
     savePasscodeHash(hash);
     savePasscode6Digit(true);
     setStoredHash(hash);
+    await wrapDeviceKeyWithPasscode(input);
     setStep('hint');
     setHintInput('');
   }, [input, confirmInput]);
@@ -312,6 +325,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     const key = generateRecoveryKey();
     const keyHash = await hashForStorage(key);
     saveRecoveryKeyHash(keyHash);
+    await wrapDeviceKeyWithRecoveryKey(key);
     setGeneratedRecoveryKey(key);
     setStep('recovery-key-show');
   }, [securityQ1, securityQ2, securityA1, securityA2]);
@@ -333,13 +347,22 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setError(`Enter ${PASSCODE_LENGTH} digits`);
       return;
     }
-    const hash = await hashPasscode(input);
-    if (hash !== storedHash) {
+    const matches = storedHash ? await verifyPasscode(input, storedHash) : false;
+    if (!matches) {
       recordFailedAttempt();
       setError(`Incorrect passcode. ${MAX_FAILED_ATTEMPTS - failedAttempts - 1} attempts remaining.`);
       setInput('');
       return;
     }
+    // Migrate legacy SHA-256 hash to PBKDF2 on first successful login.
+    if (storedHash && !storedHash.startsWith('pbkdf2v1:')) {
+      const newHash = await createPasscodeHash(input);
+      savePasscodeHash(newHash);
+      setStoredHash(newHash);
+    }
+    // Unlock device key (migrates plaintext→wrapped on first login, or unwraps on subsequent).
+    await unlockWithPasscode(input);
+    useLedgerStore.getState().actions.reload();
     resetFailedAttempts();
     justLoggedInRef.current = true;
     setAuthenticated(true);
@@ -374,6 +397,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       return;
     }
     resetFailedAttempts();
+    // Try to unlock device key so it can be re-wrapped with the new passcode.
+    await unlockWithRecoveryKey(trimmed);
     setStep('reset-new-passcode');
     setInput('');
     setConfirmInput('');
@@ -410,12 +435,14 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setError('Enter your current passcode');
       return;
     }
-    const hash = await hashPasscode(input);
-    if (hash !== storedHash) {
+    const matches = storedHash ? await verifyPasscode(input, storedHash) : false;
+    if (!matches) {
       setError('Incorrect passcode');
       setInput('');
       return;
     }
+    // Migrate device key now while we still have the old passcode.
+    await unlockWithPasscode(input);
     setStep('update-to-6digit-confirm');
     setInput('');
     setConfirmInput('');
@@ -432,10 +459,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setError('Passcodes do not match');
       return;
     }
-    const hash = await hashPasscode(input);
+    const hash = await createPasscodeHash(input);
     savePasscodeHash(hash);
     savePasscode6Digit(true);
     setStoredHash(hash);
+    await rewrapDeviceKeyWithPasscode(input);
+    useLedgerStore.getState().actions.reload();
     setAuthenticated(true);
     setInput('');
     setConfirmInput('');
@@ -452,18 +481,22 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setError('Passcodes do not match');
       return;
     }
-    const hash = await hashPasscode(input);
+    const hash = await createPasscodeHash(input);
     savePasscodeHash(hash);
     savePasscode6Digit(true);
     setStoredHash(hash);
+    await rewrapDeviceKeyWithPasscode(input);
+    useLedgerStore.getState().actions.reload();
     setAuthenticated(true);
     setInput('');
     setConfirmInput('');
     setStep('enter');
   }, [input, confirmInput]);
 
-  const handleWipeConfirm = useCallback(() => {
+  const handleWipeConfirm = useCallback(async () => {
     wipeAllAppData();
+    await resetDeviceKey();
+    useLedgerStore.getState().actions.reload();
     setStoredHash(null);
     setStep('create');
     setFailedAttempts(0);
