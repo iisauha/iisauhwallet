@@ -1993,10 +1993,8 @@ input[type="checkbox"]:focus-visible {
 .card,
 .section-header,
 .stat-tile,
-.tabs,
 .quick-sheet,
-.modal,
-.app-header {
+.modal {
   backdrop-filter: blur(22px) saturate(1.8) !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
 }
@@ -2007,12 +2005,6 @@ input[type="checkbox"]:focus-visible {
 .section-header,
 .section-header:active {
   background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 55%, transparent) !important;
-}
-.tabs {
-  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 58%, transparent) !important;
-}
-.app-header {
-  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 58%, transparent) !important;
 }
 .quick-sheet,
 .modal {
