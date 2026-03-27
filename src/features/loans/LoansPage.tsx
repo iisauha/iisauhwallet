@@ -1133,7 +1133,6 @@ export function LoansPage() {
   const privateCarouselRef = useRef<HTMLDivElement>(null);
   const [privateCarouselHeight, setPrivateCarouselHeight] = useState<number | undefined>(undefined);
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
-  const touchStartX = useRef<number | null>(null);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -1189,6 +1188,19 @@ export function LoansPage() {
     });
   }, [loansWithDerived.length, showPrivate]);
 
+  useEffect(() => {
+    const el = privateCarouselRef.current;
+    if (!el) return;
+    const handler = () => {
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      setPrivateCarouselIdx(idx);
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (item) setPrivateCarouselHeight(item.offsetHeight);
+    };
+    el.addEventListener('scrollend', handler);
+    return () => el.removeEventListener('scrollend', handler);
+  }, []);
+
   const summary = useMemo(() => {
     let totalBalance = 0;
     let derivedPrivatePaymentNowBase = 0;
@@ -1224,15 +1236,11 @@ export function LoansPage() {
         : (estimated > 0 ? estimated : 0);
     })();
 
-    // Always derive the private base from current loan cards (Payment(now) per card).
-    // The persisted PRIVATE_PAYMENT_NOW_BASE_KEY is only a write-cache for the
-    // Recalculate cycle and must not override the live-derived value — an imported
-    // backup can carry a stale or wrong persisted number.
+    // Total is always the direct sum of each loan card's Payment(now) value.
+    // Never use stored overrides or cached totals — those can accumulate stale/wrong
+    // values across imports and manual edits and cause blown-up numbers.
     const privatePaymentNowBase = derivedPrivatePaymentNowBase;
-    const totalMonthlyNow =
-      paymentNowOverride !== null && paymentNowOverride !== undefined
-        ? paymentNowOverride
-        : privatePaymentNowBase + publicPaymentNowAdded;
+    const totalMonthlyNow = derivedPrivatePaymentNowBase + publicEstimateCents;
 
     const privateTotalBalance = totalBalance;
     const publicBalanceCents = publicSummary.totalBalanceCents ?? 0;
@@ -1279,7 +1287,7 @@ export function LoansPage() {
       publicPaymentNowAdded,
       publicEstimateCents
     };
-  }, [loansWithDerived, birthdateISO, publicSummary, publicPaymentNowAdded, paymentNowOverride]);
+  }, [loansWithDerived, birthdateISO, publicSummary]);
 
   /** After-grace: per private loan use first future value (custom → full repayment → interest-only). */
   const afterGraceBreakdown = useMemo(() => {
@@ -1523,28 +1531,21 @@ export function LoansPage() {
             </button>
           </div>
           <div
-            style={privateCarouselHeight != null
-              ? { minHeight: privateCarouselHeight, transition: 'min-height 0.2s ease' }
-              : {}}
+            style={privateCarouselHeight != null ? { minHeight: privateCarouselHeight } : {}}
           >
           <div
             ref={privateCarouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
-            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchEnd={(e) => {
-              if (touchStartX.current === null) return;
-              const dx = e.changedTouches[0].clientX - touchStartX.current;
-              touchStartX.current = null;
-              if (Math.abs(dx) < 30) return;
+            onScroll={(e) => {
               const el = e.currentTarget;
-              const total = el.children.length;
-              const newIdx = dx < 0 ? Math.min(privateCarouselIdx + 1, total - 1) : Math.max(privateCarouselIdx - 1, 0);
-              if (newIdx === privateCarouselIdx) return;
-              el.scrollLeft = newIdx * el.clientWidth;
-              setPrivateCarouselIdx(newIdx);
-              const item = el.children[newIdx] as HTMLElement | undefined;
-              if (item) setPrivateCarouselHeight(item.offsetHeight);
+              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              const leftIdx = Math.floor(rawIdx);
+              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+              const progress = rawIdx - leftIdx;
+              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+              setPrivateCarouselHeight(Math.round(lh + (rh - lh) * progress));
             }}
           >
           {loansWithDerived.map((l) => (
@@ -1601,26 +1602,6 @@ export function LoansPage() {
             </button>
             <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
               Recalculates based on your current balances, rates, and payment schedule.
-            </p>
-          </div>
-          <div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
-              onClick={() => {
-                const current = summary.totalMonthlyNow;
-                const addCents = summary.derivedPrivatePaymentNowBase ?? 0;
-                const newValue = current + addCents;
-                savePaymentNowManualOverride(newValue);
-                setPaymentNowOverride(newValue);
-                setShowLoanToolsModal(false);
-              }}
-            >
-              Add private loan payments to total
-            </button>
-            <p style={{ marginTop: 4, marginBottom: 0, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-              Adds all private loan payments into your monthly total. Does not change balances or loan data.
             </p>
           </div>
           <div>

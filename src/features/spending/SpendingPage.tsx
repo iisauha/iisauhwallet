@@ -90,7 +90,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const touchStartX = useRef<number | null>(null);
 
   const { startKey, endKey } = useMemo(() => {
     const now = new Date();
@@ -301,6 +300,19 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     const firstItem = purchasesCarouselRef.children[0] as HTMLElement | undefined;
     if (firstItem) setPurchasesCarouselHeight(firstItem.offsetHeight);
   }, [purchasesCarouselRef, visiblePurchases.length]);
+
+  useEffect(() => {
+    const el = purchasesCarouselRef;
+    if (!el) return;
+    const handler = () => {
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      setPurchasesCarouselIdx(idx);
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (item) setPurchasesCarouselHeight(item.offsetHeight);
+    };
+    el.addEventListener('scrollend', handler);
+    return () => el.removeEventListener('scrollend', handler);
+  }, [purchasesCarouselRef]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -746,25 +758,20 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          <div style={purchasesCarouselHeight != null ? { minHeight: purchasesCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
+          <div style={purchasesCarouselHeight != null ? { minHeight: purchasesCarouselHeight } : {}}>
           <div
             className="card-carousel"
             style={{ marginBottom: 0 }}
             ref={(el) => setPurchasesCarouselRef(el)}
-            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchEnd={(e) => {
-              if (touchStartX.current === null) return;
-              const dx = e.changedTouches[0].clientX - touchStartX.current;
-              touchStartX.current = null;
-              if (Math.abs(dx) < 30) return;
+            onScroll={(e) => {
               const el = e.currentTarget;
-              const total = el.children.length;
-              const newIdx = dx < 0 ? Math.min(purchasesCarouselIdx + 1, total - 1) : Math.max(purchasesCarouselIdx - 1, 0);
-              if (newIdx === purchasesCarouselIdx) return;
-              el.scrollLeft = newIdx * el.clientWidth;
-              setPurchasesCarouselIdx(newIdx);
-              const item = el.children[newIdx] as HTMLElement | undefined;
-              if (item) setPurchasesCarouselHeight(item.offsetHeight);
+              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              const leftIdx = Math.floor(rawIdx);
+              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+              const progress = rawIdx - leftIdx;
+              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+              setPurchasesCarouselHeight(Math.round(lh + (rh - lh) * progress));
             }}
           >
           {visiblePurchases.map((p: any) => {

@@ -383,7 +383,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   const [entriesCarouselHeight, setEntriesCarouselHeight] = useState<number | undefined>(undefined);
   const entriesCarouselRef = useRef<HTMLDivElement>(null);
   const [entriesCarouselIdx, setEntriesCarouselIdx] = useState(0);
-  const touchStartX = useRef<number | null>(null);
 
   const lastAddTriggerRef = useRef(addTrigger);
   useEffect(() => {
@@ -449,6 +448,32 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     if (firstItem) setEntriesCarouselHeight(firstItem.offsetHeight);
   }, [entries.length]);
 
+  useEffect(() => {
+    const el = completedCarouselRef.current;
+    if (!el) return;
+    const handler = () => {
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      setCompletedCarouselIdx(idx);
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (item) setCompletedCarouselHeight(item.offsetHeight);
+    };
+    el.addEventListener('scrollend', handler);
+    return () => el.removeEventListener('scrollend', handler);
+  }, []);
+
+  useEffect(() => {
+    const el = entriesCarouselRef.current;
+    if (!el) return;
+    const handler = () => {
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      setEntriesCarouselIdx(idx);
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (item) setEntriesCarouselHeight(item.offsetHeight);
+    };
+    el.addEventListener('scrollend', handler);
+    return () => el.removeEventListener('scrollend', handler);
+  }, []);
+
   function entryDisplayName(e: SubTrackerEntry) {
     return e.cardRef.type === 'card' ? cardNameById.get(e.cardRef.cardId) || 'Card' : e.cardRef.name || 'Card';
   }
@@ -478,28 +503,21 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           {!completedBonusesCollapsed ? (
           <>
           <div
-            style={completedCarouselHeight != null
-              ? { minHeight: completedCarouselHeight, transition: 'min-height 0.2s ease' }
-              : {}}
+            style={completedCarouselHeight != null ? { minHeight: completedCarouselHeight } : {}}
           >
           <div
             ref={completedCarouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
-            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchEnd={(e) => {
-              if (touchStartX.current === null) return;
-              const dx = e.changedTouches[0].clientX - touchStartX.current;
-              touchStartX.current = null;
-              if (Math.abs(dx) < 30) return;
+            onScroll={(e) => {
               const el = e.currentTarget;
-              const total = el.children.length;
-              const newIdx = dx < 0 ? Math.min(completedCarouselIdx + 1, total - 1) : Math.max(completedCarouselIdx - 1, 0);
-              if (newIdx === completedCarouselIdx) return;
-              el.scrollLeft = newIdx * el.clientWidth;
-              setCompletedCarouselIdx(newIdx);
-              const item = el.children[newIdx] as HTMLElement | undefined;
-              if (item) setCompletedCarouselHeight(item.offsetHeight);
+              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              const leftIdx = Math.floor(rawIdx);
+              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+              const progress = rawIdx - leftIdx;
+              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+              setCompletedCarouselHeight(Math.round(lh + (rh - lh) * progress));
             }}
           >
           {completedBonuses.map((b) => {
@@ -617,28 +635,21 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       ) : (
         <>
       <div
-        style={entriesCarouselHeight != null
-          ? { minHeight: entriesCarouselHeight, transition: 'min-height 0.2s ease' }
-          : {}}
+        style={entriesCarouselHeight != null ? { minHeight: entriesCarouselHeight } : {}}
       >
       <div
         ref={entriesCarouselRef}
         className="card-carousel"
         style={{ marginBottom: 0 }}
-        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-        onTouchEnd={(e) => {
-          if (touchStartX.current === null) return;
-          const dx = e.changedTouches[0].clientX - touchStartX.current;
-          touchStartX.current = null;
-          if (Math.abs(dx) < 30) return;
+        onScroll={(e) => {
           const el = e.currentTarget;
-          const total = el.children.length;
-          const newIdx = dx < 0 ? Math.min(entriesCarouselIdx + 1, total - 1) : Math.max(entriesCarouselIdx - 1, 0);
-          if (newIdx === entriesCarouselIdx) return;
-          el.scrollLeft = newIdx * el.clientWidth;
-          setEntriesCarouselIdx(newIdx);
-          const item = el.children[newIdx] as HTMLElement | undefined;
-          if (item) setEntriesCarouselHeight(item.offsetHeight);
+          const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+          const leftIdx = Math.floor(rawIdx);
+          const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+          const progress = rawIdx - leftIdx;
+          const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+          const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+          setEntriesCarouselHeight(Math.round(lh + (rh - lh) * progress));
         }}
       >
       {entries.map((e) => {

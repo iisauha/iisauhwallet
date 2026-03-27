@@ -719,7 +719,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const [k401CarouselIdx, setK401CarouselIdx] = useState(0);
   const [k401CarouselHeight, setK401CarouselHeight] = useState<number | undefined>(undefined);
   const k401CarouselRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -732,6 +731,29 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
       initHeight(rothCarouselRef, setRothCarouselHeight);
       initHeight(k401CarouselRef, setK401CarouselHeight);
     });
+  }, []);
+
+  // Dot-indicator index updates only when scroll fully snaps to a card
+  useEffect(() => {
+    const pairs: [React.RefObject<HTMLDivElement>, (i: number) => void, (h: number | undefined) => void][] = [
+      [hysaCarouselRef, setHysaCarouselIdx, setHysaCarouselHeight],
+      [generalCarouselRef, setGeneralCarouselIdx, setGeneralCarouselHeight],
+      [rothCarouselRef, setRothCarouselIdx, setRothCarouselHeight],
+      [k401CarouselRef, setK401CarouselIdx, setK401CarouselHeight],
+    ];
+    const cleanups = pairs.map(([ref, setIdx, setHeight]) => {
+      const el = ref.current;
+      if (!el) return () => {};
+      const handler = () => {
+        const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+        setIdx(idx);
+        const item = el.children[idx] as HTMLElement | undefined;
+        if (item) setHeight(item.offsetHeight);
+      };
+      el.addEventListener('scrollend', handler);
+      return () => el.removeEventListener('scrollend', handler);
+    });
+    return () => cleanups.forEach((fn) => fn());
   }, []);
 
   const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
@@ -1472,25 +1494,20 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             <IconPlus /> Add
           </button>
         </div>
-        <div style={carouselHeight != null ? { minHeight: carouselHeight, transition: 'min-height 0.2s ease' } : {}}>
+        <div style={carouselHeight != null ? { minHeight: carouselHeight } : {}}>
         <div
           ref={carouselRef}
           className="card-carousel"
           style={{ marginBottom: 0 }}
-          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-          onTouchEnd={(e) => {
-            if (touchStartX.current === null) return;
-            const dx = e.changedTouches[0].clientX - touchStartX.current;
-            touchStartX.current = null;
-            if (Math.abs(dx) < 30) return;
+          onScroll={(e) => {
             const el = e.currentTarget;
-            const total = el.children.length;
-            const newIdx = dx < 0 ? Math.min(carouselIdx + 1, total - 1) : Math.max(carouselIdx - 1, 0);
-            if (newIdx === carouselIdx) return;
-            el.scrollLeft = newIdx * el.clientWidth;
-            setCarouselIdx(newIdx);
-            const item = el.children[newIdx] as HTMLElement | undefined;
-            if (item) setCarouselHeight(item.offsetHeight);
+            const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+            const leftIdx = Math.floor(rawIdx);
+            const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+            const progress = rawIdx - leftIdx;
+            const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+            const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+            setCarouselHeight(Math.round(lh + (rh - lh) * progress));
           }}
         >
         {visibleAccounts.map((a) => {

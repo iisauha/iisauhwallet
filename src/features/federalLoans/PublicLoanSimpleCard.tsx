@@ -51,13 +51,25 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [publicCarouselHeight, setPublicCarouselHeight] = useState<number | undefined>(undefined);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     requestAnimationFrame(() => {
       const firstItem = carouselRef.current?.children[0] as HTMLElement | undefined;
       if (firstItem) setPublicCarouselHeight(firstItem.offsetHeight);
     });
+  }, []);
+
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const handler = () => {
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      setCarouselIdx(idx);
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (item) setPublicCarouselHeight(item.offsetHeight);
+    };
+    el.addEventListener('scrollend', handler);
+    return () => el.removeEventListener('scrollend', handler);
   }, []);
 
   useEffect(() => {
@@ -140,25 +152,20 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={publicCarouselHeight != null ? { minHeight: publicCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
+      <div style={publicCarouselHeight != null ? { minHeight: publicCarouselHeight } : {}}>
       <div
         ref={carouselRef}
         className="card-carousel"
         style={{ marginBottom: 0 }}
-        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-        onTouchEnd={(e) => {
-          if (touchStartX.current === null) return;
-          const dx = e.changedTouches[0].clientX - touchStartX.current;
-          touchStartX.current = null;
-          if (Math.abs(dx) < 30) return;
+        onScroll={(e) => {
           const el = e.currentTarget;
-          const total = el.children.length;
-          const newIdx = dx < 0 ? Math.min(carouselIdx + 1, total - 1) : Math.max(carouselIdx - 1, 0);
-          if (newIdx === carouselIdx) return;
-          el.scrollLeft = newIdx * el.clientWidth;
-          setCarouselIdx(newIdx);
-          const item = el.children[newIdx] as HTMLElement | undefined;
-          if (item) setPublicCarouselHeight(item.offsetHeight);
+          const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+          const leftIdx = Math.floor(rawIdx);
+          const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+          const progress = rawIdx - leftIdx;
+          const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+          const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+          setPublicCarouselHeight(Math.round(lh + (rh - lh) * progress));
         }}
       >
         {/* Card 1: FSA link, payment entry, payment actions */}

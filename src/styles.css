@@ -1294,8 +1294,9 @@ textarea.ll-control {
 .card-carousel {
   display: flex;
   align-items: flex-start;
-  overflow-x: hidden;
+  overflow-x: auto;
   gap: 0;
+  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-bottom: 4px;

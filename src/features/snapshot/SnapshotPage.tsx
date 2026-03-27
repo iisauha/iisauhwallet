@@ -218,7 +218,6 @@ export function SnapshotPage({
   const [cardsIdx, setCardsIdx] = useState(0);
   const banksCarouselRef = useRef<HTMLDivElement>(null);
   const cardsCarouselRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number | null>(null);
   const [banksCarouselHeight, setBanksCarouselHeight] = useState<number | undefined>(undefined);
   const [cardsCarouselHeight, setCardsCarouselHeight] = useState<number | undefined>(undefined);
 
@@ -335,6 +334,33 @@ export function SnapshotPage({
       if (firstItem) setCardsCarouselHeight(firstItem.offsetHeight);
     });
   }, [activeSection, visibleCards.length]);
+
+  // Dot-indicator index updates only when scroll fully snaps to a card
+  useEffect(() => {
+    const el = banksCarouselRef.current;
+    if (!el) return;
+    const handler = () => {
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      setBanksIdx(idx);
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (item) setBanksCarouselHeight(item.offsetHeight);
+    };
+    el.addEventListener('scrollend', handler);
+    return () => el.removeEventListener('scrollend', handler);
+  }, []);
+
+  useEffect(() => {
+    const el = cardsCarouselRef.current;
+    if (!el) return;
+    const handler = () => {
+      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
+      setCardsIdx(idx);
+      const item = el.children[idx] as HTMLElement | undefined;
+      if (item) setCardsCarouselHeight(item.offsetHeight);
+    };
+    el.addEventListener('scrollend', handler);
+    return () => el.removeEventListener('scrollend', handler);
+  }, []);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
     setModal({ type: 'confirm', title, message, onConfirm });
@@ -482,24 +508,19 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={banksCarouselHeight != null ? { minHeight: banksCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
+          <div style={banksCarouselHeight != null ? { minHeight: banksCarouselHeight } : {}}>
           <div
             className="card-carousel"
             ref={banksCarouselRef}
-            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchEnd={(e) => {
-              if (touchStartX.current === null) return;
-              const dx = e.changedTouches[0].clientX - touchStartX.current;
-              touchStartX.current = null;
-              if (Math.abs(dx) < 30) return;
+            onScroll={(e) => {
               const el = e.currentTarget;
-              const total = el.children.length;
-              const newIdx = dx < 0 ? Math.min(banksIdx + 1, total - 1) : Math.max(banksIdx - 1, 0);
-              if (newIdx === banksIdx) return;
-              el.scrollLeft = newIdx * el.clientWidth;
-              setBanksIdx(newIdx);
-              const item = el.children[newIdx] as HTMLElement | undefined;
-              if (item) setBanksCarouselHeight(item.offsetHeight);
+              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              const leftIdx = Math.floor(rawIdx);
+              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+              const progress = rawIdx - leftIdx;
+              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+              setBanksCarouselHeight(Math.round(lh + (rh - lh) * progress));
             }}
           >
             {visibleBanks.map((b) => {
@@ -611,24 +632,19 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={cardsCarouselHeight != null ? { minHeight: cardsCarouselHeight, transition: 'min-height 0.2s ease' } : {}}>
+          <div style={cardsCarouselHeight != null ? { minHeight: cardsCarouselHeight } : {}}>
           <div
             className="card-carousel"
             ref={cardsCarouselRef}
-            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchEnd={(e) => {
-              if (touchStartX.current === null) return;
-              const dx = e.changedTouches[0].clientX - touchStartX.current;
-              touchStartX.current = null;
-              if (Math.abs(dx) < 30) return;
+            onScroll={(e) => {
               const el = e.currentTarget;
-              const total = el.children.length;
-              const newIdx = dx < 0 ? Math.min(cardsIdx + 1, total - 1) : Math.max(cardsIdx - 1, 0);
-              if (newIdx === cardsIdx) return;
-              el.scrollLeft = newIdx * el.clientWidth;
-              setCardsIdx(newIdx);
-              const item = el.children[newIdx] as HTMLElement | undefined;
-              if (item) setCardsCarouselHeight(item.offsetHeight);
+              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              const leftIdx = Math.floor(rawIdx);
+              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+              const progress = rawIdx - leftIdx;
+              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+              setCardsCarouselHeight(Math.round(lh + (rh - lh) * progress));
             }}
           >
             {visibleCards.map((c) => {
