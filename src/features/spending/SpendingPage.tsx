@@ -310,7 +310,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       const item = el.children[idx] as HTMLElement | undefined;
       if (!item) return;
-      ro = new ResizeObserver(() => setPurchasesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
+      ro = new ResizeObserver(() => setPurchasesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight ?? null));
       ro.observe(item);
     };
     const handler = () => {
