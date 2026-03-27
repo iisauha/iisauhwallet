@@ -1200,8 +1200,9 @@ export function SnapshotPage({
                                     onClick={() => {
                                       if (!addCat) return;
                                       const newPair = { category: addCat, subcategory: addSub || undefined };
-                                      updateRule(idx, { categories: [...pairs, newPair] });
-                                      setModal({ ...modal, [`_addCat_${rule.id}`]: '', [`_addSub_${rule.id}`]: '' } as any);
+                                      const nextRules = modal.rules.slice();
+                                      nextRules[idx] = { ...nextRules[idx], categories: [...pairs, newPair] };
+                                      setModal({ ...modal, rules: nextRules, [`_addCat_${rule.id}`]: '', [`_addSub_${rule.id}`]: '' } as any);
                                     }}
                                   >
                                     Add
