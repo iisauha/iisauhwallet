@@ -218,6 +218,7 @@ export function SnapshotPage({
   const [cardsIdx, setCardsIdx] = useState(0);
   const banksCarouselRef = useRef<HTMLDivElement>(null);
   const cardsCarouselRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
   const [banksCarouselHeight, setBanksCarouselHeight] = useState<number | undefined>(undefined);
   const [cardsCarouselHeight, setCardsCarouselHeight] = useState<number | undefined>(undefined);
 
@@ -485,11 +486,19 @@ export function SnapshotPage({
           <div
             className="card-carousel"
             ref={banksCarouselRef}
-            onScroll={(e) => {
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (touchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              touchStartX.current = null;
+              if (Math.abs(dx) < 30) return;
               const el = e.currentTarget;
-              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-              setBanksIdx(idx);
-              const item = el.children[idx] as HTMLElement | undefined;
+              const total = el.children.length;
+              const newIdx = dx < 0 ? Math.min(banksIdx + 1, total - 1) : Math.max(banksIdx - 1, 0);
+              if (newIdx === banksIdx) return;
+              el.scrollLeft = newIdx * el.clientWidth;
+              setBanksIdx(newIdx);
+              const item = el.children[newIdx] as HTMLElement | undefined;
               if (item) setBanksCarouselHeight(item.offsetHeight);
             }}
           >
@@ -606,11 +615,19 @@ export function SnapshotPage({
           <div
             className="card-carousel"
             ref={cardsCarouselRef}
-            onScroll={(e) => {
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (touchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              touchStartX.current = null;
+              if (Math.abs(dx) < 30) return;
               const el = e.currentTarget;
-              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-              setCardsIdx(idx);
-              const item = el.children[idx] as HTMLElement | undefined;
+              const total = el.children.length;
+              const newIdx = dx < 0 ? Math.min(cardsIdx + 1, total - 1) : Math.max(cardsIdx - 1, 0);
+              if (newIdx === cardsIdx) return;
+              el.scrollLeft = newIdx * el.clientWidth;
+              setCardsIdx(newIdx);
+              const item = el.children[newIdx] as HTMLElement | undefined;
               if (item) setCardsCarouselHeight(item.offsetHeight);
             }}
           >

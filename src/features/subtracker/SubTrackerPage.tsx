@@ -383,6 +383,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   const [entriesCarouselHeight, setEntriesCarouselHeight] = useState<number | undefined>(undefined);
   const entriesCarouselRef = useRef<HTMLDivElement>(null);
   const [entriesCarouselIdx, setEntriesCarouselIdx] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   const lastAddTriggerRef = useRef(addTrigger);
   useEffect(() => {
@@ -485,12 +486,20 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
             ref={completedCarouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
-            onScroll={(e) => {
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (touchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              touchStartX.current = null;
+              if (Math.abs(dx) < 30) return;
               const el = e.currentTarget;
-              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-              const item = el.children[idx] as HTMLElement | undefined;
+              const total = el.children.length;
+              const newIdx = dx < 0 ? Math.min(completedCarouselIdx + 1, total - 1) : Math.max(completedCarouselIdx - 1, 0);
+              if (newIdx === completedCarouselIdx) return;
+              el.scrollLeft = newIdx * el.clientWidth;
+              setCompletedCarouselIdx(newIdx);
+              const item = el.children[newIdx] as HTMLElement | undefined;
               if (item) setCompletedCarouselHeight(item.offsetHeight);
-              setCompletedCarouselIdx(idx);
             }}
           >
           {completedBonuses.map((b) => {
@@ -616,12 +625,20 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         ref={entriesCarouselRef}
         className="card-carousel"
         style={{ marginBottom: 0 }}
-        onScroll={(e) => {
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          touchStartX.current = null;
+          if (Math.abs(dx) < 30) return;
           const el = e.currentTarget;
-          const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-          const item = el.children[idx] as HTMLElement | undefined;
+          const total = el.children.length;
+          const newIdx = dx < 0 ? Math.min(entriesCarouselIdx + 1, total - 1) : Math.max(entriesCarouselIdx - 1, 0);
+          if (newIdx === entriesCarouselIdx) return;
+          el.scrollLeft = newIdx * el.clientWidth;
+          setEntriesCarouselIdx(newIdx);
+          const item = el.children[newIdx] as HTMLElement | undefined;
           if (item) setEntriesCarouselHeight(item.offsetHeight);
-          setEntriesCarouselIdx(idx);
         }}
       >
       {entries.map((e) => {

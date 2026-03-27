@@ -719,6 +719,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const [k401CarouselIdx, setK401CarouselIdx] = useState(0);
   const [k401CarouselHeight, setK401CarouselHeight] = useState<number | undefined>(undefined);
   const k401CarouselRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -1476,11 +1477,19 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           ref={carouselRef}
           className="card-carousel"
           style={{ marginBottom: 0 }}
-          onScroll={(e) => {
+          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+          onTouchEnd={(e) => {
+            if (touchStartX.current === null) return;
+            const dx = e.changedTouches[0].clientX - touchStartX.current;
+            touchStartX.current = null;
+            if (Math.abs(dx) < 30) return;
             const el = e.currentTarget;
-            const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-            setCarouselIdx(idx);
-            const item = el.children[idx] as HTMLElement | undefined;
+            const total = el.children.length;
+            const newIdx = dx < 0 ? Math.min(carouselIdx + 1, total - 1) : Math.max(carouselIdx - 1, 0);
+            if (newIdx === carouselIdx) return;
+            el.scrollLeft = newIdx * el.clientWidth;
+            setCarouselIdx(newIdx);
+            const item = el.children[newIdx] as HTMLElement | undefined;
             if (item) setCarouselHeight(item.offsetHeight);
           }}
         >

@@ -90,6 +90,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const { startKey, endKey } = useMemo(() => {
     const now = new Date();
@@ -750,11 +751,19 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             className="card-carousel"
             style={{ marginBottom: 0 }}
             ref={(el) => setPurchasesCarouselRef(el)}
-            onScroll={(e) => {
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (touchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              touchStartX.current = null;
+              if (Math.abs(dx) < 30) return;
               const el = e.currentTarget;
-              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-              setPurchasesCarouselIdx(idx);
-              const item = el.children[idx] as HTMLElement | undefined;
+              const total = el.children.length;
+              const newIdx = dx < 0 ? Math.min(purchasesCarouselIdx + 1, total - 1) : Math.max(purchasesCarouselIdx - 1, 0);
+              if (newIdx === purchasesCarouselIdx) return;
+              el.scrollLeft = newIdx * el.clientWidth;
+              setPurchasesCarouselIdx(newIdx);
+              const item = el.children[newIdx] as HTMLElement | undefined;
               if (item) setPurchasesCarouselHeight(item.offsetHeight);
             }}
           >

@@ -1133,6 +1133,7 @@ export function LoansPage() {
   const privateCarouselRef = useRef<HTMLDivElement>(null);
   const [privateCarouselHeight, setPrivateCarouselHeight] = useState<number | undefined>(undefined);
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   const birthdateISO = loadBirthdateISO();
 
@@ -1530,11 +1531,19 @@ export function LoansPage() {
             ref={privateCarouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
-            onScroll={(e) => {
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              if (touchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              touchStartX.current = null;
+              if (Math.abs(dx) < 30) return;
               const el = e.currentTarget;
-              const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-              setPrivateCarouselIdx(idx);
-              const item = el.children[idx] as HTMLElement | undefined;
+              const total = el.children.length;
+              const newIdx = dx < 0 ? Math.min(privateCarouselIdx + 1, total - 1) : Math.max(privateCarouselIdx - 1, 0);
+              if (newIdx === privateCarouselIdx) return;
+              el.scrollLeft = newIdx * el.clientWidth;
+              setPrivateCarouselIdx(newIdx);
+              const item = el.children[newIdx] as HTMLElement | undefined;
               if (item) setPrivateCarouselHeight(item.offsetHeight);
             }}
           >
