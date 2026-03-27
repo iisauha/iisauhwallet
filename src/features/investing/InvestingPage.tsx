@@ -1859,38 +1859,10 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Roth IRA</span>
           </div>
           {renderSection('Roth IRA', 'roth', rothAccounts, rothCarouselRef, rothCarouselIdx, setRothCarouselIdx, rothCarouselHeight, setRothCarouselHeight)}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, marginBottom: 4 }}>
-            <button
-              type="button"
-              className="snapshot-add-btn"
-              onClick={() => {
-                const source = coastFireAssumptions || coastFireForm;
-                setCoastFireForm({ ...source });
-                setCoastFireFormStrings(coastFireAssumptionsToFormStrings(source));
-                setCoastFireOpen(true);
-              }}
-            >
-              See more: Coast FIRE
-            </button>
-          </div>
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Employer-Based Retirement Accounts</span>
           </div>
           {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, k401CarouselRef, k401CarouselIdx, setK401CarouselIdx, k401CarouselHeight, setK401CarouselHeight)}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, marginBottom: 4 }}>
-            <button
-              type="button"
-              className="snapshot-add-btn"
-              onClick={() => {
-                const source = coastFireAssumptions || coastFireForm;
-                setCoastFireForm({ ...source });
-                setCoastFireFormStrings(coastFireAssumptionsToFormStrings(source));
-                setCoastFireOpen(true);
-              }}
-            >
-              See more: Coast FIRE
-            </button>
-          </div>
         </>
       ) : null}
 
@@ -1993,6 +1965,20 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             </div>
           </div>
         )}
+      </div>
+
+      <div
+        className="section-header"
+        style={{ marginTop: 16 }}
+        onClick={() => {
+          const source = coastFireAssumptions || coastFireForm;
+          setCoastFireForm({ ...source });
+          setCoastFireFormStrings(coastFireAssumptionsToFormStrings(source));
+          setCoastFireOpen(true);
+        }}
+      >
+        <span className="section-header-left">See more: Coast FIRE</span>
+        <span className="chevron">▸</span>
       </div>
 
       {coastFireOpen ? (

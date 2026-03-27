@@ -1403,7 +1403,7 @@ export function LoansPage() {
                   setShowAfterGraceBreakdown(true);
                 }}
               >
-                ?
+                +
               </button>
             </span>
             <span className="v" style={{ color: paymentNowAmountColor }}>
@@ -1501,11 +1501,10 @@ export function LoansPage() {
               No private loans. Track student and other private loans here. All values are manual and for estimates only.
             </p>
           ) : null}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
             <button
               type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+              className="snapshot-add-btn"
               onClick={() => setShowLoanToolsModal(true)}
             >
               Loan Tools

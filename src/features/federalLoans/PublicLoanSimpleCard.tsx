@@ -158,7 +158,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
           <div className="card" style={{ marginBottom: 0, padding: '14px 16px' }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loans</h4>
             <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 14 }}>
-              Use the official Federal Student Aid simulator to estimate your public loan payment, then enter your monthly amount here.
+              If you are not sure what your monthly payment will be, use the Federal Student Aid simulator to get an estimate, then enter the amount below.
             </p>
 
             <a
@@ -166,7 +166,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary"
-              style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none' }}
+              style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none', fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
             >
               Estimate Payment
             </a>
@@ -208,7 +208,7 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
         {/* Card 2: Optional summary fields and notes */}
         <div className="card-carousel-item">
           <div className="card" style={{ marginBottom: 0, padding: '14px 16px' }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loans — Details</h4>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Public Loan Details</h4>
 
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 10 }}>

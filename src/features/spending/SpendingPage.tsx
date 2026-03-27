@@ -483,8 +483,9 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 bottom: 10,
                 right: 10,
                 zIndex: 1,
-                fontSize: '0.85rem',
-                padding: '6px 12px',
+                fontSize: '0.75rem',
+                padding: '4px 8px',
+                minHeight: 'unset',
               }}
               onClick={(e) => {
                 e.stopPropagation();

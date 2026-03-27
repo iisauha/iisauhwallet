@@ -1973,39 +1973,38 @@ input[type="checkbox"]:focus-visible {
   padding: 20px 20px 18px;
 }
 
-/* ─── Liquid Glass: semi-transparent backgrounds for lava lamp bleed-through ── */
+/* ─── Liquid Glass: frosted-glass effect, lava lamp bleeds through ── */
+/* Base: all glass surfaces get backdrop-filter blur */
+.card,
+.section-header,
+.stat-tile,
+.tabs,
+.quick-sheet,
+.modal,
+.modal-overlay .modal {
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+}
+
+/* Transparent backgrounds so blobs show through */
 .card {
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 82%, transparent);
-  backdrop-filter: blur(10px) saturate(1.2);
-  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 68%, transparent) !important;
 }
-.section-header {
-  background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 80%, transparent);
-  backdrop-filter: blur(10px) saturate(1.2);
-  -webkit-backdrop-filter: blur(10px) saturate(1.2);
-}
+.section-header,
 .section-header:active {
-  background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 80%, transparent);
+  background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 65%, transparent) !important;
 }
 .stat-tile {
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 82%, transparent);
-  backdrop-filter: blur(10px) saturate(1.2);
-  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 68%, transparent) !important;
 }
 .tabs {
-  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 80%, transparent);
-  backdrop-filter: blur(16px) saturate(1.3);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 70%, transparent) !important;
 }
 .quick-sheet {
-  background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 82%, transparent);
-  backdrop-filter: blur(16px) saturate(1.3);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 72%, transparent) !important;
 }
 .modal {
-  background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 84%, transparent);
-  backdrop-filter: blur(14px) saturate(1.25);
-  -webkit-backdrop-filter: blur(14px) saturate(1.25);
+  background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 72%, transparent) !important;
 }
 
 /* ─── FAB: hide when any modal or quick sheet is open ────────────── */
