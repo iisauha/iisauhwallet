@@ -1710,7 +1710,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(32px);
   opacity: 0.30;
   border-radius: 58% 42% 54% 46% / 46% 60% 40% 54%;
-  animation: llBase 45s ease-in-out infinite;
+  animation: llBase 56s ease-in-out infinite;
 }
 
 /* ── Satellites — fast, wide-ranging sweeps across entire viewport ── */
@@ -1720,7 +1720,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%;
-  animation: llSat1 28s ease-in-out infinite;
+  animation: llSat1 35s ease-in-out infinite;
 }
 .bg-blob-3 {
   width: 36vw; height: 40vw;
@@ -1728,7 +1728,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%;
-  animation: llSat2 36s ease-in-out infinite;
+  animation: llSat2 45s ease-in-out infinite;
 }
 .bg-blob-4 {
   width: 32vw; height: 36vw;
@@ -1736,7 +1736,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%;
-  animation: llSat3 32s ease-in-out infinite;
+  animation: llSat3 40s ease-in-out infinite;
 }
 .bg-blob-5 {
   width: 30vw; height: 34vw;
@@ -1744,7 +1744,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%;
-  animation: llSat4 40s ease-in-out infinite;
+  animation: llSat4 50s ease-in-out infinite;
 }
 .bg-blob-6 {
   width: 38vw; height: 42vw;
@@ -1752,7 +1752,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%;
-  animation: llSat5 24s ease-in-out infinite;
+  animation: llSat5 30s ease-in-out infinite;
 }
 .bg-blob-7 {
   width: 28vw; height: 32vw;
@@ -1760,83 +1760,97 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%;
-  animation: llSat6 32s ease-in-out infinite;
+  animation: llSat6 40s ease-in-out infinite;
 }
 
-/* Base: sweeps all 4 quadrants — top-left, bottom-right, top-right, bottom-left */
+/* Base: sweeps all 4 quadrants — with gather swells where satellites converge */
 @keyframes llBase {
   0%   { transform: translate(0,0)          scale(1);    border-radius: 58% 42% 54% 46% / 46% 60% 40% 54%; }
-  18%  { transform: translate(-12vw,-35vh)  scale(1.04); border-radius: 46% 54% 58% 42% / 54% 46% 48% 52%; }
-  36%  { transform: translate(10vw, 40vh)   scale(0.97); border-radius: 54% 46% 46% 54% / 42% 58% 56% 44%; }
-  55%  { transform: translate(14vw,-28vh)   scale(1.06); border-radius: 50% 50% 54% 46% / 58% 42% 46% 54%; }
-  74%  { transform: translate(-10vw, 46vh)  scale(0.99); border-radius: 60% 40% 50% 50% / 44% 56% 52% 48%; }
+  10%  { transform: translate(-12vw,-35vh)  scale(0.98); border-radius: 46% 54% 58% 42% / 54% 46% 48% 52%; }
+  25%  { transform: translate(4vw,  2vh)    scale(1.7);  border-radius: 52% 48% 50% 50% / 50% 50% 52% 48%; }
+  35%  { transform: translate(10vw, 40vh)   scale(0.96); border-radius: 54% 46% 46% 54% / 42% 58% 56% 44%; }
+  48%  { transform: translate(14vw,-28vh)   scale(1.05); border-radius: 50% 50% 54% 46% / 58% 42% 46% 54%; }
+  62%  { transform: translate(-3vw, -2vh)   scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  72%  { transform: translate(-10vw, 46vh)  scale(0.98); border-radius: 60% 40% 50% 50% / 44% 56% 52% 48%; }
   88%  { transform: translate(-14vw, 10vh)  scale(1.02); border-radius: 44% 56% 52% 48% / 52% 48% 44% 56%; }
   100% { transform: translate(0,0)          scale(1);    border-radius: 58% 42% 54% 46% / 46% 60% 40% 54%; }
 }
 
-/* Sat1: top-left → bottom-right corner → top-right → bottom-left → back */
+/* Sat1: gather ↔ spread ↔ gather ↔ spread */
 @keyframes llSat1 {
   0%   { transform: translate(0,0)           scale(1);    border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%; }
-  20%  { transform: translate(40vw, 55vh)    scale(1.3);  border-radius: 48% 52% 54% 46% / 52% 48% 44% 56%; }
-  36%  { transform: translate(60vw, 90vh)    scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  52%  { transform: translate(65vw, 10vh)    scale(1.3);  border-radius: 52% 48% 46% 54% / 44% 56% 54% 46%; }
-  70%  { transform: translate(10vw, 95vh)    scale(1);    border-radius: 46% 54% 52% 48% / 56% 44% 48% 52%; }
-  85%  { transform: translate(-5vw, 50vh)    scale(1.1);  border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
+  12%  { transform: translate(40vw, 55vh)    scale(1.2);  border-radius: 48% 52% 54% 46% / 52% 48% 44% 56%; }
+  25%  { transform: translate(5vw,  8vh)     scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  38%  { transform: translate(65vw, 10vh)    scale(1.1);  border-radius: 52% 48% 46% 54% / 44% 56% 54% 46%; }
+  50%  { transform: translate(60vw, 90vh)    scale(1.3);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  63%  { transform: translate(-6vw,  5vh)    scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  75%  { transform: translate(10vw, 95vh)    scale(1.0);  border-radius: 46% 54% 52% 48% / 56% 44% 48% 52%; }
+  88%  { transform: translate(-5vw, 50vh)    scale(1.1);  border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
   100% { transform: translate(0,0)           scale(1);    border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%; }
 }
 
-/* Sat2: bottom-right → top-left → top-right → bottom-left → back */
+/* Sat2: gather ↔ spread ↔ gather ↔ spread */
 @keyframes llSat2 {
   0%   { transform: translate(0,0)            scale(1);    border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%; }
-  22%  { transform: translate(-55vw,-80vh)    scale(1.4);  border-radius: 52% 48% 46% 54% / 48% 52% 56% 44%; }
-  38%  { transform: translate(-65vw,-105vh)   scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  54%  { transform: translate(-10vw,-100vh)   scale(1.4);  border-radius: 46% 54% 52% 48% / 54% 46% 44% 56%; }
-  72%  { transform: translate(-60vw,-30vh)    scale(1);    border-radius: 50% 50% 56% 44% / 44% 56% 52% 48%; }
-  87%  { transform: translate(-30vw,-60vh)    scale(1.2);  border-radius: 54% 46% 50% 50% / 50% 50% 46% 54%; }
+  14%  { transform: translate(-55vw,-80vh)    scale(1.2);  border-radius: 52% 48% 46% 54% / 48% 52% 56% 44%; }
+  27%  { transform: translate(-8vw, -5vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  40%  { transform: translate(-65vw,-105vh)   scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  53%  { transform: translate(-10vw,-100vh)   scale(1.2);  border-radius: 46% 54% 52% 48% / 54% 46% 44% 56%; }
+  65%  { transform: translate(-4vw, -8vh)     scale(1.7);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  76%  { transform: translate(-60vw,-30vh)    scale(1.0);  border-radius: 50% 50% 56% 44% / 44% 56% 52% 48%; }
+  88%  { transform: translate(-30vw,-60vh)    scale(1.1);  border-radius: 54% 46% 50% 50% / 50% 50% 46% 54%; }
   100% { transform: translate(0,0)            scale(1);    border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%; }
 }
 
-/* Sat3: right-middle → top-left → bottom-left → top-right → back */
+/* Sat3: gather ↔ spread ↔ gather ↔ spread */
 @keyframes llSat3 {
   0%   { transform: translate(0,0)            scale(1);    border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
-  24%  { transform: translate(-100vw,-50vh)   scale(1.3);  border-radius: 46% 54% 50% 50% / 52% 48% 46% 54%; }
-  40%  { transform: translate(-110vw,-55vh)   scale(1.7);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  56%  { transform: translate(-95vw, 40vh)    scale(1.3);  border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
-  74%  { transform: translate(-30vw,-45vh)    scale(1);    border-radius: 50% 50% 56% 44% / 56% 44% 48% 52%; }
-  88%  { transform: translate(-60vw, 20vh)    scale(1.1);  border-radius: 46% 54% 52% 48% / 48% 52% 54% 46%; }
+  13%  { transform: translate(-100vw,-50vh)   scale(1.2);  border-radius: 46% 54% 50% 50% / 52% 48% 46% 54%; }
+  26%  { transform: translate(-6vw, -3vh)     scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  40%  { transform: translate(-110vw,-55vh)   scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  54%  { transform: translate(-95vw,  40vh)   scale(1.2);  border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
+  66%  { transform: translate(-8vw,   4vh)    scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  76%  { transform: translate(-30vw,-45vh)    scale(1.0);  border-radius: 50% 50% 56% 44% / 56% 44% 48% 52%; }
+  88%  { transform: translate(-60vw,  20vh)   scale(1.1);  border-radius: 46% 54% 52% 48% / 48% 52% 54% 46%; }
   100% { transform: translate(0,0)            scale(1);    border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
 }
 
-/* Sat4: bottom-left → top-right → top-left → right-middle → back */
+/* Sat4: gather ↔ spread ↔ gather ↔ spread */
 @keyframes llSat4 {
   0%   { transform: translate(0,0)            scale(1);    border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%; }
-  22%  { transform: translate(70vw,-80vh)     scale(1.35); border-radius: 50% 50% 46% 54% / 48% 52% 54% 46%; }
-  38%  { transform: translate(80vw,-110vh)    scale(1.7);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  54%  { transform: translate(15vw,-105vh)    scale(1.35); border-radius: 46% 54% 52% 48% / 52% 48% 46% 54%; }
-  72%  { transform: translate(75vw,-45vh)     scale(1);    border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
-  87%  { transform: translate(40vw,-70vh)     scale(1.15); border-radius: 48% 52% 50% 50% / 54% 46% 48% 52%; }
+  12%  { transform: translate(70vw,-80vh)     scale(1.15); border-radius: 50% 50% 46% 54% / 48% 52% 54% 46%; }
+  26%  { transform: translate(6vw, -4vh)      scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  38%  { transform: translate(80vw,-110vh)    scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  52%  { transform: translate(15vw,-105vh)    scale(1.25); border-radius: 46% 54% 52% 48% / 52% 48% 46% 54%; }
+  64%  { transform: translate(4vw,  -6vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  75%  { transform: translate(75vw,-45vh)     scale(1.0);  border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
+  87%  { transform: translate(40vw,-70vh)     scale(1.1);  border-radius: 48% 52% 50% 50% / 54% 46% 48% 52%; }
   100% { transform: translate(0,0)            scale(1);    border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%; }
 }
 
-/* Sat5: right-upper → bottom-left → bottom-right → top-left → back */
+/* Sat5: gather ↔ spread ↔ gather ↔ spread */
 @keyframes llSat5 {
   0%   { transform: translate(0,0)            scale(1);    border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%; }
-  20%  { transform: translate(-65vw, 65vh)    scale(1.3);  border-radius: 54% 46% 50% 50% / 44% 56% 52% 48%; }
-  36%  { transform: translate(-60vw, 85vh)    scale(1.65); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  52%  { transform: translate( 10vw, 90vh)    scale(1.3);  border-radius: 48% 52% 54% 46% / 56% 44% 46% 54%; }
-  70%  { transform: translate(-70vw,-10vh)    scale(1);    border-radius: 44% 56% 48% 52% / 50% 50% 56% 44%; }
-  86%  { transform: translate(-35vw, 40vh)    scale(1.1);  border-radius: 52% 48% 46% 54% / 46% 54% 50% 50%; }
+  13%  { transform: translate(-65vw, 65vh)    scale(1.1);  border-radius: 54% 46% 50% 50% / 44% 56% 52% 48%; }
+  27%  { transform: translate(-5vw,  6vh)     scale(1.7);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  40%  { transform: translate(-60vw, 85vh)    scale(1.4);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  54%  { transform: translate( 10vw, 90vh)    scale(1.1);  border-radius: 48% 52% 54% 46% / 56% 44% 46% 54%; }
+  67%  { transform: translate(-3vw, -4vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  78%  { transform: translate(-70vw,-10vh)    scale(1.0);  border-radius: 44% 56% 48% 52% / 50% 50% 56% 44%; }
+  90%  { transform: translate(-35vw, 40vh)    scale(1.1);  border-radius: 52% 48% 46% 54% / 46% 54% 50% 50%; }
   100% { transform: translate(0,0)            scale(1);    border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%; }
 }
 
-/* Sat6: mid-left → top-right → bottom-right → bottom-left → back */
+/* Sat6: gather ↔ spread ↔ gather ↔ spread */
 @keyframes llSat6 {
   0%   { transform: translate(0,0)            scale(1);    border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%; }
-  22%  { transform: translate(90vw,-40vh)     scale(1.4);  border-radius: 46% 54% 54% 46% / 48% 52% 46% 54%; }
-  38%  { transform: translate(100vw,-42vh)    scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  54%  { transform: translate(90vw, 55vh)     scale(1.4);  border-radius: 52% 48% 46% 54% / 54% 46% 52% 48%; }
-  72%  { transform: translate(20vw, 65vh)     scale(1);    border-radius: 48% 52% 52% 48% / 46% 54% 50% 50%; }
-  87%  { transform: translate(55vw, 20vh)     scale(1.15); border-radius: 54% 46% 50% 50% / 50% 50% 54% 46%; }
+  12%  { transform: translate(90vw,-40vh)     scale(1.2);  border-radius: 46% 54% 54% 46% / 48% 52% 46% 54%; }
+  26%  { transform: translate(6vw,   5vh)     scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  38%  { transform: translate(100vw,-42vh)    scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  52%  { transform: translate(90vw,  55vh)    scale(1.2);  border-radius: 52% 48% 46% 54% / 54% 46% 52% 48%; }
+  65%  { transform: translate(3vw,  -6vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  75%  { transform: translate(20vw,  65vh)    scale(1.0);  border-radius: 48% 52% 52% 48% / 46% 54% 50% 50%; }
+  87%  { transform: translate(55vw,  20vh)    scale(1.1);  border-radius: 54% 46% 50% 50% / 50% 50% 54% 46%; }
   100% { transform: translate(0,0)            scale(1);    border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%; }
 }
 
@@ -1981,7 +1995,8 @@ input[type="checkbox"]:focus-visible {
 .stat-tile,
 .tabs,
 .quick-sheet,
-.modal {
+.modal,
+.app-header {
   backdrop-filter: blur(22px) saturate(1.8) !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
 }
@@ -1994,6 +2009,9 @@ input[type="checkbox"]:focus-visible {
   background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 55%, transparent) !important;
 }
 .tabs {
+  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 58%, transparent) !important;
+}
+.app-header {
   background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 58%, transparent) !important;
 }
 .quick-sheet,
@@ -2034,7 +2052,8 @@ input[type="checkbox"]:focus-visible {
   background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 14%, transparent) !important;
 }
 .tab-active-pill {
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 92%, transparent) !important;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 55%, transparent) !important;
 }
 .btn-posted {
   background: color-mix(in srgb, var(--green-light) 55%, transparent) !important;
@@ -2057,7 +2076,8 @@ input[type="date"].ll-control {
 .pending-outbound-wrapper,
 .settings-list,
 .hero-flipper-card,
-.ll-toggle {
+.ll-toggle,
+.segmented {
   backdrop-filter: blur(22px) saturate(1.8) !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
   background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
@@ -2067,7 +2087,7 @@ input[type="date"].ll-control {
 .fab {
   backdrop-filter: blur(16px) saturate(1.7) !important;
   -webkit-backdrop-filter: blur(16px) saturate(1.7) !important;
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 92%, transparent) !important;
   transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease, opacity 0.18s ease;
 }
 
