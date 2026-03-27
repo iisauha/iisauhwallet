@@ -167,9 +167,9 @@ const SECTIONS: Section[] = [
     content: (
       <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Your data lives in Safari's local storage on your device. If Safari data is cleared, your phone is lost, or you switch browsers, your data goes with it unless you have a backup.</p>
-        <p><strong>How to back up:</strong> Settings > Export JSON. Save the file to iCloud Drive or another safe location outside your phone. Do this regularly. Once a week is a good habit.</p>
+        <p><strong>How to back up:</strong> Settings {'>'} Export JSON. Save the file to iCloud Drive or another safe location outside your phone. Do this regularly. Once a week is a good habit.</p>
         <p><strong>Encrypted backups:</strong> When you export you can encrypt the file with your passcode. If you do this, you need your passcode to open the backup later.</p>
-        <p><strong>Restoring:</strong> Settings > Import JSON. Select the backup file. The app reloads with all your data restored.</p>
+        <p><strong>Restoring:</strong> Settings {'>'} Import JSON. Select the backup file. The app reloads with all your data restored.</p>
         <p><strong>Recovery key:</strong> You saved a recovery key during setup. Keep it somewhere safe. It is how you reset your passcode if you forget it. Without it (and without security question answers), forgetting your passcode may require wiping the app data and restoring from a backup.</p>
         <p style={{ margin: '12px 0 0 0', padding: '10px 12px', background: 'color-mix(in srgb, var(--accent) 12%, transparent)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: '0.88rem' }}>
           You are all set. Tap <strong>Enter App</strong> below to get started.
