@@ -651,9 +651,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
               By skipping, you acknowledge:
             </p>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.65 }}>
-              <li>Without a recovery key or security questions, <strong>there is no way to reset your passcode</strong> if you forget it.</li>
-              <li>Forgetting your passcode will require <strong>wiping all your app data</strong> to regain access.</li>
-              <li>You can set this up later in <strong>Settings</strong> at any time.</li>
+              <li>You will <strong>not receive a recovery key</strong>. If you set up recovery (next page), you get one — skip and you get nothing.</li>
+              <li>If you lose or never have a recovery key and forget your passcode, there is <strong>absolutely no way to recover your account</strong>. You will have to hard wipe all your data.</li>
+              <li>Forgetting your passcode means <strong>permanent loss of all your data</strong> with no exceptions.</li>
             </ul>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
