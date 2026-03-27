@@ -81,7 +81,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
             autoComplete="off"
             value={currentPasscode}
             onChange={(e) => { setCurrentPasscode(e.target.value.replace(/\D/g, '')); setError(''); }}
-            placeholder="Current passcode"
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -114,7 +114,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
             autoComplete="off"
             value={newPasscode}
             onChange={(e) => { setNewPasscode(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
-            placeholder="New passcode"
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -135,7 +135,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
             autoComplete="off"
             value={confirmPasscode}
             onChange={(e) => { setConfirmPasscode(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
-            placeholder="Confirm new passcode"
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
             style={{
               width: '100%',
               padding: '12px 16px',

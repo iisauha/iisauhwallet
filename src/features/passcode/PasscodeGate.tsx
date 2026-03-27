@@ -503,6 +503,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     color: 'var(--ui-primary-text, var(--text))',
     marginBottom: 12,
   };
+  const textInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    fontSize: '1rem',
+    letterSpacing: 'normal',
+    textAlign: 'left',
+  };
   const selectStyle: React.CSSProperties = {
     width: '100%',
     marginBottom: 12,
@@ -747,7 +753,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           </Select>
           {securityQ1 && (
             <>
-              <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={inputStyle} />
+              <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={textInputStyle} />
               <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 2</label>
               <Select value={securityQ2} onChange={(e) => setSecurityQ2(e.target.value)} style={selectStyle}>
                 <option value="">Select...</option>
@@ -756,7 +762,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
                 ))}
               </Select>
               {securityQ2 && (
-                <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={inputStyle} />
+                <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={textInputStyle} />
               )}
             </>
           )}
@@ -838,7 +844,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             autoComplete="off"
             value={input}
             onChange={(e) => { setInput(e.target.value.replace(/\D/g, '')); setError(''); }}
-            placeholder="Current passcode"
+            placeholder={'•'.repeat(PASSCODE_LENGTH)}
             aria-label="Current passcode"
             style={inputStyle}
           />
@@ -930,9 +936,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <>
             <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Security questions</h1>
             <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5 }}>{qa.q1}</p>
-            <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={inputStyle} />
+            <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={textInputStyle} />
             <p style={{ margin: '12px 0 4px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5 }}>{qa.q2}</p>
-            <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={inputStyle} />
+            <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={textInputStyle} />
             {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
             <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={handleSecurityAnswersSubmit}>Verify and reset passcode</button>
             <button type="button" className="btn btn-secondary" onClick={() => setStep('forgot-options')}>Back</button>
