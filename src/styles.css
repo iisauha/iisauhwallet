@@ -1710,7 +1710,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(32px);
   opacity: 0.30;
   border-radius: 58% 42% 54% 46% / 46% 60% 40% 54%;
-  animation: llBase 11s ease-in-out infinite;
+  animation: llBase 45s ease-in-out infinite;
 }
 
 /* ── Satellites — fast, wide-ranging sweeps across entire viewport ── */
@@ -1720,7 +1720,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%;
-  animation: llSat1 7s ease-in-out infinite;
+  animation: llSat1 28s ease-in-out infinite;
 }
 .bg-blob-3 {
   width: 36vw; height: 40vw;
@@ -1728,7 +1728,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%;
-  animation: llSat2 9s ease-in-out infinite;
+  animation: llSat2 36s ease-in-out infinite;
 }
 .bg-blob-4 {
   width: 32vw; height: 36vw;
@@ -1736,7 +1736,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%;
-  animation: llSat3 8s ease-in-out infinite;
+  animation: llSat3 32s ease-in-out infinite;
 }
 .bg-blob-5 {
   width: 30vw; height: 34vw;
@@ -1744,7 +1744,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%;
-  animation: llSat4 10s ease-in-out infinite;
+  animation: llSat4 40s ease-in-out infinite;
 }
 .bg-blob-6 {
   width: 38vw; height: 42vw;
@@ -1752,7 +1752,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%;
-  animation: llSat5 6s ease-in-out infinite;
+  animation: llSat5 24s ease-in-out infinite;
 }
 .bg-blob-7 {
   width: 28vw; height: 32vw;
@@ -1760,7 +1760,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%;
-  animation: llSat6 8s ease-in-out infinite;
+  animation: llSat6 32s ease-in-out infinite;
 }
 
 /* Base: sweeps all 4 quadrants — top-left, bottom-right, top-right, bottom-left */
@@ -2049,7 +2049,21 @@ input[type="date"].ll-control {
   -webkit-backdrop-filter: blur(14px) saturate(1.7) !important;
 }
 
-/* 4 ── FAB */
+/* 4 ── SUMMARY / WIDGET SURFACES (missed in initial glass pass) */
+.summary,
+.net-cash-card,
+.recent-activity-widget,
+.pending-inbound-wrapper,
+.pending-outbound-wrapper,
+.settings-list,
+.hero-flipper-card,
+.ll-toggle {
+  backdrop-filter: blur(22px) saturate(1.8) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
+}
+
+/* 5 ── FAB */
 .fab {
   backdrop-filter: blur(16px) saturate(1.7) !important;
   -webkit-backdrop-filter: blur(16px) saturate(1.7) !important;

@@ -260,7 +260,7 @@ function MainApp() {
 
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {
-    const durations = [30, 30, 30, 30, 30, 30, 30];
+    const durations = [120, 120, 120, 120, 120, 120, 120];
     return durations.map((d) => `-${(Math.random() * d).toFixed(2)}s`);
   }, []);
 
