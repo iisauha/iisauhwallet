@@ -6,7 +6,6 @@ import {
   saveLoans,
   loadPublicPaymentNowAdded,
   savePublicPaymentNowAdded,
-  loadPrivatePaymentNowBase,
   savePrivatePaymentNowBase,
   loadLastRecomputeDate,
   applyRecomputeCycleToPrivateBalances,
@@ -1224,11 +1223,11 @@ export function LoansPage() {
         : (estimated > 0 ? estimated : 0);
     })();
 
-    const persistedPrivateBase = loadPrivatePaymentNowBase();
-    const privatePaymentNowBase =
-      persistedPrivateBase !== null && persistedPrivateBase !== undefined
-        ? persistedPrivateBase
-        : derivedPrivatePaymentNowBase;
+    // Always derive the private base from current loan cards (Payment(now) per card).
+    // The persisted PRIVATE_PAYMENT_NOW_BASE_KEY is only a write-cache for the
+    // Recalculate cycle and must not override the live-derived value — an imported
+    // backup can carry a stale or wrong persisted number.
+    const privatePaymentNowBase = derivedPrivatePaymentNowBase;
     const totalMonthlyNow =
       paymentNowOverride !== null && paymentNowOverride !== undefined
         ? paymentNowOverride
