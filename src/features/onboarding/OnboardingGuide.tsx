@@ -14,7 +14,7 @@ const SECTIONS: Section[] = [
           <li style={{ marginBottom: 8 }}>Tap <strong>Share</strong> at the top of the menu</li>
           <li style={{ marginBottom: 8 }}>Tap <strong>View More</strong> (looks like an upside-down chevron)</li>
           <li style={{ marginBottom: 8 }}>Tap <strong>Add to Home Screen</strong> (square icon with a + inside)</li>
-          <li style={{ marginBottom: 8 }}>Name the app whatever you want</li>
+          <li style={{ marginBottom: 8 }}>Name the app whatever you want. The creator named it iisauhwallet but feel free to call it anything :)</li>
           <li style={{ marginBottom: 8 }}><strong>IMPORTANT: Uncheck "Open as Web App"</strong></li>
           <li>Tap <strong>Add</strong> in the top right</li>
         </ol>

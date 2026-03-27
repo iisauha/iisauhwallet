@@ -13,7 +13,7 @@ This makes it feel and behave like a real app you tap to open.
 3. Tap **Share** at the top of the menu that pops up
 4. Tap **View More** (the button that looks like an upside-down chevron)
 5. Tap **Add to Home Screen** (a square icon with a + inside it)
-6. Name the app whatever you want (the creator named it iisauhwallet but feel free to call it anything :)
+6. Name the app whatever you want. The creator named it iisauhwallet but feel free to call it anything :)
 7. **IMPORTANT: Uncheck "Open as Web App"**
 8. Tap **Add** in the top right
 
