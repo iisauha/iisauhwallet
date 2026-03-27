@@ -1495,10 +1495,8 @@ input[type="checkbox"]:focus-visible {
   background: var(--ui-tabbar-bg, var(--surface));
 }
 
-/* ─── Modal glass effect ──────────────────────────────────────────── */
+/* ─── Modal border glow (glass handled below) ────────────────────── */
 .modal {
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
   box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px color-mix(in srgb, var(--ui-border, var(--border)) 60%, transparent);
 }
 
@@ -1692,14 +1690,12 @@ input[type="checkbox"]:focus-visible {
 }
 .snapshot-add-btn:active { transform: scale(0.93); }
 
-/* ─── Lava lamp: 7 blobs covering the full screen ────────────────── */
-/* ─── Lava lamp: 1 large base + 6 satellites that merge/emerge ─────── */
+/* ─── Lava lamp: 1 large base + 6 fast-moving satellites ───────────── */
 .bg-blob {
   position: fixed;
   z-index: 0;
   pointer-events: none;
-  will-change: transform, border-radius, opacity;
-  /* Pure accent color — no purple tint */
+  will-change: transform, border-radius;
   background: radial-gradient(circle at 42% 42%,
     var(--accent) 0%,
     color-mix(in srgb, var(--accent) 72%, transparent) 48%,
@@ -1707,64 +1703,64 @@ input[type="checkbox"]:focus-visible {
   );
 }
 
-/* ── Large base: gentle drift, stays roughly centered ── */
+/* ── Large base: sweeps the full screen ── */
 .bg-blob-1 {
-  width: 90vw; height: 96vw;
-  top: 8vh; left: 4vw;
-  filter: blur(54px);
-  opacity: 0.17;
+  width: 80vw; height: 80vw;
+  top: 10vh; left: 10vw;
+  filter: blur(32px);
+  opacity: 0.30;
   border-radius: 58% 42% 54% 46% / 46% 60% 40% 54%;
-  animation: llBase 30s ease-in-out infinite;
+  animation: llBase 11s ease-in-out infinite;
 }
 
-/* ── 6 satellites — same speed, opacity, color as base ── */
+/* ── Satellites — fast, wide-ranging sweeps across entire viewport ── */
 .bg-blob-2 {
-  width: 34vw; height: 38vw;
+  width: 40vw; height: 44vw;
   top: -8vh; left: 12vw;
-  filter: blur(52px);
-  opacity: 0.17;
+  filter: blur(28px);
+  opacity: 0.28;
   border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%;
-  animation: llSat1 30s ease-in-out infinite;
+  animation: llSat1 7s ease-in-out infinite;
 }
 .bg-blob-3 {
-  width: 30vw; height: 34vw;
+  width: 36vw; height: 40vw;
   bottom: -6vh; right: 10vw;
-  filter: blur(52px);
-  opacity: 0.17;
+  filter: blur(28px);
+  opacity: 0.28;
   border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%;
-  animation: llSat2 30s ease-in-out infinite;
+  animation: llSat2 9s ease-in-out infinite;
 }
 .bg-blob-4 {
-  width: 28vw; height: 32vw;
+  width: 32vw; height: 36vw;
   top: 50vh; right: -6vw;
-  filter: blur(52px);
-  opacity: 0.17;
+  filter: blur(28px);
+  opacity: 0.28;
   border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%;
-  animation: llSat3 30s ease-in-out infinite;
+  animation: llSat3 8s ease-in-out infinite;
 }
 .bg-blob-5 {
-  width: 26vw; height: 30vw;
+  width: 30vw; height: 34vw;
   bottom: -4vh; left: 8vw;
-  filter: blur(52px);
-  opacity: 0.17;
+  filter: blur(28px);
+  opacity: 0.28;
   border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%;
-  animation: llSat4 30s ease-in-out infinite;
+  animation: llSat4 10s ease-in-out infinite;
 }
 .bg-blob-6 {
-  width: 32vw; height: 36vw;
+  width: 38vw; height: 42vw;
   top: 18vh; right: 2vw;
-  filter: blur(52px);
-  opacity: 0.17;
+  filter: blur(28px);
+  opacity: 0.28;
   border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%;
-  animation: llSat5 30s ease-in-out infinite;
+  animation: llSat5 6s ease-in-out infinite;
 }
 .bg-blob-7 {
-  width: 24vw; height: 28vw;
+  width: 28vw; height: 32vw;
   top: 38vh; left: -4vw;
-  filter: blur(52px);
-  opacity: 0.17;
+  filter: blur(28px);
+  opacity: 0.28;
   border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%;
-  animation: llSat6 30s ease-in-out infinite;
+  animation: llSat6 8s ease-in-out infinite;
 }
 
 /* Base: sweeps all 4 quadrants — top-left, bottom-right, top-right, bottom-left */
@@ -1975,36 +1971,90 @@ input[type="checkbox"]:focus-visible {
 
 /* ─── Liquid Glass: frosted-glass effect, lava lamp bleeds through ── */
 /* Base: all glass surfaces get backdrop-filter blur */
+/* ══════════════════════════════════════════════════════════════════
+   LIQUID GLASS — uniform frosted-glass on every padded UI surface
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 1 ── LARGE SURFACES */
 .card,
 .section-header,
 .stat-tile,
 .tabs,
 .quick-sheet,
-.modal,
-.modal-overlay .modal {
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+.modal {
+  backdrop-filter: blur(22px) saturate(1.8) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
 }
-
-/* Transparent backgrounds so blobs show through */
-.card {
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 68%, transparent) !important;
+.card,
+.stat-tile {
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
 }
 .section-header,
 .section-header:active {
-  background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 65%, transparent) !important;
-}
-.stat-tile {
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 68%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 55%, transparent) !important;
 }
 .tabs {
-  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-tabbar-bg, var(--surface)) 58%, transparent) !important;
 }
-.quick-sheet {
-  background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 72%, transparent) !important;
-}
+.quick-sheet,
 .modal {
-  background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 72%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 60%, transparent) !important;
+}
+/* overlay dims but stays glassy */
+.modal-overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.55) !important;
+}
+
+/* 2 ── BUTTONS — all variants, same blur intensity */
+.btn,
+.snapshot-add-btn,
+.tab-active-pill,
+.icon-btn {
+  backdrop-filter: blur(14px) saturate(1.7) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.7) !important;
+}
+.btn-secondary,
+.btn-complete-green {
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 50%, transparent) !important;
+}
+.btn-danger,
+.btn-private-loan-delete,
+.clear-btn {
+  background: color-mix(in srgb, var(--red-light) 55%, transparent) !important;
+}
+.btn-primary {
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent) !important;
+}
+.btn-add {
+  background: color-mix(in srgb, var(--ui-add-btn, #2563EB) 20%, transparent) !important;
+}
+.snapshot-add-btn {
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 14%, transparent) !important;
+}
+.tab-active-pill {
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent) !important;
+}
+.btn-posted {
+  background: color-mix(in srgb, var(--green-light) 55%, transparent) !important;
+}
+
+/* 3 ── FORM CONTROLS */
+.ll-control,
+.ll-select,
+input[type="date"].ll-control {
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 50%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(1.7) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.7) !important;
+}
+
+/* 4 ── FAB */
+.fab {
+  backdrop-filter: blur(16px) saturate(1.7) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.7) !important;
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent) !important;
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease, opacity 0.18s ease;
 }
 
 /* ─── FAB: hide when any modal or quick sheet is open ────────────── */
@@ -2012,8 +2062,4 @@ body:has(.modal-overlay) .fab,
 body:has(.quick-sheet) .fab {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-.fab {
-  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease, opacity 0.18s ease;
 }
