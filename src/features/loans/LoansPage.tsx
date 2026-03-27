@@ -1395,21 +1395,6 @@ export function LoansPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                cursor: 'pointer'
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label="Edit monthly payment"
-              onClick={() => {
-                setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
-                setShowEditPaymentNow(true);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setEditPaymentInput((summary.totalMonthlyNow / 100).toFixed(2));
-                  setShowEditPaymentNow(true);
-                }
               }}
             >
               Monthly Payment
