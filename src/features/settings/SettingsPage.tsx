@@ -296,7 +296,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       const nav: any = navigator as any;
       if (nav.share) {
         const file = new File([text], fileName, { type: 'application/json' });
-        await nav.share({ files: [file], title: 'Backup' });
+        await nav.share({ files: [file] });
         return;
       }
     } catch (_) {}
