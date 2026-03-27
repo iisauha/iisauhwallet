@@ -60,6 +60,7 @@ type PresetTheme = {
 };
 
 const PRESET_THEMES: PresetTheme[] = [
+  // ── Dark themes ──────────────────────────────────
   {
     id: 'midnight',
     name: 'Midnight',
@@ -67,7 +68,7 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#E8673A',
     advancedColors: {
       cardBg: '#252525', surfaceSecondary: '#202020', sectionBg: '#232323',
-      modalBg: '#2d2d2d', tabBarBg: '#1e1e1e', border: '#3a3a3a',
+      modalBg: '#2d2d2d', tabBarBg: '#1a1a1a', border: '#3a3a3a',
       titleText: '#f0f0f0', primaryText: '#cccccc', outlineButton: '#cccccc', addButton: '#E8673A',
     },
   },
@@ -78,7 +79,7 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#a3e635',
     advancedColors: {
       cardBg: '#131313', surfaceSecondary: '#0f0f0f', sectionBg: '#111111',
-      modalBg: '#1a1a1a', tabBarBg: '#0c0c0c', border: '#282828',
+      modalBg: '#1a1a1a', tabBarBg: '#080808', border: '#282828',
       titleText: '#f5f5f5', primaryText: '#c8c8c8', outlineButton: '#c8c8c8', addButton: '#a3e635',
     },
   },
@@ -89,19 +90,8 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#38bdf8',
     advancedColors: {
       cardBg: '#142233', surfaceSecondary: '#112030', sectionBg: '#132131',
-      modalBg: '#1a2d3e', tabBarBg: '#0e1f2e', border: '#253d52',
+      modalBg: '#1a2d3e', tabBarBg: '#0c1927', border: '#253d52',
       titleText: '#e0f0ff', primaryText: '#b8d4ee', outlineButton: '#b8d4ee', addButton: '#38bdf8',
-    },
-  },
-  {
-    id: 'arctic',
-    name: 'Arctic',
-    themeColor: '#eef4f8',
-    accentColor: '#0ea5e9',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#e4edf4', sectionBg: '#f0f6fa',
-      modalBg: '#ffffff', tabBarBg: '#e8f0f6', border: '#c2d8e8',
-      titleText: '#0a1929', primaryText: '#1e3a52', outlineButton: '#1e3a52', addButton: '#0ea5e9',
     },
   },
   {
@@ -111,19 +101,8 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#22c55e',
     advancedColors: {
       cardBg: '#162219', surfaceSecondary: '#132116', sectionBg: '#152019',
-      modalBg: '#1c2e20', tabBarBg: '#111c14', border: '#2a3f2e',
+      modalBg: '#1c2e20', tabBarBg: '#0f1a12', border: '#2a3f2e',
       titleText: '#e8f5e0', primaryText: '#c4dcc7', outlineButton: '#c4dcc7', addButton: '#22c55e',
-    },
-  },
-  {
-    id: 'olive',
-    name: 'Olive',
-    themeColor: '#131510',
-    accentColor: '#84cc16',
-    advancedColors: {
-      cardBg: '#1c2018', surfaceSecondary: '#181b14', sectionBg: '#1a1e16',
-      modalBg: '#242920', tabBarBg: '#161914', border: '#2e3428',
-      titleText: '#edf2e0', primaryText: '#c8d4a8', outlineButton: '#c8d4a8', addButton: '#84cc16',
     },
   },
   {
@@ -133,8 +112,30 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#818cf8',
     advancedColors: {
       cardBg: '#1a1929', surfaceSecondary: '#181724', sectionBg: '#191827',
-      modalBg: '#232232', tabBarBg: '#141320', border: '#322e50',
+      modalBg: '#232232', tabBarBg: '#0f0e1a', border: '#322e50',
       titleText: '#f0eeff', primaryText: '#c4bfe8', outlineButton: '#c4bfe8', addButton: '#818cf8',
+    },
+  },
+  {
+    id: 'cobalt',
+    name: 'Cobalt',
+    themeColor: '#080c16',
+    accentColor: '#3b82f6',
+    advancedColors: {
+      cardBg: '#111828', surfaceSecondary: '#0e1524', sectionBg: '#101726',
+      modalBg: '#182030', tabBarBg: '#080c16', border: '#1e2e48',
+      titleText: '#e8f0ff', primaryText: '#a8c0e8', outlineButton: '#a8c0e8', addButton: '#3b82f6',
+    },
+  },
+  {
+    id: 'olive',
+    name: 'Olive',
+    themeColor: '#131510',
+    accentColor: '#84cc16',
+    advancedColors: {
+      cardBg: '#1c2018', surfaceSecondary: '#181b14', sectionBg: '#1a1e16',
+      modalBg: '#242920', tabBarBg: '#131510', border: '#2e3428',
+      titleText: '#edf2e0', primaryText: '#c8d4a8', outlineButton: '#c8d4a8', addButton: '#84cc16',
     },
   },
   {
@@ -144,7 +145,7 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#f472b6',
     advancedColors: {
       cardBg: '#251520', surfaceSecondary: '#20121c', sectionBg: '#22131e',
-      modalBg: '#2e1a28', tabBarBg: '#1e1018', border: '#42253a',
+      modalBg: '#2e1a28', tabBarBg: '#1a0e14', border: '#42253a',
       titleText: '#fce7f3', primaryText: '#e8b4d0', outlineButton: '#e8b4d0', addButton: '#f472b6',
     },
   },
@@ -155,7 +156,7 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#fb923c',
     advancedColors: {
       cardBg: '#231005', surfaceSecondary: '#1e0c02', sectionBg: '#200e03',
-      modalBg: '#2e1608', tabBarBg: '#1c0a01', border: '#3d1f08',
+      modalBg: '#2e1608', tabBarBg: '#170800', border: '#3d1f08',
       titleText: '#fff0e0', primaryText: '#e8c4a0', outlineButton: '#e8c4a0', addButton: '#fb923c',
     },
   },
@@ -166,7 +167,7 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#fbbf24',
     advancedColors: {
       cardBg: '#251a05', surfaceSecondary: '#201600', sectionBg: '#231803',
-      modalBg: '#2e2108', tabBarBg: '#1e1600', border: '#3d2e0a',
+      modalBg: '#2e2108', tabBarBg: '#1a1200', border: '#3d2e0a',
       titleText: '#fff8e0', primaryText: '#d4c08a', outlineButton: '#d4c08a', addButton: '#fbbf24',
     },
   },
@@ -177,7 +178,7 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#94a3b8',
     advancedColors: {
       cardBg: '#161b22', surfaceSecondary: '#131820', sectionBg: '#141a21',
-      modalBg: '#1e242d', tabBarBg: '#0f151c', border: '#2a333e',
+      modalBg: '#1e242d', tabBarBg: '#0d1117', border: '#2a333e',
       titleText: '#e6edf3', primaryText: '#b1bac4', outlineButton: '#b1bac4', addButton: '#94a3b8',
     },
   },
@@ -188,21 +189,132 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#00ff88',
     advancedColors: {
       cardBg: '#0e1220', surfaceSecondary: '#0b0f1c', sectionBg: '#0c101e',
-      modalBg: '#141828', tabBarBg: '#080c18', border: '#1e2840',
+      modalBg: '#141828', tabBarBg: '#060810', border: '#1e2840',
       titleText: '#e0ffe8', primaryText: '#a0f0c0', outlineButton: '#a0f0c0', addButton: '#00ff88',
     },
   },
   {
-    id: 'sakura',
-    name: 'Sakura',
-    themeColor: '#f8f0f4',
-    accentColor: '#ec4899',
+    id: 'berry',
+    name: 'Berry',
+    themeColor: '#0e0814',
+    accentColor: '#d946ef',
     advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#f0e6ec', sectionBg: '#f5edf2',
-      modalBg: '#ffffff', tabBarBg: '#f2e8f0', border: '#e0c8d8',
-      titleText: '#3a0a22', primaryText: '#6b2042', outlineButton: '#6b2042', addButton: '#ec4899',
+      cardBg: '#1a1024', surfaceSecondary: '#160d20', sectionBg: '#180f22',
+      modalBg: '#22162e', tabBarBg: '#0e0814', border: '#321848',
+      titleText: '#f5e8ff', primaryText: '#d4a8e8', outlineButton: '#d4a8e8', addButton: '#d946ef',
     },
   },
+  {
+    id: 'teal',
+    name: 'Deep Teal',
+    themeColor: '#060f0e',
+    accentColor: '#0d9488',
+    advancedColors: {
+      cardBg: '#0e1e1c', surfaceSecondary: '#0b1918', sectionBg: '#0d1c1a',
+      modalBg: '#142826', tabBarBg: '#060f0e', border: '#183028',
+      titleText: '#e0f5f2', primaryText: '#a0d4cc', outlineButton: '#a0d4cc', addButton: '#0d9488',
+    },
+  },
+  {
+    id: 'crimson',
+    name: 'Crimson',
+    themeColor: '#120606',
+    accentColor: '#ef4444',
+    advancedColors: {
+      cardBg: '#1e0e0e', surfaceSecondary: '#190b0b', sectionBg: '#1c0d0d',
+      modalBg: '#281414', tabBarBg: '#120606', border: '#3a1414',
+      titleText: '#fff0f0', primaryText: '#e8b8b8', outlineButton: '#e8b8b8', addButton: '#ef4444',
+    },
+  },
+  {
+    id: 'royal',
+    name: 'Royal',
+    themeColor: '#040812',
+    accentColor: '#d97706',
+    advancedColors: {
+      cardBg: '#0c1428', surfaceSecondary: '#091022', sectionBg: '#0a1224',
+      modalBg: '#101a30', tabBarBg: '#040812', border: '#182040',
+      titleText: '#fff8e8', primaryText: '#d4b87a', outlineButton: '#d4b87a', addButton: '#d97706',
+    },
+  },
+  {
+    id: 'copper',
+    name: 'Copper',
+    themeColor: '#110a04',
+    accentColor: '#ea580c',
+    advancedColors: {
+      cardBg: '#1c1008', surfaceSecondary: '#180d06', sectionBg: '#1a0f07',
+      modalBg: '#26180c', tabBarBg: '#110a04', border: '#381a0c',
+      titleText: '#fff4ec', primaryText: '#e0bca0', outlineButton: '#e0bca0', addButton: '#ea580c',
+    },
+  },
+  {
+    id: 'aurora',
+    name: 'Aurora',
+    themeColor: '#060c10',
+    accentColor: '#06b6d4',
+    advancedColors: {
+      cardBg: '#0e1c22', surfaceSecondary: '#0b181e', sectionBg: '#0d1a20',
+      modalBg: '#14242c', tabBarBg: '#060c10', border: '#16303a',
+      titleText: '#e0f8ff', primaryText: '#90d0e0', outlineButton: '#90d0e0', addButton: '#06b6d4',
+    },
+  },
+  {
+    id: 'jade',
+    name: 'Jade',
+    themeColor: '#061409',
+    accentColor: '#10b981',
+    advancedColors: {
+      cardBg: '#0c2214', surfaceSecondary: '#091c11', sectionBg: '#0a1f13',
+      modalBg: '#112e1c', tabBarBg: '#061409', border: '#163822',
+      titleText: '#e0ffed', primaryText: '#90d4a8', outlineButton: '#90d4a8', addButton: '#10b981',
+    },
+  },
+  {
+    id: 'plum',
+    name: 'Plum',
+    themeColor: '#14081e',
+    accentColor: '#c084fc',
+    advancedColors: {
+      cardBg: '#1f1230', surfaceSecondary: '#1a0e28', sectionBg: '#1c102c',
+      modalBg: '#281838', tabBarBg: '#14081e', border: '#351a50',
+      titleText: '#f5eeff', primaryText: '#d4a8f0', outlineButton: '#d4a8f0', addButton: '#c084fc',
+    },
+  },
+  {
+    id: 'mocha',
+    name: 'Mocha',
+    themeColor: '#120d08',
+    accentColor: '#c2a87a',
+    advancedColors: {
+      cardBg: '#1e1610', surfaceSecondary: '#19120d', sectionBg: '#1c140f',
+      modalBg: '#282018', tabBarBg: '#120d08', border: '#342518',
+      titleText: '#fff8ec', primaryText: '#d4b888', outlineButton: '#d4b888', addButton: '#c2a87a',
+    },
+  },
+  {
+    id: 'steel',
+    name: 'Steel',
+    themeColor: '#0d1218',
+    accentColor: '#7dd3fc',
+    advancedColors: {
+      cardBg: '#141e28', surfaceSecondary: '#111924', sectionBg: '#131c26',
+      modalBg: '#1a2632', tabBarBg: '#0d1218', border: '#1e3048',
+      titleText: '#e8f4ff', primaryText: '#a8cce8', outlineButton: '#a8cce8', addButton: '#7dd3fc',
+    },
+  },
+  {
+    id: 'wine',
+    name: 'Wine',
+    themeColor: '#150810',
+    accentColor: '#f43f5e',
+    advancedColors: {
+      cardBg: '#221018', surfaceSecondary: '#1e0d14', sectionBg: '#200f16',
+      modalBg: '#2e1422', tabBarBg: '#150810', border: '#3d1828',
+      titleText: '#fff0f4', primaryText: '#e8a8b8', outlineButton: '#e8a8b8', addButton: '#f43f5e',
+    },
+  },
+  // ── Light themes ──────────────────────────────────
   {
     id: 'light',
     name: 'Light',
@@ -214,85 +326,28 @@ const PRESET_THEMES: PresetTheme[] = [
       titleText: '#111111', primaryText: '#333333', outlineButton: '#333333', addButton: '#E8673A',
     },
   },
-  // ── High-contrast dark themes ──
   {
-    id: 'cobalt',
-    name: 'Cobalt',
-    themeColor: '#080c16',
-    accentColor: '#3b82f6',
+    id: 'arctic',
+    name: 'Arctic',
+    themeColor: '#eef4f8',
+    accentColor: '#0ea5e9',
     advancedColors: {
-      cardBg: '#111828', surfaceSecondary: '#0e1524', sectionBg: '#101726',
-      modalBg: '#182030', tabBarBg: '#0a1020', border: '#1e2e48',
-      titleText: '#e8f0ff', primaryText: '#a8c0e8', outlineButton: '#a8c0e8', addButton: '#3b82f6',
+      cardBg: '#ffffff', surfaceSecondary: '#e4edf4', sectionBg: '#f0f6fa',
+      modalBg: '#ffffff', tabBarBg: '#eef4f8', border: '#c2d8e8',
+      titleText: '#0a1929', primaryText: '#1e3a52', outlineButton: '#1e3a52', addButton: '#0ea5e9',
     },
   },
   {
-    id: 'berry',
-    name: 'Berry',
-    themeColor: '#0e0814',
-    accentColor: '#d946ef',
+    id: 'sakura',
+    name: 'Sakura',
+    themeColor: '#f8f0f4',
+    accentColor: '#ec4899',
     advancedColors: {
-      cardBg: '#1a1024', surfaceSecondary: '#160d20', sectionBg: '#180f22',
-      modalBg: '#22162e', tabBarBg: '#120a1c', border: '#321848',
-      titleText: '#f5e8ff', primaryText: '#d4a8e8', outlineButton: '#d4a8e8', addButton: '#d946ef',
+      cardBg: '#ffffff', surfaceSecondary: '#f0e6ec', sectionBg: '#f5edf2',
+      modalBg: '#ffffff', tabBarBg: '#f8f0f4', border: '#e0c8d8',
+      titleText: '#3a0a22', primaryText: '#6b2042', outlineButton: '#6b2042', addButton: '#ec4899',
     },
   },
-  {
-    id: 'teal',
-    name: 'Deep Teal',
-    themeColor: '#060f0e',
-    accentColor: '#0d9488',
-    advancedColors: {
-      cardBg: '#0e1e1c', surfaceSecondary: '#0b1918', sectionBg: '#0d1c1a',
-      modalBg: '#142826', tabBarBg: '#081614', border: '#183028',
-      titleText: '#e0f5f2', primaryText: '#a0d4cc', outlineButton: '#a0d4cc', addButton: '#0d9488',
-    },
-  },
-  {
-    id: 'crimson',
-    name: 'Crimson',
-    themeColor: '#120606',
-    accentColor: '#ef4444',
-    advancedColors: {
-      cardBg: '#1e0e0e', surfaceSecondary: '#190b0b', sectionBg: '#1c0d0d',
-      modalBg: '#281414', tabBarBg: '#160808', border: '#3a1414',
-      titleText: '#fff0f0', primaryText: '#e8b8b8', outlineButton: '#e8b8b8', addButton: '#ef4444',
-    },
-  },
-  {
-    id: 'royal',
-    name: 'Royal',
-    themeColor: '#040812',
-    accentColor: '#d97706',
-    advancedColors: {
-      cardBg: '#0c1428', surfaceSecondary: '#091022', sectionBg: '#0a1224',
-      modalBg: '#101a30', tabBarBg: '#060c1c', border: '#182040',
-      titleText: '#fff8e8', primaryText: '#d4b87a', outlineButton: '#d4b87a', addButton: '#d97706',
-    },
-  },
-  {
-    id: 'copper',
-    name: 'Copper',
-    themeColor: '#110a04',
-    accentColor: '#ea580c',
-    advancedColors: {
-      cardBg: '#1c1008', surfaceSecondary: '#180d06', sectionBg: '#1a0f07',
-      modalBg: '#26180c', tabBarBg: '#140c04', border: '#381a0c',
-      titleText: '#fff4ec', primaryText: '#e0bca0', outlineButton: '#e0bca0', addButton: '#ea580c',
-    },
-  },
-  {
-    id: 'aurora',
-    name: 'Aurora',
-    themeColor: '#060c10',
-    accentColor: '#06b6d4',
-    advancedColors: {
-      cardBg: '#0e1c22', surfaceSecondary: '#0b181e', sectionBg: '#0d1a20',
-      modalBg: '#14242c', tabBarBg: '#08141a', border: '#16303a',
-      titleText: '#e0f8ff', primaryText: '#90d0e0', outlineButton: '#90d0e0', addButton: '#06b6d4',
-    },
-  },
-  // ── Light themes ──
   {
     id: 'frost',
     name: 'Frost',
@@ -300,7 +355,7 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#1d4ed8',
     advancedColors: {
       cardBg: '#ffffff', surfaceSecondary: '#e4e8f8', sectionBg: '#f0f3fc',
-      modalBg: '#ffffff', tabBarBg: '#e8ecf8', border: '#c0c8e8',
+      modalBg: '#ffffff', tabBarBg: '#eef2ff', border: '#c0c8e8',
       titleText: '#0a0e2a', primaryText: '#1e2a5a', outlineButton: '#1e2a5a', addButton: '#1d4ed8',
     },
   },
@@ -311,8 +366,52 @@ const PRESET_THEMES: PresetTheme[] = [
     accentColor: '#18181b',
     advancedColors: {
       cardBg: '#ffffff', surfaceSecondary: '#efefef', sectionBg: '#f4f4f4',
-      modalBg: '#ffffff', tabBarBg: '#f0f0f0', border: '#d4d4d8',
+      modalBg: '#ffffff', tabBarBg: '#f8f8f8', border: '#d4d4d8',
       titleText: '#09090b', primaryText: '#27272a', outlineButton: '#27272a', addButton: '#18181b',
+    },
+  },
+  {
+    id: 'cream',
+    name: 'Cream',
+    themeColor: '#faf5eb',
+    accentColor: '#b45309',
+    advancedColors: {
+      cardBg: '#ffffff', surfaceSecondary: '#f0ead8', sectionBg: '#f7f2e4',
+      modalBg: '#ffffff', tabBarBg: '#faf5eb', border: '#ddd0b8',
+      titleText: '#2c1800', primaryText: '#5c3d1a', outlineButton: '#5c3d1a', addButton: '#b45309',
+    },
+  },
+  {
+    id: 'mint',
+    name: 'Mint',
+    themeColor: '#f0faf4',
+    accentColor: '#059669',
+    advancedColors: {
+      cardBg: '#ffffff', surfaceSecondary: '#e0f4ea', sectionBg: '#eaf8f0',
+      modalBg: '#ffffff', tabBarBg: '#f0faf4', border: '#b8e0c8',
+      titleText: '#052e16', primaryText: '#14532d', outlineButton: '#14532d', addButton: '#059669',
+    },
+  },
+  {
+    id: 'lavender',
+    name: 'Lavender',
+    themeColor: '#f5f3ff',
+    accentColor: '#7c3aed',
+    advancedColors: {
+      cardBg: '#ffffff', surfaceSecondary: '#ebe8fe', sectionBg: '#f2f0ff',
+      modalBg: '#ffffff', tabBarBg: '#f5f3ff', border: '#c4b8f8',
+      titleText: '#1e0a3e', primaryText: '#3d2070', outlineButton: '#3d2070', addButton: '#7c3aed',
+    },
+  },
+  {
+    id: 'sand',
+    name: 'Sand',
+    themeColor: '#faf7f0',
+    accentColor: '#d97706',
+    advancedColors: {
+      cardBg: '#ffffff', surfaceSecondary: '#f0ece0', sectionBg: '#f8f4ea',
+      modalBg: '#ffffff', tabBarBg: '#faf7f0', border: '#e0d4b0',
+      titleText: '#1a1000', primaryText: '#3d2800', outlineButton: '#3d2800', addButton: '#d97706',
     },
   },
 ];

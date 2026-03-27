@@ -17,7 +17,6 @@ const inputStyle = {
   padding: '10px 14px',
   borderRadius: 10,
   border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
-  background: 'var(--ui-card-bg, var(--surface))',
   color: 'var(--ui-primary-text, var(--text))',
   fontSize: '1rem'
 } as const;
@@ -262,7 +261,6 @@ export function PublicLoanSimpleCard(props: { onSave?: () => void; onAddToPaymen
                   padding: '10px 14px',
                   borderRadius: 10,
                   border: '1px solid var(--ui-outline-btn, var(--ui-border, var(--border)))',
-                  background: 'var(--ui-card-bg, var(--surface))',
                   color: 'var(--ui-primary-text, var(--text))',
                   fontSize: '0.95rem',
                   resize: 'vertical',

@@ -53,7 +53,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--ui-tabbar-bg, var(--surface));
+  background: var(--bg);
   border-top: 1px solid var(--ui-border, var(--border));
   padding: 0 4px;
   padding-bottom: var(--safe-bottom);
@@ -398,7 +398,7 @@ body {
 }
 .ll-toggle.active {
   background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 15%, transparent) !important;
-  color: var(--ui-add-btn, var(--accent)) !important;
+  color: var(--ui-primary-text, var(--text)) !important;
   border-color: var(--ui-add-btn, var(--accent)) !important;
   border-width: 1px !important;
 }
@@ -1122,9 +1122,9 @@ input[type="date"].ll-control:focus {
   gap: 4px;
   padding: 5px 12px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 14%, transparent);
-  color: var(--ui-add-btn, var(--accent));
-  border: 1px solid color-mix(in srgb, var(--ui-add-btn, var(--accent)) 30%, transparent);
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent);
+  color: var(--ui-primary-text, var(--text));
+  border: 1px solid var(--ui-border, var(--border));
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -2041,7 +2041,7 @@ input[type="checkbox"]:focus-visible {
   background: color-mix(in srgb, var(--ui-add-btn, #2563EB) 20%, transparent) !important;
 }
 .snapshot-add-btn {
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 14%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
 }
 .tab-active-pill {
   background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 92%, transparent) !important;

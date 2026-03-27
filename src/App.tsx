@@ -121,7 +121,7 @@ function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
             {displayName ? displayName.charAt(0).toUpperCase() : ''}
           </div>
         )}
-        <span className="app-header-name" style={{ fontSize: '21px', fontWeight: 600, color: 'var(--ui-title-text, var(--text))' }}>
+        <span className="app-header-name" style={{ fontWeight: 600, color: 'var(--ui-title-text, var(--text))' }}>
           {displayName || 'iisauh Wallet'}
         </span>
       </button>
