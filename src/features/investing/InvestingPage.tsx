@@ -1454,7 +1454,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           {type === 'hysa' && (
             <button
               type="button"
-              className="snapshot-add-btn"
+              className="snapshot-util-btn"
               onClick={() => {
                 setShowZeroHysa(!showZeroHysa);
                 saveBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, !showZeroHysa);

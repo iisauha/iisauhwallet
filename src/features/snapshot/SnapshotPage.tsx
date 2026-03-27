@@ -460,7 +460,7 @@ export function SnapshotPage({
         <div className="snapshot-section-label-actions">
           <button
             type="button"
-            className="snapshot-add-btn"
+            className="snapshot-util-btn"
             onClick={(e) => {
               e.stopPropagation();
               const next = !showZeroCashItems;
@@ -581,7 +581,7 @@ export function SnapshotPage({
         <div className="snapshot-section-label-actions">
           <button
             type="button"
-            className="snapshot-add-btn"
+            className="snapshot-util-btn"
             onClick={(e) => {
               e.stopPropagation();
               const next = !showZeroCreditCards;

@@ -691,7 +691,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         <div style={{ marginTop: 8 }}>
           <button
             type="button"
-            className="snapshot-add-btn"
+            className="snapshot-util-btn"
             onClick={() => setDrilldownCategoryId(null)}
             style={{ fontSize: '0.78rem' }}
           >

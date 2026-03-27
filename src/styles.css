@@ -665,16 +665,16 @@ input[type="date"].ll-control:focus {
   -webkit-tap-highlight-color: transparent;
 }
 .app-header-avatar {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
   border: 1.5px solid var(--ui-border, var(--border));
 }
 .app-header-avatar-placeholder {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--ui-card-bg, var(--surface));
@@ -682,7 +682,7 @@ input[type="date"].ll-control:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent);
 }
@@ -699,14 +699,10 @@ input[type="date"].ll-control:focus {
   margin-bottom: 1px;
 }
 .app-header-name {
-  font-size: 0.95rem;
+  font-size: 1.18rem;
   font-weight: 700;
   color: var(--ui-title-text, var(--text));
   line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
 }
 .app-header-right {
   display: flex;
@@ -1122,9 +1118,9 @@ input[type="date"].ll-control:focus {
   gap: 4px;
   padding: 5px 12px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent);
-  color: var(--ui-primary-text, var(--text));
-  border: 1px solid var(--ui-border, var(--border));
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 14%, transparent);
+  color: var(--ui-add-btn, var(--accent));
+  border: 1px solid color-mix(in srgb, var(--ui-add-btn, var(--accent)) 45%, transparent);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
@@ -1134,12 +1130,32 @@ input[type="date"].ll-control:focus {
 }
 .snapshot-add-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
 .snapshot-add-btn:active { opacity: 0.75; }
+/* Neutral utility/toggle buttons (Hide $0, filters, nav actions) */
+.snapshot-util-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent);
+  color: var(--muted);
+  border: 1px solid var(--ui-border, var(--border));
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--app-font-family);
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1;
+}
+.snapshot-util-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+.snapshot-util-btn:active { opacity: 0.75; }
 
 @media (hover: hover) and (pointer: fine) {
   .quick-sheet-item:hover { background: var(--surface-hover); }
   .hero-cta-pill:hover { background: rgba(255, 255, 255, 0.22); }
   .settings-row:hover { background: var(--surface-hover); }
-  .snapshot-add-btn:hover { background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 22%, transparent); }
+  .snapshot-add-btn:hover { background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 24%, transparent); }
+  .snapshot-util-btn:hover { background: var(--surface-hover); color: var(--ui-primary-text, var(--text)); }
   .stat-tile:hover { background: var(--surface-hover); }
   .stat-tile.active:hover { background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 16%, var(--ui-card-bg, var(--surface))); }
 }
@@ -1720,7 +1736,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%;
-  animation: llSat1 35s ease-in-out infinite;
+  animation: llSat1 23s ease-in-out infinite;
 }
 .bg-blob-3 {
   width: 36vw; height: 40vw;
@@ -1728,7 +1744,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%;
-  animation: llSat2 45s ease-in-out infinite;
+  animation: llSat2 27s ease-in-out infinite;
 }
 .bg-blob-4 {
   width: 32vw; height: 36vw;
@@ -1736,7 +1752,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%;
-  animation: llSat3 40s ease-in-out infinite;
+  animation: llSat3 21s ease-in-out infinite;
 }
 .bg-blob-5 {
   width: 30vw; height: 34vw;
@@ -1744,7 +1760,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%;
-  animation: llSat4 50s ease-in-out infinite;
+  animation: llSat4 25s ease-in-out infinite;
 }
 .bg-blob-6 {
   width: 38vw; height: 42vw;
@@ -1752,7 +1768,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%;
-  animation: llSat5 30s ease-in-out infinite;
+  animation: llSat5 29s ease-in-out infinite;
 }
 .bg-blob-7 {
   width: 28vw; height: 32vw;
@@ -1760,7 +1776,7 @@ input[type="checkbox"]:focus-visible {
   filter: blur(28px);
   opacity: 0.28;
   border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%;
-  animation: llSat6 40s ease-in-out infinite;
+  animation: llSat6 19s ease-in-out infinite;
 }
 
 /* Base: sweeps all 4 quadrants — with gather swells where satellites converge */
@@ -1776,82 +1792,92 @@ input[type="checkbox"]:focus-visible {
   100% { transform: translate(0,0)          scale(1);    border-radius: 58% 42% 54% 46% / 46% 60% 40% 54%; }
 }
 
-/* Sat1: gather ↔ spread ↔ gather ↔ spread */
+/* Sat1 — blob-2: merged 65% of cycle, then wanders bottom-right (23s) */
 @keyframes llSat1 {
-  0%   { transform: translate(0,0)           scale(1);    border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%; }
-  12%  { transform: translate(40vw, 55vh)    scale(1.2);  border-radius: 48% 52% 54% 46% / 52% 48% 44% 56%; }
-  25%  { transform: translate(5vw,  8vh)     scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  38%  { transform: translate(65vw, 10vh)    scale(1.1);  border-radius: 52% 48% 46% 54% / 44% 56% 54% 46%; }
-  50%  { transform: translate(60vw, 90vh)    scale(1.3);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  63%  { transform: translate(-6vw,  5vh)    scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  75%  { transform: translate(10vw, 95vh)    scale(1.0);  border-radius: 46% 54% 52% 48% / 56% 44% 48% 52%; }
-  88%  { transform: translate(-5vw, 50vh)    scale(1.1);  border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
-  100% { transform: translate(0,0)           scale(1);    border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%; }
+  0%   { transform: translate(0, 0)         scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  11%  { transform: translate(-3vw, 3vh)    scale(1.70); border-radius: 52% 48% 50% 50% / 48% 52% 54% 46%; }
+  22%  { transform: translate(2vw, -3vh)    scale(1.82); border-radius: 48% 52% 52% 48% / 52% 48% 46% 54%; }
+  33%  { transform: translate(-2vw, 5vh)    scale(1.66); border-radius: 54% 46% 46% 54% / 44% 56% 52% 48%; }
+  44%  { transform: translate(4vw, -2vh)    scale(1.84); border-radius: 46% 54% 54% 46% / 56% 44% 46% 54%; }
+  55%  { transform: translate(-4vw, 2vh)    scale(1.71); border-radius: 52% 48% 48% 52% / 50% 50% 52% 48%; }
+  65%  { transform: translate(1vw, -4vh)    scale(1.77); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  75%  { transform: translate(32vw, 52vh)   scale(1.15); border-radius: 48% 52% 54% 46% / 52% 48% 44% 56%; }
+  86%  { transform: translate(52vw, 74vh)   scale(1.00); border-radius: 55% 45% 50% 50% / 44% 56% 48% 52%; }
+  94%  { transform: translate(18vw, 38vh)   scale(1.20); border-radius: 50% 50% 54% 46% / 48% 52% 50% 50%; }
+  100% { transform: translate(0, 0)         scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
 }
 
-/* Sat2: gather ↔ spread ↔ gather ↔ spread */
+/* Sat2 — blob-3: merged 65% of cycle, then wanders top-left (27s) */
 @keyframes llSat2 {
-  0%   { transform: translate(0,0)            scale(1);    border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%; }
-  14%  { transform: translate(-55vw,-80vh)    scale(1.2);  border-radius: 52% 48% 46% 54% / 48% 52% 56% 44%; }
-  27%  { transform: translate(-8vw, -5vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  40%  { transform: translate(-65vw,-105vh)   scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  53%  { transform: translate(-10vw,-100vh)   scale(1.2);  border-radius: 46% 54% 52% 48% / 54% 46% 44% 56%; }
-  65%  { transform: translate(-4vw, -8vh)     scale(1.7);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  76%  { transform: translate(-60vw,-30vh)    scale(1.0);  border-radius: 50% 50% 56% 44% / 44% 56% 52% 48%; }
-  88%  { transform: translate(-30vw,-60vh)    scale(1.1);  border-radius: 54% 46% 50% 50% / 50% 50% 46% 54%; }
-  100% { transform: translate(0,0)            scale(1);    border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%; }
+  0%   { transform: translate(0, 0)          scale(1.78); border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%; }
+  10%  { transform: translate(3vw, -3vh)     scale(1.72); border-radius: 52% 48% 46% 54% / 48% 52% 56% 44%; }
+  20%  { transform: translate(-4vw, 2vh)     scale(1.85); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  30%  { transform: translate(2vw, -4vh)     scale(1.67); border-radius: 46% 54% 52% 48% / 54% 46% 44% 56%; }
+  42%  { transform: translate(-3vw, 3vh)     scale(1.79); border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
+  54%  { transform: translate(4vw, -2vh)     scale(1.69); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  65%  { transform: translate(-2vw, 3vh)     scale(1.75); border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%; }
+  75%  { transform: translate(-42vw, -55vh)  scale(1.20); border-radius: 52% 48% 46% 54% / 48% 52% 56% 44%; }
+  86%  { transform: translate(-60vw, -76vh)  scale(1.00); border-radius: 46% 54% 52% 48% / 54% 46% 44% 56%; }
+  94%  { transform: translate(-28vw, -42vh)  scale(1.18); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  100% { transform: translate(0, 0)          scale(1.78); border-radius: 48% 52% 58% 42% / 56% 44% 50% 50%; }
 }
 
-/* Sat3: gather ↔ spread ↔ gather ↔ spread */
+/* Sat3 — blob-4: merged 65% of cycle, then wanders left (21s) */
 @keyframes llSat3 {
-  0%   { transform: translate(0,0)            scale(1);    border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
-  13%  { transform: translate(-100vw,-50vh)   scale(1.2);  border-radius: 46% 54% 50% 50% / 52% 48% 46% 54%; }
-  26%  { transform: translate(-6vw, -3vh)     scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  40%  { transform: translate(-110vw,-55vh)   scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  54%  { transform: translate(-95vw,  40vh)   scale(1.2);  border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
-  66%  { transform: translate(-8vw,   4vh)    scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  76%  { transform: translate(-30vw,-45vh)    scale(1.0);  border-radius: 50% 50% 56% 44% / 56% 44% 48% 52%; }
-  88%  { transform: translate(-60vw,  20vh)   scale(1.1);  border-radius: 46% 54% 52% 48% / 48% 52% 54% 46%; }
-  100% { transform: translate(0,0)            scale(1);    border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
+  0%   { transform: translate(0, 0)          scale(1.76); border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
+  12%  { transform: translate(-2vw, 4vh)     scale(1.70); border-radius: 46% 54% 50% 50% / 52% 48% 46% 54%; }
+  24%  { transform: translate(3vw, -3vh)     scale(1.83); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  36%  { transform: translate(-4vw, 2vh)     scale(1.65); border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
+  48%  { transform: translate(2vw, -4vh)     scale(1.80); border-radius: 48% 52% 54% 46% / 56% 44% 46% 54%; }
+  65%  { transform: translate(-3vw, 3vh)     scale(1.74); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  75%  { transform: translate(-72vw, -38vh)  scale(1.18); border-radius: 46% 54% 50% 50% / 52% 48% 46% 54%; }
+  86%  { transform: translate(-95vw, -52vh)  scale(1.00); border-radius: 54% 46% 48% 52% / 44% 56% 52% 48%; }
+  94%  { transform: translate(-55vw, -28vh)  scale(1.15); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  100% { transform: translate(0, 0)          scale(1.76); border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
 }
 
-/* Sat4: gather ↔ spread ↔ gather ↔ spread */
+/* Sat4 — blob-5: merged 65% of cycle, then wanders top-right (25s) */
 @keyframes llSat4 {
-  0%   { transform: translate(0,0)            scale(1);    border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%; }
-  12%  { transform: translate(70vw,-80vh)     scale(1.15); border-radius: 50% 50% 46% 54% / 48% 52% 54% 46%; }
-  26%  { transform: translate(6vw, -4vh)      scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  38%  { transform: translate(80vw,-110vh)    scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  52%  { transform: translate(15vw,-105vh)    scale(1.25); border-radius: 46% 54% 52% 48% / 52% 48% 46% 54%; }
-  64%  { transform: translate(4vw,  -6vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  75%  { transform: translate(75vw,-45vh)     scale(1.0);  border-radius: 52% 48% 44% 56% / 46% 54% 56% 44%; }
-  87%  { transform: translate(40vw,-70vh)     scale(1.1);  border-radius: 48% 52% 50% 50% / 54% 46% 48% 52%; }
-  100% { transform: translate(0,0)            scale(1);    border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%; }
+  0%   { transform: translate(0, 0)          scale(1.77); border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%; }
+  11%  { transform: translate(4vw, -2vh)     scale(1.71); border-radius: 50% 50% 46% 54% / 48% 52% 54% 46%; }
+  22%  { transform: translate(-3vw, 3vh)     scale(1.86); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  33%  { transform: translate(2vw, -5vh)     scale(1.64); border-radius: 46% 54% 52% 48% / 52% 48% 46% 54%; }
+  46%  { transform: translate(-4vw, 4vh)     scale(1.81); border-radius: 52% 48% 48% 52% / 44% 56% 54% 46%; }
+  58%  { transform: translate(3vw, -2vh)     scale(1.72); border-radius: 48% 52% 50% 50% / 54% 46% 48% 52%; }
+  65%  { transform: translate(-2vw, 3vh)     scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  75%  { transform: translate(58vw, -75vh)   scale(1.18); border-radius: 46% 54% 52% 48% / 52% 48% 46% 54%; }
+  86%  { transform: translate(72vw, -98vh)   scale(1.00); border-radius: 54% 46% 48% 52% / 46% 54% 52% 48%; }
+  94%  { transform: translate(38vw, -62vh)   scale(1.16); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  100% { transform: translate(0, 0)          scale(1.77); border-radius: 44% 56% 52% 48% / 54% 46% 50% 50%; }
 }
 
-/* Sat5: gather ↔ spread ↔ gather ↔ spread */
+/* Sat5 — blob-6: merged 65% of cycle, then wanders bottom-left (29s) */
 @keyframes llSat5 {
-  0%   { transform: translate(0,0)            scale(1);    border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%; }
-  13%  { transform: translate(-65vw, 65vh)    scale(1.1);  border-radius: 54% 46% 50% 50% / 44% 56% 52% 48%; }
-  27%  { transform: translate(-5vw,  6vh)     scale(1.7);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  40%  { transform: translate(-60vw, 85vh)    scale(1.4);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  54%  { transform: translate( 10vw, 90vh)    scale(1.1);  border-radius: 48% 52% 54% 46% / 56% 44% 46% 54%; }
-  67%  { transform: translate(-3vw, -4vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  78%  { transform: translate(-70vw,-10vh)    scale(1.0);  border-radius: 44% 56% 48% 52% / 50% 50% 56% 44%; }
-  90%  { transform: translate(-35vw, 40vh)    scale(1.1);  border-radius: 52% 48% 46% 54% / 46% 54% 50% 50%; }
-  100% { transform: translate(0,0)            scale(1);    border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%; }
+  0%   { transform: translate(0, 0)          scale(1.74); border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%; }
+  9%   { transform: translate(-4vw, 2vh)     scale(1.68); border-radius: 54% 46% 50% 50% / 44% 56% 52% 48%; }
+  18%  { transform: translate(3vw, -4vh)     scale(1.83); border-radius: 48% 52% 50% 50% / 52% 48% 48% 52%; }
+  28%  { transform: translate(-2vw, 5vh)     scale(1.69); border-radius: 52% 48% 46% 54% / 46% 54% 56% 44%; }
+  40%  { transform: translate(4vw, -3vh)     scale(1.80); border-radius: 46% 54% 52% 48% / 56% 44% 46% 54%; }
+  52%  { transform: translate(-3vw, 2vh)     scale(1.71); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  65%  { transform: translate(2vw, -3vh)     scale(1.76); border-radius: 48% 52% 48% 52% / 52% 48% 50% 50%; }
+  74%  { transform: translate(-48vw, 58vh)   scale(1.15); border-radius: 54% 46% 50% 50% / 44% 56% 52% 48%; }
+  85%  { transform: translate(-64vw, 80vh)   scale(1.00); border-radius: 46% 54% 52% 48% / 56% 44% 46% 54%; }
+  94%  { transform: translate(-32vw, 48vh)   scale(1.18); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  100% { transform: translate(0, 0)          scale(1.74); border-radius: 50% 50% 46% 54% / 48% 52% 44% 56%; }
 }
 
-/* Sat6: gather ↔ spread ↔ gather ↔ spread */
+/* Sat6 — blob-7: merged 65% of cycle, then wanders right (19s) */
 @keyframes llSat6 {
-  0%   { transform: translate(0,0)            scale(1);    border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%; }
-  12%  { transform: translate(90vw,-40vh)     scale(1.2);  border-radius: 46% 54% 54% 46% / 48% 52% 46% 54%; }
-  26%  { transform: translate(6vw,   5vh)     scale(1.75); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  38%  { transform: translate(100vw,-42vh)    scale(1.5);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  52%  { transform: translate(90vw,  55vh)    scale(1.2);  border-radius: 52% 48% 46% 54% / 54% 46% 52% 48%; }
-  65%  { transform: translate(3vw,  -6vh)     scale(1.8);  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  75%  { transform: translate(20vw,  65vh)    scale(1.0);  border-radius: 48% 52% 52% 48% / 46% 54% 50% 50%; }
-  87%  { transform: translate(55vw,  20vh)    scale(1.1);  border-radius: 54% 46% 50% 50% / 50% 50% 54% 46%; }
-  100% { transform: translate(0,0)            scale(1);    border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%; }
+  0%   { transform: translate(0, 0)          scale(1.76); border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%; }
+  12%  { transform: translate(3vw, -3vh)     scale(1.70); border-radius: 46% 54% 54% 46% / 48% 52% 46% 54%; }
+  24%  { transform: translate(-4vw, 4vh)     scale(1.84); border-radius: 52% 48% 48% 52% / 54% 46% 52% 48%; }
+  36%  { transform: translate(2vw, -4vh)     scale(1.66); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  50%  { transform: translate(-3vw, 3vh)     scale(1.79); border-radius: 54% 46% 46% 54% / 46% 54% 54% 46%; }
+  65%  { transform: translate(2vw, -2vh)     scale(1.73); border-radius: 48% 52% 52% 48% / 52% 48% 48% 52%; }
+  75%  { transform: translate(78vw, -32vh)   scale(1.18); border-radius: 46% 54% 54% 46% / 48% 52% 46% 54%; }
+  86%  { transform: translate(93vw, -44vh)   scale(1.00); border-radius: 54% 46% 50% 50% / 50% 50% 54% 46%; }
+  94%  { transform: translate(62vw, -22vh)   scale(1.12); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
+  100% { transform: translate(0, 0)          scale(1.76); border-radius: 56% 44% 48% 52% / 52% 48% 56% 44%; }
 }
 
 /* Blobs at z-index:0; content wrappers at z-index:1 keep UI above blobs */

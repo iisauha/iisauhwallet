@@ -1504,7 +1504,7 @@ export function LoansPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
             <button
               type="button"
-              className="snapshot-add-btn"
+              className="snapshot-util-btn"
               onClick={() => setShowLoanToolsModal(true)}
             >
               Loan Tools

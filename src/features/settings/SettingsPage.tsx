@@ -334,23 +334,23 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       {/* Profile card */}
       <div
         className="card"
-        style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8, padding: '16px 16px' }}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 8, padding: '24px 16px 20px' }}
       >
         <input ref={profileImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleProfileImageChange} />
         <button
           type="button"
           onClick={() => profileImageRef.current?.click()}
           style={{
-            width: 64, height: 64, borderRadius: '50%', padding: 0, border: '2px solid var(--ui-border, var(--border))',
+            width: 96, height: 96, borderRadius: '50%', padding: 0, border: '2.5px solid var(--ui-border, var(--border))',
             background: profileImage ? `url(${profileImage}) center/cover` : 'var(--ui-card-bg, var(--surface))',
-            color: 'var(--accent)', fontSize: '1.4rem', fontWeight: 700, flexShrink: 0, cursor: 'pointer',
+            color: 'var(--accent)', fontSize: '2.2rem', fontWeight: 700, flexShrink: 0, cursor: 'pointer',
           }}
           aria-label="Change profile photo"
         >
-          {!profileImage && (displayName ? displayName.charAt(0).toUpperCase() : <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>+</span>)}
+          {!profileImage && (displayName ? displayName.charAt(0).toUpperCase() : <span style={{ fontSize: '1.4rem', color: 'var(--muted)' }}>+</span>)}
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>
+        <div style={{ width: '100%', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>
             Your name
           </div>
           <input
@@ -360,7 +360,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             onBlur={() => saveUserDisplayName(displayName || null)}
             placeholder="Enter your name"
             style={{
-              width: '100%', padding: 0, fontSize: '1.15rem', fontWeight: 700,
+              width: '100%', padding: 0, fontSize: '1.6rem', fontWeight: 700, textAlign: 'center',
               border: 'none', background: 'transparent',
               color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))',
               fontFamily: 'var(--app-font-family)',
