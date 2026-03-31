@@ -496,8 +496,8 @@ input[type="date"].ll-control:focus {
   padding: 16px;
   padding-bottom: calc(16px + var(--safe-bottom));
   animation: llFadeIn 0.18s ease-out;
-  overscroll-behavior: contain;
-  touch-action: pan-x pan-y;
+  overflow: auto;
+  overscroll-behavior: none;
 }
 .modal {
   width: 100%;
