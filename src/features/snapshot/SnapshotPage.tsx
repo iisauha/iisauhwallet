@@ -338,49 +338,35 @@ export function SnapshotPage({
     });
   }, [activeSection, visibleCards.length]);
 
-  // IntersectionObserver fires as soon as ≥50% of a card is visible — no scroll-event lag
+  // IO for dot index only — height is handled by onScroll on each carousel div
   useEffect(() => {
     const el = banksCarouselRef.current;
     if (!el) return;
-    let ro: ResizeObserver | null = null;
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) {
-            setBanksIdx(idx);
-            setBanksCarouselHeight((entry.target as HTMLElement).offsetHeight);
-            ro?.disconnect();
-            ro = new ResizeObserver(() => setBanksCarouselHeight((entry.target as HTMLElement).offsetHeight));
-            ro.observe(entry.target);
-          }
+          if (idx >= 0) setBanksIdx(idx);
         }
       }
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
-    return () => { io.disconnect(); ro?.disconnect(); };
+    return () => io.disconnect();
   }, []);
 
   useEffect(() => {
     const el = cardsCarouselRef.current;
     if (!el) return;
-    let ro: ResizeObserver | null = null;
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) {
-            setCardsIdx(idx);
-            setCardsCarouselHeight((entry.target as HTMLElement).offsetHeight);
-            ro?.disconnect();
-            ro = new ResizeObserver(() => setCardsCarouselHeight((entry.target as HTMLElement).offsetHeight));
-            ro.observe(entry.target);
-          }
+          if (idx >= 0) setCardsIdx(idx);
         }
       }
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
-    return () => { io.disconnect(); ro?.disconnect(); };
+    return () => io.disconnect();
   }, []);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {

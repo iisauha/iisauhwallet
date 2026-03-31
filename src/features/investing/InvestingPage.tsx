@@ -740,33 +740,27 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   }, []);
 
   // Dot-indicator index updates only when scroll fully snaps; ResizeObserver tracks current card height
+  // IntersectionObserver for dot index only — height is handled by onScroll on each carousel div
   useEffect(() => {
-    const pairs: [React.RefObject<HTMLDivElement>, (i: number) => void, (h: number | undefined) => void][] = [
-      [hysaCarouselRef, setHysaCarouselIdx, setHysaCarouselHeight],
-      [generalCarouselRef, setGeneralCarouselIdx, setGeneralCarouselHeight],
-      [rothCarouselRef, setRothCarouselIdx, setRothCarouselHeight],
-      [k401CarouselRef, setK401CarouselIdx, setK401CarouselHeight],
+    const pairs: [React.RefObject<HTMLDivElement>, (i: number) => void][] = [
+      [hysaCarouselRef, setHysaCarouselIdx],
+      [generalCarouselRef, setGeneralCarouselIdx],
+      [rothCarouselRef, setRothCarouselIdx],
+      [k401CarouselRef, setK401CarouselIdx],
     ];
-    const cleanups = pairs.map(([ref, setIdx, setHeight]) => {
+    const cleanups = pairs.map(([ref, setIdx]) => {
       const el = ref.current;
       if (!el) return () => {};
-      let ro: ResizeObserver | null = null;
       const io = new IntersectionObserver((entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
             const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-            if (idx >= 0) {
-              setIdx(idx);
-              setHeight((entry.target as HTMLElement).offsetHeight);
-              ro?.disconnect();
-              ro = new ResizeObserver(() => setHeight((entry.target as HTMLElement).offsetHeight));
-              ro.observe(entry.target);
-            }
+            if (idx >= 0) setIdx(idx);
           }
         }
       }, { root: el, threshold: 0.5 });
       Array.from(el.children).forEach(child => io.observe(child));
-      return () => { io.disconnect(); ro?.disconnect(); };
+      return () => io.disconnect();
     });
     return () => cleanups.forEach((fn) => fn());
   }, []);

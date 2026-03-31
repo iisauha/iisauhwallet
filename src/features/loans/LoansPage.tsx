@@ -1191,23 +1191,16 @@ export function LoansPage() {
   useEffect(() => {
     const el = privateCarouselRef.current;
     if (!el) return;
-    let ro: ResizeObserver | null = null;
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) {
-            setPrivateCarouselIdx(idx);
-            setPrivateCarouselHeight((entry.target as HTMLElement).offsetHeight);
-            ro?.disconnect();
-            ro = new ResizeObserver(() => setPrivateCarouselHeight((entry.target as HTMLElement).offsetHeight));
-            ro.observe(entry.target);
-          }
+          if (idx >= 0) setPrivateCarouselIdx(idx);
         }
       }
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
-    return () => { io.disconnect(); ro?.disconnect(); };
+    return () => io.disconnect();
   }, []);
 
   const summary = useMemo(() => {

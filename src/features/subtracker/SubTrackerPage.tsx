@@ -436,28 +436,21 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     }
     const el = completedCarouselRef.current;
     if (!el) return;
-    // Set initial height from first visible card
     requestAnimationFrame(() => {
       const first = el.children[0] as HTMLElement | undefined;
       if (first) setCompletedCarouselHeight(first.offsetHeight);
     });
-    let ro: ResizeObserver | null = null;
+    // IO for dot index only — height is handled by onScroll on the carousel div
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) {
-            setCompletedCarouselIdx(idx);
-            setCompletedCarouselHeight((entry.target as HTMLElement).offsetHeight);
-            ro?.disconnect();
-            ro = new ResizeObserver(() => setCompletedCarouselHeight((entry.target as HTMLElement).offsetHeight));
-            ro.observe(entry.target);
-          }
+          if (idx >= 0) setCompletedCarouselIdx(idx);
         }
       }
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
-    return () => { io.disconnect(); ro?.disconnect(); };
+    return () => io.disconnect();
   }, [completedBonuses.length, completedBonusesCollapsed]);
 
   useEffect(() => {
@@ -467,23 +460,16 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       const first = el.children[0] as HTMLElement | undefined;
       if (first) setEntriesCarouselHeight(first.offsetHeight);
     });
-    let ro: ResizeObserver | null = null;
     const io = new IntersectionObserver((ioEntries) => {
       for (const entry of ioEntries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) {
-            setEntriesCarouselIdx(idx);
-            setEntriesCarouselHeight((entry.target as HTMLElement).offsetHeight);
-            ro?.disconnect();
-            ro = new ResizeObserver(() => setEntriesCarouselHeight((entry.target as HTMLElement).offsetHeight));
-            ro.observe(entry.target);
-          }
+          if (idx >= 0) setEntriesCarouselIdx(idx);
         }
       }
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
-    return () => { io.disconnect(); ro?.disconnect(); };
+    return () => io.disconnect();
   }, [entries.length]);
 
   function entryDisplayName(e: SubTrackerEntry) {

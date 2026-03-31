@@ -330,35 +330,20 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     if (firstItem) setPurchasesCarouselHeight(firstItem.offsetHeight);
   }, [purchasesCarouselRef, visiblePurchasesKey]);
 
+  // IO for dot index only — height is handled by onScroll on the carousel div
   useEffect(() => {
     const el = purchasesCarouselRef;
     if (!el) return;
-    let ro: ResizeObserver | null = null;
-    const observeCurrent = (idx: number) => {
-      ro?.disconnect();
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (!item) return;
-      ro = new ResizeObserver(() => {
-        const cur = Math.round(el.scrollLeft / (el.clientWidth || 1));
-        setPurchasesCarouselHeight((el.children[cur] as HTMLElement | undefined)?.offsetHeight ?? null);
-      });
-      ro.observe(item);
-    };
-    // IntersectionObserver fires as soon as ≥50% of a card is visible — no scroll-event lag
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) {
-            setPurchasesCarouselIdx(idx);
-            setPurchasesCarouselHeight((entry.target as HTMLElement).offsetHeight);
-            observeCurrent(idx);
-          }
+          if (idx >= 0) setPurchasesCarouselIdx(idx);
         }
       }
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
-    return () => { io.disconnect(); ro?.disconnect(); };
+    return () => io.disconnect();
   }, [purchasesCarouselRef, visiblePurchasesKey]);
 
   useEffect(() => {
