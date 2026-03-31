@@ -350,6 +350,37 @@ function CompletedBonusEditorModal({
   );
 }
 
+function WindowedCarouselDots({ count, current }: { count: number; current: number }) {
+  if (count <= 1) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 8 }}>
+      {[-2, -1, 0, 1, 2].map((offset) => {
+        const idx = current + offset;
+        const exists = idx >= 0 && idx < count;
+        const isActive = offset === 0;
+        const absOff = Math.abs(offset);
+        const size = isActive ? 8 : absOff === 1 ? 7 : 6;
+        const opacity = !exists ? 0.2 : isActive ? 1 : absOff === 1 ? 0.6 : 0.35;
+        return (
+          <span
+            key={offset}
+            style={{
+              width: size,
+              height: size,
+              borderRadius: '50%',
+              background: isActive ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))',
+              opacity,
+              display: 'inline-block',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -510,7 +541,10 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
             type="button"
             className="btn btn-secondary"
             style={{ marginBottom: 16, width: '100%' }}
-            onClick={() => setSubview('main')}
+            onClick={() => {
+              setSubview('main');
+              setEntriesCarouselHeight(undefined);
+            }}
           >
             Go back to main page
           </button>
@@ -589,24 +623,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           })}
           </div>
           </div>
-          {completedBonuses.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {completedBonuses.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: i === completedCarouselIdx ? 'var(--accent)' : 'var(--border)',
-                    transition: 'background 0.2s',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          <WindowedCarouselDots count={completedBonuses.length} current={completedCarouselIdx} />
           <button
             type="button"
             className="btn btn-add"
@@ -844,7 +861,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.75rem', color: 'var(--muted)' }}>
                   <span>$0</span>
                   <span style={{ color: 'var(--green)', fontWeight: 600 }}>
-                    {Math.round(ratio * 100)}%
+                    {(ratio * 100).toPrecision(3).replace(/\.?0+$/, '')}%
                   </span>
                   <span>${(finalTarget / 100).toLocaleString()}</span>
                 </div>
@@ -1033,24 +1050,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       })}
       </div>
       </div>
-      {entries.length > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-          {entries.map((_, i) => (
-            <span
-              key={i}
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                background: i === entriesCarouselIdx ? 'var(--accent)' : 'var(--border)',
-                transition: 'background 0.2s',
-                display: 'inline-block',
-                flexShrink: 0,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      <WindowedCarouselDots count={entries.length} current={entriesCarouselIdx} />
 
       {confirmDelete ? (
         <div className="modal-overlay">

@@ -124,9 +124,20 @@ export function OptimizerAssumptionsScreen({ assumptions, onChange, onConfirm }:
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 8px 0' }}>
-        Default 2026 assumptions (editable). Edit values if needed for a different year.
-      </p>
+      <div style={{ fontSize: '0.88rem', color: 'var(--ui-primary-text, var(--text))', margin: '0 0 12px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ margin: 0 }}>
+          This tool helps you optimize your pre-tax contributions — such as your employer-based retirement account (401k, 457b), FSA/HSA, and commuter benefits — to lower your Adjusted Gross Income (AGI) as much as possible while still being able to cover your monthly fixed expenses. Lowering your AGI is especially useful if you are on an income-driven repayment (IDR) plan for federal student loans, since your monthly payment is calculated based on your AGI. It also helps you understand how much you can realistically contribute to retirement given your actual bills.
+        </p>
+        <p style={{ margin: 0 }}>
+          This tool currently reflects tax parameters for New York State and New York City residents for the 2026 tax year. All values were sourced from the IRS, NYS, and NYC tax authority websites. This tool accounts for federal, state, and city taxes. It is intended for future expansion to support other states — for now, if you are not an NYC resident, parameters would need to be manually adjusted. We apologize for the inconvenience.
+        </p>
+        <p style={{ margin: 0, fontStyle: 'italic' }}>
+          This is an estimation tool. Results are not exact and should not be treated as financial or tax advice.
+        </p>
+        <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.7 }}>
+          Default 2026 assumptions (editable). Edit values if needed for a different year.
+        </p>
+      </div>
 
       <div className="card" style={{ padding: 12 }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10, color: 'var(--ui-primary-text, var(--text))' }}>
@@ -151,7 +162,7 @@ export function OptimizerAssumptionsScreen({ assumptions, onChange, onConfirm }:
           format="currency"
         />
         <ScalarRow
-          label="HCFSA deduction (yearly $)"
+          label="FSA/HSA Deduction (yearly $)"
           value={a.hcfsaDeductionYearly}
           onChange={(v) => update({ hcfsaDeductionYearly: v })}
           format="currency"

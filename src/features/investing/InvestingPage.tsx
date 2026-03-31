@@ -112,10 +112,12 @@ function CoastFireInfoIcon({
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '0.8rem',
+          fontSize: '0.75rem',
+          fontStyle: 'italic',
+          fontWeight: 600,
         }}
       >
-        +
+        i
       </button>
       {open ? (
         <div
@@ -675,6 +677,9 @@ function CoastFireProjectionChart({
   );
 }
 
+// Module-level refs to prevent re-triggering when component remounts (tab navigation)
+let _lastProcessedHysaAllocTrigger = 0;
+
 export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 0 }: { openTransferTrigger?: number; openHysaAllocTrigger?: number }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -773,10 +778,14 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const [transferOpen, setTransferOpen] = useState(false);
   useEffect(() => { if (openTransferTrigger > 0) setTransferOpen(true); }, [openTransferTrigger]);
   useEffect(() => {
-    if (openHysaAllocTrigger > 0) {
-      // Open HYSA allocation for the first HYSA account
-      const firstHysa = investing.accounts.find(a => a.type === 'hysa') as HysaAccount | undefined;
-      if (firstHysa) openHysaAllocationModal(firstHysa);
+    if (openHysaAllocTrigger > 0 && openHysaAllocTrigger !== _lastProcessedHysaAllocTrigger) {
+      _lastProcessedHysaAllocTrigger = openHysaAllocTrigger;
+      const hysaAccounts = investing.accounts.filter(a => a.type === 'hysa') as HysaAccount[];
+      if (hysaAccounts.length === 1) {
+        openHysaAllocationModal(hysaAccounts[0]);
+      } else if (hysaAccounts.length > 1) {
+        setHysaPickerOpen(true);
+      }
     }
   }, [openHysaAllocTrigger]);
   const [transferFrom, setTransferFrom] = useState('');
@@ -785,6 +794,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const [transferNote, setTransferNote] = useState('');
   const [transferError, setTransferError] = useState<string | null>(null);
   const [hysaAllocationAccount, setHysaAllocationAccount] = useState<HysaAccount | null>(null);
+  const [hysaPickerOpen, setHysaPickerOpen] = useState(false);
   const [allocationReservedCents, setAllocationReservedCents] = useState(0);
   useEffect(() => {
     if (hysaAllocationAccount) {
@@ -2382,6 +2392,32 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           </div>
         </div>
       ) : null}
+
+      <Modal
+        open={hysaPickerOpen}
+        title="Select HYSA Account"
+        onClose={() => setHysaPickerOpen(false)}
+      >
+        <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>
+          Which HYSA would you like to adjust?
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {(investing.accounts.filter(a => a.type === 'hysa') as HysaAccount[]).map((acc) => (
+            <button
+              key={acc.id}
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => {
+                setHysaPickerOpen(false);
+                openHysaAllocationModal(acc);
+              }}
+            >
+              {acc.name}
+            </button>
+          ))}
+        </div>
+      </Modal>
 
       <Modal
         open={!!hysaAllocationAccount}

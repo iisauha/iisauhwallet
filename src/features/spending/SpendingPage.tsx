@@ -29,6 +29,37 @@ function addMonths(d: Date, months: number) {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
+function WindowedCarouselDots({ count, current }: { count: number; current: number }) {
+  if (count <= 1) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 8 }}>
+      {[-2, -1, 0, 1, 2].map((offset) => {
+        const idx = current + offset;
+        const exists = idx >= 0 && idx < count;
+        const isActive = offset === 0;
+        const absOff = Math.abs(offset);
+        const size = isActive ? 8 : absOff === 1 ? 7 : 6;
+        const opacity = !exists ? 0.2 : isActive ? 1 : absOff === 1 ? 0.6 : 0.35;
+        return (
+          <span
+            key={offset}
+            style={{
+              width: size,
+              height: size,
+              borderRadius: '50%',
+              background: isActive ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))',
+              opacity,
+              display: 'inline-block',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTrigger = 0 }: { tabVisible?: boolean; addTrigger?: number; reimburseAddTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -271,7 +302,11 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     () =>
       drilldownFilteredPurchases
         .slice()
-        .sort((a, b) => (b.dateISO || '').localeCompare(a.dateISO || '')),
+        .sort((a, b) => {
+          const aKey = a.createdAt || (a.dateISO ? a.dateISO + 'T23:59:59' : '');
+          const bKey = b.createdAt || (b.dateISO ? b.dateISO + 'T23:59:59' : '');
+          return bKey.localeCompare(aKey);
+        }),
     [drilldownFilteredPurchases]
   );
   const hasMorePurchases = sortedPurchases.length > 5;
@@ -413,7 +448,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           aria-pressed={view === 'rewards' || view === 'card'}
           style={{ flexShrink: 0 }}
         >
-          {view === 'card' ? 'By card' : 'Rewards'}
+          {view === 'card' ? 'By Payment Source' : 'Rewards'}
         </button>
         <button
           type="button"
@@ -698,10 +733,10 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                       border: '1px solid var(--border)',
                     }}
                   >
-                    <span className="name">{getCategoryName(cfg, c.categoryId)}</span>
+                    <span className="name" style={{ color: '#000000' }}>{getCategoryName(cfg, c.categoryId)}</span>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{pct}%</span>
-                      <span className="amount">{formatCents(c.amountCents)}</span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#000000' }}>{pct}%</span>
+                      <span className="amount" style={{ color: '#000000' }}>{formatCents(c.amountCents)}</span>
                     </div>
                   </div>
                 );
@@ -732,12 +767,14 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           style={{ margin: 0, flex: 1 }}
           onClick={() => setPurchasesCollapsed(!purchasesCollapsed)}
         >
-          <span className="section-header-left">Purchases</span>
-          {drilldownCategoryId ? (
-            <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8 }}>
-              (showing: {getCategoryName(cfg, drilldownCategoryId)})
-            </span>
-          ) : null}
+          <span className="section-header-left" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+            Purchases
+            {drilldownCategoryId ? (
+              <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8, fontWeight: 400 }}>
+                (showing: {getCategoryName(cfg, drilldownCategoryId)})
+              </span>
+            ) : null}
+          </span>
           <span className="chevron">{purchasesCollapsed ? '▸' : '▾'}</span>
         </div>
         <button
@@ -831,24 +868,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           )})}
           </div>
           </div>
-          {visiblePurchases.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {visiblePurchases.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: i === purchasesCarouselIdx ? 'var(--accent)' : 'var(--border)',
-                    transition: 'background 0.2s',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          <WindowedCarouselDots count={visiblePurchases.length} current={purchasesCarouselIdx} />
           {!showAllPurchases && hasMorePurchases && purchasesCarouselIdx >= visiblePurchases.length - 1 ? (
             <div style={{ textAlign: 'center', marginTop: 8 }}>
               <button

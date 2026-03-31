@@ -46,11 +46,12 @@ function RecentActivityWidget() {
     const items: ActivityItem[] = [];
 
     (data.purchases || []).forEach((p: any) => {
-      if (p.dateISO) {
+      if (p.dateISO || p.createdAt) {
+        const tsStr = p.createdAt || (p.dateISO + 'T23:59:59');
         items.push({
           label: p.title || 'Purchase',
           type: 'purchase',
-          ts: new Date(p.dateISO + 'T23:59:59').getTime(),
+          ts: new Date(tsStr).getTime(),
           amount: p.amountCents ?? null,
           notes: p.notes || undefined,
           category: p.category || undefined,

@@ -480,7 +480,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                   saveAutoLockMinutes(v);
                 }}
                 style={{
-                  width: 'auto', minWidth: 90, textAlign: 'right',
+                  width: 'auto', minWidth: 120, textAlign: 'right',
                   padding: '5px 8px', fontSize: '0.85rem', lineHeight: 1.4,
                   background: 'var(--ui-card-bg, var(--surface))',
                   border: '1px solid var(--ui-border, var(--border))',

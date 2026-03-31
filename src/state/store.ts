@@ -419,7 +419,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     addPurchase: (purchase) => {
       const next = structuredClone(get().data) as LedgerData;
       const id = uid();
-      const p: any = { ...purchase, id };
+      const p: any = { ...purchase, id, createdAt: nowIso() };
       const normalize = (s: unknown) => (typeof s === 'string' ? s.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase() : '');
 
       // If split purchase with inbound reimbursement, create pending inbound item (legacy behavior).
@@ -843,14 +843,31 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           const todayKey = toLocalDateKey(new Date());
           if (Object.keys(breakdown).length > 0) {
             const loansState = loadLoans();
-            const loans = loansState.loans.map((l: any) => {
-              if (l.category !== 'private') return l;
-              const sub = breakdown[l.id] ?? 0;
-              if (sub <= 0) return l;
-              const newBalance = Math.max(0, (l.balanceCents || 0) - sub);
-              return { ...l, balanceCents: newBalance, accrualLastUpdatedAt: todayKey };
-            });
-            saveLoans({ ...loansState, loans });
+            // Safety: if loadLoans returned empty but real data exists, cache miss — abort to prevent wiping loans.
+            if (loansState.loans.length === 0) {
+              try {
+                const rawCheck = localStorage.getItem('iisauhwallet_loans_v1');
+                if (rawCheck && rawCheck.length > 10) {
+                  console.error('[markPendingPosted] Safety abort: loadLoans() empty but localStorage has data. Skipping loan balance update to prevent data loss.');
+                }
+              } catch (_) {}
+            } else {
+              const backupPrivateCount = loansState.loans.filter((l: any) => l.category === 'private').length;
+              const loans = loansState.loans.map((l: any) => {
+                if (l.category !== 'private') return l;
+                const sub = breakdown[l.id] ?? 0;
+                if (sub <= 0) return l;
+                const newBalance = Math.max(0, (l.balanceCents || 0) - sub);
+                return { ...l, balanceCents: newBalance, accrualLastUpdatedAt: todayKey };
+              });
+              const newPrivateCount = loans.filter((l: any) => l.category === 'private').length;
+              if (backupPrivateCount > 0 && newPrivateCount < backupPrivateCount) {
+                console.error('[markPendingPosted] Safety abort: would reduce private loans from', backupPrivateCount, 'to', newPrivateCount, '. Restoring backup.');
+                saveLoans({ ...loansState, loans: loansState.loans });
+              } else {
+                saveLoans({ ...loansState, loans });
+              }
+            }
           }
           savePrivatePaymentNowBase(0);
           const publicSummary = loadPublicLoanSummary();
@@ -884,6 +901,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           title,
           amountCents,
           dateISO: todayISO,
+          createdAt: nowIso(),
           category,
           subcategory,
           notes,

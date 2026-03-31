@@ -1291,6 +1291,19 @@ export function computeInSchoolAccruedToDate(
 export function applyRecomputeCycleToPrivateBalances(paymentNowByLoanId: Record<string, number>): void {
   const today = todayISO();
   const state = loadLoans();
+
+  // Safety: if loadLoans() returned empty but localStorage has raw data, cache miss — abort to avoid wiping real loans.
+  if (state.loans.length === 0) {
+    try {
+      const rawCheck = localStorage.getItem(LOANS_KEY);
+      if (rawCheck && rawCheck.length > 10) {
+        console.error('[applyRecomputeCycle] Safety abort: loadLoans() returned empty but localStorage has loan data (cache miss). Skipping recompute to prevent data loss.');
+        return;
+      }
+    } catch (_) {}
+  }
+
+  const backupPrivateCount = state.loans.filter((l: Loan) => l.category === 'private').length;
   const loans = state.loans.map((l: Loan) => {
     if (l.category !== 'private') return l;
     const addCents = paymentNowByLoanId[l.id] ?? 0;
@@ -1303,6 +1316,14 @@ export function applyRecomputeCycleToPrivateBalances(paymentNowByLoanId: Record<
       accrualLastUpdatedAt: today
     };
   });
+
+  // Safety: never write fewer private loans than we started with (map preserves length, so this catches unexpected bugs)
+  const newPrivateCount = loans.filter((l: Loan) => l.category === 'private').length;
+  if (backupPrivateCount > 0 && newPrivateCount < backupPrivateCount) {
+    console.error('[applyRecomputeCycle] Safety abort: private loan count would drop from', backupPrivateCount, 'to', newPrivateCount, '. Aborting save.');
+    return;
+  }
+
   saveLoans({ ...state, loans });
   saveLastRecomputeDate(today);
 }

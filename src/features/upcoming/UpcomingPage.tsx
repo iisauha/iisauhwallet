@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { IconPlus } from '../../ui/icons';
-import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
+import { calcFinalNetCashCents, formatCents, parseCents, toLocalDateKey } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import {
@@ -24,6 +24,37 @@ import { loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 
+function WindowedCarouselDots({ count, current }: { count: number; current: number }) {
+  if (count <= 1) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 8 }}>
+      {[-2, -1, 0, 1, 2].map((offset) => {
+        const idx = current + offset;
+        const exists = idx >= 0 && idx < count;
+        const isActive = offset === 0;
+        const absOff = Math.abs(offset);
+        const size = isActive ? 8 : absOff === 1 ? 7 : 6;
+        const opacity = !exists ? 0.2 : isActive ? 1 : absOff === 1 ? 0.6 : 0.35;
+        return (
+          <span
+            key={offset}
+            style={{
+              width: size,
+              height: size,
+              borderRadius: '50%',
+              background: isActive ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))',
+              opacity,
+              display: 'inline-block',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function todayKey() {
   const d = new Date();
   const y = d.getFullYear();
@@ -37,6 +68,8 @@ export function UpcomingPage() {
   const actions = useLedgerStore((s) => s.actions);
 
   const [windowDays, setWindowDays] = useState(() => loadUpcomingWindowPreference().days);
+  const [customDaysInput, setCustomDaysInput] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const [expectedCosts, setExpectedCosts] = useState(() => loadExpectedCosts());
   const [expectedIncome, setExpectedIncome] = useState(() => loadExpectedIncome());
   const [lastAdjustments, setLastAdjustments] = useState(() => loadLastAdjustments());
@@ -248,22 +281,57 @@ export function UpcomingPage() {
     <div className="tab-panel active" id="upcomingContent">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
         <p className="section-title page-title" style={{ margin: 0 }}>Upcoming</p>
-        <Select
-          value={String(windowDays)}
-          onChange={(e) => {
-            const v = e.target.value === 'custom' ? windowDays : parseInt(e.target.value, 10);
-            const days = Math.min(365, Math.max(1, isNaN(v) ? 30 : v));
-            setWindowDays(days);
-            saveUpcomingWindowPreference({ days });
-          }}
-          className="upcoming-window-select"
-          style={{ fontSize: '0.82rem', padding: '6px 10px', minHeight: 'unset', flexShrink: 0 }}
-        >
-          <option value="14">14 days</option>
-          <option value="21">21 days</option>
-          <option value="30">30 days</option>
-          <option value="45">45 days</option>
-        </Select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <Select
+            value={showCustomInput ? 'custom' : String(windowDays)}
+            onChange={(e) => {
+              if (e.target.value === 'custom') {
+                setShowCustomInput(true);
+                setCustomDaysInput(String(windowDays));
+              } else {
+                setShowCustomInput(false);
+                const v = parseInt(e.target.value, 10);
+                const days = Math.min(365, Math.max(1, isNaN(v) ? 30 : v));
+                setWindowDays(days);
+                saveUpcomingWindowPreference({ days });
+              }
+            }}
+            className="upcoming-window-select"
+            style={{ fontSize: '0.82rem', padding: '6px 10px', minHeight: 'unset' }}
+          >
+            <option value="14">14 days</option>
+            <option value="21">21 days</option>
+            <option value="30">30 days</option>
+            <option value="45">45 days</option>
+            <option value="custom">Custom…</option>
+          </Select>
+          {showCustomInput && (
+            <input
+              type="number"
+              min={1}
+              value={customDaysInput}
+              onChange={(e) => setCustomDaysInput(e.target.value)}
+              onBlur={() => {
+                const v = parseInt(customDaysInput, 10);
+                if (!isNaN(v) && v >= 1) {
+                  setWindowDays(v);
+                  saveUpcomingWindowPreference({ days: v });
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const v = parseInt(customDaysInput, 10);
+                  if (!isNaN(v) && v >= 1) {
+                    setWindowDays(v);
+                    saveUpcomingWindowPreference({ days: v });
+                  }
+                }
+              }}
+              placeholder="days"
+              style={{ width: 64, padding: '5px 8px', fontSize: '0.82rem', borderRadius: 8, border: '1px solid var(--ui-border, var(--border))' }}
+            />
+          )}
+        </div>
       </div>
 
       <div
@@ -305,7 +373,7 @@ export function UpcomingPage() {
           <div
             className="card-carousel"
             ref={incomeCarouselRef}
-            onScroll={(e) => {
+            onScrollCapture={(e) => {
               const el = e.currentTarget;
               setIncomeCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
             }}
@@ -415,24 +483,7 @@ export function UpcomingPage() {
             }
           })}
           </div>
-          {allIncomeItems.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {allIncomeItems.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: i === incomeCarouselIdx ? 'var(--accent)' : 'var(--border)',
-                    transition: 'background 0.2s',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          <WindowedCarouselDots count={allIncomeItems.length} current={incomeCarouselIdx} />
         </>
       ) : null}
 
@@ -475,7 +526,7 @@ export function UpcomingPage() {
           <div
             className="card-carousel"
             ref={costsCarouselRef}
-            onScroll={(e) => {
+            onScrollCapture={(e) => {
               const el = e.currentTarget;
               setCostsCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
             }}
@@ -533,6 +584,8 @@ export function UpcomingPage() {
               );
             } else {
               const c = entry.item;
+              const recurringItem = (data.recurring || []).find((r: any) => r.id === c.recurringId);
+              const isCardCharge = recurringItem?.paymentSource === 'card';
               return (
                 <div className="card-carousel-item" key={c.recurringId + ':' + c.dateKey}>
                 <div className="card">
@@ -546,32 +599,57 @@ export function UpcomingPage() {
                     {formatExpectedTiming(c.dateKey)} • From recurring
                   </div>
                   <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                      onClick={() => {
-                        const initialCents = c.amountCents || 0;
-                        const key = `${c.recurringId}:${c.dateKey}`;
-                        const last = lastAdjustments[key];
-                        setModal({
-                          type: 'adjust-amount',
-                          direction: 'out',
-                          label: c.recurringName,
-                          originalCents: initialCents,
-                          amount: (initialCents / 100).toFixed(2),
-                          error: null,
-                          source: {
-                            kind: 'recurring-cost',
-                            recurringId: c.recurringId,
-                            dateKey: c.dateKey,
-                            lastCents: typeof last === 'number' ? last : undefined
-                          }
-                        } as any);
-                      }}
-                    >
-                      Move to Pending Outbound
-                    </button>
+                    {isCardCharge ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        onClick={() => {
+                          const amountCents = c.amountCents || 0;
+                          actions.addPurchase({
+                            title: c.recurringName,
+                            amountCents,
+                            dateISO: toLocalDateKey(new Date()),
+                            category: recurringItem?.category,
+                            subcategory: recurringItem?.subcategory,
+                            notes: recurringItem?.notes,
+                            applyToSnapshot: !!(recurringItem?.applyToSnapshot && recurringItem?.paymentTargetId),
+                            paymentSource: 'card',
+                            paymentTargetId: recurringItem?.paymentTargetId,
+                          } as any);
+                          actions.markRecurringHandled(c.recurringId, c.dateKey);
+                        }}
+                      >
+                        Purchase Was Charged to Card
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        onClick={() => {
+                          const initialCents = c.amountCents || 0;
+                          const key = `${c.recurringId}:${c.dateKey}`;
+                          const last = lastAdjustments[key];
+                          setModal({
+                            type: 'adjust-amount',
+                            direction: 'out',
+                            label: c.recurringName,
+                            originalCents: initialCents,
+                            amount: (initialCents / 100).toFixed(2),
+                            error: null,
+                            source: {
+                              kind: 'recurring-cost',
+                              recurringId: c.recurringId,
+                              dateKey: c.dateKey,
+                              lastCents: typeof last === 'number' ? last : undefined
+                            }
+                          } as any);
+                        }}
+                      >
+                        Move to Pending Outbound
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn-danger"
@@ -591,24 +669,7 @@ export function UpcomingPage() {
             }
           })}
           </div>
-          {allCostItems.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {allCostItems.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: i === costsCarouselIdx ? 'var(--accent)' : 'var(--border)',
-                    transition: 'background 0.2s',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          <WindowedCarouselDots count={allCostItems.length} current={costsCarouselIdx} />
         </>
       ) : null}
 
@@ -648,33 +709,10 @@ export function UpcomingPage() {
               <label>Title / Label</label>
               <input value={modal.title} onChange={(e) => setModal({ ...modal, title: e.target.value })} placeholder="e.g. Paycheck" />
             </div>
-            <div className="toggle-row">
-              <input
-                type="checkbox"
-                checked={modal.useRange}
-                onChange={(e) => setModal({ ...modal, useRange: e.target.checked })}
-                id="useRange"
-              />
-              <label htmlFor="useRange">Use Range</label>
+            <div className="field">
+              <label>Amount ($)</label>
+              <input value={modal.amount} onChange={(e) => setModal({ ...modal, amount: e.target.value })} inputMode="decimal" placeholder="0.00" />
             </div>
-
-            {!modal.useRange ? (
-              <div className="field">
-                <label>Amount ($)</label>
-                <input value={modal.amount} onChange={(e) => setModal({ ...modal, amount: e.target.value })} inputMode="decimal" placeholder="0.00" />
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div className="field" style={{ flex: 1 }}>
-                  <label>Min Amount ($)</label>
-                  <input value={modal.minAmount} onChange={(e) => setModal({ ...modal, minAmount: e.target.value })} inputMode="decimal" placeholder="0.00" />
-                </div>
-                <div className="field" style={{ flex: 1 }}>
-                  <label>Max Amount ($)</label>
-                  <input value={modal.maxAmount} onChange={(e) => setModal({ ...modal, maxAmount: e.target.value })} inputMode="decimal" placeholder="0.00" />
-                </div>
-              </div>
-            )}
 
             <div className="field">
               <label>Expected Date</label>
@@ -704,9 +742,8 @@ export function UpcomingPage() {
             {(() => {
               const titleOk = modal.title.trim().length > 0;
               const dateOk = modal.date.trim().length > 0;
-              const amountOk = !modal.useRange ? parseCents(modal.amount) > 0 : parseCents(modal.minAmount) > 0 && parseCents(modal.maxAmount) > 0;
-              const rangeOk = !modal.useRange ? true : parseCents(modal.maxAmount) >= parseCents(modal.minAmount);
-              const canSave = titleOk && dateOk && amountOk && rangeOk;
+              const amountOk = parseCents(modal.amount) > 0;
+              const canSave = titleOk && dateOk && amountOk;
               return (
                 <div className="btn-row">
                   <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
@@ -721,10 +758,7 @@ export function UpcomingPage() {
                       const title = modal.title.trim();
                       const expectedDate = modal.date.trim();
                       const notes = modal.notes.trim() || undefined;
-                      const minCents = modal.useRange ? parseCents(modal.minAmount) : null;
-                      const maxCents = modal.useRange ? parseCents(modal.maxAmount) : null;
-                      const amountCents =
-                        modal.useRange && minCents != null && maxCents != null ? Math.round((minCents + maxCents) / 2) : parseCents(modal.amount);
+                      const amountCents = parseCents(modal.amount);
 
                       if (modal.kind === 'income') {
                         const next = [
@@ -734,8 +768,6 @@ export function UpcomingPage() {
                             title,
                             expectedDate,
                             amountCents,
-                            minCents: modal.useRange ? minCents : undefined,
-                            maxCents: modal.useRange ? maxCents : undefined,
                             notes,
                             targetBankId: modal.targetBankId || undefined,
                             status: 'expected' as const
@@ -751,8 +783,6 @@ export function UpcomingPage() {
                             title,
                             expectedDate,
                             amountCents,
-                            minCents: modal.useRange ? minCents : undefined,
-                            maxCents: modal.useRange ? maxCents : undefined,
                             notes,
                             status: 'expected' as const
                           }

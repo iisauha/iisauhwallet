@@ -48,9 +48,9 @@ export function OptimizerResultsSummary({ result }: { result: OptimizerResult })
         Pre-Tax Contributions
       </div>
       <Row label="Pension" value={result.pension_monthly} />
-      <Row label="HCFSA" value={result.hcfsa_monthly} />
+      <Row label="FSA/HSA" value={result.hcfsa_monthly} />
       <Row label="Commuter" value={result.commuter_monthly} />
-      <Row label="457b" value={result.contrib_457b_monthly} />
+      <Row label="Employer Retirement Account (e.g. 401k, 457b)" value={result.contrib_457b_monthly} />
       <Row label="Monthly Taxable Income (AGI)" value={result.agi_monthly} />
       <Row label="Taxes" value={totalTaxesMonthly} />
       <Row label="Fixed Bills" value={totalFixedBillsMonthly} />
@@ -92,9 +92,9 @@ export function OptimizerResults({ result, showExpandedByDefault = false }: Opti
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Pre-Tax Contributions</div>
               <Row label="Pension" value={result.pension_monthly} />
-              <Row label="HCFSA" value={result.hcfsa_monthly} />
+              <Row label="FSA/HSA" value={result.hcfsa_monthly} />
               <Row label="Commuter" value={result.commuter_monthly} />
-              <Row label="457b" value={result.contrib_457b_monthly} />
+              <Row label="Employer Retirement Account (e.g. 401k, 457b)" value={result.contrib_457b_monthly} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>Taxes</div>

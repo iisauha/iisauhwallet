@@ -124,9 +124,14 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
 
       {step === 'form' && (
         <>
-          <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 14 }}>
-            This tool estimates the optimal 457(b) contribution and tax breakdown using your income and fixed expenses.
-          </p>
+          <div style={{ fontSize: '0.88rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 14 }}>
+            <p style={{ margin: '0 0 8px 0' }}>
+              This tool estimates your most optimal contribution to your employer-based retirement account (401k, 457b, or equivalent), factoring in FSA/HSA deductions, commuter benefits, other pre-tax parameters, possible pension plans, and most importantly your fixed monthly expenses entered below.
+            </p>
+            <p style={{ margin: 0, fontStyle: 'italic', fontSize: '0.82rem', opacity: 0.85 }}>
+              Note: This does not account for your employer&apos;s match. The goal is to find how much YOU should contribute each month based on your expenses and pre-tax deductions — not to maximize match. Results are an estimation, not exact.
+            </p>
+          </div>
           <OptimizerForm
             values={formValues}
             onChange={setFormValues}
