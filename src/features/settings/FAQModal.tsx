@@ -4,11 +4,11 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data?',
-    a: 'Yes. All financial data is encrypted with AES-256-GCM. The encryption key is itself protected by your passcode using PBKDF2 (100,000 iterations) — it is never stored in plaintext alongside your data. Exported backup files are also encrypted with your passcode (PBKDF2 + AES-256-GCM). Neither your data nor the key that decrypts it can be read without your passcode.',
+    a: 'Yes. All financial data is encrypted with AES-256-GCM. The encryption key is itself protected by your passcode using PBKDF2 (100,000 iterations). It is never stored in plaintext alongside your data. Exported backup files are also encrypted with your passcode (PBKDF2 + AES-256-GCM). Neither your data nor the key that decrypts it can be read without your passcode.',
   },
   {
     q: 'If someone gets my device, what can they see?',
-    a: 'They need your device unlock code and your app passcode. The financial data in storage is encrypted and the decryption key is passcode-protected, so possessing the device alone is not enough. "Pause protection" only when you are the sole user and want faster access — pausing stores the key in plaintext while disabled.',
+    a: 'They need your device unlock code and your app passcode. The financial data in storage is encrypted and the decryption key is passcode-protected, so possessing the device alone is not enough. "Pause protection" only when you are the sole user and want faster access. Pausing stores the key in plaintext while disabled.',
   },
   {
     q: 'Does the app upload my data to the internet?',

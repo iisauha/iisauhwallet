@@ -140,7 +140,7 @@ export function renderSpendingPieChart(
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: shouldAnimate ? 420 : 0 },
+      animation: { duration: shouldAnimate ? 150 : 0 },
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },

@@ -129,7 +129,7 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
               This tool estimates your most optimal contribution to your employer-based retirement account (401k, 457b, or equivalent), factoring in FSA/HSA deductions, commuter benefits, other pre-tax parameters, possible pension plans, and most importantly your fixed monthly expenses entered below.
             </p>
             <p style={{ margin: 0, fontStyle: 'italic', fontSize: '0.82rem', opacity: 0.85 }}>
-              Note: This does not account for your employer&apos;s match. The goal is to find how much YOU should contribute each month based on your expenses and pre-tax deductions — not to maximize match. Results are an estimation, not exact.
+              Note: This does not account for your employer&apos;s match. The goal is to find how much YOU should contribute each month based on your expenses and pre-tax deductions, not to maximize match. Results are an estimation, not exact.
             </p>
           </div>
           <OptimizerForm

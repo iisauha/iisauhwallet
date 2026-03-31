@@ -129,7 +129,7 @@ export function OptimizerForm({ values, onChange, onSubmit, isRunning, error }: 
         </div>
       </fieldset>
       <div className="field">
-        <label>Public Loans (monthly override) — optional</label>
+        <label>Public Loans (monthly override, optional)</label>
         <input
           type="text"
           inputMode="decimal"

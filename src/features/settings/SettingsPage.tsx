@@ -620,7 +620,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         </p>
         {selectedTabKey && (
           <p style={{ fontSize: '0.78rem', color: 'var(--accent)', margin: '0 0 8px', fontWeight: 600 }}>
-            &ldquo;{TAB_ORDER_ALL.find(t => t.key === selectedTabKey)?.label}&rdquo; selected — tap another tab to swap
+            &ldquo;{TAB_ORDER_ALL.find(t => t.key === selectedTabKey)?.label}&rdquo; selected. Tap another tab to swap
           </p>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>

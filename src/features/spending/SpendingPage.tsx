@@ -769,13 +769,13 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           onClick={() => setPurchasesCollapsed(!purchasesCollapsed)}
         >
           <span className="section-header-left">Purchases</span>
-          {drilldownCategoryId ? (
-            <span style={{ fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 6, fontWeight: 400 }}>
-              showing: {getCategoryName(cfg, drilldownCategoryId)}
-            </span>
-          ) : null}
           <span className="chevron">{purchasesCollapsed ? '▸' : '▾'}</span>
         </div>
+        {drilldownCategoryId ? (
+          <div style={{ fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 400, marginTop: -4, marginBottom: 4, paddingLeft: 8 }}>
+            showing: {getCategoryName(cfg, drilldownCategoryId)}
+          </div>
+        ) : null}
         <button
           type="button"
           className="icon-btn"
