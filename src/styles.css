@@ -44,12 +44,12 @@ body {
   color: var(--ui-primary-text, var(--text));
   font-family: var(--app-font-family);
   overscroll-behavior: none;
+  padding-top: calc(var(--header-h) + var(--safe-top));
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
 }
 /* Lock body scroll whenever ANY modal overlay is present in the DOM */
 body:has(.modal-overlay) {
   overflow: hidden !important;
-  padding-top: calc(var(--header-h) + var(--safe-top));
-  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
 }
 .tabs {
   display: flex;
