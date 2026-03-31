@@ -678,6 +678,7 @@ function CoastFireProjectionChart({
 }
 
 // Module-level refs to prevent re-triggering when component remounts (tab navigation)
+let _lastProcessedTransferTrigger = 0;
 let _lastProcessedHysaAllocTrigger = 0;
 
 export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 0, openHysaAllocAccountId = null }: { openTransferTrigger?: number; openHysaAllocTrigger?: number; openHysaAllocAccountId?: string | null }) {
@@ -776,7 +777,12 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
   );
   const [transferOpen, setTransferOpen] = useState(false);
-  useEffect(() => { if (openTransferTrigger > 0) setTransferOpen(true); }, [openTransferTrigger]);
+  useEffect(() => {
+    if (openTransferTrigger > 0 && openTransferTrigger !== _lastProcessedTransferTrigger) {
+      _lastProcessedTransferTrigger = openTransferTrigger;
+      setTransferOpen(true);
+    }
+  }, [openTransferTrigger]);
   useEffect(() => {
     if (openHysaAllocTrigger > 0 && openHysaAllocTrigger !== _lastProcessedHysaAllocTrigger) {
       _lastProcessedHysaAllocTrigger = openHysaAllocTrigger;
