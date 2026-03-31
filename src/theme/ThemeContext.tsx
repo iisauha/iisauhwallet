@@ -42,9 +42,10 @@ function applyThemeColor(appBackgroundHex: string) {
   root.setProperty('--surface-hover', defaults.surfaceHover);
   root.setProperty('--border', defaults.border);
   root.setProperty('--border-subtle', defaults.borderSubtle);
-  // For light backgrounds, use a dark text color so inputs/text remain readable
-  root.setProperty('--text', isLightHex(appBackgroundHex) ? '#111111' : defaults.text);
-  root.setProperty('--muted', defaults.muted);
+  // For light backgrounds, use dark text/muted colors so inputs/text remain readable
+  const isLight = isLightHex(appBackgroundHex);
+  root.setProperty('--text', isLight ? '#111111' : defaults.text);
+  root.setProperty('--muted', isLight ? '#555555' : defaults.muted);
   root.setProperty('--shadow', defaults.shadow);
   root.setProperty('--shadow-strong', defaults.shadowStrong);
 }
