@@ -458,6 +458,21 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
             bank.balanceCents = (bank.balanceCents || 0) - amount;
             bank.updatedAt = nowIso();
           }
+        } else if (src === 'hysa' && targetId) {
+          const inv = loadInvesting();
+          const idx = inv.accounts.findIndex((a: any) => a.id === targetId && a.type === 'hysa');
+          if (idx !== -1) {
+            const acc = inv.accounts[idx] as any;
+            const now = Date.now();
+            const newBalanceCents = Math.max(0, (acc.balanceCents || 0) - amount);
+            let updated = recordHysaBalanceEvent(acc, now, newBalanceCents);
+            const subBucket = p.hysaSubBucket;
+            if (subBucket === 'reserved') {
+              updated = { ...updated, reservedSavingsCents: Math.max(0, (acc.reservedSavingsCents || 0) - amount) };
+            }
+            inv.accounts = inv.accounts.slice(0, idx).concat([{ ...updated, lastAccruedAt: now }], inv.accounts.slice(idx + 1));
+            saveInvesting(inv);
+          }
         }
       }
 

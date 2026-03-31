@@ -147,8 +147,9 @@ export interface Purchase {
   originalTotal?: number;
 
   applyToSnapshot?: boolean;
-  paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card';
+  paymentSource?: 'card' | 'bank' | 'cash' | 'credit_card' | 'hysa';
   paymentTargetId?: string;
+  hysaSubBucket?: 'liquid' | 'reserved';
 
   /** When true, added via "Add Card Purchase (Full reimbursement expected)"; counts only in Reimbursed/other, not My purchases. */
   fullReimbursementExpected?: boolean;

@@ -137,6 +137,7 @@ export function SnapshotPage({
   onReimbursable,
   onAddRecurring,
   onAddBonus,
+  onAdjustHysaAllocForAccount,
   pendingInTrigger = 0,
   pendingOutTrigger = 0,
 }: {
@@ -145,6 +146,7 @@ export function SnapshotPage({
   onReimbursable?: () => void;
   onAddRecurring?: () => void;
   onAddBonus?: () => void;
+  onAdjustHysaAllocForAccount?: (hysaAccountId: string) => void;
   pendingInTrigger?: number;
   pendingOutTrigger?: number;
 }) {
@@ -336,53 +338,49 @@ export function SnapshotPage({
     });
   }, [activeSection, visibleCards.length]);
 
-  // Dot-indicator index updates only when scroll fully snaps; ResizeObserver tracks current card height
+  // IntersectionObserver fires as soon as ≥50% of a card is visible — no scroll-event lag
   useEffect(() => {
     const el = banksCarouselRef.current;
     if (!el) return;
     let ro: ResizeObserver | null = null;
-    const observeCurrent = () => {
-      ro?.disconnect();
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (!item) return;
-      ro = new ResizeObserver(() => setBanksCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
-      ro.observe(item);
-    };
-    const handler = () => {
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      setBanksIdx(idx);
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (item) setBanksCarouselHeight(item.offsetHeight);
-      observeCurrent();
-    };
-    observeCurrent();
-    el.addEventListener('scrollend', handler);
-    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) {
+            setBanksIdx(idx);
+            setBanksCarouselHeight((entry.target as HTMLElement).offsetHeight);
+            ro?.disconnect();
+            ro = new ResizeObserver(() => setBanksCarouselHeight((entry.target as HTMLElement).offsetHeight));
+            ro.observe(entry.target);
+          }
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => { io.disconnect(); ro?.disconnect(); };
   }, []);
 
   useEffect(() => {
     const el = cardsCarouselRef.current;
     if (!el) return;
     let ro: ResizeObserver | null = null;
-    const observeCurrent = () => {
-      ro?.disconnect();
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (!item) return;
-      ro = new ResizeObserver(() => setCardsCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
-      ro.observe(item);
-    };
-    const handler = () => {
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      setCardsIdx(idx);
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (item) setCardsCarouselHeight(item.offsetHeight);
-      observeCurrent();
-    };
-    observeCurrent();
-    el.addEventListener('scrollend', handler);
-    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) {
+            setCardsIdx(idx);
+            setCardsCarouselHeight((entry.target as HTMLElement).offsetHeight);
+            ro?.disconnect();
+            ro = new ResizeObserver(() => setCardsCarouselHeight((entry.target as HTMLElement).offsetHeight));
+            ro.observe(entry.target);
+          }
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => { io.disconnect(); ro?.disconnect(); };
   }, []);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
@@ -548,6 +546,7 @@ export function SnapshotPage({
           >
             {visibleBanks.map((b) => {
               const linkedLiquid = linkedHysaLiquidByBankId[b.id] || 0;
+              const linkedHysa = hysaAccountsSorted.find((h: any) => h.linkedCheckingBankId === b.id);
               return (
                 <div className="card-carousel-item" key={b.id}>
                   <div className="card ll-account-card">
@@ -576,6 +575,16 @@ export function SnapshotPage({
                       >
                         Add / Set
                       </button>
+                      {linkedHysa && onAdjustHysaAllocForAccount ? (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                          onClick={() => onAdjustHysaAllocForAccount((linkedHysa as any).id)}
+                        >
+                          Adjust Alloc
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="btn clear-btn"

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { IconPlus } from '../../ui/icons';
 import { calcFinalNetCashCents, formatCents, parseCents, toLocalDateKey } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
@@ -48,6 +48,36 @@ export function UpcomingPage() {
   const [costsCarouselIdx, setCostsCarouselIdx] = useState(0);
   const incomeCarouselRef = useRef<HTMLDivElement>(null);
   const costsCarouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = incomeCarouselRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) setIncomeCarouselIdx(idx);
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => io.disconnect();
+  });
+
+  useEffect(() => {
+    const el = costsCarouselRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) setCostsCarouselIdx(idx);
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => io.disconnect();
+  });
   const [modal, setModal] = useState<
     | { type: 'none' }
     | {
@@ -343,10 +373,6 @@ export function UpcomingPage() {
           <div
             className="card-carousel"
             ref={incomeCarouselRef}
-            onScrollCapture={(e) => {
-              const el = e.currentTarget;
-              setIncomeCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
-            }}
           >
           {allIncomeItems.map((entry) => {
             if (entry.kind === 'expected') {
@@ -502,10 +528,6 @@ export function UpcomingPage() {
           <div
             className="card-carousel"
             ref={costsCarouselRef}
-            onScrollCapture={(e) => {
-              const el = e.currentTarget;
-              setCostsCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
-            }}
           >
           {allCostItems.map((entry) => {
             if (entry.kind === 'expected') {
@@ -659,7 +681,7 @@ export function UpcomingPage() {
         <div className="summary-compact">
           <div className="summary-kv">
             <span className="k">Final Net Cash</span>
-            <span className="v pos">{formatCents(displayedFinalNetCashCents)}</span>
+            <span className={displayedFinalNetCashCents < 0 ? 'v neg' : 'v pos'}>{formatCents(displayedFinalNetCashCents)}</span>
           </div>
           <div className="summary-kv">
             <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected income in window</span>

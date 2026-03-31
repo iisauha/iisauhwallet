@@ -680,7 +680,7 @@ function CoastFireProjectionChart({
 // Module-level refs to prevent re-triggering when component remounts (tab navigation)
 let _lastProcessedHysaAllocTrigger = 0;
 
-export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 0 }: { openTransferTrigger?: number; openHysaAllocTrigger?: number }) {
+export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 0, openHysaAllocAccountId = null }: { openTransferTrigger?: number; openHysaAllocTrigger?: number; openHysaAllocAccountId?: string | null }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
   const cfg = useMemo(() => loadCategoryConfig(), []);
@@ -781,13 +781,17 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     if (openHysaAllocTrigger > 0 && openHysaAllocTrigger !== _lastProcessedHysaAllocTrigger) {
       _lastProcessedHysaAllocTrigger = openHysaAllocTrigger;
       const hysaAccounts = investing.accounts.filter(a => a.type === 'hysa') as HysaAccount[];
+      if (openHysaAllocAccountId) {
+        const target = hysaAccounts.find(a => a.id === openHysaAllocAccountId);
+        if (target) { openHysaAllocationModal(target); return; }
+      }
       if (hysaAccounts.length === 1) {
         openHysaAllocationModal(hysaAccounts[0]);
       } else if (hysaAccounts.length > 1) {
         setHysaPickerOpen(true);
       }
     }
-  }, [openHysaAllocTrigger]);
+  }, [openHysaAllocTrigger, openHysaAllocAccountId]);
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
   const [transferAmount, setTransferAmount] = useState('');

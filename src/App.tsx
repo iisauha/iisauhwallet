@@ -257,6 +257,7 @@ function MainApp() {
   const [exportTrigger, setExportTrigger] = useState(0);
   const [investingTransferTrigger, setInvestingTransferTrigger] = useState(0);
   const [investingHysaAllocTrigger, setInvestingHysaAllocTrigger] = useState(0);
+  const [investingHysaAllocAccountId, setInvestingHysaAllocAccountId] = useState<string | null>(null);
 
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {
@@ -343,17 +344,22 @@ function MainApp() {
         onReimbursable={() => { setTab('spending'); setSpendingReimburseAddTrigger((n) => n + 1); }}
         onAddRecurring={() => { setTab('recurring'); setRecurringAddExpenseTrigger((n) => n + 1); }}
         onAddBonus={() => { setTab('subtracker'); setSubtrackerAddTrigger((n) => n + 1); }}
+        onAdjustHysaAllocForAccount={(hysaId) => {
+          setInvestingHysaAllocAccountId(hysaId);
+          setTab('investing');
+          afterMount(() => setInvestingHysaAllocTrigger((n) => n + 1));
+        }}
         pendingInTrigger={snapshotPendingInTrigger}
         pendingOutTrigger={snapshotPendingOutTrigger}
       />
     );
     if (tab === 'upcoming') return <UpcomingPage />;
     if (tab === 'loans') return <LoansPage />;
-    if (tab === 'investing') return <InvestingPage openTransferTrigger={investingTransferTrigger} openHysaAllocTrigger={investingHysaAllocTrigger} />;
+    if (tab === 'investing') return <InvestingPage openTransferTrigger={investingTransferTrigger} openHysaAllocTrigger={investingHysaAllocTrigger} openHysaAllocAccountId={investingHysaAllocAccountId} />;
     if (tab === 'recurring') return <RecurringPage addExpenseTrigger={recurringAddExpenseTrigger} addIncomeTrigger={recurringAddIncomeTrigger} />;
     if (tab === 'subtracker') return <SubTrackerPage addTrigger={subtrackerAddTrigger} />;
     return <SettingsPage exportTrigger={exportTrigger} onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
-  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger, investingTransferTrigger, investingHysaAllocTrigger]);
+  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger, investingTransferTrigger, investingHysaAllocTrigger, investingHysaAllocAccountId]);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', String(index));

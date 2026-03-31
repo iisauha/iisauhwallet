@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { PHYSICAL_CASH_ID } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
-import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadSubTracker } from '../../state/storage';
+import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadSubTracker, loadInvesting } from '../../state/storage';
 import type { SubTrackerEntry } from '../../state/storage';
 import { computeRewardDeltaForPurchase, suggestAllCardsForPurchase, type RewardDelta, type SuggestResult } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
@@ -53,8 +53,13 @@ export function AddPurchaseModal(props: {
   const [isSplit, setIsSplit] = useState(false);
   const [myPortion, setMyPortion] = useState('');
   const [applyToSnapshot, setApplyToSnapshot] = useState(true);
-  const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | 'cash' | ''>('');
+  const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | 'cash' | 'hysa' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
+  const [hysaSubBucket, setHysaSubBucket] = useState<'liquid' | 'reserved'>('liquid');
+  const hysaAccounts = useMemo(() => {
+    const inv = loadInvesting();
+    return (inv.accounts || []).filter((a: any) => a.type === 'hysa');
+  }, []);
   const [suggestedCardsOrder, setSuggestedCardsOrder] = useState<SuggestResult[]>([]);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [showSuggestionPopup, setShowSuggestionPopup] = useState(false);
@@ -281,6 +286,7 @@ export function AddPurchaseModal(props: {
     setApplyToSnapshot(!!p.applyToSnapshot);
     setPaymentSource((p.paymentSource as any) || '');
     setPaymentTargetId(p.paymentTargetId || '');
+    setHysaSubBucket((p as any).hysaSubBucket || 'liquid');
   }
 
   const totalCents = parseCents(amount);
@@ -927,6 +933,7 @@ export function AddPurchaseModal(props: {
                 <option value="card">Credit Card</option>
                 <option value="bank">Cash (Bank)</option>
                 <option value="cash">Physical Cash</option>
+                <option value="hysa">HYSA</option>
               </Select>
             </div>
             {paymentSource === 'card' ? (
@@ -959,6 +966,28 @@ export function AddPurchaseModal(props: {
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: -6, marginBottom: 10 }}>
                 Will apply against Physical Cash ({PHYSICAL_CASH_ID}).
               </div>
+            ) : null}
+            {paymentSource === 'hysa' ? (
+              <>
+                <div className="field">
+                  <label>HYSA Account</label>
+                  <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
+                    <option value="">Select</option>
+                    {hysaAccounts.map((a: any) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}: {formatCents(a.balanceCents || 0)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="field">
+                  <label>HYSA Bucket</label>
+                  <Select value={hysaSubBucket} onChange={(e) => setHysaSubBucket(e.target.value as any)}>
+                    <option value="liquid">Money Designated for Bills</option>
+                    <option value="reserved">Reserved Savings</option>
+                  </Select>
+                </div>
+              </>
             ) : null}
           </>
         ) : null}
@@ -1000,6 +1029,7 @@ export function AddPurchaseModal(props: {
                 purchase.applyToSnapshot = true;
                 purchase.paymentSource = paymentSource === 'cash' ? 'cash' : paymentSource;
                 purchase.paymentTargetId = paymentSource === 'cash' ? PHYSICAL_CASH_ID : paymentTargetId;
+                if (paymentSource === 'hysa') purchase.hysaSubBucket = hysaSubBucket;
                 if (isSplit) {
                   purchase.splitSnapshot = { amountCents: appliedAmount, paymentSource: purchase.paymentSource, paymentTargetId: purchase.paymentTargetId };
                 }

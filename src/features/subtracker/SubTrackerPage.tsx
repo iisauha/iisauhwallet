@@ -452,56 +452,44 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     const el = completedCarouselRef.current;
     if (!el) return;
     let ro: ResizeObserver | null = null;
-    const observeCurrent = () => {
-      ro?.disconnect();
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (!item) return;
-      ro = new ResizeObserver(() => setCompletedCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
-      ro.observe(item);
-    };
-    const scrollHandler = () => {
-      setCompletedCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
-    };
-    const snapHandler = () => {
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      setCompletedCarouselIdx(idx);
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (item) setCompletedCarouselHeight(item.offsetHeight);
-      observeCurrent();
-    };
-    observeCurrent();
-    el.addEventListener('scroll', scrollHandler);
-    el.addEventListener('scrollend', snapHandler);
-    return () => { el.removeEventListener('scroll', scrollHandler); el.removeEventListener('scrollend', snapHandler); ro?.disconnect(); };
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) {
+            setCompletedCarouselIdx(idx);
+            setCompletedCarouselHeight((entry.target as HTMLElement).offsetHeight);
+            ro?.disconnect();
+            ro = new ResizeObserver(() => setCompletedCarouselHeight((entry.target as HTMLElement).offsetHeight));
+            ro.observe(entry.target);
+          }
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => { io.disconnect(); ro?.disconnect(); };
   }, []);
 
   useEffect(() => {
     const el = entriesCarouselRef.current;
     if (!el) return;
     let ro: ResizeObserver | null = null;
-    const observeCurrent = () => {
-      ro?.disconnect();
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (!item) return;
-      ro = new ResizeObserver(() => setEntriesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
-      ro.observe(item);
-    };
-    const scrollHandler = () => {
-      setEntriesCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
-    };
-    const snapHandler = () => {
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      setEntriesCarouselIdx(idx);
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (item) setEntriesCarouselHeight(item.offsetHeight);
-      observeCurrent();
-    };
-    observeCurrent();
-    el.addEventListener('scroll', scrollHandler);
-    el.addEventListener('scrollend', snapHandler);
-    return () => { el.removeEventListener('scroll', scrollHandler); el.removeEventListener('scrollend', snapHandler); ro?.disconnect(); };
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) {
+            setEntriesCarouselIdx(idx);
+            setEntriesCarouselHeight((entry.target as HTMLElement).offsetHeight);
+            ro?.disconnect();
+            ro = new ResizeObserver(() => setEntriesCarouselHeight((entry.target as HTMLElement).offsetHeight));
+            ro.observe(entry.target);
+          }
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => { io.disconnect(); ro?.disconnect(); };
   }, []);
 
   function entryDisplayName(e: SubTrackerEntry) {
@@ -842,11 +830,11 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                 </div>
                 {/* Percentage label */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.75rem', color: 'var(--muted)' }}>
-                  <span>$0</span>
+                  <span>0%</span>
                   <span style={{ color: 'var(--green)', fontWeight: 600 }}>
                     {(ratio * 100).toPrecision(3).replace(/\.?0+$/, '')}%
                   </span>
-                  <span>${(finalTarget / 100).toLocaleString()}</span>
+                  <span>100%</span>
                 </div>
               </div>
             </>) : null}

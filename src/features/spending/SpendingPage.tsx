@@ -29,37 +29,6 @@ function addMonths(d: Date, months: number) {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
 
-function WindowedCarouselDots({ count, current }: { count: number; current: number }) {
-  if (count <= 1) return null;
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 8 }}>
-      {[-2, -1, 0, 1, 2].map((offset) => {
-        const idx = current + offset;
-        const exists = idx >= 0 && idx < count;
-        const isActive = offset === 0;
-        const absOff = Math.abs(offset);
-        const size = isActive ? 8 : absOff === 1 ? 7 : 6;
-        const opacity = !exists ? 0.2 : isActive ? 1 : absOff === 1 ? 0.6 : 0.35;
-        return (
-          <span
-            key={offset}
-            style={{
-              width: size,
-              height: size,
-              borderRadius: '50%',
-              background: isActive ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))',
-              opacity,
-              display: 'inline-block',
-              flexShrink: 0,
-              transition: 'all 0.2s',
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTrigger = 0 }: { tabVisible?: boolean; addTrigger?: number; reimburseAddTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -340,28 +309,31 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     const el = purchasesCarouselRef;
     if (!el) return;
     let ro: ResizeObserver | null = null;
-    const observeCurrent = () => {
+    const observeCurrent = (idx: number) => {
       ro?.disconnect();
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       const item = el.children[idx] as HTMLElement | undefined;
       if (!item) return;
-      ro = new ResizeObserver(() => setPurchasesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight ?? null));
+      ro = new ResizeObserver(() => {
+        const cur = Math.round(el.scrollLeft / (el.clientWidth || 1));
+        setPurchasesCarouselHeight((el.children[cur] as HTMLElement | undefined)?.offsetHeight ?? null);
+      });
       ro.observe(item);
     };
-    const scrollHandler = () => {
-      setPurchasesCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
-    };
-    const snapHandler = () => {
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      setPurchasesCarouselIdx(idx);
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (item) setPurchasesCarouselHeight(item.offsetHeight);
-      observeCurrent();
-    };
-    observeCurrent();
-    el.addEventListener('scroll', scrollHandler);
-    el.addEventListener('scrollend', snapHandler);
-    return () => { el.removeEventListener('scroll', scrollHandler); el.removeEventListener('scrollend', snapHandler); ro?.disconnect(); };
+    // IntersectionObserver fires as soon as ≥50% of a card is visible — no scroll-event lag
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) {
+            setPurchasesCarouselIdx(idx);
+            setPurchasesCarouselHeight((entry.target as HTMLElement).offsetHeight);
+            observeCurrent(idx);
+          }
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => { io.disconnect(); ro?.disconnect(); };
   }, [purchasesCarouselRef]);
 
   useEffect(() => {
@@ -872,19 +844,33 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           )})}
           </div>
           </div>
-          <WindowedCarouselDots count={visiblePurchases.length} current={purchasesCarouselIdx} />
-          {!showAllPurchases && hasMorePurchases && purchasesCarouselIdx >= visiblePurchases.length - 1 ? (
-            <div style={{ textAlign: 'center', marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }}
-                onClick={() => setShowAllPurchases(true)}
-              >
-                See more
-              </button>
+          {showAllPurchases ? (
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+              {purchasesCarouselIdx + 1} of {visiblePurchases.length}
             </div>
-          ) : null}
+          ) : (
+            <>
+              {visiblePurchases.length > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                  {visiblePurchases.map((_, i) => (
+                    <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === purchasesCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
+                  ))}
+                </div>
+              )}
+              {hasMorePurchases && purchasesCarouselIdx >= visiblePurchases.length - 1 ? (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }}
+                    onClick={() => setShowAllPurchases(true)}
+                  >
+                    See more
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       ) : null}
 
