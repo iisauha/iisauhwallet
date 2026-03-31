@@ -1192,24 +1192,22 @@ export function LoansPage() {
     const el = privateCarouselRef.current;
     if (!el) return;
     let ro: ResizeObserver | null = null;
-    const observeCurrent = () => {
-      ro?.disconnect();
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (!item) return;
-      ro = new ResizeObserver(() => setPrivateCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
-      ro.observe(item);
-    };
-    const handler = () => {
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      setPrivateCarouselIdx(idx);
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (item) setPrivateCarouselHeight(item.offsetHeight);
-      observeCurrent();
-    };
-    observeCurrent();
-    el.addEventListener('scrollend', handler);
-    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
+          if (idx >= 0) {
+            setPrivateCarouselIdx(idx);
+            setPrivateCarouselHeight((entry.target as HTMLElement).offsetHeight);
+            ro?.disconnect();
+            ro = new ResizeObserver(() => setPrivateCarouselHeight((entry.target as HTMLElement).offsetHeight));
+            ro.observe(entry.target);
+          }
+        }
+      }
+    }, { root: el, threshold: 0.5 });
+    Array.from(el.children).forEach(child => io.observe(child));
+    return () => { io.disconnect(); ro?.disconnect(); };
   }, []);
 
   const summary = useMemo(() => {

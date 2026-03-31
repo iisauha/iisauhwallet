@@ -434,24 +434,13 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       setCompletedCarouselHeight(undefined);
       return;
     }
-    requestAnimationFrame(() => {
-      const carousel = completedCarouselRef.current;
-      if (!carousel) return;
-      const firstItem = carousel.children[0] as HTMLElement | undefined;
-      if (firstItem) setCompletedCarouselHeight(firstItem.offsetHeight);
-    });
-  }, [completedBonuses.length, completedBonusesCollapsed]);
-
-  useEffect(() => {
-    const carousel = entriesCarouselRef.current;
-    if (!carousel) return;
-    const firstItem = carousel.children[0] as HTMLElement | undefined;
-    if (firstItem) setEntriesCarouselHeight(firstItem.offsetHeight);
-  }, [entries.length]);
-
-  useEffect(() => {
     const el = completedCarouselRef.current;
     if (!el) return;
+    // Set initial height from first visible card
+    requestAnimationFrame(() => {
+      const first = el.children[0] as HTMLElement | undefined;
+      if (first) setCompletedCarouselHeight(first.offsetHeight);
+    });
     let ro: ResizeObserver | null = null;
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -469,14 +458,18 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
     return () => { io.disconnect(); ro?.disconnect(); };
-  }, []);
+  }, [completedBonuses.length, completedBonusesCollapsed]);
 
   useEffect(() => {
     const el = entriesCarouselRef.current;
     if (!el) return;
+    requestAnimationFrame(() => {
+      const first = el.children[0] as HTMLElement | undefined;
+      if (first) setEntriesCarouselHeight(first.offsetHeight);
+    });
     let ro: ResizeObserver | null = null;
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
+    const io = new IntersectionObserver((ioEntries) => {
+      for (const entry of ioEntries) {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
           if (idx >= 0) {
@@ -491,7 +484,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
     return () => { io.disconnect(); ro?.disconnect(); };
-  }, []);
+  }, [entries.length]);
 
   function entryDisplayName(e: SubTrackerEntry) {
     return e.cardRef.type === 'card' ? cardNameById.get(e.cardRef.cardId) || 'Card' : e.cardRef.name || 'Card';
