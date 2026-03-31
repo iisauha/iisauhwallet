@@ -346,7 +346,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
     return () => { io.disconnect(); ro?.disconnect(); };
-  }, [purchasesCarouselRef]);
+  }, [purchasesCarouselRef, visiblePurchases.length]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
