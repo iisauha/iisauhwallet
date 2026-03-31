@@ -348,7 +348,10 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ro = new ResizeObserver(() => setPurchasesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight ?? null));
       ro.observe(item);
     };
-    const handler = () => {
+    const scrollHandler = () => {
+      setPurchasesCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+    };
+    const snapHandler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setPurchasesCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
@@ -356,8 +359,9 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       observeCurrent();
     };
     observeCurrent();
-    el.addEventListener('scrollend', handler);
-    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
+    el.addEventListener('scroll', scrollHandler);
+    el.addEventListener('scrollend', snapHandler);
+    return () => { el.removeEventListener('scroll', scrollHandler); el.removeEventListener('scrollend', snapHandler); ro?.disconnect(); };
   }, [purchasesCarouselRef]);
 
   useEffect(() => {

@@ -350,37 +350,6 @@ function CompletedBonusEditorModal({
   );
 }
 
-function WindowedCarouselDots({ count, current }: { count: number; current: number }) {
-  if (count <= 1) return null;
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 8 }}>
-      {[-2, -1, 0, 1, 2].map((offset) => {
-        const idx = current + offset;
-        const exists = idx >= 0 && idx < count;
-        const isActive = offset === 0;
-        const absOff = Math.abs(offset);
-        const size = isActive ? 8 : absOff === 1 ? 7 : 6;
-        const opacity = !exists ? 0.2 : isActive ? 1 : absOff === 1 ? 0.6 : 0.35;
-        return (
-          <span
-            key={offset}
-            style={{
-              width: size,
-              height: size,
-              borderRadius: '50%',
-              background: isActive ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))',
-              opacity,
-              display: 'inline-block',
-              flexShrink: 0,
-              transition: 'all 0.2s',
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
@@ -491,7 +460,10 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       ro = new ResizeObserver(() => setCompletedCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
       ro.observe(item);
     };
-    const handler = () => {
+    const scrollHandler = () => {
+      setCompletedCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+    };
+    const snapHandler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setCompletedCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
@@ -499,8 +471,9 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       observeCurrent();
     };
     observeCurrent();
-    el.addEventListener('scrollend', handler);
-    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
+    el.addEventListener('scroll', scrollHandler);
+    el.addEventListener('scrollend', snapHandler);
+    return () => { el.removeEventListener('scroll', scrollHandler); el.removeEventListener('scrollend', snapHandler); ro?.disconnect(); };
   }, []);
 
   useEffect(() => {
@@ -515,7 +488,10 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       ro = new ResizeObserver(() => setEntriesCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
       ro.observe(item);
     };
-    const handler = () => {
+    const scrollHandler = () => {
+      setEntriesCarouselIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+    };
+    const snapHandler = () => {
       const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
       setEntriesCarouselIdx(idx);
       const item = el.children[idx] as HTMLElement | undefined;
@@ -523,8 +499,9 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       observeCurrent();
     };
     observeCurrent();
-    el.addEventListener('scrollend', handler);
-    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
+    el.addEventListener('scroll', scrollHandler);
+    el.addEventListener('scrollend', snapHandler);
+    return () => { el.removeEventListener('scroll', scrollHandler); el.removeEventListener('scrollend', snapHandler); ro?.disconnect(); };
   }, []);
 
   function entryDisplayName(e: SubTrackerEntry) {
@@ -623,7 +600,13 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           })}
           </div>
           </div>
-          <WindowedCarouselDots count={completedBonuses.length} current={completedCarouselIdx} />
+          {completedBonuses.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {completedBonuses.map((_, i) => (
+                <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === completedCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
+              ))}
+            </div>
+          )}
           <button
             type="button"
             className="btn btn-add"
@@ -1050,7 +1033,13 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       })}
       </div>
       </div>
-      <WindowedCarouselDots count={entries.length} current={entriesCarouselIdx} />
+      {entries.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+          {entries.map((_, i) => (
+            <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === entriesCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
+          ))}
+        </div>
+      )}
 
       {confirmDelete ? (
         <div className="modal-overlay">

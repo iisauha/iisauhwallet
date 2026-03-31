@@ -24,36 +24,6 @@ import { loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 
-function WindowedCarouselDots({ count, current }: { count: number; current: number }) {
-  if (count <= 1) return null;
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 8 }}>
-      {[-2, -1, 0, 1, 2].map((offset) => {
-        const idx = current + offset;
-        const exists = idx >= 0 && idx < count;
-        const isActive = offset === 0;
-        const absOff = Math.abs(offset);
-        const size = isActive ? 8 : absOff === 1 ? 7 : 6;
-        const opacity = !exists ? 0.2 : isActive ? 1 : absOff === 1 ? 0.6 : 0.35;
-        return (
-          <span
-            key={offset}
-            style={{
-              width: size,
-              height: size,
-              borderRadius: '50%',
-              background: isActive ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))',
-              opacity,
-              display: 'inline-block',
-              flexShrink: 0,
-              transition: 'all 0.2s',
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
 
 function todayKey() {
   const d = new Date();
@@ -483,7 +453,13 @@ export function UpcomingPage() {
             }
           })}
           </div>
-          <WindowedCarouselDots count={allIncomeItems.length} current={incomeCarouselIdx} />
+          {allIncomeItems.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {allIncomeItems.map((_, i) => (
+                <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === incomeCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
+              ))}
+            </div>
+          )}
         </>
       ) : null}
 
@@ -669,7 +645,13 @@ export function UpcomingPage() {
             }
           })}
           </div>
-          <WindowedCarouselDots count={allCostItems.length} current={costsCarouselIdx} />
+          {allCostItems.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+              {allCostItems.map((_, i) => (
+                <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === costsCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
+              ))}
+            </div>
+          )}
         </>
       ) : null}
 
