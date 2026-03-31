@@ -1,5 +1,6 @@
 /* Milestone A/B: keep look/feel close to legacy while refactoring */
-*, *::before, *::after { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
 :root {
   --bg: #1a1a1a;
   --bg-secondary: #202020;
@@ -36,7 +37,10 @@ html {
   font-size: calc(16px * var(--app-font-scale));
   background: var(--bg);
   overscroll-behavior: none;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
 }
+html::-webkit-scrollbar { display: none; }
 body {
   margin: 0;
   min-height: 100dvh;
@@ -44,9 +48,12 @@ body {
   color: var(--ui-primary-text, var(--text));
   font-family: var(--app-font-family);
   overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   padding-top: calc(var(--header-h) + var(--safe-top));
   padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
 }
+body::-webkit-scrollbar { display: none; }
 /* Lock body scroll whenever ANY modal overlay is present in the DOM */
 body:has(.modal-overlay) {
   overflow: hidden !important;
