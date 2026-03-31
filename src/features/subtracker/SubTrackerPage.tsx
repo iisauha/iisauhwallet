@@ -901,7 +901,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   const currentSpendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
                   setSpentInput((currentSpendCents / 100).toFixed(2));
                   // Pre-fill CPP from linked card
-                  const linkedCard = e.cardRef.type === 'card' ? cards.find((c) => c.id === e.cardRef.cardId) : undefined;
+                  const linkedCard = e.cardRef.type === 'card' ? cards.find((c) => c.id === (e.cardRef as { type: 'card'; cardId: string }).cardId) : undefined;
                   const cardCpp = linkedCard?.avgCentsPerPoint ?? linkedCard?.avgCentsPerMile;
                   setCppInput(typeof cardCpp === 'number' && cardCpp > 0 ? String(cardCpp) : '');
                   setEditorEntryId(e.id);
