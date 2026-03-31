@@ -136,7 +136,7 @@ function entryToCompletedBonus(
           ? centsPerUnitOverride
           : 1
         : undefined,
-    completedAt: e.startDate || todayKey(),
+    completedAt: todayKey(),
     notes: undefined
   };
 }
@@ -392,6 +392,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     }
   }, [addTrigger]);
   const [spentInput, setSpentInput] = useState<string>('0.00');
+  const [cppInput, setCppInput] = useState<string>('');
   const [completedEditor, setCompletedEditor] = useState<null | { mode: 'add' } | { mode: 'edit'; id: string }>(null);
   const [completedBonusesCollapsed, setCompletedBonusesCollapsed] = useDropdownCollapsed('sub_tracker_completed_bonuses', false);
   const [rewardAddPrompt, setRewardAddPrompt] = useState<null | {
@@ -899,6 +900,10 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   );
                   const currentSpendCents = typeof e.spendCents === 'number' ? e.spendCents : 0;
                   setSpentInput((currentSpendCents / 100).toFixed(2));
+                  // Pre-fill CPP from linked card
+                  const linkedCard = e.cardRef.type === 'card' ? cards.find((c) => c.id === e.cardRef.cardId) : undefined;
+                  const cardCpp = linkedCard?.avgCentsPerPoint ?? linkedCard?.avgCentsPerMile;
+                  setCppInput(typeof cardCpp === 'number' && cardCpp > 0 ? String(cardCpp) : '');
                   setEditorEntryId(e.id);
                   setEditorOpen(true);
                 }}
@@ -919,7 +924,11 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                 style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', flexShrink: 0 }}
                 onClick={() => {
                   const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
-                  if (!achievedTiers.length) return;
+                  if (!achievedTiers.length) {
+                    const firstTarget = tiers.length ? Math.min(...tiers.map(t => t.spendTargetCents || 0)) : 0;
+                    alert(`Your current spend (${formatCents(spendCents)}) hasn't reached the first milestone target (${formatCents(firstTarget)}). Please adjust your spend amount before completing.`);
+                    return;
+                  }
                   const parsed = achievedTiers
                     .map((t) => parseRewardText(t.rewardText || ''))
                     .filter((p) => p.unitType !== 'other' && p.quantity > 0);
@@ -1155,6 +1164,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           setMonthsWindow('3');
           setTierDrafts([{ id: uid(), spendTarget: '', rewardAmount: '', rewardUnit: 'points' }]);
           setSpentInput('0.00');
+          setCppInput('');
           setConfirmDelete(null);
           setEditorEntryId(null);
           setEditorOpen(true);
@@ -1188,7 +1198,12 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                 setManualName(v.slice('manual:'.length));
               } else if (v.startsWith('card:')) {
                 setCardMode('card');
-                setCardId(v.slice('card:'.length));
+                const cid = v.slice('card:'.length);
+                setCardId(cid);
+                // Auto-fill CPP from card's reward settings
+                const c = cards.find((x) => x.id === cid);
+                const cpp = c?.avgCentsPerPoint ?? c?.avgCentsPerMile;
+                if (typeof cpp === 'number' && cpp > 0) setCppInput(String(cpp));
               }
             }}
           >
@@ -1253,6 +1268,20 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               Enter amount to set total, or +amount to add (e.g. +50).
             </p>
           ) : null}
+        </div>
+
+        <div className="field">
+          <label>Cents per point/mile (CPP)</label>
+          <input
+            className="ll-control"
+            value={cppInput}
+            onChange={(e) => setCppInput(e.target.value)}
+            inputMode="decimal"
+            placeholder="e.g. 1.5"
+          />
+          <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '4px 0 0 0' }}>
+            Used to estimate cash value of points/miles rewards. Leave blank if not applicable.
+          </p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1428,6 +1457,16 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   updatedAt: new Date().toISOString()
                 };
                 persist({ version: 1, entries: [entry, ...entries] });
+              }
+              // Save CPP to linked card if applicable
+              const parsedCpp = parseFloat(cppInput);
+              if (cardMode === 'card' && cardId && Number.isFinite(parsedCpp) && parsedCpp > 0) {
+                const rewardUnit = tierDrafts[0]?.rewardUnit || 'points';
+                if (rewardUnit === 'points') {
+                  actions.updateCardRewardCpp(cardId, { avgCentsPerPoint: parsedCpp });
+                } else if (rewardUnit === 'miles') {
+                  actions.updateCardRewardCpp(cardId, { avgCentsPerMile: parsedCpp });
+                }
               }
               setEditorOpen(false);
             }}
