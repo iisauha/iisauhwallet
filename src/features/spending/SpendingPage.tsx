@@ -305,6 +305,18 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     return parts.join('|');
   };
 
+  // Stable key that changes whenever the visible purchase list identity changes
+  const visiblePurchasesKey = useMemo(
+    () => visiblePurchases.map((p: any) => p.id || '').join(','),
+    [visiblePurchases]
+  );
+
+  // Reset carousel index when the list changes (category drill-down, filter change, etc.)
+  useEffect(() => {
+    setPurchasesCarouselIdx(0);
+    if (purchasesCarouselRef) purchasesCarouselRef.scrollLeft = 0;
+  }, [visiblePurchasesKey]);
+
   const editingPurchase = useMemo(() => {
     if (!editingPurchaseKey) return null;
     const list: any[] = data.purchases || [];
@@ -315,7 +327,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     if (!purchasesCarouselRef) return;
     const firstItem = purchasesCarouselRef.children[0] as HTMLElement | undefined;
     if (firstItem) setPurchasesCarouselHeight(firstItem.offsetHeight);
-  }, [purchasesCarouselRef, visiblePurchases.length]);
+  }, [purchasesCarouselRef, visiblePurchasesKey]);
 
   useEffect(() => {
     const el = purchasesCarouselRef;
@@ -346,7 +358,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     }, { root: el, threshold: 0.5 });
     Array.from(el.children).forEach(child => io.observe(child));
     return () => { io.disconnect(); ro?.disconnect(); };
-  }, [purchasesCarouselRef, visiblePurchases.length]);
+  }, [purchasesCarouselRef, visiblePurchasesKey]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
