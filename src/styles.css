@@ -42,6 +42,11 @@ body {
   background: var(--bg);
   color: var(--ui-primary-text, var(--text));
   font-family: var(--app-font-family);
+}
+/* Lock body scroll whenever ANY modal overlay is present in the DOM */
+body:has(.modal-overlay) {
+  overflow: hidden !important;
+  touch-action: none;
   padding-top: calc(var(--header-h) + var(--safe-top));
   padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
 }
@@ -510,6 +515,7 @@ input[type="date"].ll-control:focus {
   border: 1px solid var(--ui-border, var(--border));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: auto;
   animation: llModalIn 0.38s ease-out;
   box-shadow: var(--shadow-strong);
 }
