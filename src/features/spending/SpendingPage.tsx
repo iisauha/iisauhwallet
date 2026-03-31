@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
-import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry } from '../../state/storage';
+import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry, loadInvesting } from '../../state/storage';
 import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
@@ -244,16 +244,28 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   const byCard = useMemo(() => {
     const bankById = new Map<string, string>((data.banks || []).map((b) => [b.id, b.name || 'Bank']));
     const cardById = new Map<string, string>((data.cards || []).map((c) => [c.id, c.name || 'Card']));
+    const inv = loadInvesting();
+    const hysaById = new Map<string, string>((inv.accounts || []).filter((a: any) => a.type === 'hysa').map((a: any) => [a.id, a.name || 'HYSA']));
     const map = new Map<string, number>();
     filteredPurchases.forEach((p: any) => {
       const targetId = (p.paymentTargetId || '') as string;
       const src = (p.paymentSource || '') as string;
-      const name =
-        targetId && (src === 'card' || src === 'credit_card')
-          ? cardById.get(targetId) || 'Unknown / Not specified'
-          : targetId && (src === 'bank' || src === 'cash')
-            ? bankById.get(targetId) || 'Unknown / Not specified'
-            : 'Unknown / Not specified';
+      let name: string;
+      if (targetId && (src === 'card' || src === 'credit_card')) {
+        name = cardById.get(targetId) || 'Credit Card';
+      } else if (targetId && (src === 'bank' || src === 'cash')) {
+        name = bankById.get(targetId) || (src === 'cash' ? 'Physical Cash' : 'Bank');
+      } else if (src === 'hysa' && targetId) {
+        name = 'HYSA — ' + (hysaById.get(targetId) || 'HYSA');
+      } else if (src === 'hysa') {
+        name = 'HYSA';
+      } else if (src === 'cash') {
+        name = 'Physical Cash';
+      } else if (src) {
+        name = src.charAt(0).toUpperCase() + src.slice(1);
+      } else {
+        name = 'Not specified';
+      }
       map.set(name, (map.get(name) || 0) + (p.amountCents || 0));
     });
     return Array.from(map.entries())
@@ -496,7 +508,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       </div> : null}
 
       <p className="section-title page-title" style={{ marginTop: 4 }}>
-        {view === 'category' ? 'Spending distribution' : view === 'card' ? 'Spending by card' : 'Rewards overview'}
+        {view === 'category' ? 'Spending distribution' : view === 'card' ? 'Spending by payment source' : 'Rewards overview'}
       </p>
       <div className="card" style={view === 'category' ? { position: 'relative' } : undefined}>
         {view === 'category' ? (
