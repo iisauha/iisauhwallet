@@ -35,6 +35,7 @@ html {
   -webkit-tap-highlight-color: transparent;
   font-size: calc(16px * var(--app-font-scale));
   background: var(--bg);
+  overscroll-behavior: none;
 }
 body {
   margin: 0;
@@ -42,6 +43,7 @@ body {
   background: var(--bg);
   color: var(--ui-primary-text, var(--text));
   font-family: var(--app-font-family);
+  overscroll-behavior: none;
 }
 /* Lock body scroll whenever ANY modal overlay is present in the DOM */
 body:has(.modal-overlay) {
