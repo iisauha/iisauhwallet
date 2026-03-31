@@ -771,11 +771,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           <span className="section-header-left">Purchases</span>
           <span className="chevron">{purchasesCollapsed ? '▸' : '▾'}</span>
         </div>
-        {drilldownCategoryId ? (
-          <div style={{ fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 400, marginTop: -4, marginBottom: 4, paddingLeft: 8 }}>
-            showing: {getCategoryName(cfg, drilldownCategoryId)}
-          </div>
-        ) : null}
         <button
           type="button"
           className="icon-btn"
@@ -805,6 +800,11 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
+          {drilldownCategoryId ? (
+            <div style={{ fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500, marginBottom: 8, paddingLeft: 2 }}>
+              Only Showing {getCategoryName(cfg, drilldownCategoryId)} purchases
+            </div>
+          ) : null}
           <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden' } : {}}>
           <div
             className="card-carousel"
