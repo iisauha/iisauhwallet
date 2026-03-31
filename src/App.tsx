@@ -347,7 +347,7 @@ function MainApp() {
         onAdjustHysaAllocForAccount={(hysaId) => {
           setInvestingHysaAllocAccountId(hysaId);
           setTab('investing');
-          afterMount(() => setInvestingHysaAllocTrigger((n) => n + 1));
+          setTimeout(() => setInvestingHysaAllocTrigger((n) => n + 1), 30);
         }}
         pendingInTrigger={snapshotPendingInTrigger}
         pendingOutTrigger={snapshotPendingOutTrigger}
