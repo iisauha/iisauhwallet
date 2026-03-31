@@ -843,6 +843,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     amount: string;
     useSet: boolean;
     hysaInterest: string;
+    hysaBucket: 'liquid' | 'reserved';
   } | null>(null);
 
   const [coastFireOpen, setCoastFireOpen] = useState(false);
@@ -1049,6 +1050,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
       amount: '',
       useSet: false,
       hysaInterest: '',
+      hysaBucket: 'liquid',
     });
   }
 
@@ -1092,10 +1094,14 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
       const accounts = state.accounts.map((a) => {
         if (a.id !== raw.id) return a;
         if (a.type === 'hysa') {
-          return {
+          let next = {
             ...(recordHysaBalanceEvent(a as HysaAccount, now, newBal) as HysaAccount),
             lastAccruedAt: now,
           };
+          if (balanceModal.hysaBucket === 'reserved') {
+            next = { ...next, reservedSavingsCents: ((a as HysaAccount).reservedSavingsCents || 0) + cents };
+          }
+          return next;
         }
         return { ...a, balanceCents: newBal };
       });
@@ -1698,6 +1704,18 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   inputMode="decimal"
                   placeholder="Leave blank to keep current"
                 />
+              </div>
+            ) : null}
+            {balanceModal.acc.type === 'hysa' && !balanceModal.useSet ? (
+              <div className="field">
+                <label>Add to which bucket?</label>
+                <Select
+                  value={balanceModal.hysaBucket}
+                  onChange={(e) => setBalanceModal({ ...balanceModal, hysaBucket: e.target.value as 'liquid' | 'reserved' })}
+                >
+                  <option value="liquid">Money Designated for Bills</option>
+                  <option value="reserved">Reserved Savings</option>
+                </Select>
               </div>
             ) : null}
             <div className="btn-row">
