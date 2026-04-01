@@ -120,32 +120,11 @@ function CoastFireInfoIcon({
       >
         i
       </button>
-      {open ? (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'fixed',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            minWidth: 260,
-            maxWidth: 320,
-            width: 'max-content',
-            padding: '12px 14px',
-            background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
-            border: '1px solid var(--ui-border, var(--border))',
-            borderRadius: 8,
-            fontSize: '0.8rem',
-            lineHeight: 1.4,
-            color: 'var(--ui-primary-text, var(--text))',
-            zIndex: 10001,
-            boxShadow: 'var(--shadow-strong)',
-            whiteSpace: 'pre-line'
-          }}
-        >
+      <Modal open={open} fullscreen title="Info" onClose={() => onToggle('')}>
+        <div style={{ fontSize: '0.88rem', lineHeight: 1.55, color: 'var(--ui-primary-text, var(--text))', whiteSpace: 'pre-line' }}>
           {content}
         </div>
-      ) : null}
+      </Modal>
     </span>
   );
 }
@@ -377,17 +356,6 @@ function CoastFireResultView({
 
   return (
     <>
-      {coastFireTooltipId ? (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 10000,
-            background: 'transparent'
-          }}
-          onClick={() => setCoastFireTooltipId(null)}
-        />
-      ) : null}
       <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', marginTop: 0 }}>
         Coast FIRE means you already have enough invested today that, even if you stop making new
         retirement contributions, your investments could still grow to your retirement target by
