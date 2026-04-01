@@ -516,9 +516,16 @@ input[type="date"].ll-control:focus {
 }
 .modal-overlay.modal-overlay--fullscreen {
   padding: 0;
+  top: calc(var(--header-h) + var(--safe-top));
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+  left: 0;
+  right: 0;
   align-items: stretch;
   justify-content: stretch;
   overflow: hidden;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .modal {
   width: 100%;
@@ -541,9 +548,12 @@ input[type="date"].ll-control:focus {
   border-radius: 0;
   border: none;
   box-shadow: none;
-  padding-top: max(20px, env(safe-area-inset-top));
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-top: 20px;
+  padding-bottom: 16px;
   animation: llModalIn 0.28s ease-out;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .modal-header {
   display: flex;
