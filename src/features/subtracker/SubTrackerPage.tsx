@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { useLedgerStore } from '../../state/store';
 import {
   loadSubTracker,
@@ -505,6 +506,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
               const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
               setCompletedCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              scheduleSnapCorrection(el);
             }}
           >
           {displayedCompleted.map((b) => {
@@ -638,6 +640,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
           const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
           setEntriesCarouselHeight(Math.round(lh + (rh - lh) * progress));
+          scheduleSnapCorrection(el);
         }}
       >
       {displayedEntries.map((e) => {

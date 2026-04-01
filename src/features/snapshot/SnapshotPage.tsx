@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
@@ -504,6 +505,7 @@ export function SnapshotPage({
               const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
               const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
               setBanksCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              scheduleSnapCorrection(el);
             }}
           >
             {displayedBanks.map((b) => {
@@ -640,6 +642,7 @@ export function SnapshotPage({
               const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
               const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
               setCardsCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              scheduleSnapCorrection(el);
             }}
           >
             {displayedCards.map((c) => {

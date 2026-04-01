@@ -24,6 +24,7 @@ import { loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 import { useDialog } from '../../ui/DialogProvider';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { computeRewardDeltaForPurchase, type RewardDelta } from '../rewards/rewardMatching';
 import { createPortal } from 'react-dom';
 
@@ -407,6 +408,7 @@ export function UpcomingPage() {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
               setIncomeCarouselIdx(Math.round(rawIdx));
+              scheduleSnapCorrection(el);
             }}
           >
           {displayedIncome.map((entry) => {
@@ -584,6 +586,7 @@ export function UpcomingPage() {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
               setCostsCarouselIdx(Math.round(rawIdx));
+              scheduleSnapCorrection(el);
             }}
           >
           {displayedCosts.map((entry) => {

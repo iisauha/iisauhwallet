@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
@@ -403,6 +404,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
                 const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
                 setExpenseCatHeight((prev) => ({ ...prev, [catId]: Math.round(lh + (rh - lh) * progress) }));
+                scheduleSnapCorrection(el);
               }}
             >
             {displayedItems.map((r: any) => (

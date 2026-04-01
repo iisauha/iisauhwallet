@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem } from '../../state/models';
 import { formatCents } from '../../state/calc';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 
 function escapeText(s: string): string {
   return s;
@@ -49,6 +50,7 @@ function useCarouselScroll() {
     const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
     const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
     setHeight(Math.round(lh + (rh - lh) * progress));
+    scheduleSnapCorrection(el);
   }, []);
 
   return { ref, idx, height, onScroll };

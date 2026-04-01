@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLedgerStore } from '../../state/store';
 import { formatCents } from '../../state/calc';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import {
   loadLoans,
   saveLoans,
@@ -1527,6 +1528,7 @@ export function LoansPage() {
               const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
               const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
               setPrivateCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              scheduleSnapCorrection(el);
             }}
           >
           {displayedLoans.map((l) => (

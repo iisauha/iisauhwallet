@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import {
   type PublicLoanSummary,
   loadPublicLoanSummary,
@@ -164,6 +165,7 @@ export function PublicLoanSimpleCard(props: {
           const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
           const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
           setPublicCarouselHeight(Math.round(lh + (rh - lh) * progress));
+          scheduleSnapCorrection(el);
         }}
       >
         {/* Card 1: FSA link, payment entry, payment actions */}

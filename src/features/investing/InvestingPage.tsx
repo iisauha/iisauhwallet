@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { IconPlus } from '../../ui/icons';
 import {
   loadInvesting,
@@ -1483,6 +1484,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
             const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
             setCarouselHeight(Math.round(lh + (rh - lh) * progress));
+            scheduleSnapCorrection(el);
           }}
         >
         {visibleAccounts.map((a) => {

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry, loadInvesting } from '../../state/storage';
 import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
@@ -783,6 +784,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
               const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
               setPurchasesCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              scheduleSnapCorrection(el);
             }}
           >
           {visiblePurchases.map((p: any) => {
