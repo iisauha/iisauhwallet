@@ -16,7 +16,7 @@ function GuideDropdown({ title, children }: { title: string; children: ReactNode
     >
       <summary
         style={{
-          padding: '12px 14px',
+          padding: '10px 14px',
           cursor: 'pointer',
           fontWeight: 600,
           fontSize: '0.95rem',
@@ -28,9 +28,9 @@ function GuideDropdown({ title, children }: { title: string; children: ReactNode
       </summary>
       <div
         style={{
-          padding: '0 14px 14px',
-          fontSize: '0.9rem',
-          lineHeight: 1.55,
+          padding: '0 14px 10px',
+          fontSize: '0.88rem',
+          lineHeight: 1.45,
           color: ALL_OTHER_TEXT_COLOR,
           fontFamily: 'var(--app-font-family)',
         }}
@@ -43,7 +43,7 @@ function GuideDropdown({ title, children }: { title: string; children: ReactNode
 
 function B({ children }: { children: ReactNode }) {
   return (
-    <ul style={{ margin: '0 0 12px 0', paddingLeft: 18, color: ALL_OTHER_TEXT_COLOR }}>
+    <ul style={{ margin: '0 0 8px 0', paddingLeft: 18, color: ALL_OTHER_TEXT_COLOR }}>
       {children}
     </ul>
   );
@@ -51,7 +51,7 @@ function B({ children }: { children: ReactNode }) {
 
 function Li({ children }: { children: ReactNode }) {
   return (
-    <li style={{ marginBottom: 8, color: ALL_OTHER_TEXT_COLOR }}>
+    <li style={{ marginBottom: 5, color: ALL_OTHER_TEXT_COLOR }}>
       {children}
     </li>
   );
@@ -75,7 +75,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
           color: ALL_OTHER_TEXT_COLOR,
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: 8,
           fontFamily: 'var(--app-font-family)',
         }}
       >

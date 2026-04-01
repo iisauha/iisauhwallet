@@ -1329,6 +1329,8 @@ textarea.ll-control {
 
 /* ─── UI Consistency — Card press state ──────────────────────────── */
 .card:active { transform: scale(0.97); }
+.card.card-no-press:active { transform: none; }
+.card.card-no-press:hover { transform: none; background: var(--ui-card-bg, var(--surface)); box-shadow: var(--shadow); }
 .stat-tile:active { transform: scale(0.97); }
 
 /* ─── Recent Activity Widget ──────────────────────────────────────── */

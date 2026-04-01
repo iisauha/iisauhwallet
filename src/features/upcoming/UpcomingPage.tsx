@@ -292,17 +292,33 @@ export function UpcomingPage() {
               <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>days</span>
             </div>
           ) : (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-              onClick={() => {
-                setShowCustomInput(true);
-                setCustomDaysInput(String(windowDays));
+            <select
+              value={[7, 14, 21, 30, 60, 90].includes(windowDays) ? String(windowDays) : 'custom'}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'custom') {
+                  setShowCustomInput(true);
+                  setCustomDaysInput(String(windowDays));
+                } else {
+                  const v = parseInt(val, 10);
+                  setWindowDays(v);
+                  saveUpcomingWindowPreference({ days: v });
+                }
               }}
+              style={{ fontSize: '0.82rem', padding: '6px 10px', borderRadius: 10, border: '1px solid var(--ui-border, var(--border))', background: 'var(--ui-surface-secondary, var(--surface))', color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)', minHeight: 'unset', cursor: 'pointer' }}
             >
-              {windowDays} days
-            </button>
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="21">21 days</option>
+              <option value="30">30 days</option>
+              <option value="60">60 days</option>
+              <option value="90">90 days</option>
+              {![7, 14, 21, 30, 60, 90].includes(windowDays) ? (
+                <option value="custom">{windowDays} days</option>
+              ) : (
+                <option value="custom">Custom…</option>
+              )}
+            </select>
           )}
         </div>
       </div>

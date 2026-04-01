@@ -151,6 +151,12 @@ export function renderSpendingPieChart(
           const idx = elements[0].index;
           if (idx >= 0 && idx < slices.length) onSliceClick(slices[idx].categoryId);
         }
+      },
+      elements: {
+        arc: {
+          hoverBackgroundColor: (ctx: any) => colors[ctx.dataIndex],
+          hoverBorderWidth: 0,
+        }
       }
     }
   });

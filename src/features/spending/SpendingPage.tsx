@@ -493,15 +493,12 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       <p className="section-title page-title" style={{ marginTop: 4 }}>
         {view === 'category' ? 'Spending distribution' : view === 'card' ? 'Spending by payment source' : 'Rewards overview'}
       </p>
-      <div className="card" style={view === 'category' ? { position: 'relative' } : undefined}>
+      <div className={view === 'category' ? 'card card-no-press' : 'card'} style={view === 'category' ? { position: 'relative' } : undefined}>
         {view === 'category' ? (
           <>
             <div
               className="spending-chart-wrap"
-              style={{ position: 'relative', width: '100%', height: 260 }}
-              onClick={(e) => {
-                if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
-              }}
+              style={{ position: 'relative', width: '100%', height: 230 }}
             >
               <canvas ref={canvasRef} />
             </div>
@@ -707,7 +704,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
 
 
       {view === 'category' && drilldownCategoryId ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
           <button
             type="button"
             className="snapshot-util-btn"
