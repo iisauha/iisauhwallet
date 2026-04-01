@@ -681,7 +681,7 @@ export function UpcomingPage() {
                           const fullAmountCents = c.fullAmountCents || c.amountCents || 0;
                           const userPortionCents = isSplitRec ? (c.myPortionCents ?? c.amountCents ?? 0) : fullAmountCents;
                           const splitInboundCents = isSplitRec ? fullAmountCents - userPortionCents : 0;
-                          const shouldApply = !!(recurringItem?.applyToSnapshot && recurringItem?.paymentTargetId);
+                          const shouldApply = !!recurringItem?.paymentTargetId;
 
                           const purchase: any = {
                             title: c.recurringName,
