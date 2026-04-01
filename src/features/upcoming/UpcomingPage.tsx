@@ -66,6 +66,10 @@ export function UpcomingPage() {
         minAmount: string;
         maxAmount: string;
         targetBankId: string;
+        targetHysaId: string;
+        hysaSubBucket: 'liquid' | 'reserved';
+        paymentSource: 'bank' | 'card' | '';
+        paymentTargetId: string;
       }
      | {
          type: 'adjust-amount';
@@ -354,6 +358,10 @@ export function UpcomingPage() {
                   minAmount: '',
                   maxAmount: '',
                   targetBankId: '',
+                  targetHysaId: '',
+                  hysaSubBucket: 'liquid',
+                  paymentSource: '',
+                  paymentTargetId: '',
                 });
               }}
             >
@@ -527,6 +535,10 @@ export function UpcomingPage() {
                   minAmount: '',
                   maxAmount: '',
                   targetBankId: '',
+                  targetHysaId: '',
+                  hysaSubBucket: 'liquid',
+                  paymentSource: '',
+                  paymentTargetId: '',
                 });
               }}
             >
@@ -556,26 +568,53 @@ export function UpcomingPage() {
                   </div>
                   <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>{formatExpectedTiming(c.expectedDate)}</div>
                   <div className="btn-row" style={{ flexWrap: 'nowrap', gap: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                    {c.paymentSource === 'card' ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => {
-                          const initialCents = c.amountCents || 0;
-                          const last = lastAdjustments[c.id];
-                          setModal({
-                            type: 'adjust-amount',
-                            direction: 'out',
-                            label: c.title,
-                            originalCents: initialCents,
-                            amount: (initialCents / 100).toFixed(2),
-                            error: null,
-                            source: { kind: 'expected-cost', id: c.id, lastCents: typeof last === 'number' ? last : undefined }
+                          const amountCents = c.amountCents || 0;
+                          actions.addPurchase({
+                            title: c.title,
+                            amountCents,
+                            dateISO: toLocalDateKey(new Date()),
+                            notes: c.notes,
+                            applyToSnapshot: !!c.paymentTargetId,
+                            paymentSource: 'card',
+                            paymentTargetId: c.paymentTargetId,
                           } as any);
+                          const next = expectedCosts.map((x) =>
+                            x.id === c.id ? { ...x, status: 'moved_to_pending' as const } : x
+                          );
+                          setExpectedCosts(next);
+                          saveExpectedCosts(next);
                         }}
-                    >
-                      Move to Pending Outbound
-                    </button>
+                      >
+                        Purchase Was Charged to Card
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                          onClick={() => {
+                            const initialCents = c.amountCents || 0;
+                            const last = lastAdjustments[c.id];
+                            setModal({
+                              type: 'adjust-amount',
+                              direction: 'out',
+                              label: c.title,
+                              originalCents: initialCents,
+                              amount: (initialCents / 100).toFixed(2),
+                              error: null,
+                              source: { kind: 'expected-cost', id: c.id, lastCents: typeof last === 'number' ? last : undefined }
+                            } as any);
+                          }}
+                      >
+                        Move to Pending Outbound
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn-danger"
@@ -731,10 +770,17 @@ export function UpcomingPage() {
         </div>
       </div>
 
-      {modal.type === 'add-expected' ? (
-        <div className="modal-overlay">
+      {modal.type === 'add-expected' ? (() => {
+        const hysaAccounts = loadInvesting().accounts.filter((a: any) => a.type === 'hysa');
+        return (
+        <div className="modal-overlay modal-overlay--fullscreen">
           <div className="modal">
-            <h3>{modal.kind === 'income' ? 'Add Expected Income' : 'Add Expected Cost'}</h3>
+            <div className="modal-header modal-header--sticky">
+              <h3 style={{ margin: 0, flex: 1 }}>{modal.kind === 'income' ? 'Add Expected Income' : 'Add Expected Cost'}</h3>
+              <button type="button" aria-label="Close" onClick={() => setModal({ type: 'none' })} className="modal-close-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
             <div className="field">
               <label>Title / Label</label>
               <input value={modal.title} onChange={(e) => setModal({ ...modal, title: e.target.value })} placeholder="e.g. Paycheck" />
@@ -755,15 +801,87 @@ export function UpcomingPage() {
             </div>
 
             {modal.kind === 'income' && (
+              <>
+                <div className="field">
+                  <label>Deposit to bank</label>
+                  <Select
+                    value={modal.targetBankId}
+                    onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}
+                  >
+                    <option value="">Select bank...</option>
+                    {(data.banks || []).map((b: any) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </Select>
+                </div>
+                {hysaAccounts.length > 0 && (
+                  <div className="field">
+                    <label>Deposit to HYSA (optional)</label>
+                    <Select
+                      value={modal.targetHysaId}
+                      onChange={(e) => setModal({ ...modal, targetHysaId: e.target.value })}
+                    >
+                      <option value="">None</option>
+                      {hysaAccounts.map((a: any) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+                {modal.targetHysaId && (
+                  <div className="field">
+                    <label>HYSA Bucket</label>
+                    <Select
+                      value={modal.hysaSubBucket}
+                      onChange={(e) => setModal({ ...modal, hysaSubBucket: e.target.value as 'liquid' | 'reserved' })}
+                    >
+                      <option value="liquid">Bills (Liquid)</option>
+                      <option value="reserved">Reserved (Savings)</option>
+                    </Select>
+                  </div>
+                )}
+              </>
+            )}
+
+            {modal.kind === 'cost' && (
               <div className="field">
-                <label>Deposit to bank</label>
+                <label>Payment source</label>
                 <Select
-                  value={modal.targetBankId}
-                  onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}
+                  value={modal.paymentSource}
+                  onChange={(e) => setModal({ ...modal, paymentSource: e.target.value as any, paymentTargetId: '' })}
+                >
+                  <option value="">None</option>
+                  <option value="bank">Bank account</option>
+                  <option value="card">Credit card</option>
+                </Select>
+              </div>
+            )}
+
+            {modal.kind === 'cost' && modal.paymentSource === 'bank' && (
+              <div className="field">
+                <label>From bank account</label>
+                <Select
+                  value={modal.paymentTargetId}
+                  onChange={(e) => setModal({ ...modal, paymentTargetId: e.target.value })}
                 >
                   <option value="">Select bank...</option>
                   {(data.banks || []).map((b: any) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
+            {modal.kind === 'cost' && modal.paymentSource === 'card' && (
+              <div className="field">
+                <label>Charged to card</label>
+                <Select
+                  value={modal.paymentTargetId}
+                  onChange={(e) => setModal({ ...modal, paymentTargetId: e.target.value })}
+                >
+                  <option value="">Select card...</option>
+                  {(data.cards || []).map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </Select>
               </div>
@@ -800,6 +918,8 @@ export function UpcomingPage() {
                             amountCents,
                             notes,
                             targetBankId: modal.targetBankId || undefined,
+                            targetHysaId: modal.targetHysaId || undefined,
+                            hysaSubBucket: modal.targetHysaId ? modal.hysaSubBucket : undefined,
                             status: 'expected' as const
                           }
                         ];
@@ -814,6 +934,8 @@ export function UpcomingPage() {
                             expectedDate,
                             amountCents,
                             notes,
+                            paymentSource: modal.paymentSource || undefined,
+                            paymentTargetId: modal.paymentTargetId || undefined,
                             status: 'expected' as const
                           }
                         ];
@@ -830,7 +952,8 @@ export function UpcomingPage() {
             })()}
           </div>
         </div>
-      ) : null}
+        );
+      })() : null}
       {modal.type === 'adjust-amount' ? (
         <div className="modal-overlay">
           <div className="modal">

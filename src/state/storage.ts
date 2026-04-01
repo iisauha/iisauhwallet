@@ -681,6 +681,8 @@ export type ExpectedCost = {
   maxCents?: number | null;
   notes?: string;
   status?: 'expected' | 'moved_to_pending';
+  paymentSource?: 'bank' | 'card';
+  paymentTargetId?: string;
 };
 
 export type ExpectedIncome = {
@@ -692,6 +694,8 @@ export type ExpectedIncome = {
   maxCents?: number | null;
   notes?: string;
   status?: 'expected' | 'moved_to_pending';
+  targetHysaId?: string;
+  hysaSubBucket?: 'liquid' | 'reserved';
 };
 
 export function loadExpectedCosts(): ExpectedCost[] {

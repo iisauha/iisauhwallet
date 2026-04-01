@@ -521,15 +521,13 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
 
 
       {open ? (
-        <div className="modal-overlay">
+        <div className="modal-overlay modal-overlay--fullscreen">
           <div className="modal">
-            <h3>Recurring Item</h3>
-            <div className="field">
-              <label>Type</label>
-              <Select value={type} onChange={(e) => setType(e.target.value as any)}>
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-              </Select>
+            <div className="modal-header modal-header--sticky">
+              <h3 style={{ margin: 0, flex: 1 }}>{type === 'income' ? 'Recurring Income' : 'Recurring Expense'}</h3>
+              <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="modal-close-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
             </div>
             <div className="field">
               <label>Name / Merchant</label>

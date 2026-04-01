@@ -741,7 +741,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         </div>
         <button
           type="button"
-          className="icon-btn"
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--ui-primary-text, var(--text))', display: 'inline-flex', alignItems: 'center' }}
           onClick={() => {
             setSearchOpen((v) => !v);
             if (searchOpen) setSearchQuery('');
