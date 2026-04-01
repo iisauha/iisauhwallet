@@ -727,18 +727,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const k401CarouselRef = useRef<HTMLDivElement>(null);
   const [showAllInvesting, setShowAllInvesting] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      const initHeight = (ref: React.RefObject<HTMLDivElement>, set: (h: number | undefined) => void) => {
-        const first = ref.current?.children[0] as HTMLElement | undefined;
-        if (first) set(first.offsetHeight);
-      };
-      initHeight(hysaCarouselRef, setHysaCarouselHeight);
-      initHeight(generalCarouselRef, setGeneralCarouselHeight);
-      initHeight(rothCarouselRef, setRothCarouselHeight);
-      initHeight(k401CarouselRef, setK401CarouselHeight);
-    });
-  }, []);
 
 
   const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
@@ -1503,7 +1491,15 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
         </div>
         <div style={carouselHeight != null ? { height: carouselHeight, overflow: 'hidden' } : {}}>
         <div
-          ref={carouselRef}
+          ref={(el) => {
+            (carouselRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+            if (el && carouselHeight == null) {
+              requestAnimationFrame(() => {
+                const first = el.children[0] as HTMLElement | undefined;
+                if (first) setCarouselHeight(first.offsetHeight);
+              });
+            }
+          }}
           className="card-carousel"
           style={{ marginBottom: 0 }}
           onScroll={(e) => {
