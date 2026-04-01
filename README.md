@@ -83,9 +83,9 @@ This is your main financial dashboard and the first thing you see when you open 
 
 **Credit Cards section:** Same idea: shows all your credit cards and their current balances (what you owe). Swipe through cards. Tap **+ Add** to add a new card. Tap a card to edit its balance or set up reward tracking (cashback, miles, or points) for spending suggestions.
 
-**Pending Inbound section:** Money that is on its way to you but has not arrived yet. For example: a transfer you sent from a bank that takes 2-3 days, a Venmo payment someone owes you, or a paycheck that cleared but you have not updated the balance yet. Tap **+ Add** to create a pending item. When the money actually arrives, tap **Post** and choose which account it goes into. The balance updates automatically.
+**Pending Inbound section:** Money that is on its way to you but has not arrived yet. For example: a transfer you sent from a bank that takes 2-3 days, a Venmo payment someone owes you, or a paycheck that cleared but you have not updated the balance yet. Swipe through pending items. Tap **Post** when the money arrives and choose which account it goes into. The balance updates automatically.
 
-**Pending Outbound section:** Money you have sent but that has not fully cleared. A bill payment, a credit card payment, a transfer out. Tap **+ Add** to create one. Tap **Post** when it clears and the appropriate account balance updates. For loan payments, you can see the breakdown of how the payment splits between interest and principal.
+**Pending Outbound section:** Money you have sent but that has not fully cleared. A bill payment, a credit card payment, a transfer out. Swipe through items. Tap **Post** when it clears and the appropriate account balance updates. For loan payments, you can see the breakdown of how the payment splits between interest and principal.
 
 **Net Cash:** At the bottom of the Snapshot page is your final net cash. Basically your total bank balances minus your total credit card debt, adjusted for pending items. This tells you "if everything settled right now, how much money do I actually have?"
 
@@ -101,7 +101,7 @@ Track every purchase you make. Log it manually: merchant name, amount, date, wha
 
 **Categories and subcategories:** Organize your spending by category (Food, Transportation, Entertainment, etc.) and subcategory. You can create your own categories in Settings under Manage Categories.
 
-**Viewing your spending:** Switch between "Categories" view (a pie chart breaking down where your money goes) and "By Card" view (a bar chart showing which card you spent on most). You can also toggle to a Rewards view to see your current cashback/points/miles balances across all your cards.
+**Viewing your spending:** Switch between "Categories" view (a donut chart with a tappable category grid below - tap any category to filter), "Sources" view (spending totals per payment source), and "Rewards" view to see your current cashback/points/miles balances across all your cards.
 
 **Date ranges:** Filter spending by this month, last month, all time, or pick a custom date range.
 
@@ -214,7 +214,7 @@ Track credit card sign-up bonuses. These bonuses typically require you to spend 
 
 **Export JSON:** Back up all your data to a JSON file. You can encrypt it with your passcode for extra protection. This is your safety net. If anything happens to your browser storage, you can restore from this file.
 
-**Import JSON:** Restore from a previously exported backup. Replaces all current data.
+**Import JSON:** Restore from a previously exported backup. Works across any device or browser - just enter the passcode used when the backup was exported. Replaces all current data.
 
 **Export Monthly Purchases CSV:** Downloads this month's purchases as a spreadsheet-compatible CSV file.
 
@@ -227,7 +227,7 @@ Track credit card sign-up bonuses. These bonuses typically require you to spend 
 - Export a JSON backup regularly (Settings > Export JSON). Once a week is a good habit.
 - Save the backup file to iCloud Drive or another safe place outside your phone.
 - If you export with encryption, remember that you need your passcode to open it again.
-- If you switch phones or clear browser data, you can restore everything from a backup.
+- If you switch phones or clear browser data, you can restore everything from a backup on any device or browser.
 - The app stores data in Safari's local storage. Clearing Safari data or switching browsers will remove your data unless you have a backup.
 
 ---
