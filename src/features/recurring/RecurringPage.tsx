@@ -9,10 +9,12 @@ import { Select } from '../../ui/Select';
 import { OptimizerModal } from '../optimizer/OptimizerModal';
 import { ViewLastOptimizerModal } from '../optimizer/ViewLastOptimizerModal';
 import { IconPlus } from '../../ui/icons';
+import { useDialog } from '../../ui/DialogProvider';
 
 export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncomeTrigger = 0 }: { addTrigger?: number; addExpenseTrigger?: number; addIncomeTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const { showConfirm } = useDialog();
   const cfg = useMemo(() => loadCategoryConfig(), []);
   const investingState = useMemo(() => loadInvesting(), []);
 
@@ -794,8 +796,9 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                           type="button"
                           className="btn-delete"
                           style={{ marginTop: 8 }}
-                          onClick={() => {
-                            if (!window.confirm('Remove this deduction?')) return;
+                          onClick={async () => {
+                            const ok = await showConfirm('Remove this deduction?');
+                            if (!ok) return;
                             setPreTaxDeductions((prev) => prev.filter((x) => x.id !== d.id));
                           }}
                         >

@@ -15,6 +15,7 @@ import { ThemeProvider } from './theme/ThemeContext';
 import { AppearanceProvider } from './theme/AppearanceContext';
 import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
 import { ReminderProvider } from './state/ReminderContext';
+import { DialogProvider } from './ui/DialogProvider';
 import { TAB_ORDER_KEY } from './state/keys';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
 import {
@@ -496,6 +497,7 @@ export function App() {
       <AppearanceProvider>
         <AdvancedUIColorsProvider>
           <ReminderProvider>
+            <DialogProvider>
             <DropdownStateProvider>
               <PasscodeGate>
                 <Routes>
@@ -504,6 +506,7 @@ export function App() {
                 </Routes>
               </PasscodeGate>
             </DropdownStateProvider>
+            </DialogProvider>
           </ReminderProvider>
         </AdvancedUIColorsProvider>
       </AppearanceProvider>

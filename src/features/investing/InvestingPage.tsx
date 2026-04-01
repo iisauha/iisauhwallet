@@ -26,6 +26,7 @@ import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
 import { loadCategoryConfig, getCategoryName } from '../../state/storage';
 import Chart from 'chart.js/auto';
+import { useDialog } from '../../ui/DialogProvider';
 
 function HysaMoveRow({
   totalCents,
@@ -684,6 +685,7 @@ let _lastProcessedHysaAllocTrigger = 0;
 export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 0, openHysaAllocAccountId = null }: { openTransferTrigger?: number; openHysaAllocTrigger?: number; openHysaAllocAccountId?: string | null }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const { showAlert, showConfirm } = useDialog();
   const cfg = useMemo(() => loadCategoryConfig(), []);
 
   const [investing, setInvesting] = useState<InvestingState>(() => {
@@ -1078,8 +1080,9 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     });
   }
 
-  function deleteAccount(acc: InvestingAccount) {
-    if (!window.confirm(`Delete account "${acc.name}"? This cannot be undone.`)) return;
+  async function deleteAccount(acc: InvestingAccount) {
+    const ok = await showConfirm(`Delete account "${acc.name}"? This cannot be undone.`);
+    if (!ok) return;
     const accounts = investing.accounts.filter((a) => a.id !== acc.id);
     persist({ ...investing, accounts });
   }
@@ -1184,7 +1187,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     }
   }
 
-  function createTransfer() {
+  async function createTransfer() {
     setTransferError(null);
     const from = transferFrom;
     const to = transferTo;
@@ -1256,7 +1259,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
         toTokens.length > 0 &&
         fromTokens.some((t) => toTokens.includes(t));
       if (hasCommon) {
-        const ok = window.confirm('This transfer will be instant. Continue?');
+        const ok = await showConfirm('This transfer will be instant. Continue?');
         useInstantSameBank = !!ok;
       }
     }
@@ -2185,7 +2188,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => {
+                    onClick={async () => {
                       const s = coastFireFormStrings;
                       const currentAge = s.currentAge.trim() === '' ? NaN : parseInt(s.currentAge, 10);
                       const retirementAge = s.retirementAge.trim() === '' ? NaN : parseInt(s.retirementAge, 10);
@@ -2196,23 +2199,23 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                       const manualMonthlyContributionDollars = s.manualMonthlyContributionDollars.trim() === '' ? NaN : parseFloat(s.manualMonthlyContributionDollars);
 
                       if (!Number.isFinite(currentAge) || currentAge < 1) {
-                        window.alert('Current age must be greater than 0.');
+                        showAlert('Current age must be greater than 0.');
                         return;
                       }
                       if (!Number.isFinite(retirementAge) || retirementAge < 1) {
-                        window.alert('Retirement age must be greater than 0.');
+                        showAlert('Retirement age must be greater than 0.');
                         return;
                       }
                       if (retirementAge <= currentAge) {
-                        window.alert('Retirement age must be greater than current age.');
+                        showAlert('Retirement age must be greater than current age.');
                         return;
                       }
                       if (!Number.isFinite(annualSpendingDollars) || annualSpendingDollars <= 0) {
-                        window.alert('Annual spending must be positive.');
+                        showAlert('Annual spending must be positive.');
                         return;
                       }
                       if (!Number.isFinite(swrPercent) || swrPercent <= 0) {
-                        window.alert('Safe withdrawal rate must be positive.');
+                        showAlert('Safe withdrawal rate must be positive.');
                         return;
                       }
 

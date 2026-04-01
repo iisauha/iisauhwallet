@@ -15,6 +15,7 @@ import {
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
+import { useDialog } from '../../ui/DialogProvider';
 
 function todayKey() {
   const d = new Date();
@@ -353,6 +354,7 @@ function CompletedBonusEditorModal({
 export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const { showAlert } = useDialog();
   const cards = data.cards || [];
   const banks = (data.banks || []).map((b: any) => ({ id: b.id, name: b.name || 'Bank' }));
 
@@ -901,7 +903,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
                   if (!achievedTiers.length) {
                     const firstTarget = tiers.length ? Math.min(...tiers.map(t => t.spendTargetCents || 0)) : 0;
-                    alert(`Your current spend (${formatCents(spendCents)}) hasn't reached the first milestone target (${formatCents(firstTarget)}). Please adjust your spend amount before completing.`);
+                    showAlert(`Your current spend (${formatCents(spendCents)}) hasn't reached the first milestone target (${formatCents(firstTarget)}). Please adjust your spend amount before completing.`);
                     return;
                   }
                   const parsed = achievedTiers
@@ -909,7 +911,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                     .filter((p) => p.unitType !== 'other' && p.quantity > 0);
                   const unitTypes = Array.from(new Set(parsed.map((p) => p.unitType)));
                   if (unitTypes.length !== 1) {
-                    alert('All milestone rewards must use the same unit type (cash back, points, or miles) to complete.');
+                    showAlert('All milestone rewards must use the same unit type (cash back, points, or miles) to complete.');
                     return;
                   }
                   const unitType = unitTypes[0] as 'cash' | 'points' | 'miles';

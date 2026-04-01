@@ -23,6 +23,7 @@ import { getRecurringIncomeOccurrencesInWindow, getRecurringOccurrencesInWindow 
 import { loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
+import { useDialog } from '../../ui/DialogProvider';
 
 
 function todayKey() {
@@ -36,6 +37,7 @@ function todayKey() {
 export function UpcomingPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const { showConfirm } = useDialog();
 
   const [windowDays, setWindowDays] = useState(() => loadUpcomingWindowPreference().days);
   const [customDaysInput, setCustomDaysInput] = useState('');
@@ -393,8 +395,9 @@ export function UpcomingPage() {
                       type="button"
                       className="btn btn-danger"
                       style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                      onClick={() => {
-                        if (!confirm('Remove this expected income from Upcoming?')) return;
+                      onClick={async () => {
+                        const ok = await showConfirm('Remove this expected income from Upcoming?');
+                        if (!ok) return;
                         const next = expectedIncome.filter((x) => x.id !== i.id);
                         setExpectedIncome(next);
                         saveExpectedIncome(next);
@@ -445,8 +448,9 @@ export function UpcomingPage() {
                       type="button"
                       className="btn btn-danger"
                       style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                      onClick={() => {
-                        if (!confirm('Remove this occurrence from Upcoming only? Your recurring income is not changed.')) return;
+                      onClick={async () => {
+                        const ok = await showConfirm('Remove this occurrence from Upcoming only? Your recurring income is not changed.');
+                        if (!ok) return;
                         dismissUpcomingOccurrence('inc', i.recurringId, i.expectedDate);
                         setDismissedOccurrences(loadUpcomingDismissedOccurrences());
                       }}
@@ -564,8 +568,9 @@ export function UpcomingPage() {
                       type="button"
                       className="btn btn-danger"
                       style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                      onClick={() => {
-                        if (!confirm('Remove this expected cost from Upcoming?')) return;
+                      onClick={async () => {
+                        const ok = await showConfirm('Remove this expected cost from Upcoming?');
+                        if (!ok) return;
                         const next = expectedCosts.filter((x) => x.id !== c.id);
                         setExpectedCosts(next);
                         saveExpectedCosts(next);
@@ -649,8 +654,9 @@ export function UpcomingPage() {
                       type="button"
                       className="btn btn-danger"
                       style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                      onClick={() => {
-                        if (!confirm('Remove this occurrence from Upcoming only? Your recurring expense is not changed.')) return;
+                      onClick={async () => {
+                        const ok = await showConfirm('Remove this occurrence from Upcoming only? Your recurring expense is not changed.');
+                        if (!ok) return;
                         dismissUpcomingOccurrence('exp', c.recurringId, c.dateKey);
                         setDismissedOccurrences(loadUpcomingDismissedOccurrences());
                       }}

@@ -27,6 +27,7 @@ import {
   clearDataCache,
 } from '../../state/storage';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
+import { useDialog } from '../../ui/DialogProvider';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
@@ -190,6 +191,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const fileRef = useRef<HTMLInputElement | null>(null);
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
+  const { showAlert, showConfirm } = useDialog();
   const [manageOpen, setManageOpen] = useState(false);
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
@@ -258,7 +260,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         await importJSONDecrypted(pendingJson, confirmedInput);
         setChallenge(null);
         setChallengeCountdown(0);
-        alert('Import done. Reloading…');
+        showAlert('Import done. Reloading…');
         window.location.reload();
       } catch (_) {
         onFail();
@@ -562,13 +564,13 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             const text = String(r.result || '');
             try {
               importJSON(text);
-              alert('Import done. Reloading…');
+              showAlert('Import done. Reloading…');
               window.location.reload();
             } catch (err: any) {
               if (err?.message === ENCRYPTED_IMPORT) {
                 openChallenge('import', text);
               } else {
-                alert('Invalid JSON.');
+                showAlert('Invalid JSON.');
               }
             }
             e.target.value = '';
@@ -600,8 +602,9 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         <button
           type="button"
           className="settings-row settings-danger-row"
-          onClick={() => {
-            if (!confirm('Reset all data? This will clear localStorage for this site.')) return;
+          onClick={async () => {
+            const ok = await showConfirm('Reset all data? This will clear localStorage for this site.');
+            if (!ok) return;
             clearDataCache();
             localStorage.clear();
             actions.reload();

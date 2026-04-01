@@ -28,6 +28,7 @@ import {
 } from '../../state/storage';
 import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimatedPaymentNowMap, computeMonthlyInterestCents } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
+import { useDialog } from '../../ui/DialogProvider';
 import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
@@ -1108,6 +1109,7 @@ export type LoanViewFilter = 'public' | 'private';
 
 export function LoansPage() {
   const data = useLedgerStore((s) => s.data);
+  const { showConfirm } = useDialog();
   const [state, setState] = useState<LoansState>(() => loadLoans());
   const [showPublic, setShowPublic] = useState(loadLoansSectionShowPublic);
   const [showPrivate, setShowPrivate] = useState(loadLoansSectionShowPrivate);
@@ -1532,8 +1534,9 @@ export function LoansPage() {
             <LoanCard
               loan={l}
               onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
-              onDelete={() => {
-                if (!confirm('Delete this loan?')) return;
+              onDelete={async () => {
+                const ok = await showConfirm('Delete this loan?');
+                if (!ok) return;
                 persist({ loans: state.loans.filter((x) => x.id !== l.id) });
               }}
               onToggleExcludeFromPayment={(exclude) =>
