@@ -1057,7 +1057,7 @@ export function SnapshotPage({
                     <span>
                       {modal.publicCurrentBalanceCents != null
                         ? formatCents(Math.max(0, modal.publicCurrentBalanceCents - (modal.publicPortionCents || 0)))
-                        : '—'}
+                        : '-'}
                     </span>
                   </div>
                 </div>
@@ -1195,7 +1195,7 @@ export function SnapshotPage({
                         {!rule.isCatchAll && (
                           <div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 5 }}>
-                              Categories ({pairs.length === 0 ? 'none — add below' : `${pairs.length} selected`})
+                              Categories ({pairs.length === 0 ? 'none - add below' : `${pairs.length} selected`})
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
                               {pairs.map((pair, pi) => (
@@ -1409,7 +1409,7 @@ export function SnapshotPage({
                           <option value="">Select...</option>
                           {cardsSortedByBalance.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.name} — {formatCents(c.balanceCents || 0)}
+                              {c.name} - {formatCents(c.balanceCents || 0)}
                             </option>
                           ))}
                         </Select>
@@ -1422,7 +1422,7 @@ export function SnapshotPage({
                             <option value="">Select...</option>
                             {hysaAccountsSorted.map((a: any) => (
                               <option key={a.id} value={a.id}>
-                                {a.name} — {formatCents(a.balanceCents || 0)}
+                                {a.name} - {formatCents(a.balanceCents || 0)}
                               </option>
                             ))}
                           </Select>
@@ -1443,7 +1443,7 @@ export function SnapshotPage({
                           <option value="">Select...</option>
                           {banksSortedByBalance.map((b) => (
                             <option key={b.id} value={b.id}>
-                              {b.name} — {formatCents(b.balanceCents || 0)}
+                              {b.name} - {formatCents(b.balanceCents || 0)}
                             </option>
                           ))}
                         </Select>
@@ -1485,7 +1485,7 @@ export function SnapshotPage({
                               <option value="">Select...</option>
                               {banksSortedByBalance.map((b) => (
                                 <option key={b.id} value={b.id}>
-                                  {b.name} — {formatCents(b.balanceCents || 0)}
+                                  {b.name} - {formatCents(b.balanceCents || 0)}
                                 </option>
                               ))}
                             </Select>
@@ -1501,7 +1501,7 @@ export function SnapshotPage({
                                 <option value="">Select...</option>
                                 {hysaAccountsSorted.map((a: any) => (
                                   <option key={a.id} value={a.id}>
-                                    {a.name} — {formatCents(a.balanceCents || 0)}
+                                    {a.name} - {formatCents(a.balanceCents || 0)}
                                   </option>
                                 ))}
                               </Select>
@@ -1525,7 +1525,7 @@ export function SnapshotPage({
                             <option value="">Select...</option>
                             {cardsSortedByBalance.map((c) => (
                               <option key={c.id} value={c.id}>
-                                {c.name} — {formatCents(c.balanceCents || 0)}
+                                {c.name} - {formatCents(c.balanceCents || 0)}
                               </option>
                             ))}
                           </Select>
@@ -1550,7 +1550,7 @@ export function SnapshotPage({
                               <option value="">Select...</option>
                               {banksSortedByBalance.map((b) => (
                                 <option key={b.id} value={b.id}>
-                                  {b.name} — {formatCents(b.balanceCents || 0)}
+                                  {b.name} - {formatCents(b.balanceCents || 0)}
                                 </option>
                               ))}
                             </Select>
@@ -1563,7 +1563,7 @@ export function SnapshotPage({
                                 <option value="">Select...</option>
                                 {hysaAccountsSorted.map((a: any) => (
                                   <option key={a.id} value={a.id}>
-                                    {a.name} — {formatCents(a.balanceCents || 0)}
+                                    {a.name} - {formatCents(a.balanceCents || 0)}
                                   </option>
                                 ))}
                               </Select>
@@ -1714,7 +1714,7 @@ export function SnapshotPage({
                   >
                     {banksSortedByBalance.map((b) => (
                       <option key={b.id} value={`bank:${b.id}`}>
-                        {b.name} — {formatCents(b.balanceCents || 0)}
+                        {b.name} - {formatCents(b.balanceCents || 0)}
                       </option>
                     ))}
                     {modal.isRefund ? (
@@ -1724,7 +1724,7 @@ export function SnapshotPage({
                         </option>
                         {cardsSortedByBalance.map((c) => (
                           <option key={c.id} value={`card:${c.id}`}>
-                            {c.name} — {formatCents(c.balanceCents || 0)}
+                            {c.name} - {formatCents(c.balanceCents || 0)}
                           </option>
                         ))}
                       </>
@@ -1765,7 +1765,7 @@ export function SnapshotPage({
                   <Select value={modal.bankId} onChange={(e) => setModal({ ...modal, bankId: e.target.value })}>
                     {banksSortedByBalance.map((b) => (
                       <option key={b.id} value={`bank:${b.id}`}>
-                        {b.name} — {formatCents(b.balanceCents || 0)}
+                        {b.name} - {formatCents(b.balanceCents || 0)}
                       </option>
                     ))}
                     {cardsSortedByBalance.length ? (
@@ -1775,7 +1775,7 @@ export function SnapshotPage({
                         </option>
                         {cardsSortedByBalance.map((c) => (
                           <option key={c.id} value={`card:${c.id}`}>
-                            {c.name} — {formatCents(c.balanceCents || 0)}
+                            {c.name} - {formatCents(c.balanceCents || 0)}
                           </option>
                         ))}
                       </>

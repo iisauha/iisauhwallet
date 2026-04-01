@@ -132,7 +132,7 @@ export function renderSpendingPieChart(
   if (existing) existing.destroy();
 
   const chart = new Chart(canvas, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
       labels,
       datasets: [{ data, backgroundColor: colors, borderWidth: 0 }]
@@ -140,6 +140,7 @@ export function renderSpendingPieChart(
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      cutout: '55%',
       animation: { duration: shouldAnimate ? 150 : 0 },
       plugins: {
         legend: { display: false },

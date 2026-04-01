@@ -871,7 +871,7 @@ export function AddPurchaseModal(props: {
                 setHasSelectedCategory(true);
               }}
             >
-              <option value="">—</option>
+              <option value="">-</option>
               {subs.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -938,7 +938,7 @@ export function AddPurchaseModal(props: {
                   setPaymentTargetId('');
                 }}
               >
-                <option value="">— Select source —</option>
+                <option value="">- Select source -</option>
                 <option value="card">Credit Card</option>
                 <option value="bank">Cash (Bank)</option>
                 <option value="cash">Physical Cash</option>

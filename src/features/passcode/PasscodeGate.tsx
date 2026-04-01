@@ -779,7 +779,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             onChange={(e) => setSecurityQ1(e.target.value)}
             style={selectStyle}
           >
-            <option value="">— Skip security questions —</option>
+            <option value="">- Skip security questions -</option>
             {SECURITY_QUESTION_OPTIONS.map((q) => (
               <option key={q} value={q}>{q}</option>
             ))}

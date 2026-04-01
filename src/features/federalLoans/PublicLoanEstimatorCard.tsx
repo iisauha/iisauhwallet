@@ -154,7 +154,7 @@ export function PublicLoanEstimatorCard() {
             style={{ padding: '6px 8px', minWidth: 120 }}
           >
             {STATE_OPTIONS.map((s) => (
-              <option key={s || 'blank'} value={s}>{s || '—'}</option>
+              <option key={s || 'blank'} value={s}>{s || '-'}</option>
             ))}
           </Select>
         </div>
@@ -210,7 +210,7 @@ export function PublicLoanEstimatorCard() {
       </div>
 
       <div className="field" style={{ marginTop: 12 }}>
-        <label>Actual Total Monthly Payment Override ($) — optional</label>
+        <label>Actual Total Monthly Payment Override ($) - optional</label>
         <input
           type="text"
           className="ll-control"

@@ -850,7 +850,7 @@ function statusLabel(status: Loan['repaymentStatus']): string {
     case 'custom_payment':
       return 'Custom';
     default:
-      return '—';
+      return '-';
   }
 }
 
@@ -903,12 +903,12 @@ function LoanCard(props: {
         </div>
       ) : null}
       <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>
-        Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '—'}
+        Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '-'}
       </div>
       {l.category === 'private' ? (
         <>
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-            Current range: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '—'}
+            Current range: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '-'}
           </div>
           {l.activePrivateRangeMode === 'deferred' && l.deferredDailyInterestCents != null && l.deferredDaysInRange != null && l.deferredInterestTotalCents != null && l.deferredProjectedBalanceCents != null ? (
             <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
@@ -946,10 +946,10 @@ function LoanCard(props: {
       {l.category === 'public' && (l.totalFederalPaymentCents != null || l.approximateShareCents != null) ? (
         <>
           <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 2 }}>
-            Total federal payment (after grace): {l.totalFederalPaymentCents != null ? formatCents(l.totalFederalPaymentCents) : '—'}
+            Total federal payment (after grace): {l.totalFederalPaymentCents != null ? formatCents(l.totalFederalPaymentCents) : '-'}
           </div>
           <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-            Approximate share of total: {l.approximateShareCents != null ? formatCents(l.approximateShareCents) : '—'} (not separately calculated)
+            Approximate share of total: {l.approximateShareCents != null ? formatCents(l.approximateShareCents) : '-'} (not separately calculated)
           </div>
         </>
       ) : null}
@@ -1064,7 +1064,7 @@ function ConsolidatedLoanSimulatorModal(props: {
         </div>
         <div className="summary-kv">
           <span className="k">Current after grace</span>
-          <span className="v">{currentTotalAfterGraceCents > 0 ? formatCents(currentTotalAfterGraceCents) : '—'}</span>
+          <span className="v">{currentTotalAfterGraceCents > 0 ? formatCents(currentTotalAfterGraceCents) : '-'}</span>
         </div>
       </div>
       <div className="field">
@@ -1092,7 +1092,7 @@ function ConsolidatedLoanSimulatorModal(props: {
       <div className="summary-compact" style={{ marginTop: 12 }}>
         <div className="summary-kv">
           <span className="k">New consolidation amount</span>
-          <span className="v">{derived.newMonthly != null ? formatCents(derived.newMonthly) : '—'}</span>
+          <span className="v">{derived.newMonthly != null ? formatCents(derived.newMonthly) : '-'}</span>
         </div>
       </div>
       <div style={{ marginTop: 16 }}>
@@ -1391,7 +1391,7 @@ export function LoansPage() {
               </button>
             </span>
             <span className="v" style={{ color: paymentNowAmountColor }}>
-              {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} /> : '—'}
+              {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} /> : '-'}
             </span>
           </div>
         </div>
@@ -1808,19 +1808,19 @@ export function LoansPage() {
           ) : (
             <div className="summary-kv">
               <span className="k">Private Loans After Grace</span>
-              <span className="v" style={{ color: 'var(--red)' }}>—</span>
+              <span className="v" style={{ color: 'var(--red)' }}>-</span>
             </div>
           )}
           <div className="summary-kv">
             <span className="k">Public Loans After Grace</span>
             <span className="v" style={{ color: 'var(--red)' }}>
-              {afterGraceBreakdown.publicAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.publicAfterGraceCents) : '—'}
+              {afterGraceBreakdown.publicAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.publicAfterGraceCents) : '-'}
             </span>
           </div>
           <div className="summary-kv" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
             <span className="k">Combined After Grace</span>
             <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-              {afterGraceBreakdown.combinedAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.combinedAfterGraceCents) : '—'}
+              {afterGraceBreakdown.combinedAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.combinedAfterGraceCents) : '-'}
             </span>
           </div>
         </div>
@@ -2189,7 +2189,7 @@ function PayoffDetails(props: { loan: LoanWithDerived; birthdateISO: string | nu
         <div className="summary-kv">
           <span className="k">Estimated monthly payment</span>
           <span className="v">
-            {loan.monthlyNowCents != null ? formatCents(loan.monthlyNowCents) : '—'}
+            {loan.monthlyNowCents != null ? formatCents(loan.monthlyNowCents) : '-'}
           </span>
         </div>
         {loan.category === 'public' && loan.repaymentStatus === 'in_school_interest_only' && loan.gracePeriodEndDate ? (
@@ -2272,7 +2272,7 @@ function RefinanceSimulator(props: { loan: LoanWithDerived }) {
         <div className="summary-kv">
           <span className="k">Current after-grace value</span>
           <span className="v">
-            {currentAfterGraceCents > 0 ? formatCents(currentAfterGraceCents) : '—'}
+            {currentAfterGraceCents > 0 ? formatCents(currentAfterGraceCents) : '-'}
           </span>
         </div>
         {currentAfterGraceCents === 0 ? (
@@ -2308,13 +2308,13 @@ function RefinanceSimulator(props: { loan: LoanWithDerived }) {
         <div className="summary-kv">
           <span className="k">Refinanced after-grace value</span>
           <span className="v">
-            {derived.refiPayment != null ? formatCents(derived.refiPayment) : '—'}
+            {derived.refiPayment != null ? formatCents(derived.refiPayment) : '-'}
           </span>
         </div>
         <div className="summary-kv">
           <span className="k">Refinanced est. months to payoff</span>
           <span className="v">
-            {derived.refiMonths != null ? `~${derived.refiMonths} months` : '—'}
+            {derived.refiMonths != null ? `~${derived.refiMonths} months` : '-'}
           </span>
         </div>
       </div>

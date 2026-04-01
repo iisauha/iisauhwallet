@@ -304,7 +304,7 @@ export function UpcomingPage() {
                 }
               }}
               placeholder="days"
-              style={{ width: 64, padding: '5px 8px', fontSize: '0.82rem', borderRadius: 8, border: '1px solid var(--ui-border, var(--border))' }}
+              style={{ width: 64, padding: '5px 8px', fontSize: '0.82rem', borderRadius: 8, border: '1px solid var(--ui-border, var(--border))', background: 'var(--ui-surface-secondary, var(--surface))', color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}
             />
           )}
         </div>

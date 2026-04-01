@@ -474,7 +474,7 @@ function CoastFireResultView({
             />
           </span>
           <span className="v amount-pos">
-            {result.realReturnWarning ? '—' : fmt(result.fvIfStopNow)}
+            {result.realReturnWarning ? '-' : fmt(result.fvIfStopNow)}
           </span>
         </div>
       </div>
@@ -508,7 +508,7 @@ function CoastFireResultView({
                 const pvStr = fmt(result.pv);
                 const monthlyStr = fmt(monthlyContrib);
                 const annualStr = fmt(annualContrib);
-                const fvStr = result.realReturnWarning ? '—' : fmt(result.fvWithContrib);
+                const fvStr = result.realReturnWarning ? '-' : fmt(result.fvWithContrib);
                 return `This projection uses your current invested assets, your monthly contribution amount, and your inflation-adjusted return to estimate your portfolio value at retirement if you continue contributing at the same rate.\n\nFormula:\nFV = PV(1+r)^t + C × [((1+r)^t − 1) / r]\n\nWhere:\n• PV = current invested assets\n• r = inflation-adjusted annual return\n• t = years until retirement\n• C = annual contribution amount (monthly × 12)\n\nUsing your values:\n• PV = ${pvStr}\n• Monthly contribution = ${monthlyStr}\n• Annual contribution = ${annualStr}\n• r = ${rPct.toFixed(1)}%\n• t = ${yearsToRetirement} years\n\nProjected value = ${fvStr}`;
               })()}
               activeId={coastFireTooltipId}
@@ -516,7 +516,7 @@ function CoastFireResultView({
             />
           </span>
           <span className="v amount-pos">
-            {result.realReturnWarning ? '—' : fmt(result.fvWithContrib)}
+            {result.realReturnWarning ? '-' : fmt(result.fvWithContrib)}
           </span>
         </div>
       </div>
@@ -2311,17 +2311,17 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                 <option value="">Select...</option>
                 {banksSortedByBalance.map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
-                    Bank — {b.name}
+                    Bank - {b.name}
                   </option>
                 ))}
                 {hysaAccountsSorted.map((a) => (
                   <option key={a.id} value={`hysa:${a.id}`}>
-                    HYSA — {a.name}
+                    HYSA - {a.name}
                   </option>
                 ))}
                 {generalAccountsSorted.map((a) => (
                   <option key={a.id} value={`general:${a.id}`}>
-                    Investing — {a.name}
+                    Investing - {a.name}
                   </option>
                 ))}
               </Select>
@@ -2332,17 +2332,17 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                 <option value="">Select...</option>
                 {banksSortedByBalance.map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
-                    Bank — {b.name}
+                    Bank - {b.name}
                   </option>
                 ))}
                 {hysaAccountsSorted.map((a) => (
                   <option key={a.id} value={`hysa:${a.id}`}>
-                    HYSA — {a.name}
+                    HYSA - {a.name}
                   </option>
                 ))}
                 {generalAccountsSorted.map((a) => (
                   <option key={a.id} value={`general:${a.id}`}>
-                    Investing — {a.name}
+                    Investing - {a.name}
                   </option>
                 ))}
               </Select>

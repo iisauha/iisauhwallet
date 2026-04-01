@@ -102,8 +102,17 @@ function saveTabOrder(order: TabKey[]): void {
 
 
 function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
-  const displayName = loadUserDisplayName();
-  const profileImage = loadUserProfileImage();
+  const [displayName, setDisplayName] = useState<string | null>(() => loadUserDisplayName());
+  const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
+
+  useEffect(() => {
+    // Re-read after crypto may have initialized
+    const timer = setTimeout(() => {
+      setDisplayName(loadUserDisplayName());
+      setProfileImage(loadUserProfileImage());
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <header className="app-header">

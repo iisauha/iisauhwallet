@@ -7,7 +7,7 @@ const SECTIONS: Section[] = [
   {
     title: 'How to Add to Your Home Screen',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>This app is a website. Adding it to your home screen makes it feel and open like a real app.</p>
         <ol style={{ paddingLeft: 20, margin: '0 0 12px 0' }}>
           <li style={{ marginBottom: 8 }}>Open <strong>https://iisauha.github.io/iisauhwallet/</strong> in Safari</li>
@@ -28,7 +28,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Security: What You Need to Know',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Your data lives entirely on your device inside Safari's local storage. It is never sent to any server. The creator of this app cannot see your data, ever.</p>
         <p><strong>The 6-digit passcode</strong> is the gate. Nobody gets in without it.</p>
         <p><strong>What encryption does:</strong> When you export a backup you can encrypt it with your passcode. Without the passcode the file looks like random gibberish:</p>
@@ -45,7 +45,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Personalize the Look and Feel',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Go to Settings (tap your name or avatar at the top) and then tap <strong>App Customization</strong> to change how the app looks.</p>
         <p><strong>Themes:</strong> Royal (default), Midnight, Aurora, Jade, Plum, Copper, Mocha, Steel, and more. Light themes too: Light, Arctic, Sakura. Each theme changes the background, surfaces, and accent all at once.</p>
         <p><strong>Fonts:</strong> Dozens of options: SF Pro, Inter, Roboto, DM Sans, Helvetica, Georgia, Playfair, and more. Tap any to preview instantly.</p>
@@ -59,7 +59,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Snapshot Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Your main financial dashboard. Shows where your money is right now.</p>
         <p><strong>Cash:</strong> All your bank accounts. Tap the header to expand. Swipe through accounts. Tap <strong>+ Add</strong> to create one, tap any card to edit its balance.</p>
         <p><strong>Credit Cards:</strong> All your credit cards and what you owe. Tap <strong>+ Add</strong> to add one. Tap a card to edit balance or set up reward rules (cashback, miles, points) so the app can suggest which card to use when you shop.</p>
@@ -72,7 +72,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Spending Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Log every purchase manually and see where your money goes by category.</p>
         <p><strong>Adding a purchase:</strong> Tap the "+" button in the bottom right corner and choose "Log a purchase." The app suggests which card earns the best rewards for that spending category.</p>
         <p><strong>Views:</strong> Toggle between Categories (pie chart of spending by category), By Card (bar chart by card), and Rewards (current points/miles/cashback balances across all cards).</p>
@@ -86,7 +86,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Upcoming Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>A calendar for your money. Shows every expected paycheck and bill coming up in the next 14, 21, 30, or 45 days.</p>
         <p><strong>Expected Income:</strong> Automatically pulled from your recurring income items. Shows each upcoming paycheck or deposit with how many days away it is, highlighted in green.</p>
         <p><strong>Expected Costs:</strong> Bills and expenses from your recurring list, shown on their expected dates, in red. You can adjust the amount for one specific occurrence without touching the permanent recurring item.</p>
@@ -99,7 +99,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Recurring Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Set up anything that repeats and it will automatically flow into Upcoming and optionally into Snapshot.</p>
         <p><strong>Recurring Income:</strong> Salary, freelance checks, side income, rental income, anything that comes in regularly. Set the name, amount, frequency (monthly, weekly, biweekly, yearly, or every X days), start date, and which account it deposits into. Toggle "autopay" to automatically create a Pending Inbound item when it is due.</p>
         <p><strong>Recurring Expenses:</strong> Rent, subscriptions, insurance, loan payments, anything that repeats. Link an expense to a loan and it will always use the current estimated payment amount. "Apply to Snapshot" means the expense actually updates your account balances when processed.</p>
@@ -111,7 +111,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Loans Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Track federal student loans and private loans in one place.</p>
         <p><strong>Federal Loans:</strong> Add your federal student loans. The app estimates monthly payments for each repayment plan (Standard, IDR, PAYE, SAVE, IBR, ICR) and shows years to potential forgiveness for each. You can log your current status: in school, grace period, deferment, forbearance, or active repayment.</p>
         <p><strong>Private Loans:</strong> Add private loans with balance, interest rate, and a payment mode: custom monthly amount, full amortized repayment, interest-only, or deferred. Set date ranges for different modes. For example: deferred through graduation, then interest-only for a year, then full repayment.</p>
@@ -124,7 +124,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Investing Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Track all investment accounts: HYSA, Roth IRA, 401(k), Traditional IRA, and general brokerage. Includes a Coast FIRE calculator.</p>
         <p><strong>Balances:</strong> Tap any account to update its balance. Everything is entered manually. The app does not connect to any brokerage.</p>
         <p><strong>HYSA sub-buckets:</strong> Each HYSA has two buckets: Reserved (savings you are not touching) and Bills (money set aside for upcoming bills). The Bills bucket is what the Upcoming tab counts as available liquid cash. Use Allocate to move between them without changing the total balance.</p>
@@ -137,7 +137,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Bonuses Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Track credit card sign-up bonuses. These typically require spending a target amount in the first few months to earn a large reward.</p>
         <p><strong>Adding a tracker:</strong> Tap <strong>+ Add</strong>, pick the card, set the deadline, and define the spending tiers. For example: spend $500 to get 50,000 points, spend $1,000 to get an additional 25,000 points.</p>
         <p><strong>Tracking progress:</strong> Enter how much you have spent toward the bonus so far. The tracker shows which tiers you have unlocked, how much more you need for the next tier, and how many days remain until the deadline.</p>
@@ -149,7 +149,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Settings Tab',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Tap your name or avatar in the top bar to open Settings.</p>
         <p><strong>Profile:</strong> Set your display name and upload a profile photo. Stored on your device only.</p>
         <p><strong>App Customization:</strong> Theme, fonts, font size, accent color, surface style.</p>
@@ -166,7 +166,7 @@ const SECTIONS: Section[] = [
   {
     title: 'Backing Up Your Data',
     content: (
-      <div style={{ fontSize: '0.92rem', lineHeight: 1.65, color: 'var(--ui-primary-text, var(--text))' }}>
+      <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Your data lives in Safari's local storage on your device. If Safari data is cleared, your phone is lost, or you switch browsers, your data goes with it unless you have a backup.</p>
         <p><strong>How to back up:</strong> Settings {'>'} Export JSON. Save the file to iCloud Drive or another safe location outside your phone. Do this regularly. Once a week is a good habit.</p>
         <p><strong>Encrypted backups:</strong> When you export you can encrypt the file with your passcode. If you do this, you need your passcode to open the backup later.</p>
@@ -237,7 +237,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           background: 'var(--ui-card-bg, var(--surface))',
           borderRadius: 16,
           border: '1px solid var(--ui-border, var(--border))',
-          padding: '20px 20px 16px',
+          padding: '14px 16px 12px',
           flex: 1,
           overflowY: 'auto',
           minHeight: 0,
@@ -245,8 +245,8 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
       >
         <h2
           style={{
-            margin: '0 0 14px 0',
-            fontSize: '1.15rem',
+            margin: '0 0 10px 0',
+            fontSize: '1.05rem',
             fontWeight: 700,
             color: 'var(--ui-title-text, var(--text))',
             lineHeight: 1.3,

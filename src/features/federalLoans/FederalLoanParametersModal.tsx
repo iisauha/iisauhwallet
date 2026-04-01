@@ -159,7 +159,7 @@ export function FederalLoanParametersModal({
               style={{ padding: '4px 8px', minWidth: 120 }}
             >
               {STATE_OPTIONS.map((s) => (
-                <option key={s || 'blank'} value={s}>{s || '—'}</option>
+                <option key={s || 'blank'} value={s}>{s || '-'}</option>
               ))}
             </Select>
           </div>

@@ -494,12 +494,12 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                   saveAutoLockMinutes(v);
                 }}
                 style={{
-                  width: 'auto', minWidth: 120, textAlign: 'right',
+                  width: 'auto', textAlign: 'right',
                   padding: '5px 8px', fontSize: '0.85rem', lineHeight: 1.4,
                   background: 'var(--ui-card-bg, var(--surface))',
                   border: '1px solid var(--ui-border, var(--border))',
                   borderRadius: 8,
-                  color: 'var(--ui-primary-text, var(--text))',
+                  color: 'var(--muted)',
                   fontFamily: 'var(--app-font-family)',
                   cursor: 'pointer',
                 }}

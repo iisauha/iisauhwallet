@@ -977,7 +977,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
               <div className="field">
                 <label>Default deposit bank (for posting)</label>
                 <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
-                  <option value="">— Select bank —</option>
+                  <option value="">- Select bank -</option>
                   {(data.banks || []).map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
@@ -998,7 +998,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                       if (v !== 'hysa') setPaymentTargetId('');
                     }}
                   >
-                    <option value="">— Select source —</option>
+                    <option value="">- Select source -</option>
                     <option value="card">Credit Card</option>
                     <option value="bank">Cash (Bank)</option>
                     <option value="hysa">HYSA / Investing</option>
@@ -1109,7 +1109,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                               .filter((a) => a.type === 'hysa' || a.type === 'general')
                               .map((a) => (
                                 <option key={a.id} value={`${a.type}:${a.id}`}>
-                                  {a.type === 'hysa' ? 'HYSA' : 'Investing'} — {a.name}
+                                  {a.type === 'hysa' ? 'HYSA' : 'Investing'} - {a.name}
                                 </option>
                               ))}
                           </Select>

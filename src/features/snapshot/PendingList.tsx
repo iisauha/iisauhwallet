@@ -106,9 +106,9 @@ function renderInboundCard(
   const card = p.targetCardId ? (data.cards || []).find((c) => c.id === p.targetCardId) : undefined;
   const cardName = card ? card.name || '' : '';
   const baseLabel = isRefund
-    ? `Refund — ${p.label}${cardName ? ` → ${cardName}` : ''}`
+    ? `Refund - ${p.label}${cardName ? ` → ${cardName}` : ''}`
     : isHysa
-      ? `To HYSA — ${p.label}`
+      ? `To HYSA - ${p.label}`
       : p.label;
   const amountText = formatCents(p.amountCents);
   const isJoiningFrom = joiningFromId === p.id;
@@ -123,8 +123,8 @@ function renderInboundCard(
             <span className="name">
               {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
               {isHysa && !isRefund ? <span className="pending-refund-badge" style={{ background: 'var(--green-light)' }}>HYSA</span> : null}
-              {isRefund || isHysa ? ' — ' : null}
-              {escapeText(baseLabel.replace(/^Refund —\s*/, '').replace(/^To HYSA —\s*/, ''))}
+              {isRefund || isHysa ? ' - ' : null}
+              {escapeText(baseLabel.replace(/^Refund -\s*/, '').replace(/^To HYSA -\s*/, ''))}
             </span>
             <span className="amount inbound-amount">{amountText}</span>
           </div>
@@ -219,7 +219,7 @@ export function PendingInboundList(props: {
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
             Join into one:{' '}
             <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
-            — Transfer to {getInboundDestinationName(props.data, fromItem)}
+            - Transfer to {getInboundDestinationName(props.data, fromItem)}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -426,7 +426,7 @@ export function PendingOutboundList(props: {
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
             Join into one:{' '}
             <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
-            — {getOutboundDestinationLabel(props.data, fromItem)}
+            - {getOutboundDestinationLabel(props.data, fromItem)}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -679,7 +679,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
             </div>
             <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
               <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>Required spend: </span>
-              <span>{finalTarget ? formatCents(finalTarget) : '—'}</span>
+              <span>{finalTarget ? formatCents(finalTarget) : '-'}</span>
             </div>
             <div style={{ fontSize: '0.95rem', marginTop: 2 }}>
               <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>Current spend: </span>

@@ -73,7 +73,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     setRewardSubtractManualStr('');
   }, [rewardSubtractPopup]);
   const [purchasesCollapsed, setPurchasesCollapsed] = useDropdownCollapsed('spending_purchases', true);
-  const [legendOpen, setLegendOpen] = useState(false);
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
   const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
@@ -256,7 +255,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       } else if (targetId && (src === 'bank' || src === 'cash')) {
         name = bankById.get(targetId) || (src === 'cash' ? 'Physical Cash' : 'Bank');
       } else if (src === 'hysa' && targetId) {
-        name = 'HYSA — ' + (hysaById.get(targetId) || 'HYSA');
+        name = 'HYSA - ' + (hysaById.get(targetId) || 'HYSA');
       } else if (src === 'hysa') {
         name = 'HYSA';
       } else if (src === 'cash') {
@@ -419,7 +418,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           aria-pressed={view === 'rewards' || view === 'card'}
           style={{ flexShrink: 0 }}
         >
-          {view === 'card' ? 'By Payment Source' : 'Rewards'}
+          {view === 'card' ? 'Sources' : 'Rewards'}
         </button>
         <button
           type="button"
@@ -462,7 +461,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 };
                 const cashbackCents = (totalCashback || 0) + (pointsApproxCents || 0);
                 const travelCents = milesApproxCents || 0;
-                if (cashbackCents <= 0 && travelCents <= 0) return '—';
+                if (cashbackCents <= 0 && travelCents <= 0) return '-';
                 const labelStyle = {
                   fontSize: '0.8rem',
                   color: 'var(--ui-primary-text, var(--text))',
@@ -498,32 +497,51 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           <>
             <div
               className="spending-chart-wrap"
-              style={{ position: 'relative', width: '100%', height: 220 }}
+              style={{ position: 'relative', width: '100%', height: 200 }}
               onClick={(e) => {
                 if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
               }}
             >
               <canvas ref={canvasRef} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 500 }}>Total</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>{formatCents(periodTotalCents)}</div>
+                </div>
+              </div>
             </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{
-                position: 'absolute',
-                bottom: 10,
-                right: 10,
-                zIndex: 1,
-                fontSize: '0.75rem',
-                padding: '4px 8px',
-                minHeight: 'unset',
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setLegendOpen(true);
-              }}
-            >
-              Legend
-            </button>
+            {byCategory.length > 0 ? (() => {
+              const totalCents = byCategory.reduce((s, c) => s + c.amountCents, 0);
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 10 }}>
+                  {byCategory.map((c) => {
+                    const pct = totalCents > 0 ? Math.round((c.amountCents / totalCents) * 100) : 0;
+                    const isActive = drilldownCategoryId === c.categoryId;
+                    return (
+                      <button
+                        key={c.categoryId}
+                        type="button"
+                        onClick={() => setDrilldownCategoryId(prev => prev === c.categoryId ? null : c.categoryId)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '8px 10px', borderRadius: 10,
+                          border: isActive ? '2px solid var(--accent)' : '1px solid var(--ui-border, var(--border))',
+                          background: isActive ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+                          cursor: 'pointer', textAlign: 'left', minWidth: 0,
+                          fontFamily: 'var(--app-font-family)',
+                        }}
+                      >
+                        <span style={{ width: 10, height: 10, borderRadius: 3, flexShrink: 0, background: getCategoryColor(c.categoryId) }} />
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500 }}>
+                          {getCategoryName(cfg, c.categoryId)}
+                        </span>
+                        <span style={{ flexShrink: 0, fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 600 }}>{pct}%</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })() : null}
           </>
         ) : view === 'card' ? (
           <div>
@@ -684,38 +702,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         )}
       </div>
 
-      {view === 'category' ? (
-        <Modal open={legendOpen} title="Legend" onClose={() => setLegendOpen(false)} className="modal-legend">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {byCategory.length === 0 ? (
-              <p style={{ color: 'var(--ui-primary-text, var(--text))', margin: 0 }}>No spending in this period.</p>
-            ) : (() => {
-              const totalCents = byCategory.reduce((s, c) => s + c.amountCents, 0);
-              return byCategory.map((c) => {
-                const pct = totalCents > 0 ? Math.round((c.amountCents / totalCents) * 100) : 0;
-                return (
-                  <div
-                    className="row"
-                    key={c.categoryId}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: getCategoryColor(c.categoryId),
-                      border: '1px solid var(--border)',
-                    }}
-                  >
-                    <span className="name" style={{ color: '#000000' }}>{getCategoryName(cfg, c.categoryId)}</span>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#000000' }}>{pct}%</span>
-                      <span className="amount" style={{ color: '#000000' }}>{formatCents(c.amountCents)}</span>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-        </Modal>
-      ) : null}
 
       {view === 'category' && drilldownCategoryId ? (
         <div style={{ marginTop: 8 }}>
