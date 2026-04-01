@@ -24,6 +24,8 @@ import { loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 import { useDialog } from '../../ui/DialogProvider';
+import { computeRewardDeltaForPurchase, type RewardDelta } from '../rewards/rewardMatching';
+import { createPortal } from 'react-dom';
 
 
 function todayKey() {
@@ -85,6 +87,25 @@ export function UpcomingPage() {
            | { kind: 'recurring-cost'; recurringId: string; dateKey: string };
       }
   >({ type: 'none' });
+
+  const [rewardPopup, setRewardPopup] = useState<null | {
+    rewardType: 'cashback' | 'miles' | 'points';
+    cardId: string;
+    cardName: string;
+    deltaLabel: string;
+    computedDelta: number;
+    newBalanceLabel: string;
+    newBalance: number;
+    currentBalance: number;
+  }>(null);
+  const [rewardMode, setRewardMode] = useState<'computed' | 'manual'>('computed');
+  const [rewardManualStr, setRewardManualStr] = useState('');
+
+  useEffect(() => {
+    if (!rewardPopup) return;
+    setRewardMode('computed');
+    setRewardManualStr('');
+  }, [rewardPopup]);
 
   const today = todayKey();
 
@@ -693,6 +714,49 @@ export function UpcomingPage() {
 
                           actions.addPurchase(purchase);
                           actions.markRecurringHandled(c.recurringId, c.dateKey);
+
+                          // Show reward popup if card has reward rules matching this category
+                          if (recurringItem?.paymentTargetId && recurringItem?.category) {
+                            const card = (data.cards || []).find((cc: any) => cc.id === recurringItem.paymentTargetId);
+                            if (card) {
+                              const rewardDelta = computeRewardDeltaForPurchase({
+                                card,
+                                amountCents: fullAmountCents,
+                                category: recurringItem.category,
+                                subcategory: recurringItem.subcategory
+                              });
+                              if (rewardDelta) {
+                                if (rewardDelta.rewardType === 'cashback') {
+                                  const cur = card.rewardCashbackCents ?? 0;
+                                  setRewardPopup({
+                                    rewardType: 'cashback', cardId: card.id, cardName: card.name || 'Card',
+                                    deltaLabel: `${formatCents(rewardDelta.deltaCashbackCents)} cash back`,
+                                    computedDelta: rewardDelta.deltaCashbackCents,
+                                    newBalanceLabel: `${formatCents(cur + rewardDelta.deltaCashbackCents)} cash back`,
+                                    newBalance: cur + rewardDelta.deltaCashbackCents, currentBalance: cur
+                                  });
+                                } else if (rewardDelta.rewardType === 'points') {
+                                  const cur = card.rewardPoints ?? 0;
+                                  setRewardPopup({
+                                    rewardType: 'points', cardId: card.id, cardName: card.name || 'Card',
+                                    deltaLabel: `${rewardDelta.deltaPoints.toLocaleString()} points`,
+                                    computedDelta: rewardDelta.deltaPoints,
+                                    newBalanceLabel: `${(cur + rewardDelta.deltaPoints).toLocaleString()} points`,
+                                    newBalance: cur + rewardDelta.deltaPoints, currentBalance: cur
+                                  });
+                                } else {
+                                  const cur = card.rewardMiles ?? 0;
+                                  setRewardPopup({
+                                    rewardType: 'miles', cardId: card.id, cardName: card.name || 'Card',
+                                    deltaLabel: `${rewardDelta.deltaMiles.toLocaleString()} miles`,
+                                    computedDelta: rewardDelta.deltaMiles,
+                                    newBalanceLabel: `${(cur + rewardDelta.deltaMiles).toLocaleString()} miles`,
+                                    newBalance: cur + rewardDelta.deltaMiles, currentBalance: cur
+                                  });
+                                }
+                              }
+                            }
+                          }
                         }}
                       >
                         Purchase Was Charged to Card
@@ -1227,6 +1291,74 @@ export function UpcomingPage() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {rewardPopup ? createPortal(
+        <div className="modal-overlay" style={{ zIndex: 10002 }}>
+          <div className="modal">
+            <h3 style={{ marginBottom: 10 }}>Update rewards?</h3>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+              Would you like to add {rewardPopup.deltaLabel} to your {rewardPopup.cardName} rewards? Your new balance will be {rewardPopup.newBalanceLabel}.
+            </p>
+            {rewardMode === 'manual' ? (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
+                  Specify how much {rewardPopup.rewardType === 'cashback' ? 'cash back ($)' : rewardPopup.rewardType} to add
+                </label>
+                <input
+                  className="ll-control"
+                  value={rewardManualStr}
+                  onChange={(e) => setRewardManualStr(e.target.value)}
+                  inputMode={rewardPopup.rewardType === 'cashback' ? 'decimal' : 'numeric'}
+                  placeholder={rewardPopup.rewardType === 'cashback' ? 'e.g. 20' : 'e.g. 40000'}
+                />
+              </div>
+            ) : null}
+            <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setRewardPopup(null)}>No</button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  if (rewardMode === 'computed') {
+                    if (rewardPopup.rewardType === 'cashback') {
+                      actions.updateCardRewardTotals(rewardPopup.cardId, { rewardCashbackCents: rewardPopup.newBalance });
+                    } else if (rewardPopup.rewardType === 'points') {
+                      actions.updateCardRewardTotals(rewardPopup.cardId, { rewardPoints: rewardPopup.newBalance });
+                    } else {
+                      actions.updateCardRewardTotals(rewardPopup.cardId, { rewardMiles: rewardPopup.newBalance });
+                    }
+                  } else {
+                    const cleaned = (rewardManualStr || '0').replace(/,/g, '');
+                    const deltaInput =
+                      rewardPopup.rewardType === 'cashback'
+                        ? parseCents(rewardManualStr)
+                        : Math.round(parseFloat(cleaned));
+                    const delta = Number.isFinite(deltaInput) ? deltaInput : 0;
+                    if (!(delta > 0)) return;
+                    const nextBalance = Math.max(0, rewardPopup.currentBalance + delta);
+                    if (rewardPopup.rewardType === 'cashback') {
+                      actions.updateCardRewardTotals(rewardPopup.cardId, { rewardCashbackCents: nextBalance });
+                    } else if (rewardPopup.rewardType === 'points') {
+                      actions.updateCardRewardTotals(rewardPopup.cardId, { rewardPoints: nextBalance });
+                    } else {
+                      actions.updateCardRewardTotals(rewardPopup.cardId, { rewardMiles: nextBalance });
+                    }
+                  }
+                  setRewardPopup(null);
+                }}
+              >
+                {rewardMode === 'computed' ? 'Yes' : 'Add'}
+              </button>
+              {rewardMode === 'computed' ? (
+                <button type="button" className="btn btn-secondary" onClick={() => setRewardMode('manual')}>Specify</button>
+              ) : (
+                <button type="button" className="btn btn-secondary" onClick={() => setRewardMode('computed')}>Use computed</button>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
       ) : null}
 
     </div>
