@@ -203,6 +203,18 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [faqOpen, setFaqOpen] = useState(false);
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
+
+  // Re-read after crypto unlock (aux cache may not have been populated on first mount)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const fresh = loadUserDisplayName();
+      if (fresh && !displayName) setDisplayName(fresh);
+      const freshImg = loadUserProfileImage();
+      if (freshImg && !profileImage) setProfileImage(freshImg);
+    }, 150);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
   const [tabOrder, setTabOrder] = useState<string[]>(() => loadTabOrderFromStorage());
