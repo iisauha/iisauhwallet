@@ -239,10 +239,10 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           borderRadius: 16,
           border: '1px solid var(--ui-border, var(--border))',
           padding: compact ? '6px 12px 4px' : '10px 14px 10px',
-          flex: '0 1 auto',
+          flex: compact ? '0 1 auto' : '1 1 0',
           overflowY: 'auto',
           minHeight: 0,
-          maxHeight: compact ? 'calc(100vh - 280px)' : 'calc(100vh - 240px)',
+          ...(compact ? { maxHeight: 'calc(100vh - 280px)' } : {}),
         }}
       >
         <h2
@@ -307,7 +307,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-start',
+        justifyContent: 'center',
         padding: '20px 16px',
         animation: 'passcodeFadeIn 0.3s ease-out',
       }}
@@ -318,6 +318,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           maxWidth: 420,
           display: 'flex',
           flexDirection: 'column',
+          height: 'calc(100vh - 40px)',
         }}
       >
         {inner}
