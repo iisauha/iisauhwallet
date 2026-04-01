@@ -330,21 +330,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     if (firstItem) setPurchasesCarouselHeight(firstItem.offsetHeight);
   }, [purchasesCarouselRef, visiblePurchasesKey]);
 
-  // IO for dot index only — height is handled by onScroll on the carousel div
-  useEffect(() => {
-    const el = purchasesCarouselRef;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setPurchasesCarouselIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
-  }, [purchasesCarouselRef, visiblePurchasesKey]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -796,6 +781,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              setPurchasesCarouselIdx(Math.round(rawIdx));
               const leftIdx = Math.floor(rawIdx);
               const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
               const progress = rawIdx - leftIdx;

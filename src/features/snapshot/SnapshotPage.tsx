@@ -343,36 +343,6 @@ export function SnapshotPage({
     });
   }, [activeSection, visibleCards.length]);
 
-  // IO for dot index only — height is handled by onScroll on each carousel div
-  useEffect(() => {
-    const el = banksCarouselRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setBanksIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const el = cardsCarouselRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setCardsIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
-  }, []);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
     setModal({ type: 'confirm', title, message, onConfirm });
@@ -527,6 +497,7 @@ export function SnapshotPage({
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              setBanksIdx(Math.round(rawIdx));
               const leftIdx = Math.floor(rawIdx);
               const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
               const progress = rawIdx - leftIdx;
@@ -662,6 +633,7 @@ export function SnapshotPage({
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              setCardsIdx(Math.round(rawIdx));
               const leftIdx = Math.floor(rawIdx);
               const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
               const progress = rawIdx - leftIdx;

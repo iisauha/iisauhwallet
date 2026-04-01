@@ -51,35 +51,6 @@ export function UpcomingPage() {
   const incomeCarouselRef = useRef<HTMLDivElement>(null);
   const costsCarouselRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = incomeCarouselRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setIncomeCarouselIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
-  });
-
-  useEffect(() => {
-    const el = costsCarouselRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setCostsCarouselIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
-  });
   const [modal, setModal] = useState<
     | { type: 'none' }
     | {
@@ -378,6 +349,11 @@ export function UpcomingPage() {
           <div
             className="card-carousel"
             ref={incomeCarouselRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              setIncomeCarouselIdx(Math.round(rawIdx));
+            }}
           >
           {displayedIncome.map((entry) => {
             if (entry.kind === 'expected') {
@@ -544,6 +520,11 @@ export function UpcomingPage() {
           <div
             className="card-carousel"
             ref={costsCarouselRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              setCostsCarouselIdx(Math.round(rawIdx));
+            }}
           >
           {displayedCosts.map((entry) => {
             if (entry.kind === 'expected') {

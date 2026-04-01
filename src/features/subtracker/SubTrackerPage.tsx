@@ -444,17 +444,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       const first = el.children[0] as HTMLElement | undefined;
       if (first) setCompletedCarouselHeight(first.offsetHeight);
     });
-    // IO for dot index only — height is handled by onScroll on the carousel div
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setCompletedCarouselIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
   }, [completedBonuses.length, completedBonusesCollapsed]);
 
   useEffect(() => {
@@ -464,16 +453,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
       const first = el.children[0] as HTMLElement | undefined;
       if (first) setEntriesCarouselHeight(first.offsetHeight);
     });
-    const io = new IntersectionObserver((ioEntries) => {
-      for (const entry of ioEntries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setEntriesCarouselIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
   }, [entries.length]);
 
   function entryDisplayName(e: SubTrackerEntry) {
@@ -517,6 +496,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              setCompletedCarouselIdx(Math.round(rawIdx));
               const leftIdx = Math.floor(rawIdx);
               const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
               const progress = rawIdx - leftIdx;
@@ -649,6 +629,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         onScroll={(e) => {
           const el = e.currentTarget;
           const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+          setEntriesCarouselIdx(Math.round(rawIdx));
           const leftIdx = Math.floor(rawIdx);
           const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
           const progress = rawIdx - leftIdx;

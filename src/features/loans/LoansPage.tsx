@@ -1191,20 +1191,6 @@ export function LoansPage() {
     });
   }, [loansWithDerived.length, showPrivate]);
 
-  useEffect(() => {
-    const el = privateCarouselRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-          if (idx >= 0) setPrivateCarouselIdx(idx);
-        }
-      }
-    }, { root: el, threshold: 0.5 });
-    Array.from(el.children).forEach(child => io.observe(child));
-    return () => io.disconnect();
-  }, []);
 
   const summary = useMemo(() => {
     let totalBalance = 0;
@@ -1532,6 +1518,7 @@ export function LoansPage() {
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+              setPrivateCarouselIdx(Math.round(rawIdx));
               const leftIdx = Math.floor(rawIdx);
               const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
               const progress = rawIdx - leftIdx;
