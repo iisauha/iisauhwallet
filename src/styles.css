@@ -558,11 +558,6 @@ input[type="date"].ll-control:focus {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
-/* Sub-popups nested inside a fullscreen overlay must cover full viewport */
-.modal-overlay--fullscreen > .modal-overlay {
-  position: fixed;
-  inset: 0;
-}
 .modal-header {
   display: flex;
   align-items: center;
