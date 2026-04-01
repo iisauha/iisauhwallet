@@ -74,6 +74,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   }, [rewardSubtractPopup]);
   const [purchasesCollapsed, setPurchasesCollapsed] = useDropdownCollapsed('spending_purchases', true);
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
+  const [legendOpen, setLegendOpen] = useState(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
   const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
   const [editBalanceModal, setEditBalanceModal] = useState<{
@@ -497,23 +498,25 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           <>
             <div
               className="spending-chart-wrap"
-              style={{ position: 'relative', width: '100%', height: 200 }}
+              style={{ position: 'relative', width: '100%', height: 260 }}
               onClick={(e) => {
                 if (drilldownCategoryId && e.target === e.currentTarget) setDrilldownCategoryId(null);
               }}
             >
               <canvas ref={canvasRef} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 500 }}>Total</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>{formatCents(periodTotalCents)}</div>
-                </div>
-              </div>
             </div>
-            {byCategory.length > 0 ? (() => {
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.78rem', padding: '5px 10px', minHeight: 'unset', marginTop: 6 }}
+              onClick={() => setLegendOpen(!legendOpen)}
+            >
+              {legendOpen ? 'Hide Legend' : 'Legend'}
+            </button>
+            {legendOpen && byCategory.length > 0 ? (() => {
               const totalCents = byCategory.reduce((s, c) => s + c.amountCents, 0);
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
                   {byCategory.map((c) => {
                     const pct = totalCents > 0 ? Math.round((c.amountCents / totalCents) * 100) : 0;
                     const isActive = drilldownCategoryId === c.categoryId;

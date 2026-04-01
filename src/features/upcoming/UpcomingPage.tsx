@@ -260,54 +260,49 @@ export function UpcomingPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
         <p className="section-title page-title" style={{ margin: 0 }}>Upcoming</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <Select
-            value={showCustomInput ? 'custom' : String(windowDays)}
-            onChange={(e) => {
-              if (e.target.value === 'custom') {
-                setShowCustomInput(true);
-                setCustomDaysInput(String(windowDays));
-              } else {
-                setShowCustomInput(false);
-                const v = parseInt(e.target.value, 10);
-                const days = Math.min(365, Math.max(1, isNaN(v) ? 30 : v));
-                setWindowDays(days);
-                saveUpcomingWindowPreference({ days });
-              }
-            }}
-            className="upcoming-window-select"
-            style={{ fontSize: '0.82rem', padding: '6px 10px', minHeight: 'unset' }}
-          >
-            <option value="14">14 days</option>
-            <option value="21">21 days</option>
-            <option value="30">30 days</option>
-            <option value="45">45 days</option>
-            <option value="custom">Custom…</option>
-          </Select>
-          {showCustomInput && (
-            <input
-              type="number"
-              min={1}
-              value={customDaysInput}
-              onChange={(e) => setCustomDaysInput(e.target.value)}
-              onBlur={() => {
-                const v = parseInt(customDaysInput, 10);
-                if (!isNaN(v) && v >= 1) {
-                  setWindowDays(v);
-                  saveUpcomingWindowPreference({ days: v });
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+          {showCustomInput ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="number"
+                min={1}
+                value={customDaysInput}
+                onChange={(e) => setCustomDaysInput(e.target.value)}
+                onBlur={() => {
                   const v = parseInt(customDaysInput, 10);
                   if (!isNaN(v) && v >= 1) {
                     setWindowDays(v);
                     saveUpcomingWindowPreference({ days: v });
                   }
-                }
+                  setShowCustomInput(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const v = parseInt(customDaysInput, 10);
+                    if (!isNaN(v) && v >= 1) {
+                      setWindowDays(v);
+                      saveUpcomingWindowPreference({ days: v });
+                    }
+                    setShowCustomInput(false);
+                  }
+                }}
+                autoFocus
+                placeholder="days"
+                style={{ width: 56, padding: '6px 10px', fontSize: '0.82rem', borderRadius: 10, border: '1px solid var(--ui-border, var(--border))', background: 'var(--ui-surface-secondary, var(--surface))', color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)', textAlign: 'center' }}
+              />
+              <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>days</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+              onClick={() => {
+                setShowCustomInput(true);
+                setCustomDaysInput(String(windowDays));
               }}
-              placeholder="days"
-              style={{ width: 64, padding: '5px 8px', fontSize: '0.82rem', borderRadius: 8, border: '1px solid var(--ui-border, var(--border))', background: 'var(--ui-surface-secondary, var(--surface))', color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}
-            />
+            >
+              {windowDays} days
+            </button>
           )}
         </div>
       </div>
