@@ -62,7 +62,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
               }}
             >
               {item.q}
-              <span style={{ fontSize: '1.2rem', color: 'var(--ui-primary-text, var(--text))' }}>{expandedIndex === i ? '−' : '+'}</span>
+              <span className="chevron" style={{ fontSize: '0.9rem' }}>{expandedIndex === i ? '▾' : '▸'}</span>
             </button>
             {expandedIndex === i && (
               <div

@@ -28,6 +28,7 @@ import {
 } from '../../state/storage';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
 import { useDialog } from '../../ui/DialogProvider';
+import { Select } from '../../ui/Select';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
 import { AppCustomizationModal } from './AppCustomizationModal';
 import { EditAccountNamesModal } from './EditAccountNamesModal';
@@ -488,32 +489,23 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                   <div className="settings-row-sublabel">Lock app after this many minutes of inactivity</div>
                 </div>
               </div>
-              <select
+              <Select
                 value={autoLockMinutes}
                 onChange={(e) => {
                   const v = parseInt(e.target.value, 10);
                   setAutoLockMinutes(v);
                   saveAutoLockMinutes(v);
                 }}
-                style={{
-                  width: 'auto', textAlign: 'right',
-                  padding: '5px 8px', fontSize: '0.85rem', lineHeight: 1.4,
-                  background: 'var(--ui-card-bg, var(--surface))',
-                  border: '1px solid var(--ui-border, var(--border))',
-                  borderRadius: 8,
-                  color: 'var(--muted)',
-                  fontFamily: 'var(--app-font-family)',
-                  cursor: 'pointer',
-                }}
+                style={{ width: 'auto', fontSize: '0.85rem', padding: '5px 8px', minHeight: 'unset', color: 'var(--muted)' }}
               >
-                <option value={1}>1 minute</option>
-                <option value={2}>2 minutes</option>
-                <option value={5}>5 minutes</option>
-                <option value={10}>10 minutes</option>
-                <option value={15}>15 minutes</option>
-                <option value={30}>30 minutes</option>
+                <option value={1}>1 min</option>
+                <option value={2}>2 min</option>
+                <option value={5}>5 min</option>
+                <option value={10}>10 min</option>
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
                 <option value={0}>Never</option>
-              </select>
+              </Select>
             </div>
             <SettingsRow
               icon={<IconQuestionMark />}
