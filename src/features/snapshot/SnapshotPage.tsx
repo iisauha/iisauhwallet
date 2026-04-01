@@ -805,9 +805,8 @@ export function SnapshotPage({
                 outboundHysaSubBucket: ''
               });
             }}
-            onJoinInbound={(id1, id2, combined) => {
-              actions.deletePending('in', id1);
-              actions.deletePending('in', id2);
+            onJoinInbound={(ids, combined) => {
+              ids.forEach((id) => actions.deletePending('in', id));
               actions.addPendingInbound(combined);
             }}
           />
@@ -856,9 +855,8 @@ export function SnapshotPage({
                 outboundHysaSubBucket: (item as any).meta?.hysaSubBucket || ''
               });
             }}
-            onJoinOutbound={(id1, id2, combined) => {
-              actions.deletePending('out', id1);
-              actions.deletePending('out', id2);
+            onJoinOutbound={(ids, combined) => {
+              ids.forEach((id) => actions.deletePending('out', id));
               actions.addPendingOutbound(combined);
             }}
           />

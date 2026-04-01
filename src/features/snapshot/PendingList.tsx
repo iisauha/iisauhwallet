@@ -31,7 +31,7 @@ function getInboundDestinationName(data: LedgerData, p: PendingInboundItem): str
   return 'Account';
 }
 
-type JoinStep = 'idle' | { fromId: string } | { fromId: string; toId: string };
+type JoinStep = 'idle' | { selectedIds: string[] };
 
 function useCarouselScroll() {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -96,9 +96,10 @@ function renderInboundCard(
   onPosted?: (id: string) => void,
   onDelete?: (id: string) => void,
   onEdit?: (item: PendingInboundItem) => void,
-  onJoin?: (id: string) => void,
-  onJoinWithThis?: (id: string) => void,
-  joiningFromId?: string | null,
+  onStartJoin?: (id: string) => void,
+  onToggleJoin?: (id: string) => void,
+  selectedIds?: Set<string>,
+  isEligible?: boolean,
   onExitJoin?: () => void
 ) {
   const isRefund = Boolean(p.isRefund || p.depositTo === 'card');
@@ -111,13 +112,12 @@ function renderInboundCard(
       ? `To HYSA - ${p.label}`
       : p.label;
   const amountText = formatCents(p.amountCents);
-  const isJoiningFrom = joiningFromId === p.id;
-  const canJoinWith = joiningFromId && joiningFromId !== p.id;
-  const inJoinMode = joiningFromId != null;
+  const inJoinMode = selectedIds != null && selectedIds.size > 0;
+  const isSelected = selectedIds?.has(p.id) ?? false;
   const btnStyle = { minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' };
   return (
     <div className="card-carousel-item" key={p.id}>
-      <div className="card">
+      <div className="card" style={isSelected ? { outline: '2px solid var(--accent)', outlineOffset: -2 } : undefined}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <div className="row">
             <span className="name">
@@ -128,8 +128,8 @@ function renderInboundCard(
             </span>
             <span className="amount inbound-amount">{amountText}</span>
           </div>
-          {isJoiningFrom ? (
-            <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
+          {isSelected && selectedIds!.size === 1 ? (
+            <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Swipe to add more…</span>
           ) : null}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start', marginTop: 10 }}>
@@ -138,10 +138,12 @@ function renderInboundCard(
           {onEdit ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onEdit(p)}>Edit</button>
           ) : null}
-          {onJoin && !joiningFromId ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoin(p.id)}>Join</button>
-          ) : onJoinWithThis && canJoinWith ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoinWithThis(p.id)}>Join with this</button>
+          {!inJoinMode && onStartJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Join</button>
+          ) : inJoinMode && isEligible && !isSelected && onToggleJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Join with this</button>
+          ) : inJoinMode && isSelected && selectedIds!.size > 1 && onToggleJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Remove from join</button>
           ) : null}
           {inJoinMode && onExitJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={onExitJoin}>Exit</button>
@@ -158,7 +160,7 @@ export function PendingInboundList(props: {
   onPosted?: (id: string) => void;
   onDelete?: (id: string) => void;
   onEditInbound?: (item: PendingInboundItem) => void;
-  onJoinInbound?: (id1: string, id2: string, combined: Omit<PendingInboundItem, 'id'>, dateISO: string) => void;
+  onJoinInbound?: (ids: string[], combined: Omit<PendingInboundItem, 'id'>, dateISO: string) => void;
 }) {
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -168,54 +170,69 @@ export function PendingInboundList(props: {
   const hasMore = props.items.length >= 5;
   const visibleItems = showAll ? props.items : props.items.slice(0, 5);
 
-  const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
-  const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
-  const joiningFromId = joinStep !== 'idle' ? joinStep.fromId : null;
+  const selectedIds = joinStep !== 'idle' ? new Set(joinStep.selectedIds) : new Set<string>();
+  const firstSelected = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.selectedIds[0]) : undefined;
 
-  const renderItem = (p: PendingInboundItem) =>
-    renderInboundCard(
+  const toggleJoin = (id: string) => {
+    if (joinStep === 'idle') return;
+    const ids = joinStep.selectedIds;
+    if (ids.includes(id)) {
+      const next = ids.filter((x) => x !== id);
+      if (next.length === 0) { setJoinStep('idle'); return; }
+      setJoinStep({ selectedIds: next });
+    } else {
+      setJoinStep({ selectedIds: [...ids, id] });
+    }
+  };
+
+  const renderItem = (p: PendingInboundItem) => {
+    const isEligible = firstSelected ? sameDestinationInbound(firstSelected, p) : false;
+    return renderInboundCard(
       p,
       props.data,
       props.onPosted,
       props.onDelete,
       props.onEditInbound,
-      props.onJoinInbound ? () => setJoinStep({ fromId: p.id }) : undefined,
-      props.onJoinInbound && fromItem && sameDestinationInbound(fromItem, p)
-        ? (toId) => setJoinStep({ fromId: fromItem.id, toId })
-        : undefined,
-      joiningFromId,
+      props.onJoinInbound ? (id) => setJoinStep({ selectedIds: [id] }) : undefined,
+      props.onJoinInbound ? (id) => toggleJoin(id) : undefined,
+      selectedIds.size > 0 ? selectedIds : undefined,
+      isEligible,
       () => setJoinStep('idle')
     );
+  };
+
+  const selectedItems = joinStep !== 'idle' ? joinStep.selectedIds.map((id) => props.items.find((p) => p.id === id)).filter(Boolean) as PendingInboundItem[] : [];
+  const totalCents = selectedItems.reduce((s, p) => s + (p.amountCents || 0), 0);
 
   const confirmJoin = () => {
-    if (!fromItem || !toItem || !props.onJoinInbound || joinStep === 'idle' || !('toId' in joinStep)) return;
-    const destName = getInboundDestinationName(props.data, fromItem);
+    if (!firstSelected || selectedItems.length < 2 || !props.onJoinInbound || joinStep === 'idle') return;
+    const destName = getInboundDestinationName(props.data, firstSelected);
     const combined: Omit<PendingInboundItem, 'id'> = {
       label: `Transfer to ${destName}`,
-      amountCents: (fromItem.amountCents || 0) + (toItem.amountCents || 0),
-      depositTo: fromItem.depositTo,
-      targetBankId: fromItem.targetBankId,
-      targetCardId: fromItem.targetCardId,
-      targetInvestingAccountId: fromItem.targetInvestingAccountId,
-      isRefund: fromItem.isRefund,
+      amountCents: totalCents,
+      depositTo: firstSelected.depositTo,
+      targetBankId: firstSelected.targetBankId,
+      targetCardId: firstSelected.targetCardId,
+      targetInvestingAccountId: firstSelected.targetInvestingAccountId,
+      isRefund: firstSelected.isRefund,
       createdAt: new Date(joinDate).toISOString(),
     };
-    props.onJoinInbound(fromItem.id, toItem.id, combined, new Date(joinDate).toISOString());
+    props.onJoinInbound(joinStep.selectedIds, combined, new Date(joinDate).toISOString());
     setJoinStep('idle');
     setJoinDate(new Date().toISOString().slice(0, 10));
   };
 
   return (
     <div>
-      {joinStep !== 'idle' && 'toId' in joinStep && fromItem && toItem ? (
+      {joinStep !== 'idle' && selectedItems.length >= 2 ? (
         <div
           className="card"
           style={{ padding: '10px 12px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-            Join into one:{' '}
-            <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
-            - Transfer to {getInboundDestinationName(props.data, fromItem)}
+            Join {selectedItems.length} items into one:{' '}
+            <strong>{formatCents(totalCents)}</strong>{' '}
+            - Transfer to {firstSelected ? getInboundDestinationName(props.data, firstSelected) : ''}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -291,9 +308,10 @@ function renderOutboundCard(
   onPosted?: (id: string) => void,
   onDelete?: (id: string) => void,
   onEdit?: (item: PendingOutboundItem) => void,
-  onJoin?: (id: string) => void,
-  onJoinWithThis?: (id: string) => void,
-  joiningFromId?: string | null,
+  onStartJoin?: (id: string) => void,
+  onToggleJoin?: (id: string) => void,
+  selectedIds?: Set<string>,
+  isEligible?: boolean,
   onExitJoin?: () => void
 ) {
   const isCcPay = p.outboundType === 'cc_payment';
@@ -314,13 +332,12 @@ function renderOutboundCard(
   } else {
     label = `${p.label}`;
   }
-  const isJoiningFrom = joiningFromId === p.id;
-  const canJoinWith = joiningFromId && joiningFromId !== p.id;
-  const inJoinMode = joiningFromId != null;
+  const inJoinMode = selectedIds != null && selectedIds.size > 0;
+  const isSelected = selectedIds?.has(p.id) ?? false;
   const btnStyle = { minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' };
   return (
     <div className="card-carousel-item" key={p.id}>
-      <div className="card">
+      <div className="card" style={isSelected ? { outline: '2px solid var(--accent)', outlineOffset: -2 } : undefined}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <div className="row">
             <span className="name">
@@ -330,8 +347,8 @@ function renderOutboundCard(
             </span>
             <span className="amount outbound-amount">{amountText}</span>
           </div>
-          {isJoiningFrom ? (
-            <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
+          {isSelected && selectedIds!.size === 1 ? (
+            <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Swipe to add more…</span>
           ) : null}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start', marginTop: 10 }}>
@@ -340,10 +357,12 @@ function renderOutboundCard(
           {onEdit ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onEdit(p)}>Edit</button>
           ) : null}
-          {onJoin && !joiningFromId ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoin(p.id)}>Join</button>
-          ) : onJoinWithThis && canJoinWith ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoinWithThis(p.id)}>Join with this</button>
+          {!inJoinMode && onStartJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Join</button>
+          ) : inJoinMode && isEligible && !isSelected && onToggleJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Join with this</button>
+          ) : inJoinMode && isSelected && selectedIds!.size > 1 && onToggleJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Remove from join</button>
           ) : null}
           {inJoinMode && onExitJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={onExitJoin}>Exit</button>
@@ -360,7 +379,7 @@ export function PendingOutboundList(props: {
   onPosted?: (id: string) => void;
   onDelete?: (id: string) => void;
   onEditOutbound?: (item: PendingOutboundItem) => void;
-  onJoinOutbound?: (id1: string, id2: string, combined: Omit<PendingOutboundItem, 'id'>, dateISO: string) => void;
+  onJoinOutbound?: (ids: string[], combined: Omit<PendingOutboundItem, 'id'>, dateISO: string) => void;
 }) {
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -370,55 +389,70 @@ export function PendingOutboundList(props: {
   const hasMore = props.items.length >= 5;
   const visibleItems = showAll ? props.items : props.items.slice(0, 5);
 
-  const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
-  const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
-  const joiningFromId = joinStep !== 'idle' ? joinStep.fromId : null;
+  const selectedIds = joinStep !== 'idle' ? new Set(joinStep.selectedIds) : new Set<string>();
+  const firstSelected = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.selectedIds[0]) : undefined;
 
-  const renderOutItem = (p: PendingOutboundItem) =>
-    renderOutboundCard(
+  const toggleJoin = (id: string) => {
+    if (joinStep === 'idle') return;
+    const ids = joinStep.selectedIds;
+    if (ids.includes(id)) {
+      const next = ids.filter((x) => x !== id);
+      if (next.length === 0) { setJoinStep('idle'); return; }
+      setJoinStep({ selectedIds: next });
+    } else {
+      setJoinStep({ selectedIds: [...ids, id] });
+    }
+  };
+
+  const renderOutItem = (p: PendingOutboundItem) => {
+    const isEligible = firstSelected ? sameDestinationOutbound(firstSelected, p) : false;
+    return renderOutboundCard(
       p,
       props.data,
       props.onPosted,
       props.onDelete,
       props.onEditOutbound,
-      props.onJoinOutbound ? () => setJoinStep({ fromId: p.id }) : undefined,
-      props.onJoinOutbound && fromItem && sameDestinationOutbound(fromItem, p)
-        ? (toId) => setJoinStep({ fromId: fromItem.id, toId })
-        : undefined,
-      joiningFromId,
+      props.onJoinOutbound ? (id) => setJoinStep({ selectedIds: [id] }) : undefined,
+      props.onJoinOutbound ? (id) => toggleJoin(id) : undefined,
+      selectedIds.size > 0 ? selectedIds : undefined,
+      isEligible,
       () => setJoinStep('idle')
     );
+  };
+
+  const selectedItems = joinStep !== 'idle' ? joinStep.selectedIds.map((id) => props.items.find((p) => p.id === id)).filter(Boolean) as PendingOutboundItem[] : [];
+  const totalCents = selectedItems.reduce((s, p) => s + (p.amountCents || 0), 0);
 
   const confirmJoinOut = () => {
-    if (!fromItem || !toItem || !props.onJoinOutbound || joinStep === 'idle' || !('toId' in joinStep)) return;
-    const combinedLabel = getOutboundDestinationLabel(props.data, fromItem);
+    if (!firstSelected || selectedItems.length < 2 || !props.onJoinOutbound || joinStep === 'idle') return;
+    const combinedLabel = getOutboundDestinationLabel(props.data, firstSelected);
     const combined: Omit<PendingOutboundItem, 'id'> = {
       label: combinedLabel,
-      amountCents: (fromItem.amountCents || 0) + (toItem.amountCents || 0),
-      outboundType: fromItem.outboundType,
-      sourceBankId: fromItem.sourceBankId,
-      targetCardId: fromItem.targetCardId,
-      paymentSource: fromItem.paymentSource,
-      paymentTargetId: fromItem.paymentTargetId,
-      meta: fromItem.meta,
+      amountCents: totalCents,
+      outboundType: firstSelected.outboundType,
+      sourceBankId: firstSelected.sourceBankId,
+      targetCardId: firstSelected.targetCardId,
+      paymentSource: firstSelected.paymentSource,
+      paymentTargetId: firstSelected.paymentTargetId,
+      meta: firstSelected.meta,
       createdAt: new Date(joinDate).toISOString(),
     };
-    props.onJoinOutbound(fromItem.id, toItem.id, combined, new Date(joinDate).toISOString());
+    props.onJoinOutbound(joinStep.selectedIds, combined, new Date(joinDate).toISOString());
     setJoinStep('idle');
     setJoinDate(new Date().toISOString().slice(0, 10));
   };
 
   return (
     <div>
-      {joinStep !== 'idle' && 'toId' in joinStep && fromItem && toItem ? (
+      {joinStep !== 'idle' && selectedItems.length >= 2 ? (
         <div
           className="card"
           style={{ padding: '10px 12px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-            Join into one:{' '}
-            <strong>{formatCents((fromItem.amountCents || 0) + (toItem.amountCents || 0))}</strong>{' '}
-            - {getOutboundDestinationLabel(props.data, fromItem)}
+            Join {selectedItems.length} items into one:{' '}
+            <strong>{formatCents(totalCents)}</strong>{' '}
+            - {firstSelected ? getOutboundDestinationLabel(props.data, firstSelected) : ''}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
