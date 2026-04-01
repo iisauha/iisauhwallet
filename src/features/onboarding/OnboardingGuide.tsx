@@ -63,8 +63,8 @@ const SECTIONS: Section[] = [
         <p style={{ marginTop: 0 }}>Your main financial dashboard. Shows where your money is right now.</p>
         <p><strong>Cash:</strong> All your bank accounts. Tap the header to expand. Swipe through accounts. Tap <strong>+ Add</strong> to create one, tap any card to edit its balance.</p>
         <p><strong>Credit Cards:</strong> All your credit cards and what you owe. Tap <strong>+ Add</strong> to add one. Tap a card to edit balance or set up reward rules (cashback, miles, points) so the app can suggest which card to use when you shop.</p>
-        <p><strong>Pending Inbound:</strong> Money on its way to you that has not arrived yet (bank transfer in progress, Venmo owed, etc.). Tap <strong>+ Add</strong> to create one. Tap <strong>Post</strong> when it arrives and the account balance updates.</p>
-        <p><strong>Pending Outbound:</strong> Money you have sent but that has not cleared yet. Tap <strong>Post</strong> when it clears.</p>
+        <p><strong>Pending Inbound:</strong> Money on its way to you (bank transfer, Venmo, etc.). Swipe through pending items. Tap <strong>Post</strong> when it arrives and the account balance updates.</p>
+        <p><strong>Pending Outbound:</strong> Money you have sent but that has not cleared yet. Swipe through items and tap <strong>Post</strong> when it clears.</p>
         <p style={{ marginBottom: 0 }}><strong>Net Cash:</strong> At the bottom of the page. Your total bank balance minus total credit card debt, adjusted for pending items. "If everything settled right now, where do I stand?"</p>
       </div>
     ),
@@ -75,7 +75,7 @@ const SECTIONS: Section[] = [
       <div style={{ fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--ui-primary-text, var(--text))' }}>
         <p style={{ marginTop: 0 }}>Log every purchase manually and see where your money goes by category.</p>
         <p><strong>Adding a purchase:</strong> Tap the "+" button in the bottom right corner and choose "Log a purchase." The app suggests which card earns the best rewards for that spending category.</p>
-        <p><strong>Views:</strong> Toggle between Categories (pie chart of spending by category), By Card (bar chart by card), and Rewards (current points/miles/cashback balances across all cards).</p>
+        <p><strong>Views:</strong> Toggle between Categories (donut chart with tappable category grid below), Sources (spending by payment source), and Rewards (current points/miles/cashback balances across all cards).</p>
         <p><strong>Date ranges:</strong> This month, last month, all time, or custom.</p>
         <p><strong>Search:</strong> Tap the magnifying glass icon to search purchases by name, category, or subcategory. Supports regex patterns like /coffee|tea/.</p>
         <p><strong>Reward tracking:</strong> After logging a purchase on a rewards card, confirm how many points/miles/cashback you earned and it gets added to that card's balance.</p>
@@ -158,7 +158,7 @@ const SECTIONS: Section[] = [
         <p><strong>Manage Categories:</strong> Create, rename, and delete spending categories and subcategories.</p>
         <p><strong>Security:</strong> Pause/resume the passcode, reset it, or set an auto-lock timer.</p>
         <p><strong>Export JSON:</strong> Full backup of all your data. Encrypt it with your passcode for extra protection. Back up regularly.</p>
-        <p><strong>Import JSON:</strong> Restore from a backup file. Replaces all current data.</p>
+        <p><strong>Import JSON:</strong> Restore from a backup file. Works across devices and browsers. Just enter the passcode used when the backup was exported.</p>
         <p style={{ marginBottom: 0 }}><strong>Export Purchases CSV:</strong> This month's purchases as a CSV file you can open in a spreadsheet.</p>
       </div>
     ),
@@ -170,7 +170,7 @@ const SECTIONS: Section[] = [
         <p style={{ marginTop: 0 }}>Your data lives in Safari's local storage on your device. If Safari data is cleared, your phone is lost, or you switch browsers, your data goes with it unless you have a backup.</p>
         <p><strong>How to back up:</strong> Settings {'>'} Export JSON. Save the file to iCloud Drive or another safe location outside your phone. Do this regularly. Once a week is a good habit.</p>
         <p><strong>Encrypted backups:</strong> When you export you can encrypt the file with your passcode. If you do this, you need your passcode to open the backup later.</p>
-        <p><strong>Restoring:</strong> Settings {'>'} Import JSON. Select the backup file. The app reloads with all your data restored.</p>
+        <p><strong>Restoring:</strong> Settings {'>'} Import JSON. Select the backup file and enter the export passcode. Works on any device or browser. The app reloads with all your data restored.</p>
         <p><strong>Recovery key:</strong> You saved a recovery key during setup. Keep it somewhere safe. It is how you reset your passcode if you forget it. Without it (and without security question answers), forgetting your passcode may require wiping the app data and restoring from a backup.</p>
         <p style={{ margin: '12px 0 0 0', padding: '10px 12px', background: 'color-mix(in srgb, var(--accent) 12%, transparent)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: '0.88rem' }}>
           You are all set. Tap <strong>Enter App</strong> below to get started.

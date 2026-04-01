@@ -204,8 +204,8 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               Filter by this month, last month, all time, or custom dates.
             </Li>
             <Li>
-              Switch between Categories (pie chart of spending distribution), By card (totals per card), or Rewards (balances
-              and value). Use Legend on the chart to match colors to category names.
+              Switch between Categories (donut chart with tappable category grid), Sources (totals per payment source), or Rewards (balances
+              and value). Tap any category in the grid to filter purchases.
             </Li>
             <Li>
               By card totals come from purchase records in the selected period, not from Snapshot card balances.
@@ -406,8 +406,8 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               screen).
             </Li>
             <Li>
-              Backup: export monthly purchases CSV; export full data as JSON; import JSON replaces data on this device.
-              Import only files you trust.
+              Backup: export monthly purchases CSV; export full data as JSON; import JSON works across any device or browser
+              (just enter the export passcode). Import only files you trust.
             </Li>
             <Li>
               Manage categories: categories and subcategories used in Spending and Recurring.
