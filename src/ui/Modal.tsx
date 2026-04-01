@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 
 function IconX() {
   return (
@@ -18,10 +18,10 @@ export function Modal(props: {
   titleStyle?: CSSProperties;
   /** Optional extra CSS class(es) applied to the .modal element. */
   className?: string;
+  /** When true, modal fills the entire screen instead of floating card. */
+  fullscreen?: boolean;
 }) {
-  const { open, title, children, onClose, titleStyle, className } = props;
-  const modalRef = useRef<HTMLDivElement>(null);
-  const [fullscreen, setFullscreen] = useState(false);
+  const { open, title, children, onClose, titleStyle, className, fullscreen } = props;
 
   useEffect(() => {
     if (!open || !onClose) return;
@@ -31,28 +31,6 @@ export function Modal(props: {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose]);
-
-  // Auto-detect if modal content overflows the card-style max-height
-  useEffect(() => {
-    if (!open) { setFullscreen(false); return; }
-    const el = modalRef.current;
-    if (!el) return;
-    const check = () => {
-      // Card modal max-height is 88vh minus overlay padding (32px top+bottom)
-      const availableHeight = window.innerHeight * 0.88;
-      setFullscreen(el.scrollHeight > availableHeight);
-    };
-    // Check after render + a small delay for content to settle
-    check();
-    const raf = requestAnimationFrame(check);
-    // Also re-check on resize
-    window.addEventListener('resize', check);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', check);
-    };
-  }, [open, children]);
-
 
   if (!open) return null;
   const overlayClass = fullscreen ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay';
@@ -64,23 +42,11 @@ export function Modal(props: {
       onClick={onClose ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
     >
       <div
-        ref={modalRef}
         className={className ? `modal ${className}` : 'modal'}
         onClick={onClose ? (e) => e.stopPropagation() : undefined}
       >
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-            marginBottom: title ? 16 : 4,
-            position: fullscreen ? 'sticky' : undefined,
-            top: fullscreen ? 0 : undefined,
-            zIndex: fullscreen ? 1 : undefined,
-            background: fullscreen ? 'inherit' : undefined,
-            paddingBottom: fullscreen ? 4 : undefined,
-          }}
+          className={fullscreen ? 'modal-header modal-header--sticky' : 'modal-header'}
         >
           {title ? (
             <h3 style={{ margin: 0, flex: 1, ...titleStyle }}>{title}</h3>

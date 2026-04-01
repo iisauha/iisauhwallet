@@ -288,7 +288,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
 
   if (canClose) {
     return (
-      <Modal open title="App Guide" onClose={onClose}>
+      <Modal open fullscreen title="App Guide" onClose={onClose}>
         <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '70vh' }}>
           {inner}
         </div>

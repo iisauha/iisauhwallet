@@ -446,9 +446,12 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
   };
 
   return (
-    <div className="modal-overlay modal-overlay-animate" onClick={onClose}>
-      <div className="modal modal-animate" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-        <h3>App Customization</h3>
+    <div className="modal-overlay modal-overlay--fullscreen modal-overlay-animate" onClick={onClose}>
+      <div className="modal modal-animate" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header modal-header--sticky">
+          <h3 style={{ margin: 0, flex: 1 }}>App Customization</h3>
+          <button type="button" aria-label="Close" onClick={onClose} className="modal-close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
+        </div>
 
         {/* ── Themes ───────────────────────────────────────── */}
         <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>Theme</p>

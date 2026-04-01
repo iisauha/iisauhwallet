@@ -103,7 +103,7 @@ export function FederalLoanParametersModal({
   };
 
   return (
-    <Modal open={open} title="Public Loan Parameters" onClose={onClose}>
+    <Modal open={open} fullscreen title="Public Loan Parameters" onClose={onClose}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Household</legend>

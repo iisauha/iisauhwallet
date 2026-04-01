@@ -11,7 +11,7 @@ export function ViewLastOptimizerModal({ open, onClose }: ViewLastOptimizerModal
   const saved = open ? loadLastOptimizerResult() : null;
 
   return (
-    <Modal open={open} title="Last computed optimization" onClose={onClose}>
+    <Modal open={open} fullscreen title="Last computed optimization" onClose={onClose}>
       {saved?.result ? (
         <>
           <OptimizerResults result={saved.result} showExpandedByDefault={false} />

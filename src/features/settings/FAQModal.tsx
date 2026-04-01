@@ -30,7 +30,7 @@ export function FAQModal({ open, onClose }: { open: boolean; onClose: () => void
   if (!open) return null;
 
   return (
-    <Modal open={open} title="Security FAQ" onClose={onClose}>
+    <Modal open={open} fullscreen title="Security FAQ" onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {FAQ_ITEMS.map((item, i) => (
           <div

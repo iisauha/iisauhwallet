@@ -63,6 +63,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Modal
       open={open}
+      fullscreen
       title="How This App Works"
       onClose={onClose}
       titleStyle={{ color: ALL_OTHER_TEXT_COLOR }}

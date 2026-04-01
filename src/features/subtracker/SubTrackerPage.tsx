@@ -245,7 +245,7 @@ function CompletedBonusEditorModal({
   }
 
   return (
-    <Modal open title={mode === 'edit' ? 'Edit Completed Bonus' : 'Add Completed Bonus'} onClose={onClose}>
+    <Modal open fullscreen title={mode === 'edit' ? 'Edit Completed Bonus' : 'Add Completed Bonus'} onClose={onClose}>
       <div className="field">
         <label>Account</label>
         <Select
@@ -1163,6 +1163,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
 
       <Modal
         open={editorOpen}
+        fullscreen
         title={editorEntryId ? 'Edit tracked card' : 'Add tracked card'}
         onClose={() => setEditorOpen(false)}
       >

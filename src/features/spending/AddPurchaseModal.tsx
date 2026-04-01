@@ -312,7 +312,7 @@ export function AddPurchaseModal(props: {
     suggestedSubTrackerCardId ? (data.cards || []).find((c) => c.id === suggestedSubTrackerCardId)?.name : null;
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay modal-overlay--fullscreen">
       {showSubTrackerPopup && suggestedSubTrackerCardId && suggestedSubTrackerCardName ? (
         <div className="modal-overlay" style={{ zIndex: 10001 }}>
           <div className="modal">
@@ -734,7 +734,10 @@ export function AddPurchaseModal(props: {
         </div>
       ) : null}
       <div className="modal">
-        <h3>{isEditing ? 'Edit Purchase' : props.reimbursementExpected ? 'Add Card Purchase (Full reimbursement expected)' : 'Add Purchase'}</h3>
+        <div className="modal-header modal-header--sticky">
+          <h3 style={{ margin: 0, flex: 1 }}>{isEditing ? 'Edit Purchase' : props.reimbursementExpected ? 'Add Card Purchase (Full reimbursement expected)' : 'Add Purchase'}</h3>
+          <button type="button" aria-label="Close" onClick={props.onClose} className="modal-close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
+        </div>
         {props.reimbursementExpected && !isEditing ? (
           <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 12 }}>
             A pending inbound entry will be created for this amount. When you receive reimbursement, post it from Pending Inbound and choose which bank to deposit into.

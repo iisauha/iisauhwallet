@@ -113,7 +113,7 @@ export function OptimizerModal({ open, onClose, recurring = [] }: OptimizerModal
   }, []);
 
   return (
-    <Modal open={open} title="Optimize Pre-Tax Contributions" onClose={onClose}>
+    <Modal open={open} fullscreen title="Optimize Pre-Tax Contributions" onClose={onClose}>
       {step === 'assumptions' && (
         <OptimizerAssumptionsScreen
           assumptions={assumptionsState}

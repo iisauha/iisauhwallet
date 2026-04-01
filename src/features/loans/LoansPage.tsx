@@ -1620,6 +1620,7 @@ export function LoansPage() {
       {/* Loan editor modal */}
       <Modal
         open={!!editor}
+        fullscreen
         title={editor?.mode === 'edit' ? 'Edit loan' : 'Add loan'}
         onClose={() => setEditor(null)}
       >
@@ -1656,6 +1657,7 @@ export function LoansPage() {
       {/* Payoff age modal */}
       <Modal
         open={!!payoffLoan}
+        fullscreen
         title="Estimated payoff age"
         onClose={() => setPayoffLoan(null)}
       >
@@ -1667,6 +1669,7 @@ export function LoansPage() {
       {/* Refinance modal (private loans only) — uses this loan's after-grace value */}
       <Modal
         open={!!refiLoan}
+        fullscreen
         title="After-grace refinance"
         onClose={() => setRefiLoan(null)}
       >
@@ -1776,6 +1779,7 @@ export function LoansPage() {
       {/* Future Estimated Payments (after-grace) info popup */}
       <Modal
         open={showAfterGraceBreakdown}
+        fullscreen
         title="Future Estimated Payments"
         onClose={() => setShowAfterGraceBreakdown(false)}
       >

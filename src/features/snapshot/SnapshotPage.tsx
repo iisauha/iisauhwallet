@@ -943,7 +943,7 @@ export function SnapshotPage({
       </div>
 
       {modal.type !== 'none' ? (
-        <div className="modal-overlay">
+        <div className={modal.type === 'card-reward-config' || modal.type === 'loan-payment-preview' ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay'}>
           <div className="modal">
             {modal.type === 'add-bank' ? (
               <>
@@ -1009,7 +1009,10 @@ export function SnapshotPage({
 
             {modal.type === 'loan-payment-preview' ? (
               <>
-                <h3>Loan payment breakdown</h3>
+                <div className="modal-header modal-header--sticky">
+                  <h3 style={{ margin: 0, flex: 1 }}>Loan payment breakdown</h3>
+                  <button type="button" aria-label="Close" onClick={() => setModal({ type: 'none' })} className="modal-close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
+                </div>
                 <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>
                   Review how this payment will update your loan balances. You can edit the private loan amounts for this
                   posted payment only.
@@ -1166,7 +1169,10 @@ export function SnapshotPage({
                 }));
               return (
                 <>
-                  <h3>Card reward rules</h3>
+                  <div className="modal-header modal-header--sticky">
+                    <h3 style={{ margin: 0, flex: 1 }}>Card reward rules</h3>
+                    <button type="button" aria-label="Close" onClick={() => setModal({ type: 'none' })} className="modal-close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
+                  </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: -4, marginBottom: 12 }}>
                     Add rules for category/subcategory. Exact match wins; catch-all applies when no rule matches.
                   </p>

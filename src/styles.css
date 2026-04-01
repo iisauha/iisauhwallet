@@ -545,6 +545,36 @@ input[type="date"].ll-control:focus {
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   animation: llModalIn 0.28s ease-out;
 }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.modal-header--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: inherit;
+  padding-bottom: 4px;
+}
+.modal-close-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1.5px solid var(--ui-border, var(--border));
+  border-radius: 10px;
+  background: var(--ui-surface-secondary, var(--surface));
+  color: var(--ui-primary-text, var(--text));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  opacity: 0.85;
+}
 .modal:focus { outline: none; }
 .modal:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 2px; }
 

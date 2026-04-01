@@ -56,9 +56,12 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
   };
 
   return (
-    <div className="modal-overlay modal-overlay-animate" onClick={onClose}>
+    <div className="modal-overlay modal-overlay--fullscreen modal-overlay-animate" onClick={onClose}>
       <div className="modal modal-animate" onClick={(e) => e.stopPropagation()}>
-        <h3>Edit Account Names</h3>
+        <div className="modal-header modal-header--sticky">
+          <h3 style={{ margin: 0, flex: 1 }}>Edit Account Names</h3>
+          <button type="button" aria-label="Close" onClick={onClose} className="modal-close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
+        </div>
         <p style={{ fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 16 }}>
           Change the display name for any account. Balances and logic are unchanged.
         </p>
