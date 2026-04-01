@@ -52,27 +52,7 @@ export function Modal(props: {
             <h3 style={{ margin: 0, flex: 1, ...titleStyle }}>{title}</h3>
           ) : <span />}
           {onClose ? (
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={onClose}
-              style={{
-                flexShrink: 0,
-                width: 34,
-                height: 34,
-                padding: 0,
-                border: '1.5px solid var(--ui-border, var(--border))',
-                borderRadius: 10,
-                background: 'var(--ui-surface-secondary, var(--surface))',
-                color: 'var(--ui-primary-text, var(--text))',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background 0.15s ease',
-                opacity: 0.85,
-              }}
-            >
+            <button type="button" aria-label="Close" onClick={onClose} className="modal-close-btn">
               <IconX />
             </button>
           ) : null}
