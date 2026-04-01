@@ -716,9 +716,12 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           >
             ← All categories
           </button>
-          <div style={{ fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500, marginTop: 6, paddingLeft: 2 }}>
-            Only Showing {getCategoryName(cfg, drilldownCategoryId)} purchases
-          </div>
+        </div>
+      ) : null}
+
+      {drilldownCategoryId ? (
+        <div style={{ fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500, textAlign: 'center', margin: '12px 0' }}>
+          Only Showing {getCategoryName(cfg, drilldownCategoryId)} purchases
         </div>
       ) : null}
 
