@@ -707,7 +707,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
 
 
       {view === 'category' && drilldownCategoryId ? (
-        <div style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
           <button
             type="button"
             className="snapshot-util-btn"
@@ -716,12 +716,9 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           >
             ← All categories
           </button>
-        </div>
-      ) : null}
-
-      {drilldownCategoryId ? (
-        <div style={{ fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500, textAlign: 'center', margin: '12px 0' }}>
-          Only Showing {getCategoryName(cfg, drilldownCategoryId)} purchases
+          <span style={{ fontSize: '0.84rem', color: 'var(--muted)', fontWeight: 500 }}>
+            Only Showing {getCategoryName(cfg, drilldownCategoryId)}
+          </span>
         </div>
       ) : null}
 
