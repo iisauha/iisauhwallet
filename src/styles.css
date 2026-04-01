@@ -503,28 +503,29 @@ input[type="date"].ll-control:focus {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   z-index: 200;
-  padding: 16px;
-  padding-bottom: calc(16px + var(--safe-bottom));
+  padding: 0;
   animation: llFadeIn 0.18s ease-out;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: none;
 }
 .modal {
   width: 100%;
-  max-width: 420px;
-  max-height: min(88vh, 88dvh);
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   font-family: var(--app-font-family);
   background: var(--ui-modal-bg, var(--ui-card-bg, var(--surface)));
-  border-radius: 20px;
+  border-radius: 0;
   padding: 20px 18px 16px;
-  border: 1px solid var(--ui-border, var(--border));
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  border: none;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  animation: llModalIn 0.38s ease-out;
-  box-shadow: var(--shadow-strong);
+  animation: llModalIn 0.28s ease-out;
 }
 .modal:focus { outline: none; }
 .modal:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 2px; }
@@ -534,8 +535,8 @@ input[type="date"].ll-control:focus {
   to { opacity: 1; }
 }
 @keyframes llModalIn {
-  from { opacity: 0; transform: scale(0.96) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -580,6 +581,7 @@ input[type="date"].ll-control:focus {
 .modal select,
 .modal textarea {
   width: 100%;
+  max-width: 100%;
   min-height: 44px;
   padding: 10px 12px;
   font-size: 0.95rem;

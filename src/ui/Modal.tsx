@@ -40,45 +40,48 @@ export function Modal(props: {
       onClick={onClose ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
     >
       <div className={className ? `modal ${className}` : 'modal'} onClick={onClose ? (e) => e.stopPropagation() : undefined}>
-        {(title || onClose) ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-              marginBottom: title ? 20 : 8,
-            }}
-          >
-            {title ? (
-              <h3 style={{ margin: 0, flex: 1, ...titleStyle }}>{title}</h3>
-            ) : <span />}
-            {onClose ? (
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={onClose}
-                style={{
-                  flexShrink: 0,
-                  width: 32,
-                  height: 32,
-                  padding: 0,
-                  border: '1px solid var(--ui-border, var(--border))',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  color: 'var(--muted)',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background 0.15s ease',
-                }}
-              >
-                <IconX />
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            marginBottom: title ? 20 : 8,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            background: 'inherit',
+            paddingBottom: 4,
+          }}
+        >
+          {title ? (
+            <h3 style={{ margin: 0, flex: 1, ...titleStyle }}>{title}</h3>
+          ) : <span />}
+          {onClose ? (
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              style={{
+                flexShrink: 0,
+                width: 32,
+                height: 32,
+                padding: 0,
+                border: '1px solid var(--ui-border, var(--border))',
+                borderRadius: 8,
+                background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              <IconX />
+            </button>
+          ) : null}
+        </div>
         {children}
       </div>
     </div>
