@@ -23,6 +23,7 @@ import {
   loadHiddenTabs,
   saveHiddenTabs,
   hashPasscode,
+  verifyPasscode,
   clearDataCache,
 } from '../../state/storage';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
@@ -237,21 +238,42 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       setChallenge((c) => c ? { ...c, error: 'Enter 6 digits' } : null);
       return;
     }
-    const storedHash = loadPasscodeHash();
-    const hash = await hashPasscode(challenge.input);
-    if (hash !== storedHash) {
+
+    const onFail = () => {
       const nextFails = challenge.fails + 1;
       let delaySec = 0;
-      if (nextFails >= 5) delaySec = 300; // 5 min lock after 5 fails
+      if (nextFails >= 5) delaySec = 300;
       else if (nextFails >= 3) delaySec = 5;
       else if (nextFails >= 2) delaySec = 2;
       setChallenge((c) => c ? { ...c, fails: nextFails, error: `Incorrect passcode.${nextFails >= 5 ? ' Locked for 5 min.' : ''}`, input: '', delayUntil: delaySec > 0 ? Date.now() + delaySec * 1000 : 0 } : null);
-      return;
-    }
-    // Correct — run the gated action
+    };
+
     const mode = challenge.mode;
     const pendingJson = challenge.pendingJson;
     const confirmedInput = challenge.input;
+
+    // Import mode: skip local hash check, try decrypting the file directly
+    if (mode === 'import' && pendingJson) {
+      try {
+        await importJSONDecrypted(pendingJson, confirmedInput);
+        setChallenge(null);
+        setChallengeCountdown(0);
+        alert('Import done. Reloading…');
+        window.location.reload();
+      } catch (_) {
+        onFail();
+      }
+      return;
+    }
+
+    // Export/CSV mode: verify against local passcode hash
+    const storedHash = loadPasscodeHash();
+    if (!storedHash) return;
+    const valid = await verifyPasscode(confirmedInput, storedHash);
+    if (!valid) {
+      onFail();
+      return;
+    }
     setChallenge(null);
     setChallengeCountdown(0);
     if (mode === 'export') {
@@ -260,14 +282,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       doExportText(encrypted);
     } else if (mode === 'csv') {
       exportMonthlyPurchasesCsv();
-    } else if (mode === 'import' && pendingJson) {
-      try {
-        await importJSONDecrypted(pendingJson, confirmedInput);
-        alert('Import done. Reloading…');
-        window.location.reload();
-      } catch (_) {
-        alert('Wrong passcode or corrupt file.');
-      }
     }
   };
 
@@ -552,11 +566,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               window.location.reload();
             } catch (err: any) {
               if (err?.message === ENCRYPTED_IMPORT) {
-                if (!hasPasscode) {
-                  alert('This backup is encrypted but no passcode is set. Set a passcode first, then re-import.');
-                } else {
-                  openChallenge('import', text);
-                }
+                openChallenge('import', text);
               } else {
                 alert('Invalid JSON.');
               }
@@ -718,7 +728,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         >
           <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.4 }}>
             {challenge.mode === 'import'
-              ? 'This backup is encrypted. Enter your passcode to decrypt and restore it.'
+              ? 'This backup is encrypted. Enter the passcode that was used when this backup was exported.'
               : 'Enter your passcode to continue.'}
           </p>
           <input
