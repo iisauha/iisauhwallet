@@ -238,17 +238,16 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           background: 'var(--ui-card-bg, var(--surface))',
           borderRadius: 16,
           border: '1px solid var(--ui-border, var(--border))',
-          padding: compact ? '6px 12px 4px' : '10px 14px 10px',
-          flex: compact ? '0 1 auto' : '1 1 0',
+          padding: compact ? '10px 14px 8px' : '10px 14px 10px',
+          flex: '1 1 0',
           overflowY: 'auto',
           minHeight: 0,
-          ...(compact ? { maxHeight: 'calc(100vh - 280px)' } : {}),
         }}
       >
         <h2
           style={{
-            margin: compact ? '0 0 3px 0' : '0 0 6px 0',
-            fontSize: compact ? '0.88rem' : '0.98rem',
+            margin: compact ? '0 0 6px 0' : '0 0 6px 0',
+            fontSize: compact ? '0.95rem' : '0.98rem',
             fontWeight: 700,
             color: 'var(--ui-title-text, var(--text))',
             lineHeight: 1.3,
