@@ -924,6 +924,20 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
           paymentSource,
           paymentTargetId
         };
+        // Carry split info from pending outbound so rewards use full amount
+        if (typeof pending.splitTotalCents === 'number' && typeof pending.myPortionCents === 'number') {
+          purchase.isSplit = true;
+          purchase.splitTotalCents = pending.splitTotalCents;
+          purchase.splitMyPortionCents = pending.myPortionCents;
+          purchase.originalTotal = pending.splitTotalCents;
+          if (paymentSource === 'card' || (paymentSource as string) === 'credit_card') {
+            purchase.splitSnapshot = {
+              amountCents: pending.splitTotalCents,
+              paymentSource,
+              paymentTargetId
+            };
+          }
+        }
         (next as any).purchases.push(purchase);
       };
 

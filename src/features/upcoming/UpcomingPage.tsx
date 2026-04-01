@@ -656,18 +656,42 @@ export function UpcomingPage() {
                         className="btn btn-secondary"
                         style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => {
-                          const amountCents = c.amountCents || 0;
-                          actions.addPurchase({
+                          const isSplitRec = !!c.isSplit && typeof c.myPortionCents === 'number' && c.myPortionCents > 0;
+                          const fullAmountCents = c.fullAmountCents || c.amountCents || 0;
+                          const userPortionCents = isSplitRec ? (c.myPortionCents ?? c.amountCents ?? 0) : fullAmountCents;
+                          const splitInboundCents = isSplitRec ? fullAmountCents - userPortionCents : 0;
+                          const shouldApply = !!(recurringItem?.applyToSnapshot && recurringItem?.paymentTargetId);
+
+                          const purchase: any = {
                             title: c.recurringName,
-                            amountCents,
+                            amountCents: userPortionCents,
                             dateISO: toLocalDateKey(new Date()),
                             category: recurringItem?.category,
                             subcategory: recurringItem?.subcategory,
                             notes: recurringItem?.notes,
-                            applyToSnapshot: !!(recurringItem?.applyToSnapshot && recurringItem?.paymentTargetId),
+                            applyToSnapshot: shouldApply,
                             paymentSource: 'card',
                             paymentTargetId: recurringItem?.paymentTargetId,
-                          } as any);
+                          };
+
+                          if (isSplitRec) {
+                            purchase.isSplit = true;
+                            purchase.splitTotalCents = fullAmountCents;
+                            purchase.splitMyPortionCents = userPortionCents;
+                            purchase.originalTotal = fullAmountCents;
+                            if (splitInboundCents > 0) {
+                              purchase.splitInboundCents = splitInboundCents;
+                            }
+                            if (shouldApply) {
+                              purchase.splitSnapshot = {
+                                amountCents: fullAmountCents,
+                                paymentSource: 'card',
+                                paymentTargetId: recurringItem?.paymentTargetId
+                              };
+                            }
+                          }
+
+                          actions.addPurchase(purchase);
                           actions.markRecurringHandled(c.recurringId, c.dateKey);
                         }}
                       >
