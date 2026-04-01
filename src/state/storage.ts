@@ -53,6 +53,9 @@ import {
   HIDDEN_TABS_KEY,
   USER_DISPLAY_NAME_KEY,
   USER_PROFILE_IMAGE_KEY,
+  PUBLIC_LOAN_ESTIMATOR_KEY,
+  PUBLIC_LOAN_SUMMARY_KEY,
+  FEDERAL_LOAN_PARAMETERS_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached, b64Enc, b64Dec } from './crypto';
@@ -503,6 +506,10 @@ export function exportJSON(): string {
     PUBLIC_LOAN_SHOW_PAYMENT_ACTIONS_KEY,
     UPCOMING_DISMISSED_OCCURRENCES_KEY,
     USER_DISPLAY_NAME_KEY,
+    USER_PROFILE_IMAGE_KEY,
+    PUBLIC_LOAN_ESTIMATOR_KEY,
+    PUBLIC_LOAN_SUMMARY_KEY,
+    FEDERAL_LOAN_PARAMETERS_KEY,
     'iisauhwallet_quick_action_freq_v1',
   ]);
 
@@ -526,6 +533,8 @@ export function exportJSON(): string {
     PUBLIC_PAYMENT_NOW_ADDED_KEY, PRIVATE_PAYMENT_NOW_BASE_KEY,
     LAST_RECOMPUTE_DATE_KEY, PAYMENT_NOW_MANUAL_OVERRIDE_KEY,
     CARD_REWARD_ADJUSTMENTS_KEY, CARD_REWARD_ONLY_ENTRIES_KEY, REWARDS_VISIBLE_CARD_IDS_KEY,
+    PUBLIC_LOAN_ESTIMATOR_KEY, PUBLIC_LOAN_SUMMARY_KEY, FEDERAL_LOAN_PARAMETERS_KEY,
+    USER_DISPLAY_NAME_KEY, USER_PROFILE_IMAGE_KEY,
   ]);
 
   try {
