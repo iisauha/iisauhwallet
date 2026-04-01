@@ -740,31 +740,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     });
   }, []);
 
-  // Dot-indicator index updates only when scroll fully snaps; ResizeObserver tracks current card height
-  // IntersectionObserver for dot index only — height is handled by onScroll on each carousel div
-  useEffect(() => {
-    const pairs: [React.RefObject<HTMLDivElement>, (i: number) => void][] = [
-      [hysaCarouselRef, setHysaCarouselIdx],
-      [generalCarouselRef, setGeneralCarouselIdx],
-      [rothCarouselRef, setRothCarouselIdx],
-      [k401CarouselRef, setK401CarouselIdx],
-    ];
-    const cleanups = pairs.map(([ref, setIdx]) => {
-      const el = ref.current;
-      if (!el) return () => {};
-      const io = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-            if (idx >= 0) setIdx(idx);
-          }
-        }
-      }, { root: el, threshold: 0.5 });
-      Array.from(el.children).forEach(child => io.observe(child));
-      return () => io.disconnect();
-    });
-    return () => cleanups.forEach((fn) => fn());
-  }, []);
 
   const [showZeroHysa, setShowZeroHysa] = useState<boolean>(() =>
     loadBoolPref(INVESTING_SHOW_ZERO_HYSA_KEY, true)
@@ -1534,6 +1509,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           onScroll={(e) => {
             const el = e.currentTarget;
             const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+            setCarouselIdx(Math.round(rawIdx));
             const leftIdx = Math.floor(rawIdx);
             const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
             const progress = rawIdx - leftIdx;

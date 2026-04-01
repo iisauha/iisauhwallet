@@ -64,29 +64,6 @@ export function PublicLoanSimpleCard(props: {
     });
   }, []);
 
-  useEffect(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-    let ro: ResizeObserver | null = null;
-    const observeCurrent = () => {
-      ro?.disconnect();
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (!item) return;
-      ro = new ResizeObserver(() => setPublicCarouselHeight((el.children[Math.round(el.scrollLeft / (el.clientWidth || 1))] as HTMLElement | undefined)?.offsetHeight));
-      ro.observe(item);
-    };
-    const handler = () => {
-      const idx = Math.round(el.scrollLeft / (el.clientWidth || 1));
-      setCarouselIdx(idx);
-      const item = el.children[idx] as HTMLElement | undefined;
-      if (item) setPublicCarouselHeight(item.offsetHeight);
-      observeCurrent();
-    };
-    observeCurrent();
-    el.addEventListener('scrollend', handler);
-    return () => { el.removeEventListener('scrollend', handler); ro?.disconnect(); };
-  }, []);
 
   useEffect(() => {
     const s = loadPublicLoanSummary();
@@ -180,6 +157,7 @@ export function PublicLoanSimpleCard(props: {
         onScroll={(e) => {
           const el = e.currentTarget;
           const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+          setCarouselIdx(Math.round(rawIdx));
           const leftIdx = Math.floor(rawIdx);
           const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
           const progress = rawIdx - leftIdx;
