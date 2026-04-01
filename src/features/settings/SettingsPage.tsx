@@ -294,7 +294,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
     resizeImageToDataUrl(file).then(
-      (dataUrl) => { saveUserProfileImage(dataUrl); setProfileImage(dataUrl); },
+      (dataUrl) => { saveUserProfileImage(dataUrl); setProfileImage(dataUrl); window.dispatchEvent(new CustomEvent('profile-updated')); },
       () => {}
     );
     e.target.value = '';
@@ -375,7 +375,10 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            onBlur={() => saveUserDisplayName(displayName || null)}
+            onBlur={() => {
+              saveUserDisplayName(displayName || null);
+              window.dispatchEvent(new CustomEvent('profile-updated'));
+            }}
             placeholder="Enter your name"
             style={{
               width: '100%', padding: 0, fontSize: '1.6rem', fontWeight: 700, textAlign: 'center',

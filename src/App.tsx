@@ -112,7 +112,15 @@ function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
       setDisplayName(loadUserDisplayName());
       setProfileImage(loadUserProfileImage());
     }, 100);
-    return () => clearTimeout(timer);
+    const handleProfileUpdate = () => {
+      setDisplayName(loadUserDisplayName());
+      setProfileImage(loadUserProfileImage());
+    };
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('profile-updated', handleProfileUpdate);
+    };
   }, []);
 
   return (
