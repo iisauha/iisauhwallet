@@ -204,16 +204,26 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
 
-  // Re-read after crypto unlock (aux cache may not have been populated on first mount)
+  // Re-read after crypto unlock — aux cache may lag behind on mount.
+  // Retry at increasing intervals until we get a value or give up.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const fresh = loadUserDisplayName();
-      if (fresh && !displayName) setDisplayName(fresh);
-      const freshImg = loadUserProfileImage();
-      if (freshImg && !profileImage) setProfileImage(freshImg);
-    }, 150);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    const delays = [50, 150, 400, 1000];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (const ms of delays) {
+      timers.push(setTimeout(() => {
+        if (cancelled) return;
+        setDisplayName((prev) => {
+          if (prev) return prev; // already have a value
+          return loadUserDisplayName() || '';
+        });
+        setProfileImage((prev) => {
+          if (prev) return prev;
+          return loadUserProfileImage();
+        });
+      }, ms));
+    }
+    return () => { cancelled = true; timers.forEach(clearTimeout); };
   }, []);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
