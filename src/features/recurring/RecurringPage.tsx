@@ -125,6 +125,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
   const [expensesSectionCollapsed, setExpensesSectionCollapsed] = useDropdownCollapsed('recurring_expenses_main', false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
   const [expenseCatIdx, setExpenseCatIdx] = useState<Record<string, number>>({});
+  const [showAllExpenseCat, setShowAllExpenseCat] = useState<Record<string, boolean>>({});
   const expenseCatRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   function toMonthlyCents(r: any): number {
@@ -369,6 +370,8 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
         </div>
       {expensesByCategory.map(([catId, items]) => {
         const headerLabel = getCategoryName(cfg, catId);
+        const catShowAll = !!showAllExpenseCat[catId];
+        const displayedItems = catShowAll ? items : items.slice(0, 5);
         return (
           <div key={catId} style={{ marginBottom: 16 }}>
             <div style={{
@@ -392,7 +395,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 setExpenseCatIdx((prev) => ({ ...prev, [catId]: idx }));
               }}
             >
-            {items.map((r: any) => (
+            {displayedItems.map((r: any) => (
               <div className="card-carousel-item" key={r.id}>
               <div className="card">
                     <div className="row">
@@ -470,24 +473,35 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                   </div>
                 ))}
             </div>
-            {items.length > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                {items.map((_: any, i: number) => (
-                  <span
-                    key={i}
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: '50%',
-                      background: i === (expenseCatIdx[catId] ?? 0) ? 'var(--accent)' : 'var(--border)',
-                      transition: 'background 0.2s',
-                      display: 'inline-block',
-                      flexShrink: 0,
-                    }}
-                  />
-                ))}
+            {displayedItems.length > 1 && (catShowAll && items.length >= 5 ? (
+              <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+                {(expenseCatIdx[catId] ?? 0) + 1} of {displayedItems.length}
               </div>
-            )}
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                  {displayedItems.map((_: any, i: number) => (
+                    <span
+                      key={i}
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: i === (expenseCatIdx[catId] ?? 0) ? 'var(--accent)' : 'var(--border)',
+                        transition: 'background 0.2s',
+                        display: 'inline-block',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ))}
+                </div>
+                {items.length >= 5 && (expenseCatIdx[catId] ?? 0) >= displayedItems.length - 1 ? (
+                  <div style={{ textAlign: 'center', marginTop: 8 }}>
+                    <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllExpenseCat((prev) => ({ ...prev, [catId]: true }))}>See more</button>
+                  </div>
+                ) : null}
+              </>
+            ))}
           </div>
         );
       })}

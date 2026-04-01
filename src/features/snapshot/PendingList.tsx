@@ -54,25 +54,39 @@ function useCarouselScroll() {
   return { ref, idx, height, onScroll };
 }
 
-function CarouselDots({ count, activeIdx }: { count: number; activeIdx: number }) {
+function CarouselIndicator({ count, activeIdx, showAll, onSeeMore }: { count: number; activeIdx: number; showAll: boolean; onSeeMore: () => void }) {
   if (count <= 1) return null;
+  if (showAll) {
+    return (
+      <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+        {activeIdx + 1} of {count}
+      </div>
+    );
+  }
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-      {Array.from({ length: count }, (_, i) => (
-        <span
-          key={i}
-          style={{
-            width: 7,
-            height: 7,
-            borderRadius: '50%',
-            background: i === activeIdx ? 'var(--accent)' : 'var(--border)',
-            transition: 'background 0.2s',
-            display: 'inline-block',
-            flexShrink: 0,
-          }}
-        />
-      ))}
-    </div>
+    <>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+        {Array.from({ length: count }, (_, i) => (
+          <span
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: i === activeIdx ? 'var(--accent)' : 'var(--border)',
+              transition: 'background 0.2s',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
+        ))}
+      </div>
+      {count >= 5 && activeIdx >= count - 1 ? (
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={onSeeMore}>See more</button>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -152,7 +166,11 @@ export function PendingInboundList(props: {
 }) {
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [showAll, setShowAll] = useState(false);
   const carousel = useCarouselScroll();
+
+  const hasMore = props.items.length >= 5;
+  const visibleItems = showAll ? props.items : props.items.slice(0, 5);
 
   const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
   const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
@@ -226,10 +244,10 @@ export function PendingInboundList(props: {
       ) : null}
       <div style={carousel.height != null ? { height: carousel.height, overflow: 'hidden' } : {}}>
         <div className="card-carousel" ref={carousel.ref} onScroll={carousel.onScroll}>
-          {props.items.map((p) => renderItem(p))}
+          {visibleItems.map((p) => renderItem(p))}
         </div>
       </div>
-      <CarouselDots count={props.items.length} activeIdx={carousel.idx} />
+      <CarouselIndicator count={visibleItems.length} activeIdx={carousel.idx} showAll={showAll && hasMore} onSeeMore={() => setShowAll(true)} />
     </div>
   );
 }
@@ -354,7 +372,11 @@ export function PendingOutboundList(props: {
 }) {
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [showAll, setShowAll] = useState(false);
   const carousel = useCarouselScroll();
+
+  const hasMore = props.items.length >= 5;
+  const visibleItems = showAll ? props.items : props.items.slice(0, 5);
 
   const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
   const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
@@ -429,10 +451,10 @@ export function PendingOutboundList(props: {
       ) : null}
       <div style={carousel.height != null ? { height: carousel.height, overflow: 'hidden' } : {}}>
         <div className="card-carousel" ref={carousel.ref} onScroll={carousel.onScroll}>
-          {props.items.map((p) => renderOutItem(p))}
+          {visibleItems.map((p) => renderOutItem(p))}
         </div>
       </div>
-      <CarouselDots count={props.items.length} activeIdx={carousel.idx} />
+      <CarouselIndicator count={visibleItems.length} activeIdx={carousel.idx} showAll={showAll && hasMore} onSeeMore={() => setShowAll(true)} />
     </div>
   );
 }

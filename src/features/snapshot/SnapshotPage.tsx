@@ -219,6 +219,8 @@ export function SnapshotPage({
   const [activeSection, setActiveSection] = useState<'cash' | 'cards' | 'pending' | null>(null);
   const [banksIdx, setBanksIdx] = useState(0);
   const [cardsIdx, setCardsIdx] = useState(0);
+  const [showAllBanks, setShowAllBanks] = useState(false);
+  const [showAllCards, setShowAllCards] = useState(false);
   const banksCarouselRef = useRef<HTMLDivElement>(null);
   const cardsCarouselRef = useRef<HTMLDivElement>(null);
   const [banksCarouselHeight, setBanksCarouselHeight] = useState<number | undefined>(undefined);
@@ -315,6 +317,9 @@ export function SnapshotPage({
       ? cardsSortedByBalance
       : cardsSortedByBalance.filter((c) => (c.balanceCents || 0) !== 0);
   }, [cardsSortedByBalance, showZeroCreditCards]);
+
+  const displayedBanks = showAllBanks ? visibleBanks : visibleBanks.slice(0, 5);
+  const displayedCards = showAllCards ? visibleCards : visibleCards.slice(0, 5);
 
   // Set dynamic height of banks carousel to the currently visible item's height
   useEffect(() => {
@@ -530,7 +535,7 @@ export function SnapshotPage({
               setBanksCarouselHeight(Math.round(lh + (rh - lh) * progress));
             }}
           >
-            {visibleBanks.map((b) => {
+            {displayedBanks.map((b) => {
               const linkedLiquid = linkedHysaLiquidByBankId[b.id] || 0;
               const linkedHysa = hysaAccountsSorted.find((h: any) => h.linkedCheckingBankId === b.id);
               return (
@@ -602,24 +607,24 @@ export function SnapshotPage({
             })}
           </div>
           </div>
-          {visibleBanks.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {visibleBanks.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: i === banksIdx ? 'var(--accent)' : 'var(--border)',
-                    transition: 'background 0.2s',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-              ))}
+          {displayedBanks.length > 1 && (showAllBanks && visibleBanks.length >= 5 ? (
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+              {banksIdx + 1} of {displayedBanks.length}
             </div>
-          )}
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                {displayedBanks.map((_, i) => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === banksIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
+                ))}
+              </div>
+              {visibleBanks.length >= 5 && banksIdx >= displayedBanks.length - 1 ? (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllBanks(true)}>See more</button>
+                </div>
+              ) : null}
+            </>
+          ))}
         </>
       </div>
 
@@ -665,7 +670,7 @@ export function SnapshotPage({
               setCardsCarouselHeight(Math.round(lh + (rh - lh) * progress));
             }}
           >
-            {visibleCards.map((c) => {
+            {displayedCards.map((c) => {
               const balanceCents = c.balanceCents ?? 0;
               const amountClass =
                 balanceCents > 0 ? 'amount amount-neg' : balanceCents < 0 ? 'amount amount-pos' : 'amount amount-pos';
@@ -762,24 +767,24 @@ export function SnapshotPage({
             })}
           </div>
           </div>
-          {visibleCards.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {visibleCards.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: i === cardsIdx ? 'var(--accent)' : 'var(--border)',
-                    transition: 'background 0.2s',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-              ))}
+          {displayedCards.length > 1 && (showAllCards && visibleCards.length >= 5 ? (
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+              {cardsIdx + 1} of {displayedCards.length}
             </div>
-          )}
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                {displayedCards.map((_, i) => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === cardsIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
+                ))}
+              </div>
+              {visibleCards.length >= 5 && cardsIdx >= displayedCards.length - 1 ? (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllCards(true)}>See more</button>
+                </div>
+              ) : null}
+            </>
+          ))}
         </>
       </div>
 

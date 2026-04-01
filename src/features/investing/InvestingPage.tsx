@@ -725,6 +725,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const [k401CarouselIdx, setK401CarouselIdx] = useState(0);
   const [k401CarouselHeight, setK401CarouselHeight] = useState<number | undefined>(undefined);
   const k401CarouselRef = useRef<HTMLDivElement>(null);
+  const [showAllInvesting, setShowAllInvesting] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -1496,10 +1497,12 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     setCarouselHeight: (h: number | undefined) => void
   ) {
     const sortedAccounts = [...accounts].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
-    const visibleAccounts =
+    const allVisibleAccounts =
       type === 'hysa' && !showZeroHysa
         ? sortedAccounts.filter((a) => (a.balanceCents || 0) !== 0)
         : sortedAccounts;
+    const sectionShowAll = !!showAllInvesting[type];
+    const visibleAccounts = sectionShowAll ? allVisibleAccounts : allVisibleAccounts.slice(0, 5);
     return (
       <>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
@@ -1639,23 +1642,24 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           })}
           </div>
           </div>
-          {visibleAccounts.length > 1 ? (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {visibleAccounts.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: i === carouselIdx ? 'var(--accent)' : 'var(--border)',
-                    transition: 'background 0.2s',
-                    display: 'inline-block'
-                  }}
-                />
-              ))}
+          {visibleAccounts.length > 1 && (sectionShowAll && allVisibleAccounts.length >= 5 ? (
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+              {carouselIdx + 1} of {visibleAccounts.length}
             </div>
-          ) : null}
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                {visibleAccounts.map((_, i) => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === carouselIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
+                ))}
+              </div>
+              {allVisibleAccounts.length >= 5 && carouselIdx >= visibleAccounts.length - 1 ? (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllInvesting((prev) => ({ ...prev, [type]: true }))}>See more</button>
+                </div>
+              ) : null}
+            </>
+          ))}
       </>
     );
   }

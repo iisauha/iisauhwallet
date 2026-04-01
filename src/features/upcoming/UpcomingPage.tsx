@@ -46,6 +46,8 @@ export function UpcomingPage() {
   const [dismissedOccurrences, setDismissedOccurrences] = useState(() => loadUpcomingDismissedOccurrences());
   const [incomeCarouselIdx, setIncomeCarouselIdx] = useState(0);
   const [costsCarouselIdx, setCostsCarouselIdx] = useState(0);
+  const [showAllIncome, setShowAllIncome] = useState(false);
+  const [showAllCosts, setShowAllCosts] = useState(false);
   const incomeCarouselRef = useRef<HTMLDivElement>(null);
   const costsCarouselRef = useRef<HTMLDivElement>(null);
 
@@ -277,6 +279,9 @@ export function UpcomingPage() {
     ...sortedRecurringCosts.map(c => ({ kind: 'recurring' as const, item: c, days: sortKeyForDate(c.dateKey || '') }))
   ].sort((a, b) => a.days - b.days);
 
+  const displayedIncome = showAllIncome ? allIncomeItems : allIncomeItems.slice(0, 5);
+  const displayedCosts = showAllCosts ? allCostItems : allCostItems.slice(0, 5);
+
   return (
     <div className="tab-panel active" id="upcomingContent">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
@@ -374,7 +379,7 @@ export function UpcomingPage() {
             className="card-carousel"
             ref={incomeCarouselRef}
           >
-          {allIncomeItems.map((entry) => {
+          {displayedIncome.map((entry) => {
             if (entry.kind === 'expected') {
               const i = entry.item;
               return (
@@ -479,13 +484,24 @@ export function UpcomingPage() {
             }
           })}
           </div>
-          {allIncomeItems.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {allIncomeItems.map((_, i) => (
-                <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === incomeCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
-              ))}
+          {displayedIncome.length > 1 && (showAllIncome && allIncomeItems.length >= 5 ? (
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+              {incomeCarouselIdx + 1} of {displayedIncome.length}
             </div>
-          )}
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                {displayedIncome.map((_, i) => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === incomeCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
+                ))}
+              </div>
+              {allIncomeItems.length >= 5 && incomeCarouselIdx >= displayedIncome.length - 1 ? (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllIncome(true)}>See more</button>
+                </div>
+              ) : null}
+            </>
+          ))}
         </>
       ) : null}
 
@@ -529,7 +545,7 @@ export function UpcomingPage() {
             className="card-carousel"
             ref={costsCarouselRef}
           >
-          {allCostItems.map((entry) => {
+          {displayedCosts.map((entry) => {
             if (entry.kind === 'expected') {
               const c = entry.item;
               return (
@@ -667,13 +683,24 @@ export function UpcomingPage() {
             }
           })}
           </div>
-          {allCostItems.length > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-              {allCostItems.map((_, i) => (
-                <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === costsCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
-              ))}
+          {displayedCosts.length > 1 && (showAllCosts && allCostItems.length >= 5 ? (
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+              {costsCarouselIdx + 1} of {displayedCosts.length}
             </div>
-          )}
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                {displayedCosts.map((_, i) => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === costsCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
+                ))}
+              </div>
+              {allCostItems.length >= 5 && costsCarouselIdx >= displayedCosts.length - 1 ? (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllCosts(true)}>See more</button>
+                </div>
+              ) : null}
+            </>
+          ))}
         </>
       ) : null}
 
