@@ -132,7 +132,7 @@ function renderInboundCard(
             <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
           ) : null}
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start', marginTop: 10 }}>
           <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Posted</button>
           <button type="button" className="btn-delete" style={btnStyle} onClick={() => onDelete?.(p.id)}>Delete</button>
           {onEdit ? (
@@ -334,7 +334,7 @@ function renderOutboundCard(
             <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
           ) : null}
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start', marginTop: 10 }}>
           <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Posted</button>
           <button type="button" className="btn-delete" style={btnStyle} onClick={() => onDelete?.(p.id)}>Delete</button>
           {onEdit ? (

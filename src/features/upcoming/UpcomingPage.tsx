@@ -306,7 +306,7 @@ export function UpcomingPage() {
                   saveUpcomingWindowPreference({ days: v });
                 }
               }}
-              style={{ minHeight: 'unset', padding: '8px 14px', fontSize: '0.88rem' }}
+              style={{ minHeight: 'unset', padding: '6px 12px', fontSize: '0.85rem' }}
             >
               <option value="7">7 days</option>
               <option value="14">14 days</option>

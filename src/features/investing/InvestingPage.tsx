@@ -114,7 +114,7 @@ function CoastFireInfoIcon({
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '0.75rem',
-          fontStyle: 'italic',
+          fontStyle: 'normal',
           fontWeight: 600,
         }}
       >
