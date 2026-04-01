@@ -685,6 +685,11 @@ input[type="date"].ll-control:focus {
 .upcoming-window-select {
   padding-right: 14px;
 }
+/* Compact guide (Settings app guide) — tighten text so pages fit without scrolling */
+.guide-compact p { margin-top: 0; margin-bottom: 4px; font-size: 0.78rem; line-height: 1.4; }
+.guide-compact ol, .guide-compact ul { margin-top: 0; margin-bottom: 4px; }
+.guide-compact li { margin-bottom: 3px; font-size: 0.78rem; line-height: 1.4; }
+
 /* Chart container: subtle fade-in so it doesn’t appear jarring */
 .spending-chart-wrap {
   animation: chartFadeIn 0.32s ease-out;
