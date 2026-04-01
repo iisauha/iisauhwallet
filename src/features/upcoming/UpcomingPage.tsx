@@ -101,6 +101,17 @@ export function UpcomingPage() {
   const [rewardMode, setRewardMode] = useState<'computed' | 'manual'>('computed');
   const [rewardManualStr, setRewardManualStr] = useState('');
 
+  const [splitInboundPopup, setSplitInboundPopup] = useState<null | {
+    title: string;
+    fullAmountCents: number;
+    userPortionCents: number;
+    reimbursementCents: number;
+    depositTo: 'bank' | 'hysa';
+    targetBankId: string;
+    targetHysaId: string;
+    hysaSubBucket: 'liquid' | 'reserved';
+  }>(null);
+
   useEffect(() => {
     if (!rewardPopup) return;
     setRewardMode('computed');
@@ -700,9 +711,6 @@ export function UpcomingPage() {
                             purchase.splitTotalCents = fullAmountCents;
                             purchase.splitMyPortionCents = userPortionCents;
                             purchase.originalTotal = fullAmountCents;
-                            if (splitInboundCents > 0) {
-                              purchase.splitInboundCents = splitInboundCents;
-                            }
                             if (shouldApply) {
                               purchase.splitSnapshot = {
                                 amountCents: fullAmountCents,
@@ -714,6 +722,21 @@ export function UpcomingPage() {
 
                           actions.addPurchase(purchase);
                           actions.markRecurringHandled(c.recurringId, c.dateKey);
+
+                          // Show split reimbursement popup to let user pick deposit destination
+                          if (isSplitRec && splitInboundCents > 0) {
+                            const firstBankId = (data.banks || [])[0]?.id || '';
+                            setSplitInboundPopup({
+                              title: c.recurringName,
+                              fullAmountCents,
+                              userPortionCents,
+                              reimbursementCents: splitInboundCents,
+                              depositTo: 'bank',
+                              targetBankId: firstBankId,
+                              targetHysaId: '',
+                              hysaSubBucket: 'liquid',
+                            });
+                          }
 
                           // Show reward popup if card has reward rules matching this category
                           if (recurringItem?.paymentTargetId && recurringItem?.category) {
@@ -1260,10 +1283,16 @@ export function UpcomingPage() {
                       });
                       if (item.isSplit && item.fullAmountCents > userPortionCents) {
                         const reimbursementCents = item.fullAmountCents - userPortionCents;
-                        actions.addPendingInbound({
-                          label: item.recurringName,
-                          amountCents: reimbursementCents,
-                          depositTo: 'bank'
+                        const firstBankId = (data.banks || [])[0]?.id || '';
+                        setSplitInboundPopup({
+                          title: item.recurringName,
+                          fullAmountCents: item.fullAmountCents,
+                          userPortionCents,
+                          reimbursementCents,
+                          depositTo: 'bank',
+                          targetBankId: firstBankId,
+                          targetHysaId: '',
+                          hysaSubBucket: 'liquid',
                         });
                       }
                     }
@@ -1356,6 +1385,119 @@ export function UpcomingPage() {
               ) : (
                 <button type="button" className="btn btn-secondary" onClick={() => setRewardMode('computed')}>Use computed</button>
               )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {splitInboundPopup ? createPortal(
+        <div className="modal-overlay" style={{ zIndex: 10002 }}>
+          <div className="modal">
+            <h3 style={{ marginBottom: 10 }}>Split Reimbursement</h3>
+            <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+              This purchase is being split from a total of{' '}
+              <strong>{formatCents(splitInboundPopup.fullAmountCents)}</strong>. Your portion is{' '}
+              <strong>{formatCents(splitInboundPopup.userPortionCents)}</strong>, so you are expecting a{' '}
+              <strong>{formatCents(splitInboundPopup.reimbursementCents)}</strong> reimbursement for{' '}
+              <em>{splitInboundPopup.title}</em>.
+            </p>
+            <div className="field" style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
+                Where will this reimbursement be deposited?
+              </label>
+              <select
+                className="ll-control"
+                value={splitInboundPopup.depositTo}
+                onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, depositTo: e.target.value as 'bank' | 'hysa' })}
+              >
+                <option value="bank">Bank Account</option>
+                <option value="hysa">HYSA</option>
+              </select>
+            </div>
+            {splitInboundPopup.depositTo === 'bank' ? (
+              <div className="field" style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
+                  Bank Account
+                </label>
+                <select
+                  className="ll-control"
+                  value={splitInboundPopup.targetBankId}
+                  onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, targetBankId: e.target.value })}
+                >
+                  {(data.banks || []).map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name || 'Bank'}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <>
+                <div className="field" style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
+                    HYSA Account
+                  </label>
+                  <select
+                    className="ll-control"
+                    value={splitInboundPopup.targetHysaId}
+                    onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, targetHysaId: e.target.value })}
+                  >
+                    <option value="">Select...</option>
+                    {loadInvesting().accounts.filter((a: any) => a.type === 'hysa').map((a: any) => (
+                      <option key={a.id} value={a.id}>{a.name || 'HYSA'}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field" style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
+                    Sub-bucket
+                  </label>
+                  <select
+                    className="ll-control"
+                    value={splitInboundPopup.hysaSubBucket}
+                    onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, hysaSubBucket: e.target.value as 'liquid' | 'reserved' })}
+                  >
+                    <option value="liquid">Liquid</option>
+                    <option value="reserved">Reserved Savings</option>
+                  </select>
+                </div>
+              </>
+            )}
+            <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSplitInboundPopup(null)}
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                className="btn btn-posted"
+                onClick={() => {
+                  const p = splitInboundPopup;
+                  if (p.depositTo === 'bank') {
+                    actions.addPendingInbound({
+                      label: p.title,
+                      amountCents: p.reimbursementCents,
+                      depositTo: 'bank',
+                      targetBankId: p.targetBankId || undefined,
+                      fromSplit: true,
+                    });
+                  } else {
+                    actions.addPendingInbound({
+                      label: p.title,
+                      amountCents: p.reimbursementCents,
+                      depositTo: 'hysa',
+                      targetInvestingAccountId: p.targetHysaId || undefined,
+                      fromSplit: true,
+                      meta: p.hysaSubBucket ? { hysaSubBucket: p.hysaSubBucket } : undefined,
+                    } as any);
+                  }
+                  setSplitInboundPopup(null);
+                }}
+              >
+                Add Reimbursement
+              </button>
             </div>
           </div>
         </div>,
