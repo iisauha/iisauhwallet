@@ -989,7 +989,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
             ) : (
               <>
                 <div className="field">
-                  <label>Default payment source</label>
+                  <label>Payment source</label>
                   <Select
                     value={paymentSource}
                     onChange={(e) => {
@@ -1005,8 +1005,9 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     <option value="hysa">HYSA / Investing</option>
                   </Select>
                 </div>
+                {paymentSource ? (
                 <div className="field">
-                  <label>Default payment target</label>
+                  <label>Payment target</label>
                   <Select
                     value={
                       paymentSource === 'hysa' && paymentTargetId
@@ -1044,6 +1045,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                           ))}
                   </Select>
                 </div>
+                ) : null}
                 {paymentSource === 'hysa' ? (
                   <div className="field">
                     <label>Use which HYSA portion?</label>
