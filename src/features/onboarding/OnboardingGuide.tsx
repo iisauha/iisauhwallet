@@ -259,8 +259,8 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
         {section.content}
       </div>
 
-      {/* Step counter + Buttons pinned at bottom */}
-      <div style={{ flexShrink: 0, marginTop: 'auto', paddingTop: 6 }}>
+      {/* Step counter + Buttons right below card */}
+      <div style={{ flexShrink: 0, paddingTop: 8 }}>
         <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
           {idx + 1} of {SECTIONS.length}
         </div>
