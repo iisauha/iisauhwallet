@@ -918,6 +918,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         onClose={() => {
           setOpenAdd(false);
           setReimbursementMode(false);
+          setEditingPurchaseKey(null);
         }}
         purchaseKey={editingPurchase ? getPurchaseUiId(editingPurchase) : null}
         reimbursementExpected={reimbursementMode}
