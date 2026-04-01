@@ -742,6 +742,9 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           >
             ← All categories
           </button>
+          <div style={{ fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500, marginTop: 6, paddingLeft: 2 }}>
+            Only Showing {getCategoryName(cfg, drilldownCategoryId)} purchases
+          </div>
         </div>
       ) : null}
 
@@ -785,11 +788,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          {drilldownCategoryId ? (
-            <div style={{ fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500, marginBottom: 8, paddingLeft: 2 }}>
-              Only Showing {getCategoryName(cfg, drilldownCategoryId)} purchases
-            </div>
-          ) : null}
           <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden' } : {}}>
           <div
             className="card-carousel"
@@ -815,7 +813,12 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 <span className="amount">{formatCents(p.amountCents || 0)}</span>
               </div>
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
-                {formatLongLocalDate(p.dateISO || '')} •{' '}
+                {formatLongLocalDate(p.dateISO || '')}
+                {p.createdAt ? (() => {
+                  const d = new Date(p.createdAt);
+                  return Number.isNaN(d.getTime()) ? '' : ` at ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+                })() : ''}
+                {' '}•{' '}
                 <span style={{ color: getCategoryColor(p.category || 'uncategorized'), fontWeight: 600 }}>
                   {getCategoryName(cfg, p.category || 'uncategorized')}
                 </span>

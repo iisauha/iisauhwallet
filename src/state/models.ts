@@ -161,6 +161,9 @@ export interface Purchase {
 
   recurringId?: string;
   recurringDateKey?: string;
+
+  /** ISO timestamp of when the purchase was added. */
+  createdAt?: string;
 }
 
 export type RecurringType = 'expense' | 'income';

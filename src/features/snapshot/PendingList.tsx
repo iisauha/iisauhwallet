@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem } from '../../state/models';
 import { formatCents } from '../../state/calc';
 
@@ -26,7 +26,6 @@ function getInboundDestinationName(data: LedgerData, p: PendingInboundItem): str
     return card?.name || 'Card';
   }
   if (dep === 'hysa') {
-    // LedgerData does not currently expose investing accounts here; keep label simple.
     return 'HYSA';
   }
   return 'Account';
@@ -34,7 +33,50 @@ function getInboundDestinationName(data: LedgerData, p: PendingInboundItem): str
 
 type JoinStep = 'idle' | { fromId: string } | { fromId: string; toId: string };
 
-function renderInboundItem(
+function useCarouselScroll() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [idx, setIdx] = useState(0);
+  const [height, setHeight] = useState<number | undefined>(undefined);
+
+  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+    const snappedIdx = Math.round(rawIdx);
+    setIdx(snappedIdx);
+    const leftIdx = Math.floor(rawIdx);
+    const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
+    const progress = rawIdx - leftIdx;
+    const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
+    const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
+    setHeight(Math.round(lh + (rh - lh) * progress));
+  }, []);
+
+  return { ref, idx, height, onScroll };
+}
+
+function CarouselDots({ count, activeIdx }: { count: number; activeIdx: number }) {
+  if (count <= 1) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+      {Array.from({ length: count }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: i === activeIdx ? 'var(--accent)' : 'var(--border)',
+            transition: 'background 0.2s',
+            display: 'inline-block',
+            flexShrink: 0,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function renderInboundCard(
   p: PendingInboundItem,
   data: LedgerData,
   onPosted?: (id: string) => void,
@@ -60,80 +102,41 @@ function renderInboundItem(
   const inJoinMode = joiningFromId != null;
   const btnStyle = { minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' };
   return (
-    <div className="pending-item" key={p.id}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
-        <span>
-        {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
-        {isHysa && !isRefund ? <span className="pending-refund-badge" style={{ background: 'var(--green-light)' }}>HYSA</span> : null}
-        {isRefund || isHysa ? ' — ' : null}
-        {escapeText(baseLabel.replace(/^Refund —\s*/, '').replace(/^To HYSA —\s*/, ''))}
-        {' '}
-        <span className="pending-amount inbound-amount">{amountText}</span>
-        </span>
-        {isJoiningFrom ? (
-          <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
-        ) : null}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          className="btn btn-posted"
-          style={btnStyle}
-          onClick={() => onPosted?.(p.id)}
-        >
-          Posted
-        </button>
-        <button
-          type="button"
-          className="btn-delete"
-          style={btnStyle}
-          onClick={() => onDelete?.(p.id)}
-        >
-          Delete
-        </button>
-        {onEdit ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={() => onEdit(p)}
-          >
-            Edit
-          </button>
-        ) : null}
-        {onJoin && !joiningFromId ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={() => onJoin(p.id)}
-          >
-            Join
-          </button>
-        ) : onJoinWithThis && canJoinWith ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={() => onJoinWithThis(p.id)}
-          >
-            Join with this
-          </button>
-        ) : (
-          <span />
-        )}
-        {inJoinMode && onExitJoin ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={onExitJoin}
-          >
-            Exit
-          </button>
-        ) : (
-          <span />
-        )}
+    <div className="card-carousel-item" key={p.id}>
+      <div className="card">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+          <div className="row">
+            <span className="name">
+              {isRefund ? <span className="pending-refund-badge">Refund</span> : null}
+              {isHysa && !isRefund ? <span className="pending-refund-badge" style={{ background: 'var(--green-light)' }}>HYSA</span> : null}
+              {isRefund || isHysa ? ' — ' : null}
+              {escapeText(baseLabel.replace(/^Refund —\s*/, '').replace(/^To HYSA —\s*/, ''))}
+            </span>
+            <span className="amount inbound-amount">{amountText}</span>
+          </div>
+          {isJoiningFrom ? (
+            <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
+          ) : null}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
+          <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Posted</button>
+          <button type="button" className="btn-delete" style={btnStyle} onClick={() => onDelete?.(p.id)}>Delete</button>
+          {onEdit ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onEdit(p)}>Edit</button>
+          ) : null}
+          {onJoin && !joiningFromId ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoin(p.id)}>Join</button>
+          ) : onJoinWithThis && canJoinWith ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoinWithThis(p.id)}>Join with this</button>
+          ) : (
+            <span />
+          )}
+          {inJoinMode && onExitJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={onExitJoin}>Exit</button>
+          ) : (
+            <span />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -149,13 +152,14 @@ export function PendingInboundList(props: {
 }) {
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const carousel = useCarouselScroll();
 
   const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
   const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
   const joiningFromId = joinStep !== 'idle' ? joinStep.fromId : null;
 
   const renderItem = (p: PendingInboundItem) =>
-    renderInboundItem(
+    renderInboundCard(
       p,
       props.data,
       props.onPosted,
@@ -220,9 +224,12 @@ export function PendingInboundList(props: {
           </div>
         </div>
       ) : null}
-      <div className="pending-inbound-wrapper">
-        {props.items.map((p) => renderItem(p))}
+      <div style={carousel.height != null ? { height: carousel.height, overflow: 'hidden' } : {}}>
+        <div className="card-carousel" ref={carousel.ref} onScroll={carousel.onScroll}>
+          {props.items.map((p) => renderItem(p))}
+        </div>
       </div>
+      <CarouselDots count={props.items.length} activeIdx={carousel.idx} />
     </div>
   );
 }
@@ -264,7 +271,7 @@ function getOutboundDestinationLabel(data: LedgerData, p: PendingOutboundItem): 
   return p.label || 'Transfer';
 }
 
-function renderOutboundItem(
+function renderOutboundCard(
   p: PendingOutboundItem,
   data: LedgerData,
   onPosted?: (id: string) => void,
@@ -298,79 +305,40 @@ function renderOutboundItem(
   const inJoinMode = joiningFromId != null;
   const btnStyle = { minHeight: 32, padding: '6px 10px', fontSize: '0.85rem' };
   return (
-    <div className="pending-item" key={p.id}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
-        <span>
-          {isCcPay ? <span className="pending-ccpay-badge">CC Payment</span> : null}
-          {isCcPay ? ' ' : null}
-          {escapeText(label.replace(/^CC Payment\s*/, ''))}
-          {' '}
-          <span className="pending-amount outbound-amount">{amountText}</span>
-        </span>
-        {isJoiningFrom ? (
-          <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
-        ) : null}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          className="btn btn-posted"
-          style={btnStyle}
-          onClick={() => onPosted?.(p.id)}
-        >
-          Posted
-        </button>
-        <button
-          type="button"
-          className="btn-delete"
-          style={btnStyle}
-          onClick={() => onDelete?.(p.id)}
-        >
-          Delete
-        </button>
-        {onEdit ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={() => onEdit(p)}
-          >
-            Edit
-          </button>
-        ) : null}
-        {onJoin && !joiningFromId ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={() => onJoin(p.id)}
-          >
-            Join
-          </button>
-        ) : onJoinWithThis && canJoinWith ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={() => onJoinWithThis(p.id)}
-          >
-            Join with this
-          </button>
-        ) : (
-          <span />
-        )}
-        {inJoinMode && onExitJoin ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={btnStyle}
-            onClick={onExitJoin}
-          >
-            Exit
-          </button>
-        ) : (
-          <span />
-        )}
+    <div className="card-carousel-item" key={p.id}>
+      <div className="card">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+          <div className="row">
+            <span className="name">
+              {isCcPay ? <span className="pending-ccpay-badge">CC Payment</span> : null}
+              {isCcPay ? ' ' : null}
+              {escapeText(label.replace(/^CC Payment\s*/, ''))}
+            </span>
+            <span className="amount outbound-amount">{amountText}</span>
+          </div>
+          {isJoiningFrom ? (
+            <span style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>Select another to join…</span>
+          ) : null}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
+          <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Posted</button>
+          <button type="button" className="btn-delete" style={btnStyle} onClick={() => onDelete?.(p.id)}>Delete</button>
+          {onEdit ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onEdit(p)}>Edit</button>
+          ) : null}
+          {onJoin && !joiningFromId ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoin(p.id)}>Join</button>
+          ) : onJoinWithThis && canJoinWith ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onJoinWithThis(p.id)}>Join with this</button>
+          ) : (
+            <span />
+          )}
+          {inJoinMode && onExitJoin ? (
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={onExitJoin}>Exit</button>
+          ) : (
+            <span />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -386,13 +354,14 @@ export function PendingOutboundList(props: {
 }) {
   const [joinStep, setJoinStep] = useState<JoinStep>('idle');
   const [joinDate, setJoinDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const carousel = useCarouselScroll();
 
   const fromItem = joinStep !== 'idle' ? props.items.find((p) => p.id === joinStep.fromId) : undefined;
   const toItem = joinStep !== 'idle' && 'toId' in joinStep ? props.items.find((p) => p.id === joinStep.toId) : undefined;
   const joiningFromId = joinStep !== 'idle' ? joinStep.fromId : null;
 
   const renderOutItem = (p: PendingOutboundItem) =>
-    renderOutboundItem(
+    renderOutboundCard(
       p,
       props.data,
       props.onPosted,
@@ -458,10 +427,12 @@ export function PendingOutboundList(props: {
           </div>
         </div>
       ) : null}
-      <div className="pending-outbound-wrapper">
-        {props.items.map((p) => renderOutItem(p))}
+      <div style={carousel.height != null ? { height: carousel.height, overflow: 'hidden' } : {}}>
+        <div className="card-carousel" ref={carousel.ref} onScroll={carousel.onScroll}>
+          {props.items.map((p) => renderOutItem(p))}
+        </div>
       </div>
+      <CarouselDots count={props.items.length} activeIdx={carousel.idx} />
     </div>
   );
 }
-
