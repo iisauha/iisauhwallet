@@ -239,15 +239,16 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           borderRadius: 16,
           border: '1px solid var(--ui-border, var(--border))',
           padding: compact ? '6px 12px 4px' : '10px 14px 10px',
-          flex: 1,
+          flex: '0 1 auto',
           overflowY: 'auto',
           minHeight: 0,
+          maxHeight: compact ? 'calc(100vh - 280px)' : 'calc(100vh - 240px)',
         }}
       >
         <h2
           style={{
-            margin: compact ? '0 0 3px 0' : '0 0 8px 0',
-            fontSize: compact ? '0.88rem' : '1.02rem',
+            margin: compact ? '0 0 3px 0' : '0 0 6px 0',
+            fontSize: compact ? '0.88rem' : '0.98rem',
             fontWeight: 700,
             color: 'var(--ui-title-text, var(--text))',
             lineHeight: 1.3,
@@ -258,31 +259,31 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
         {section.content}
       </div>
 
-      {/* Step counter */}
-      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', margin: compact ? '6px 0 6px' : '8px 0 6px', flexShrink: 0 }}>
-        {idx + 1} of {SECTIONS.length}
-      </div>
-
-      {/* Buttons */}
-      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-        {!isFirst && (
+      {/* Step counter + Buttons pinned at bottom */}
+      <div style={{ flexShrink: 0, marginTop: 'auto', paddingTop: 6 }}>
+        <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
+          {idx + 1} of {SECTIONS.length}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {!isFirst && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: '0 0 auto', minWidth: 72 }}
+              onClick={handleBack}
+            >
+              Back
+            </button>
+          )}
           <button
             type="button"
-            className="btn btn-secondary"
-            style={{ flex: '0 0 auto', minWidth: 72 }}
-            onClick={handleBack}
+            className="btn btn-primary"
+            style={{ flex: 1 }}
+            onClick={handleNext}
           >
-            Back
+            {isLast ? (canClose ? 'Done' : 'Enter App') : 'Next'}
           </button>
-        )}
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ flex: 1 }}
-          onClick={handleNext}
-        >
-          {isLast ? (canClose ? 'Done' : 'Enter App') : 'Next'}
-        </button>
+        </div>
       </div>
     </>
   );
@@ -306,7 +307,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         padding: '20px 16px',
         animation: 'passcodeFadeIn 0.3s ease-out',
       }}
@@ -317,7 +318,6 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           maxWidth: 420,
           display: 'flex',
           flexDirection: 'column',
-          height: 'calc(100vh - 40px)',
         }}
       >
         {inner}
