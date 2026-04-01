@@ -16,9 +16,12 @@ const SECTIONS: Section[] = [
           <li style={{ marginBottom: 8 }}>Tap <strong>View More</strong> (looks like an upside-down chevron)</li>
           <li style={{ marginBottom: 8 }}>Tap <strong>Add to Home Screen</strong> (square icon with a + inside)</li>
           <li style={{ marginBottom: 8 }}>Name the app whatever you want. The creator named it iisauhwallet but feel free to call it anything :)</li>
-          <li style={{ marginBottom: 8 }}>Leave <strong>"Open as Web App"</strong> checked</li>
+          <li style={{ marginBottom: 8 }}><strong>IMPORTANT: Uncheck "Open as Web App"</strong></li>
           <li>Tap <strong>Add</strong> in the top right</li>
         </ol>
+        <p style={{ margin: '12px 0 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+          Why uncheck "Open as Web App"? The app was built to work as a regular Safari website. Leaving it checked causes the app to malfunction. Always keep it unchecked.
+        </p>
       </div>
     ),
   },
