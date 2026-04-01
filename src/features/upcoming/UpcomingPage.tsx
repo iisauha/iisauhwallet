@@ -1465,13 +1465,6 @@ export function UpcomingPage() {
             <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
               <button
                 type="button"
-                className="btn btn-secondary"
-                onClick={() => setSplitInboundPopup(null)}
-              >
-                Skip
-              </button>
-              <button
-                type="button"
                 className="btn btn-posted"
                 onClick={() => {
                   const p = splitInboundPopup;
