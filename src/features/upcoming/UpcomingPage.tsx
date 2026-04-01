@@ -767,7 +767,7 @@ export function UpcomingPage() {
                         className="btn btn-secondary"
                         style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => {
-                          const initialCents = c.amountCents || 0;
+                          const initialCents = (c.isSplit && c.fullAmountCents) ? c.fullAmountCents : (c.amountCents || 0);
                           const key = `${c.recurringId}:${c.dateKey}`;
                           const last = lastAdjustments[key];
                           setModal({
@@ -1244,6 +1244,7 @@ export function UpcomingPage() {
                         ...(publicPortionCents > 0 ? { publicPortionCents } : {}),
                         totalVisiblePaymentNowCents: cents
                       };
+                      const userPortionCents = item.isSplit && typeof item.myPortionCents === 'number' ? item.myPortionCents : cents;
                       actions.addPendingOutbound({
                         label: item.recurringName,
                         amountCents: cents,
@@ -1252,16 +1253,16 @@ export function UpcomingPage() {
                         paymentSource: item.paymentSource as any,
                         paymentTargetId: item.paymentTargetId,
                         splitTotalCents: item.isSplit ? item.fullAmountCents : undefined,
-                        myPortionCents: item.isSplit ? cents : undefined,
+                        myPortionCents: item.isSplit ? userPortionCents : undefined,
                         category: item.category,
                         subcategory: item.subcategory,
                         meta
                       });
-                      if (item.isSplit && item.fullAmountCents > cents) {
-                        const splitPortionCents = item.fullAmountCents - cents;
+                      if (item.isSplit && item.fullAmountCents > userPortionCents) {
+                        const reimbursementCents = item.fullAmountCents - userPortionCents;
                         actions.addPendingInbound({
                           label: item.recurringName,
-                          amountCents: splitPortionCents,
+                          amountCents: reimbursementCents,
                           depositTo: 'bank'
                         });
                       }

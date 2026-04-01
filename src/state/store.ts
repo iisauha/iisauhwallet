@@ -903,8 +903,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
 
       const addSpendingFromPendingIfNeeded = (pending: any, paymentSource: 'card' | 'bank' | 'cash', paymentTargetId?: string) => {
         if (!pending || !pending.meta || pending.meta.source !== 'upcoming' || pending.meta.addToSpendingOnConfirm === false) return;
-        const amountCents = typeof pending.amountCents === 'number' ? pending.amountCents : 0;
-        if (!(amountCents > 0)) return;
+        const rawAmountCents = typeof pending.amountCents === 'number' ? pending.amountCents : 0;
+        if (!(rawAmountCents > 0)) return;
+        const amountCents = typeof pending.myPortionCents === 'number' ? pending.myPortionCents : rawAmountCents;
         const todayISO = toLocalDateKey(new Date());
         const title = pending.meta.originalTitle || pending.label || 'Spending';
         const category = pending.meta.originalCategory || pending.category || undefined;
