@@ -292,7 +292,8 @@ export function UpcomingPage() {
               <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>days</span>
             </div>
           ) : (
-            <select
+            <Select
+              className="upcoming-window-select"
               value={[7, 14, 21, 30, 60, 90].includes(windowDays) ? String(windowDays) : 'custom'}
               onChange={(e) => {
                 const val = e.target.value;
@@ -305,7 +306,7 @@ export function UpcomingPage() {
                   saveUpcomingWindowPreference({ days: v });
                 }
               }}
-              style={{ fontSize: '0.82rem', padding: '6px 10px', borderRadius: 10, border: '1px solid var(--ui-border, var(--border))', background: 'var(--ui-surface-secondary, var(--surface))', color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)', minHeight: 'unset', cursor: 'pointer' }}
+              style={{ minHeight: 'unset', padding: '8px 14px', fontSize: '0.88rem' }}
             >
               <option value="7">7 days</option>
               <option value="14">14 days</option>
@@ -318,7 +319,7 @@ export function UpcomingPage() {
               ) : (
                 <option value="custom">Custom…</option>
               )}
-            </select>
+            </Select>
           )}
         </div>
       </div>

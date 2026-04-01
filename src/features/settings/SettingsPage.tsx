@@ -37,7 +37,7 @@ import { FAQModal } from './FAQModal';
 import { Modal } from '../../ui/Modal';
 import {
   IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
-  IconExport, IconChevronRight, IconTrash,
+  IconExport, IconChevronRight, IconTrash, IconRefresh,
   IconHome, IconArrowExchange, IconCalendar, IconBankBuilding,
   IconBarChartTrend, IconRefreshCircle, IconStar, IconQuestionMark, IconInfoCircle,
 } from '../../ui/icons';
@@ -496,7 +496,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                   setAutoLockMinutes(v);
                   saveAutoLockMinutes(v);
                 }}
-                style={{ width: 'auto', fontSize: '0.85rem', padding: '5px 8px', minHeight: 'unset', color: 'var(--muted)' }}
+                style={{ width: 'auto', fontSize: '0.78rem', padding: '4px 6px', minHeight: 'unset', color: 'var(--muted)' }}
               >
                 <option value={1}>1 min</option>
                 <option value={2}>2 min</option>
@@ -541,6 +541,23 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           label="Import JSON"
           sublabel="Restore from a backup file"
           onClick={() => fileRef.current?.click()}
+        />
+        <SettingsRow
+          icon={<IconRefresh />}
+          iconBg="#F97316"
+          label="Force Refresh"
+          sublabel="Reload the app to get the latest version"
+          onClick={async () => {
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              for (const reg of registrations) await reg.unregister();
+            }
+            if ('caches' in window) {
+              const keys = await caches.keys();
+              for (const key of keys) await caches.delete(key);
+            }
+            window.location.reload();
+          }}
         />
       </div>
       <input

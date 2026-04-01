@@ -496,20 +496,29 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       <div className={view === 'category' ? 'card card-no-press' : 'card'} style={view === 'category' ? { position: 'relative' } : undefined}>
         {view === 'category' ? (
           <>
-            <div
-              className="spending-chart-wrap"
-              style={{ position: 'relative', width: '100%', height: 230 }}
-            >
-              <canvas ref={canvasRef} />
-            </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '5px 10px', minHeight: 'unset', marginTop: 6 }}
-              onClick={() => setLegendOpen(!legendOpen)}
-            >
-              {legendOpen ? 'Hide Legend' : 'Legend'}
-            </button>
+            {byCategory.length > 0 ? (
+              <>
+                <div
+                  className="spending-chart-wrap"
+                  style={{ position: 'relative', width: '100%', height: 230 }}
+                >
+                  <canvas ref={canvasRef} />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.78rem', padding: '5px 10px', minHeight: 'unset', marginTop: 6 }}
+                  onClick={() => setLegendOpen(!legendOpen)}
+                >
+                  {legendOpen ? 'Hide Legend' : 'Legend'}
+                </button>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--muted)', fontSize: '0.92rem', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: '1rem' }}>No purchases yet</p>
+                <p style={{ margin: '6px 0 0' }}>Add a purchase to visualize your spending.</p>
+              </div>
+            )}
             {legendOpen && byCategory.length > 0 ? (() => {
               const totalCents = byCategory.reduce((s, c) => s + c.amountCents, 0);
               return (
