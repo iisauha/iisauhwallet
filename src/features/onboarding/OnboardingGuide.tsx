@@ -289,7 +289,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
   if (canClose) {
     return (
       <Modal open fullscreen title="App Guide" onClose={onClose}>
-        <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '70vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           {inner}
         </div>
       </Modal>
@@ -316,7 +316,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           maxWidth: 420,
           display: 'flex',
           flexDirection: 'column',
-          maxHeight: 'calc(100vh - 40px)',
+          height: 'calc(100vh - 40px)',
         }}
       >
         {inner}
