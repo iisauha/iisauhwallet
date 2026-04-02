@@ -5,70 +5,9 @@ import {
   IconCalendar, IconRefreshCircle, IconBankBuilding, IconBarChartTrend,
   IconStar, IconGear, IconDatabase, IconCreditCard, IconLock,
   IconWallet, IconArrowDownRight, IconArrowUpRight, IconTag,
-  IconMagnify, IconUser, IconExport,
+  IconMagnify, IconUser, IconExport, IconEye, IconCheckCircle,
+  IconChevronRight, IconArrowExchange,
 } from '../../ui/icons';
-
-/* ------------------------------------------------------------------ */
-/*  Inline SVG icons not in the shared library                         */
-/* ------------------------------------------------------------------ */
-
-/** Simple share/upload icon */
-function IconShare() {
-  return (
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7" />
-      <polyline points="16 6 12 2 8 6" />
-      <line x1="12" y1="2" x2="12" y2="15" />
-    </svg>
-  );
-}
-
-/** Globe icon for Safari */
-function IconGlobe() {
-  return (
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" />
-    </svg>
-  );
-}
-
-/** Checkmark icon for "uncheck" step */
-function IconCheckSquare() {
-  return (
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
-/** Simple eye icon for views */
-function IconEyeSimple() {
-  return (
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-/** Dashboard / grid icon for Snapshot hero */
-function IconDashboard() {
-  return (
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="9" rx="1" />
-      <rect x="14" y="3" width="7" height="5" rx="1" />
-      <rect x="14" y="12" width="7" height="9" rx="1" />
-      <rect x="3" y="16" width="7" height="5" rx="1" />
-    </svg>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /*  Data types                                                         */
@@ -101,10 +40,10 @@ const SECTIONS: Section[] = [
     title: 'Add to Home Screen',
     tagline: 'Make it feel like a real app.',
     items: [
-      { icon: <IconGlobe />, label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
-      { icon: <IconShare />, label: 'Share menu', detail: 'Tap the three dots (bottom right) then tap Share at the top.' },
+      { icon: <IconChevronRight />, label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
+      { icon: <IconExport />, label: 'Share menu', detail: 'Tap the three dots (bottom right) then tap Share at the top.' },
       { icon: <IconHome />, label: 'Add to Home Screen', detail: 'Tap View More, then Add to Home Screen. Name it whatever you like.' },
-      { icon: <IconCheckSquare />, label: 'Uncheck "Open as Web App"', detail: 'This is important. The app is built to run as a regular Safari page. Leaving it checked causes bugs.' },
+      { icon: <IconCheckCircle />, label: 'Uncheck "Open as Web App"', detail: 'This is important. The app is built to run as a regular Safari page. Leaving it checked causes bugs.' },
     ],
   },
   {
@@ -124,13 +63,13 @@ const SECTIONS: Section[] = [
     tagline: 'Themes, fonts, colors, and layout.',
     items: [
       { icon: <IconPalette />, label: 'Themes', detail: 'Royal, Midnight, Aurora, Jade, Plum, Sakura, and more. Each changes background, surfaces, and accent at once.' },
-      { icon: <IconTag />, label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Choose Small, Medium, or Large sizing.' },
-      { icon: <IconCoin />, label: 'Accent color', detail: 'Pick any custom hex color on top of any theme for a truly personal look.' },
-      { icon: <IconGear />, label: 'Manage tabs', detail: 'Hide tabs you don\'t use or drag them into a different order.' },
+      { icon: <IconGear />, label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Choose Small, Medium, or Large sizing.' },
+      { icon: <IconTag />, label: 'Accent color', detail: 'Pick any custom hex color on top of any theme for a truly personal look.' },
+      { icon: <IconArrowExchange />, label: 'Manage tabs', detail: 'Hide tabs you don\'t use or drag them into a different order.' },
     ],
   },
   {
-    icon: <IconDashboard />,
+    icon: <IconWallet />,
     title: 'Snapshot',
     tagline: 'Your money, right now.',
     items: [
@@ -147,7 +86,7 @@ const SECTIONS: Section[] = [
     tagline: 'See where your money goes.',
     items: [
       { icon: <IconTag />, label: 'Log purchases', detail: 'Tap "+" to log a purchase. The app suggests which card earns the best rewards for that category.' },
-      { icon: <IconEyeSimple />, label: 'Views', detail: 'Toggle between Categories (donut chart), Sources (by payment method), and Rewards (points/miles/cashback balances).' },
+      { icon: <IconEye />, label: 'Views', detail: 'Toggle between Categories (donut chart), Sources (by payment method), and Rewards (points/miles/cashback balances).' },
       { icon: <IconMagnify />, label: 'Search', detail: 'Search by name, category, or subcategory. Supports regex patterns like /coffee|tea/.' },
       { icon: <IconCoin />, label: 'Reimbursable', detail: 'Mark work expenses as reimbursable and they\'re excluded from your personal totals.' },
     ],
