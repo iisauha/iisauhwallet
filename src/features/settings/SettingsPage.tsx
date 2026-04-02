@@ -404,10 +404,11 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           {!profileImage && (displayName ? displayName.charAt(0).toUpperCase() : <span style={{ fontSize: '1.4rem', color: 'var(--muted)' }}>+</span>)}
         </button>
         <div style={{ width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>
+          <label htmlFor="settings-display-name" style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>
             Your name
-          </div>
+          </label>
           <input
+            id="settings-display-name"
             type="text"
             value={displayName}
             onChange={(e) => {

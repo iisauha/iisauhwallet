@@ -104,6 +104,7 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
             <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))', marginBottom: 8 }}>Credit cards</p>
             {cards.map((c) => (
               <div key={c.id} style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', display: 'block', marginBottom: 2 }}>Card</label>
                 <input
                   value={getCardName(c.id, c.name)}
                   onChange={(e) => setCardName(c.id, e.target.value)}
