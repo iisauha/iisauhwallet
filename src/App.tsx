@@ -1,13 +1,13 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { lazy, Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { SnapshotPage } from './features/snapshot/SnapshotPage';
-import { SpendingPage } from './features/spending/SpendingPage';
-import { UpcomingPage } from './features/upcoming/UpcomingPage';
-import { LoansPage } from './features/loans/LoansPage';
-import { InvestingPage } from './features/investing/InvestingPage';
-import { RecurringPage } from './features/recurring/RecurringPage';
-import { SubTrackerPage } from './features/subtracker/SubTrackerPage';
-import { SettingsPage } from './features/settings/SettingsPage';
+const SpendingPage = lazy(() => import('./features/spending/SpendingPage').then(m => ({ default: m.SpendingPage })));
+const UpcomingPage = lazy(() => import('./features/upcoming/UpcomingPage').then(m => ({ default: m.UpcomingPage })));
+const LoansPage = lazy(() => import('./features/loans/LoansPage').then(m => ({ default: m.LoansPage })));
+const InvestingPage = lazy(() => import('./features/investing/InvestingPage').then(m => ({ default: m.InvestingPage })));
+const RecurringPage = lazy(() => import('./features/recurring/RecurringPage').then(m => ({ default: m.RecurringPage })));
+const SubTrackerPage = lazy(() => import('./features/subtracker/SubTrackerPage').then(m => ({ default: m.SubTrackerPage })));
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
 import { PrivacyPage } from './features/privacy/PrivacyPage';
 import { PasscodeGate } from './features/passcode/PasscodeGate';
 import { DropdownStateProvider } from './state/DropdownStateContext';
@@ -15,7 +15,8 @@ import { ThemeProvider } from './theme/ThemeContext';
 import { AppearanceProvider } from './theme/AppearanceContext';
 import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
 import { ReminderProvider } from './state/ReminderContext';
-import { DialogProvider } from './ui/DialogProvider';
+import { DialogProvider, useDialog } from './ui/DialogProvider';
+import { UndoToast } from './ui/UndoToast';
 import { TAB_ORDER_KEY } from './state/keys';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
 import {
@@ -277,6 +278,16 @@ function MainApp() {
   const [investingHysaAllocTrigger, setInvestingHysaAllocTrigger] = useState(0);
   const [investingHysaAllocAccountId, setInvestingHysaAllocAccountId] = useState<string | null>(null);
 
+  // Storage quota exceeded alert
+  const { showAlert: showQuotaAlert } = useDialog();
+  useEffect(() => {
+    const handler = () => {
+      showQuotaAlert('Storage is full. Some data may not have been saved. Consider exporting a backup and archiving old purchases in Settings.');
+    };
+    window.addEventListener('storage-quota-exceeded', handler);
+    return () => window.removeEventListener('storage-quota-exceeded', handler);
+  }, [showQuotaAlert]);
+
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {
     const durations = [150, 150, 150, 150, 150, 150, 150];
@@ -431,6 +442,7 @@ function MainApp() {
         }
       }} />
 
+      <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
       {(spendingVisited || tab === 'spending') && (
         <div
           style={{ display: tab === 'spending' ? 'block' : 'none', position: 'relative', zIndex: 1, minHeight: '100%' }}
@@ -444,6 +456,9 @@ function MainApp() {
           {otherTabContent}
         </div>
       )}
+      </Suspense>
+
+      <UndoToast />
 
       {/* Floating Action Button */}
       <button

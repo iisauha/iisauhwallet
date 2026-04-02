@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { HelpTip } from '../../ui/HelpTip';
 import { IconPlus } from '../../ui/icons';
 import {
   loadInvesting,
@@ -1885,7 +1886,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
       {!liquidCollapsed ? (
         <>
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginBottom: 12, paddingBottom: 4 }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>HYSA</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>HYSA<HelpTip text="High-Yield Savings Account. Split into 'Bills fund' (liquid, available for spending) and 'Savings reserve' (earmarked for savings goals). Adjust the split via the allocation modal." /></span>
           </div>
           {renderSection('HYSA', 'hysa', hysaAccounts, hysaCarouselRef, hysaCarouselIdx, setHysaCarouselIdx, hysaCarouselHeight, setHysaCarouselHeight)}
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
@@ -2475,7 +2476,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <div style={{ fontWeight: 600 }}>{formatCents(totalCents)}</div>
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Savings reserve</label>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Savings reserve<HelpTip text="Funds set aside within your HYSA. Not counted as immediately available cash in your bills fund." /></label>
                   <input
                     type="text"
                     inputMode="decimal"

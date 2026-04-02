@@ -6,6 +6,26 @@ import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurrin
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
+// ── Single-level undo for destructive actions ──────────────────────────────
+let _undoSnapshot: { data: LedgerData; label: string; expiresAt: number } | null = null;
+const UNDO_WINDOW_MS = 8000;
+
+export function getUndoSnapshot() { return _undoSnapshot; }
+export function clearUndoSnapshot() { _undoSnapshot = null; }
+export function applyUndo(): boolean {
+  if (!_undoSnapshot || Date.now() > _undoSnapshot.expiresAt) { _undoSnapshot = null; return false; }
+  const data = _undoSnapshot.data;
+  saveData(data);
+  useLedgerStore.setState({ data });
+  _undoSnapshot = null;
+  return true;
+}
+
+function captureUndo(data: LedgerData, label: string) {
+  _undoSnapshot = { data: structuredClone(data), label, expiresAt: Date.now() + UNDO_WINDOW_MS };
+  window.dispatchEvent(new CustomEvent('undo-available', { detail: { label } }));
+}
+
 export interface LedgerState {
   data: LedgerData;
   actions: {
@@ -74,6 +94,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       set({ data: next });
     },
     deleteBankAccount: (id) => {
+      captureUndo(get().data, 'Delete bank account');
       const next = structuredClone(get().data) as LedgerData;
       next.banks = next.banks.filter((b) => b.id !== id && b.type !== 'physical_cash');
       saveData(next);
@@ -86,12 +107,14 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       set({ data: next });
     },
     deleteCreditCard: (id) => {
+      captureUndo(get().data, 'Delete credit card');
       const next = structuredClone(get().data) as LedgerData;
       next.cards = next.cards.filter((c) => c.id !== id);
       saveData(next);
       set({ data: next });
     },
     updateBankBalance: (id, amountCents, mode) => {
+      if (mode === 'set') captureUndo(get().data, 'Set bank balance');
       const next = structuredClone(get().data) as LedgerData;
       const bank = next.banks.find((b) => b.id === id);
       if (!bank) return;
@@ -101,6 +124,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       set({ data: next });
     },
     updateCardBalance: (id, amountCents, mode) => {
+      if (mode === 'set') captureUndo(get().data, 'Set card balance');
       const next = structuredClone(get().data) as LedgerData;
       const card = next.cards.find((c) => c.id === id);
       if (!card) return;
@@ -524,6 +548,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       set({ data: next });
     },
     deletePurchase: (id) => {
+      captureUndo(get().data, 'Delete purchase');
       const next = structuredClone(get().data) as LedgerData;
       const p: any = (next.purchases || []).find((x: any) => x.id === id);
       if (!p) return;
@@ -618,6 +643,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       set({ data: next });
     },
     deleteRecurringItem: (id) => {
+      captureUndo(get().data, 'Delete recurring item');
       const next = structuredClone(get().data) as any;
       next.recurring = (next.recurring || []).filter((r: any) => r.id !== id);
       if (next.recurringPosted && typeof next.recurringPosted === 'object') {
@@ -808,6 +834,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       set({ data: next });
     },
     deletePending: (kind, id) => {
+      captureUndo(get().data, 'Delete pending item');
       const next = structuredClone(get().data) as LedgerData;
       if (kind === 'in') next.pendingIn = next.pendingIn.filter((p) => p.id !== id);
       else next.pendingOut = next.pendingOut.filter((p) => p.id !== id);
@@ -815,6 +842,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       set({ data: next });
     },
     clearPending: (kind) => {
+      captureUndo(get().data, 'Clear all pending');
       const next = structuredClone(get().data) as LedgerData;
       if (kind === 'in') next.pendingIn = [];
       else next.pendingOut = [];

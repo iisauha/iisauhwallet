@@ -450,18 +450,65 @@ export function saveData(data: LedgerData) {
     .then((ct) => {
       if (_writeSeq !== seq) return;
       try { localStorage.setItem(STORAGE_KEY, ct); }
-      catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') console.error('localStorage full — data NOT saved'); }
+      catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') { console.error('localStorage full — data NOT saved'); window.dispatchEvent(new CustomEvent('storage-quota-exceeded')); } }
     })
     .catch(() => {
       if (_writeSeq !== seq) return;
       try { localStorage.setItem(STORAGE_KEY, json); }
-      catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') console.error('localStorage full — data NOT saved'); }
+      catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') { console.error('localStorage full — data NOT saved'); window.dispatchEvent(new CustomEvent('storage-quota-exceeded')); } }
     });
 }
 
 /** Clears the in-memory data cache. Call before localStorage.clear() so reload() returns empty data. */
 export function clearDataCache(): void {
   setCachedData(null);
+}
+
+/** Estimate total localStorage usage in bytes. */
+export function estimateStorageUsage(): { totalBytes: number; purchaseCount: number } {
+  let totalBytes = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    const val = localStorage.getItem(key);
+    totalBytes += key.length * 2 + (val ? val.length * 2 : 0); // UTF-16
+  }
+  const data = loadData();
+  return { totalBytes, purchaseCount: (data.purchases || []).length };
+}
+
+/** Archive purchases older than N months into summary buckets, removing individual records. */
+export function archiveOldPurchases(data: LedgerData, olderThanMonths: number): { data: LedgerData; archivedCount: number } {
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - olderThanMonths);
+  const cutoffKey = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-01`;
+
+  const keep: any[] = [];
+  const archive: any[] = [];
+  for (const p of (data.purchases || []) as any[]) {
+    const dateKey = p.dateISO || '';
+    if (dateKey && dateKey < cutoffKey) {
+      archive.push(p);
+    } else {
+      keep.push(p);
+    }
+  }
+
+  if (archive.length === 0) return { data, archivedCount: 0 };
+
+  const summary: Record<string, { totalCents: number; count: number }> = { ...(data.purchaseArchiveSummary || {}) };
+  for (const p of archive) {
+    const dateISO: string = p.dateISO || '';
+    const month = dateISO.slice(0, 7) || 'unknown'; // YYYY-MM
+    const cat: string = p.category || 'uncategorized';
+    const key = `${month}_${cat}`;
+    if (!summary[key]) summary[key] = { totalCents: 0, count: 0 };
+    summary[key].totalCents += typeof p.amountCents === 'number' ? p.amountCents : 0;
+    summary[key].count += 1;
+  }
+
+  const next: LedgerData = { ...data, purchases: keep, purchaseArchiveSummary: summary };
+  return { data: next, archivedCount: archive.length };
 }
 
 function safeJsonParse(raw: string | null): { ok: boolean; value: unknown } {

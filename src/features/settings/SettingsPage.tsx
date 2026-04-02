@@ -26,6 +26,9 @@ import {
   verifyPasscode,
   clearDataCache,
   logActivityEntry,
+  estimateStorageUsage,
+  archiveOldPurchases,
+  saveData,
 } from '../../state/storage';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
 import { useDialog } from '../../ui/DialogProvider';
@@ -702,6 +705,42 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           r.readAsText(f);
         }}
       />
+
+      {/* Storage */}
+      <p className="settings-group-label">Storage</p>
+      <div className="settings-list">
+        <SettingsRow
+          icon={<span style={{ fontSize: '1.1rem' }}>&#128230;</span>}
+          iconBg="var(--accent)"
+          label="Storage Usage"
+          sublabel={(() => {
+            const { totalBytes, purchaseCount } = estimateStorageUsage();
+            const kb = (totalBytes / 1024).toFixed(0);
+            const mb = (totalBytes / (1024 * 1024)).toFixed(2);
+            const pct = ((totalBytes / (5 * 1024 * 1024)) * 100).toFixed(1);
+            return `${Number(kb) > 1024 ? mb + ' MB' : kb + ' KB'} used (~${pct}% of 5 MB) \u2022 ${purchaseCount} purchases`;
+          })()}
+        />
+        <SettingsRow
+          icon={<span style={{ fontSize: '1.1rem' }}>&#128451;</span>}
+          iconBg="#f59e0b"
+          label="Archive Old Purchases"
+          sublabel="Remove purchases older than 6 months (keeps monthly summaries)"
+          onClick={async () => {
+            const ok = await showConfirm('Archive all purchases older than 6 months? Individual records will be replaced with monthly category summaries. This cannot be undone — consider exporting a backup first.');
+            if (!ok) return;
+            const current = useLedgerStore.getState().data;
+            const result = archiveOldPurchases(current, 6);
+            if (result.archivedCount === 0) {
+              await showAlert('No purchases older than 6 months found.');
+              return;
+            }
+            saveData(result.data);
+            actions.reload();
+            await showAlert(`Archived ${result.archivedCount} old purchase${result.archivedCount === 1 ? '' : 's'}.`);
+          }}
+        />
+      </div>
 
       {/* About */}
       <p className="settings-group-label">About</p>

@@ -235,6 +235,9 @@ export interface RecurringItem {
 
 export type RecurringPostedMap = Record<string, any>;
 
+/** Archived purchase summary keyed by "YYYY-MM_categoryId" */
+export type PurchaseArchiveSummary = Record<string, { totalCents: number; count: number }>;
+
 export interface LedgerData {
   banks: BankAccount[];
   cards: CreditCard[];
@@ -243,6 +246,8 @@ export interface LedgerData {
   purchases: Purchase[];
   recurring: RecurringItem[];
   recurringPosted: RecurringPostedMap;
+  /** Summarized totals from archived (deleted) old purchases */
+  purchaseArchiveSummary?: PurchaseArchiveSummary;
   // legacy had optional cashInHandCents for older saves; we read it but never write it
   cashInHandCents?: number;
 }

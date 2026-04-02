@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { HelpTip } from '../../ui/HelpTip';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
@@ -554,7 +555,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     checked={isFullTimeJob}
                     onChange={(e) => setIsFullTimeJob(e.target.checked)}
                   />
-                  <label htmlFor="recFullTimeJob">Full-time job (has pre-tax deductions)</label>
+                  <label htmlFor="recFullTimeJob">Full-time job (has pre-tax deductions)<HelpTip text="Amounts deducted from your paycheck before taxes (e.g. 401k, health insurance). These reduce your take-home pay but are not tracked as spending." /></label>
                 </div>
                 {isFullTimeJob ? (
                   <div className="card" style={{ marginTop: 8 }}>
@@ -830,7 +831,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     }}
                     id="recSplit"
                   />
-                  <label htmlFor="recSplit">Split with someone else</label>
+                  <label htmlFor="recSplit">Split with someone else<HelpTip text="When enabled, enter your portion of the bill. A pending inbound reimbursement will be auto-created for the other person's share each cycle." /></label>
                 </div>
                 {isSplit ? (
                   <div className="field">

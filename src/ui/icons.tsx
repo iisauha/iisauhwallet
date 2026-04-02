@@ -257,9 +257,9 @@ export function IconShieldChart() {
   );
 }
 
-export function IconInfoCircle() {
+export function IconInfoCircle({ style }: { style?: React.CSSProperties } = {}) {
   return (
-    <svg {...SVG_PROPS}>
+    <svg {...SVG_PROPS} style={style}>
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8h.01M12 11v5" />
     </svg>

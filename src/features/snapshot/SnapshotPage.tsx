@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { HelpTip } from '../../ui/HelpTip';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
@@ -940,7 +941,7 @@ export function SnapshotPage({
 
       <div className={`snapshot-section-body${activeSection === 'pending' ? ' open' : ''}`}>
       <div className="snapshot-section-label" id="snapshotPending">
-        <span>Pending Inbound</span>
+        <span>Pending Inbound<HelpTip text="Deposits or payments you expect but haven't posted yet. When the money arrives, tap 'Mark Received' to add it to your bank balance." /></span>
         <button
           type="button"
           className="snapshot-add-btn"
@@ -992,7 +993,7 @@ export function SnapshotPage({
       ) : null}
 
       <div className="snapshot-section-label">
-        <span>Pending Outbound</span>
+        <span>Pending Outbound<HelpTip text="Payments you expect to leave your accounts but haven't cleared yet (e.g. scheduled bills, card payments). Tap 'Mark Cleared' when they post." /></span>
         <button
           type="button"
           className="snapshot-add-btn"
@@ -1087,7 +1088,7 @@ export function SnapshotPage({
             </>
           ) : null}
           <div className={finalNetCashDisplayClass} >
-            <span className="k">Final Net Cash</span>
+            <span className="k">Final Net Cash<HelpTip text="Your total bank balance plus expected inbound deposits, minus credit card debt and expected outbound payments. This is your projected available cash." /></span>
             <span className="v" style={{ color: displayedFinalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {formatCents(displayedFinalNetCashCents)}
             </span>
