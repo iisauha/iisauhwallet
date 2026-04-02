@@ -1581,9 +1581,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                         >
                           Adjust HYSA Split
                         </button>
-                        <select
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', cursor: 'pointer' }}
+                        <Select
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', width: 'auto' }}
                           value={(a as HysaAccount).linkedCheckingBankId || ''}
                           onChange={(e) => {
                             const bankId = e.target.value || undefined;
@@ -1600,7 +1599,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                             .map((b) => (
                               <option key={b.id} value={b.id}>{b.name}</option>
                             ))}
-                        </select>
+                        </Select>
                       </>
                     ) : null}
                     <button

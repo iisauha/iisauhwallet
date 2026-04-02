@@ -109,7 +109,7 @@ export function FederalLoanParametersModal({
           <legend style={{ fontSize: '0.9rem', fontWeight: 600 }}>Household</legend>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Household size</label>
-            <select
+            <Select
               value={params.householdSize >= 1 && params.householdSize <= 6 ? params.householdSize : 1}
               onChange={(e) =>
                 update({ householdSize: Math.max(1, Math.min(6, Number(e.target.value) || 1)) })
@@ -122,7 +122,7 @@ export function FederalLoanParametersModal({
               <option value={4}>4</option>
               <option value={5}>5</option>
               <option value={6}>6</option>
-            </select>
+            </Select>
           </div>
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 2 }}>Number of dependents</label>

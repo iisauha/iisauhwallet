@@ -1409,29 +1409,27 @@ export function UpcomingPage() {
               <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                 Where will this reimbursement be deposited?
               </label>
-              <select
-                className="ll-control"
+              <Select
                 value={splitInboundPopup.depositTo}
                 onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, depositTo: e.target.value as 'bank' | 'hysa' })}
               >
                 <option value="bank">Bank Account</option>
                 <option value="hysa">HYSA</option>
-              </select>
+              </Select>
             </div>
             {splitInboundPopup.depositTo === 'bank' ? (
               <div className="field" style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                   Bank Account
                 </label>
-                <select
-                  className="ll-control"
+                <Select
                   value={splitInboundPopup.targetBankId}
                   onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, targetBankId: e.target.value })}
                 >
                   {(data.banks || []).map((b: any) => (
                     <option key={b.id} value={b.id}>{b.name || 'Bank'}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             ) : (
               <>
@@ -1439,8 +1437,7 @@ export function UpcomingPage() {
                   <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                     HYSA Account
                   </label>
-                  <select
-                    className="ll-control"
+                  <Select
                     value={splitInboundPopup.targetHysaId}
                     onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, targetHysaId: e.target.value })}
                   >
@@ -1448,20 +1445,19 @@ export function UpcomingPage() {
                     {loadInvesting().accounts.filter((a: any) => a.type === 'hysa').map((a: any) => (
                       <option key={a.id} value={a.id}>{a.name || 'HYSA'}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div className="field" style={{ marginBottom: 12 }}>
                   <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 6, color: 'var(--ui-primary-text, var(--text))' }}>
                     Sub-bucket
                   </label>
-                  <select
-                    className="ll-control"
+                  <Select
                     value={splitInboundPopup.hysaSubBucket}
                     onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, hysaSubBucket: e.target.value as 'liquid' | 'reserved' })}
                   >
                     <option value="liquid">Bills fund</option>
                     <option value="reserved">Savings reserve</option>
-                  </select>
+                  </Select>
                 </div>
               </>
             )}

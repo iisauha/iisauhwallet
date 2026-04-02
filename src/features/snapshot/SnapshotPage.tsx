@@ -620,7 +620,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'pending'}
         >
           <div className="stat-tile-icon"><IconClock /></div>
-          <div className="stat-tile-value" style={{ color: pendingCount > 0 ? '#f97316' : undefined }}>{pendingCount}</div>
+          <div className="stat-tile-value" style={{ color: pendingCount > 0 ? 'var(--accent)' : undefined }}>{pendingCount}</div>
           <div className="stat-tile-label">Pending</div>
         </button>
       </div>
@@ -1068,7 +1068,7 @@ export function SnapshotPage({
           >
             <span className="k">
               Total Pending Outbound
-              <span style={{ marginLeft: 6, fontSize: '0.85rem', opacity: 0.8 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
+              <span style={{ marginLeft: 6, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
             </span>
             <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.pendingOutCents)}</span>
           </div>
