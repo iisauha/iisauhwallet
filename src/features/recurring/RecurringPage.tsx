@@ -830,7 +830,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     }}
                     id="recSplit"
                   />
-                  <label htmlFor="recSplit">Split with others</label>
+                  <label htmlFor="recSplit">Split with someone else</label>
                 </div>
                 {isSplit ? (
                   <div className="field">

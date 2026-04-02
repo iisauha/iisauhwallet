@@ -1459,7 +1459,7 @@ export function UpcomingPage() {
                     value={splitInboundPopup.hysaSubBucket}
                     onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, hysaSubBucket: e.target.value as 'liquid' | 'reserved' })}
                   >
-                    <option value="liquid">Liquid</option>
+                    <option value="liquid">Bills fund</option>
                     <option value="reserved">Savings reserve</option>
                   </select>
                 </div>

@@ -1553,7 +1553,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                           <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
                           <div style={{ marginTop: 4 }}>
                             <div>Savings reserve: {formatCents(reservedCents)}</div>
-                            <div>Money in HYSA designated for bills: {formatCents(h.linkedCheckingBankId ? liquidCents : 0)}</div>
+                            <div>Bills fund: {formatCents(h.linkedCheckingBankId ? liquidCents : 0)}</div>
                           </div>
                         </div>
                       );
@@ -1561,7 +1561,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   ) : null}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                     <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }} onClick={() => openInvestingBalanceModal(a)}>
-                      Add / Set
+                      Update Balance
                     </button>
                     {a.type === 'hysa' ? (
                       <>
@@ -1874,7 +1874,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
         style={{ marginTop: 24, padding: '10px 14px', borderRadius: 10 }}
         onClick={() => setLiquidCollapsed(!liquidCollapsed)}
       >
-        <span className="section-header-left">Liquid</span>
+        <span className="section-header-left">Accessible Funds</span>
         <span className="chevron">{liquidCollapsed ? '▸' : '▾'}</span>
       </div>
       {!liquidCollapsed ? (
@@ -2290,14 +2290,14 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                     className="btn btn-secondary"
                     onClick={() => commitHysaSubBucketChoice('liquid')}
                   >
-                    Checking / liquid portion
+                    Bills fund
                   </button>
                   <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => commitHysaSubBucketChoice('reserved')}
                   >
-                    Savings / reserved portion
+                    Savings reserve
                   </button>
                   <button
                     type="button"
@@ -2439,7 +2439,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>
-                  Move money between reserved savings and money designated for bills. Total HYSA balance stays the same.
+                  Move money between savings reserve and bills fund. Total HYSA balance stays the same.
                 </p>
                 <div>
                   <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Total HYSA balance</label>

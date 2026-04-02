@@ -75,8 +75,8 @@ const SECTIONS: Section[] = [
     tagline: 'Your financial dashboard.',
     hint: 'This is the first tab in the navigation bar.',
     items: [
-      { label: 'Bank accounts & cash', detail: 'Checking, savings (not HYSA, those go in Investing), and physical cash. Tap a card then tap Add/Set. "Add" adds to your current balance, "Set" replaces it entirely.' },
-      { label: 'Credit cards', detail: 'What you owe on each card. Same Add/Set logic for balances. You can also set up reward rules so the app suggests which card to use at checkout.' },
+      { label: 'Bank accounts & cash', detail: 'Checking, savings (not HYSA, those go in Investing), and physical cash. Tap a card then tap Update Balance. "Add" adds to your current balance, "Set" replaces it entirely.' },
+      { label: 'Credit cards', detail: 'What you owe on each card. Same Update Balance logic for balances. You can also set up reward rules so the app suggests which card to use at checkout.' },
       { label: 'Pending inbound', detail: 'Money on the way to you. A Venmo from a friend splitting dinner, a work reimbursement, a bank transfer. Tap Mark Received when it lands.' },
       { label: 'Pending outbound', detail: 'Payments you\'ve sent that haven\'t cleared yet. Rent check in the mail, a credit card payment processing, a Zelle that\'s pending.' },
       { label: 'Net cash', detail: '"If everything settled right now, what do I actually have?" Banks minus cards, adjusted for pending.' },
@@ -135,8 +135,8 @@ const SECTIONS: Section[] = [
     tagline: 'Watch your money grow.',
     hint: 'Tap the chart tab in the navigation bar.',
     items: [
-      { label: 'Balances', detail: 'Tap an account card, then tap Add/Set. "Add" adds to your current balance, "Set" replaces it with a new amount. Check your brokerage app for the latest number.' },
-      { label: 'HYSA buckets', detail: 'Split your high-yield savings into Reserved (savings you won\'t touch) and Bills (money set aside for upcoming expenses like rent or insurance).' },
+      { label: 'Balances', detail: 'Tap an account card, then tap Update Balance. "Add" adds to your current balance, "Set" replaces it with a new amount. Check your brokerage app for the latest number.' },
+      { label: 'HYSA buckets', detail: 'Split your high-yield savings into Savings reserve (money you won\'t touch) and Bills fund (set aside for upcoming expenses like rent or insurance).' },
       { label: 'Interest accrual', detail: 'Estimates this month\'s HYSA interest by taking your current balance times your APY divided by 12. It\'s a simple estimate and doesn\'t account for daily deposits or withdrawals.' },
       { label: 'Coast FIRE', detail: '"Can I stop saving aggressively and still retire on time?" Enter your age, retirement age, and expected spending to find out.' },
     ],

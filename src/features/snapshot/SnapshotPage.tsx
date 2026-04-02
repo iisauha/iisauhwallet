@@ -74,7 +74,7 @@ function RecentActivityWidget() {
       if (p.createdAt) {
         const isHysa = p.meta?.recurringHysaSource || (p.paymentSource === 'hysa');
         const isCcPayment = p.outboundType === 'cc_payment';
-        const descriptor = isHysa ? 'HYSA transfer' : isCcPayment ? 'CC payment pending' : 'Pending outbound';
+        const descriptor = isHysa ? 'HYSA transfer' : isCcPayment ? 'Credit card payment pending' : 'Pending payment';
         items.push({ label: p.label || 'Outbound transfer', type: 'pending-out', ts: new Date(p.createdAt).getTime(), amount: p.amountCents ?? null, descriptor });
       }
     });

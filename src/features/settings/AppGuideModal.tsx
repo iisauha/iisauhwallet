@@ -147,7 +147,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               posts).
             </Li>
             <Li>
-              If you use Investing → HYSA, you can split savings into reserved vs money designated for bills, and optionally
+              If you use Investing → HYSA, you can split savings into savings reserve vs bills fund, and optionally
               link that HYSA to a checking account. Then Snapshot (and Upcoming) can count that bill portion toward cash
               available for spending even though it still sits in savings. Checking may show a short line about linked HYSA
               when that applies.
@@ -171,8 +171,8 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               it up. It reflects your entries, not a bank&apos;s official number.
             </Li>
             <Li>
-              Cash: expand or collapse the section; show or hide $0 accounts; add or set balance (add increases the
-              balance, set replaces it—check the dialog); clear sets balance to $0 in the app only; delete removes the
+              Cash: expand or collapse the section; show or hide $0 accounts; Update Balance (add increases the
+              balance, or check "Replace current balance" to set a new amount); Set to $0 zeroes the balance; delete removes the
               account after you confirm; add bank account creates a new manual account.
             </Li>
             <Li>
@@ -281,7 +281,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
             </Li>
             <Li>
               Payment source (card, bank, or HYSA) tells the app which account type usually pays the bill. For HYSA, choose
-              bill-designated vs reserved savings. The app uses this when building pending items; it does not pay bills for
+              bills fund vs savings reserve. The app uses this when building pending items; it does not pay bills for
               you.
             </Li>
             <Li>
@@ -334,12 +334,12 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               collapse.
             </Li>
             <Li>
-              Update balances with add/set flows; use &quot;set&quot; when you want to replace the balance instead of adding
+              Tap Update Balance on any account; check &quot;Replace current balance&quot; when you want to set a new amount instead of adding
               to it.
             </Li>
             <Li>
-              HYSA supports interest rate, interest accrued this month, reserved vs bill-designated savings, optional linked
-              checking, and optional interest baselines. Linking bill-designated HYSA to checking lets Snapshot and Upcoming
+              HYSA supports interest rate, interest accrued this month, savings reserve vs bills fund, optional linked
+              checking, and optional interest baselines. Linking bills fund HYSA to checking lets Snapshot and Upcoming
               treat part of savings like near-term cash.
             </Li>
             <Li>
@@ -406,8 +406,8 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               screen).
             </Li>
             <Li>
-              Backup: export monthly purchases CSV; export full data as JSON; import JSON works across any device or browser
-              (just enter the export passcode). Import only files you trust.
+              Backup: export monthly purchases as a spreadsheet; export a full backup of all your data; import a backup to restore
+              (works across any device or browser, just enter the export passcode). Only import files you trust.
             </Li>
             <Li>
               Manage categories: categories and subcategories used in Spending and Recurring.

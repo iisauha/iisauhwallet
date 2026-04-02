@@ -84,7 +84,7 @@ export function SecurityOnboarding({ onPass }: { onPass: () => void }) {
       <div className="modal" style={{ width: '100%', maxWidth: 560, animation: 'passcodeFadeIn 0.3s ease-out' }}>
         <h3 style={{ marginBottom: 10, fontSize: '1.15rem', fontWeight: 700 }}>Important Security Information</h3>
         <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', lineHeight: 1.55 }}>
-          This app stores your data locally in your browser. The creator cannot access your data. There is no automatic connection to your bank. Only use the official site link. Save your recovery key and export JSON backups regularly.
+          This app stores your data locally in your browser. The creator cannot access your data. There is no automatic connection to your bank. Only use the official site link. Save your recovery key and export backups regularly.
         </p>
 
         <p style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 600 }}>

@@ -43,7 +43,7 @@ export function PrivacyPage() {
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
           That also means <strong>you are responsible for backups</strong> if you care about not losing data (for example,
-          Settings → Export JSON). Moving to a new device usually means bringing a backup file with you or starting fresh.
+          Settings → Export Backup). Moving to a new device usually means bringing a backup file with you or starting fresh.
         </p>
       </section>
 
@@ -130,7 +130,7 @@ export function PrivacyPage() {
           Backups and exports (treat as sensitive)
         </h2>
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          <strong>Export JSON</strong> saves a backup of what the export includes from your local data (balances, purchases,
+          <strong>Export Backup</strong> saves a backup of what the export includes from your local data (balances, purchases,
           settings keys, and similar). It can still feel very personal. Treat exports like a private document.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
@@ -138,7 +138,7 @@ export function PrivacyPage() {
           assume you might need to set them again after a restore.
         </p>
         <p style={{ margin: '12px 0 0 0', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          <strong>Import JSON</strong> replaces the app’s saved data on this device with the file you pick. Only import files
+          <strong>Import Backup</strong> replaces the app’s saved data on this device with the file you pick. Only import files
           you trust.
         </p>
       </section>
@@ -171,7 +171,7 @@ export function PrivacyPage() {
         <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.7 }}>
           <li>Use a passcode and avoid leaving protection paused on a shared device.</li>
           <li>Save your recovery key when the app shows it. It is not shown in full again the same way.</li>
-          <li>Export JSON backups if you care about not losing data, and store those files somewhere safe.</li>
+          <li>Export Backup backups if you care about not losing data, and store those files somewhere safe.</li>
           <li>Only import backups you trust.</li>
           <li>Use only the official site link above.</li>
           <li>If you suspect exposure, you can use “Reset All Data” in Settings to clear this site’s storage on the device.</li>
