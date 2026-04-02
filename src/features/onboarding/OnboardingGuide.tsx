@@ -24,6 +24,8 @@ type Section = {
   title: string;
   tagline: string;
   items: DetailItem[];
+  /** Show numbered steps instead of icons on pills. */
+  numbered?: boolean;
   /** Optional callout shown below the items (e.g. warnings, tips). */
   callout?: { text: string; variant: 'accent' | 'red' };
   /** If true, the callout is only shown in onboarding (not Settings). */
@@ -39,6 +41,7 @@ const SECTIONS: Section[] = [
     icon: <IconHome />,
     title: 'Add to Home Screen',
     tagline: 'Make it feel like a real app.',
+    numbered: true,
     items: [
       { icon: <IconChevronRight />, label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
       { icon: <IconExport />, label: 'Share menu', detail: 'Tap the three dots (bottom right) then tap Share at the top.' },
@@ -159,15 +162,12 @@ const SECTIONS: Section[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  Expandable pill with staggered entrance                            */
+/*  Static pill with staggered entrance                                */
 /* ------------------------------------------------------------------ */
 
-function DetailPill({ icon, label, detail, delay }: DetailItem & { delay: number }) {
-  const [open, setOpen] = useState(false);
+function DetailPill({ icon, label, detail, delay, step }: DetailItem & { delay: number; step?: number }) {
   return (
-    <button
-      type="button"
-      onClick={() => setOpen(!open)}
+    <div
       className="guide-pill"
       style={{
         display: 'flex',
@@ -175,61 +175,61 @@ function DetailPill({ icon, label, detail, delay }: DetailItem & { delay: number
         gap: 10,
         width: '100%',
         textAlign: 'left',
-        background: open
-          ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
-          : 'var(--ui-surface-secondary, color-mix(in srgb, var(--surface) 60%, transparent))',
-        border: '1px solid var(--ui-border, var(--border))',
-        borderRadius: 10,
-        padding: '9px 11px',
-        cursor: 'pointer',
+        background: 'color-mix(in srgb, var(--accent) 6%, transparent)',
+        borderRadius: 12,
+        padding: '10px 12px',
         color: 'var(--ui-primary-text, var(--text))',
         fontFamily: 'inherit',
         fontSize: '0.8rem',
         lineHeight: 1.4,
-        transition: 'background 0.15s ease, border-color 0.15s ease',
         opacity: 0,
-        animation: `guidePillIn 0.3s ease-out ${delay}ms forwards`,
-        borderColor: open ? 'color-mix(in srgb, var(--accent) 30%, var(--ui-border, var(--border)))' : undefined,
+        animation: `guidePillIn 0.35s ease-out ${delay}ms forwards`,
+        borderLeft: '3px solid color-mix(in srgb, var(--accent) 40%, transparent)',
       }}
     >
-      <span style={{
-        flexShrink: 0,
-        width: 22,
-        height: 22,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--accent)',
-        opacity: 0.85,
-      }}>
-        {icon}
-      </span>
+      {step != null ? (
+        <span style={{
+          flexShrink: 0,
+          width: 24,
+          height: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '50%',
+          background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+          color: 'var(--accent)',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+        }}>
+          {step}
+        </span>
+      ) : (
+        <span style={{
+          flexShrink: 0,
+          width: 22,
+          height: 22,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--accent)',
+          opacity: 0.85,
+        }}>
+          {icon}
+        </span>
+      )}
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontWeight: 600 }}>{label}</span>
-        {open && (
-          <span style={{
-            display: 'block',
-            marginTop: 3,
-            color: 'var(--muted)',
-            fontSize: '0.78rem',
-            lineHeight: 1.4,
-            animation: 'guidePillIn 0.2s ease-out',
-          }}>
-            {detail}
-          </span>
-        )}
+        <span style={{
+          display: 'block',
+          marginTop: 2,
+          color: 'var(--muted)',
+          fontSize: '0.76rem',
+          lineHeight: 1.35,
+        }}>
+          {detail}
+        </span>
       </span>
-      <span style={{
-        flexShrink: 0,
-        fontSize: '0.65rem',
-        color: 'var(--muted)',
-        marginTop: 4,
-        transition: 'transform 0.2s ease',
-        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-      }}>
-        &#9662;
-      </span>
-    </button>
+    </div>
   );
 }
 
@@ -385,7 +385,12 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
         {/* Expandable pills — staggered entrance */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flexShrink: 0 }}>
           {section.items.map((item, i) => (
-            <DetailPill key={`${slideKey}-${i}`} {...item} delay={80 + i * 60} />
+            <DetailPill
+              key={`${slideKey}-${i}`}
+              {...item}
+              delay={80 + i * 60}
+              step={section.numbered ? i + 1 : undefined}
+            />
           ))}
         </div>
 
