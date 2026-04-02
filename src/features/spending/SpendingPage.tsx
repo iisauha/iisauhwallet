@@ -349,7 +349,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           value={filter}
           onChange={(e) => setFilter(e.target.value as FilterKey)}
           className="spending-filter-select"
-          style={{ flexShrink: 0, minWidth: 110 }}
+          style={{ flexShrink: 0 }}
         >
           <option value="this_month">This Month</option>
           <option value="last_month">Last Month</option>
