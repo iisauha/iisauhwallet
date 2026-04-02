@@ -58,7 +58,7 @@ import {
   FEDERAL_LOAN_PARAMETERS_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
-import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached, b64Enc, b64Dec } from './crypto';
+import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached, b64Enc, b64Dec, compressString, decompressString } from './crypto';
 
 // Sequence counter: each saveData call increments this. The .then() callback only
 // writes to localStorage if its seq is still the latest, preventing stale fire-and-forgets
@@ -444,14 +444,14 @@ export function saveData(data: LedgerData) {
   setCachedData(data); // update in-memory cache synchronously for instant reads
   const seq = ++_writeSeq;
   const json = JSON.stringify(data);
-  // Encrypt and persist asynchronously; fall back to plaintext if encryption unavailable.
-  // Only write if this is still the latest save (seq guard prevents stale writes from winning).
-  encryptWithDeviceKey(json)
-    .then((ct) => {
+  // Compress → encrypt → persist. Compression typically reduces JSON 3-5x.
+  // Falls back to uncompressed plaintext if encryption/compression unavailable.
+  compressString(json)
+    .then((compressed) => encryptWithDeviceKey(compressed).then((ct) => {
       if (_writeSeq !== seq) return;
       try { localStorage.setItem(STORAGE_KEY, ct); }
       catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') { console.error('localStorage full — data NOT saved'); window.dispatchEvent(new CustomEvent('storage-quota-exceeded')); } }
-    })
+    }))
     .catch(() => {
       if (_writeSeq !== seq) return;
       try { localStorage.setItem(STORAGE_KEY, json); }

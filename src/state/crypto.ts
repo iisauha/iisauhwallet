@@ -103,6 +103,33 @@ export function b64Dec(b64: string): Uint8Array {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
+// ── Gzip compression (reduces JSON ~3-5x before encryption) ─────────────
+
+const GZ_PREFIX = 'gz1:';
+
+async function compressString(input: string): Promise<string> {
+  try {
+    const stream = new Blob([input]).stream().pipeThrough(new CompressionStream('gzip'));
+    const buf = await new Response(stream).arrayBuffer();
+    return GZ_PREFIX + b64Enc(new Uint8Array(buf));
+  } catch {
+    return input; // fallback: store uncompressed
+  }
+}
+
+async function decompressString(stored: string): Promise<string> {
+  if (!stored.startsWith(GZ_PREFIX)) return stored; // uncompressed legacy data
+  try {
+    const bytes = b64Dec(stored.slice(GZ_PREFIX.length));
+    const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return await new Response(stream).text();
+  } catch {
+    return stored; // decompression failed — return raw
+  }
+}
+
+export { compressString, decompressString };
+
 // ── Device key management ─────────────────────────────────────────────────
 
 async function getOrCreateDeviceKey(): Promise<CryptoKey> {
@@ -243,17 +270,23 @@ async function unwrapRawKey(json: string, secret: string): Promise<Uint8Array | 
 // ── Cache population (shared by initCrypto and post-auth unlock) ───────────
 
 async function populateAuxCache(): Promise<void> {
-  // Main ledger key
+  // Main ledger key (may be compressed: gz1:... inside the encrypted blob)
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     if (isEncrypted(raw)) {
       try {
-        const plain = await decryptWithDeviceKey(raw);
+        const decrypted = await decryptWithDeviceKey(raw);
+        const plain = await decompressString(decrypted);
         dataCache = JSON.parse(plain) as LedgerData;
       } catch (_) {}
     } else {
-      try { dataCache = JSON.parse(raw) as LedgerData; } catch (_) {}
-      encryptWithDeviceKey(raw).then((ct) => localStorage.setItem(STORAGE_KEY, ct)).catch(() => {});
+      try {
+        const plain = await decompressString(raw);
+        dataCache = JSON.parse(plain) as LedgerData;
+      } catch (_) {}
+      // Re-encrypt (and compress) on next save via setCachedData path
+      const json = dataCache ? JSON.stringify(dataCache) : raw;
+      compressString(json).then((c) => encryptWithDeviceKey(c)).then((ct) => localStorage.setItem(STORAGE_KEY, ct)).catch(() => {});
     }
   }
 
