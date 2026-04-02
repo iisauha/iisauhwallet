@@ -240,9 +240,9 @@ export function PendingInboundList(props: {
       targetCardId: firstSelected.targetCardId,
       targetInvestingAccountId: firstSelected.targetInvestingAccountId,
       isRefund: firstSelected.isRefund,
-      createdAt: new Date(joinDate).toISOString(),
+      createdAt: new Date(joinDate + 'T00:00:00').toISOString(),
     };
-    props.onJoinInbound(joinStep.selectedIds, combined, new Date(joinDate).toISOString());
+    props.onJoinInbound(joinStep.selectedIds, combined, new Date(joinDate + 'T00:00:00').toISOString());
     setJoinStep('idle');
     setJoinDate(new Date().toISOString().slice(0, 10));
   };
@@ -460,9 +460,9 @@ export function PendingOutboundList(props: {
       paymentSource: firstSelected.paymentSource,
       paymentTargetId: firstSelected.paymentTargetId,
       meta: firstSelected.meta,
-      createdAt: new Date(joinDate).toISOString(),
+      createdAt: new Date(joinDate + 'T00:00:00').toISOString(),
     };
-    props.onJoinOutbound(joinStep.selectedIds, combined, new Date(joinDate).toISOString());
+    props.onJoinOutbound(joinStep.selectedIds, combined, new Date(joinDate + 'T00:00:00').toISOString());
     setJoinStep('idle');
     setJoinDate(new Date().toISOString().slice(0, 10));
   };

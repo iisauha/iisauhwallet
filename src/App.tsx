@@ -17,6 +17,7 @@ import { AdvancedUIColorsProvider } from './theme/AdvancedUIColorsContext';
 import { ReminderProvider } from './state/ReminderContext';
 import { DialogProvider, useDialog } from './ui/DialogProvider';
 import { UndoToast } from './ui/UndoToast';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import { TAB_ORDER_KEY } from './state/keys';
 import { useLedgerStore } from './state/store';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
@@ -532,6 +533,7 @@ function MainApp() {
 
 export function App() {
   return (
+    <ErrorBoundary>
     <ThemeProvider>
       <AppearanceProvider>
         <AdvancedUIColorsProvider>
@@ -550,5 +552,6 @@ export function App() {
         </AdvancedUIColorsProvider>
       </AppearanceProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }
