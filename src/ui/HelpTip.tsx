@@ -51,6 +51,9 @@ export function HelpTip({ text }: { text: string }) {
             whiteSpace: 'pre-wrap',
             boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
             textAlign: 'left',
+            textTransform: 'none',
+            letterSpacing: 'normal',
+            fontWeight: 400,
           }}
         >
           {text}
