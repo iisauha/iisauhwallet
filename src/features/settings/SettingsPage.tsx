@@ -527,13 +527,13 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                 </div>
               </div>
               <Select
+                className="ll-select-compact"
                 value={autoLockMinutes}
                 onChange={(e) => {
                   const v = parseInt(e.target.value, 10);
                   setAutoLockMinutes(v);
                   saveAutoLockMinutes(v);
                 }}
-                style={{ width: 'auto', fontSize: '0.78rem', padding: '4px 6px', minHeight: 'unset', color: 'var(--muted)' }}
               >
                 <option value={1}>1 min</option>
                 <option value={2}>2 min</option>

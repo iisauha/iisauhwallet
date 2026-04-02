@@ -688,7 +688,7 @@ input[type="date"].ll-control:focus {
   display: none;
 }
 .spending-filter-select {
-  padding-right: 14px;
+  padding-right: 14px !important;
 }
 
 /* Upcoming: remove the caret spacing and keep the box hugging the label. */
@@ -696,7 +696,7 @@ input[type="date"].ll-control:focus {
   display: none;
 }
 .upcoming-window-select {
-  padding-right: 14px;
+  padding-right: 14px !important;
 }
 /* Settings app guide modal — reduce container padding so Next stays visible */
 .modal.guide-modal { padding: 10px 14px 10px; overflow: hidden; display: flex; flex-direction: column; }
@@ -2095,6 +2095,7 @@ input[type="checkbox"]:focus-visible {
   background: var(--ui-card-bg, var(--surface)) !important;
   border: 1px solid var(--ui-border, var(--border)) !important;
   color: var(--ui-primary-text, var(--text)) !important;
+  padding-right: 14px !important;
   font-weight: 500;
   box-shadow: 0 1px 4px rgba(0,0,0,0.12);
 }
