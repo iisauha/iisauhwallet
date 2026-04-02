@@ -31,7 +31,7 @@ import {
   saveData,
 } from '../../state/storage';
 import { useContentGuard } from '../../state/useContentGuard';
-import { IconBox, IconArchive } from '../../ui/icons';
+import { IconBox, IconTrash } from '../../ui/icons';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
 import { useDialog } from '../../ui/DialogProvider';
 import { Select } from '../../ui/Select';
@@ -730,12 +730,12 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           })()}
         />
         <SettingsRow
-          icon={<IconArchive />}
+          icon={<IconTrash />}
           iconBg="#f59e0b"
-          label="Archive Old Purchases"
+          label="Remove Old Purchases"
           sublabel="Remove purchases older than 6 months (keeps monthly summaries)"
           onClick={async () => {
-            const ok = await showConfirm('Archive all purchases older than 6 months? Individual records will be replaced with monthly category summaries. This cannot be undone. Consider exporting a backup first.');
+            const ok = await showConfirm('Remove all purchases older than 6 months? Individual records will be replaced with monthly category summaries. This cannot be undone. Consider exporting a backup first.');
             if (!ok) return;
             const current = useLedgerStore.getState().data;
             const result = archiveOldPurchases(current, 6);
