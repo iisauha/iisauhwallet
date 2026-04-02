@@ -292,6 +292,18 @@ function MainApp() {
     return () => { window.removeEventListener('storage-quota-exceeded', quotaHandler); window.removeEventListener('content-warning', contentHandler); };
   }, [showAlert]);
 
+  // Cross-tab sync: reload store when another tab writes to localStorage
+  const actions = useLedgerStore((s) => s.actions);
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === 'ledgerlite' || e.key === null) {
+        actions.reload();
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, [actions]);
+
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {
     const durations = [150, 150, 150, 150, 150, 150, 150];
@@ -446,7 +458,7 @@ function MainApp() {
         }
       }} />
 
-      <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+      <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '0.9rem' }}>Loading...</div>}>
       {(spendingVisited || tab === 'spending') && (
         <div
           style={{ display: tab === 'spending' ? 'block' : 'none', position: 'relative', zIndex: 1, minHeight: '100%' }}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
+import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY, UNDO_DURATION_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
@@ -233,6 +233,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
 
   const [backupLocationLabel, setBackupLocationLabel] = useState<string>(() => localStorage.getItem(BACKUP_LOCATION_LABEL_KEY) || '');
   const [backupReminderDays, setBackupReminderDays] = useState<number>(() => parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1);
+  const [undoDuration, setUndoDuration] = useState<number>(() => parseInt(localStorage.getItem(UNDO_DURATION_KEY) || '5', 10) || 5);
 
   const hasPasscode = loadPasscodeHash() !== null;
   const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
@@ -753,6 +754,22 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             await showAlert(`Archived ${result.archivedCount} old purchase${result.archivedCount === 1 ? '' : 's'}.`);
           }}
         />
+        <div style={{ padding: '10px 16px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', color: 'var(--ui-primary-text, var(--text))' }}>
+            Undo popup duration
+            <Select
+              value={undoDuration}
+              onChange={(e) => {
+                const v = Math.max(1, Math.min(30, parseInt(e.target.value, 10) || 5));
+                setUndoDuration(v);
+                localStorage.setItem(UNDO_DURATION_KEY, String(v));
+              }}
+              style={{ width: 80, marginBottom: 0, fontSize: '0.88rem' }}
+            >
+              {[3, 5, 8, 10, 15].map(s => <option key={s} value={s}>{s}s</option>)}
+            </Select>
+          </label>
+        </div>
       </div>
 
       {/* About */}

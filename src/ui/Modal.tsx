@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 
 function IconX() {
   return (
@@ -9,20 +9,21 @@ function IconX() {
   );
 }
 
+const MODAL_TITLE_ID = 'modal-title';
+
 export function Modal(props: {
   open: boolean;
   title?: string;
   children: ReactNode;
   onClose?: () => void;
-  /** Optional styles for the title heading (e.g. match App Customization "All Other Text"). */
   titleStyle?: CSSProperties;
-  /** Optional extra CSS class(es) applied to the .modal element. */
   className?: string;
-  /** When true, modal fills the entire screen instead of floating card. */
   fullscreen?: boolean;
 }) {
   const { open, title, children, onClose, titleStyle, className, fullscreen } = props;
+  const modalRef = useRef<HTMLDivElement>(null);
 
+  // Esc to close
   useEffect(() => {
     if (!open || !onClose) return;
     const handleEsc = (e: KeyboardEvent) => {
@@ -32,6 +33,29 @@ export function Modal(props: {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose]);
 
+  // Auto-focus modal on open
+  useEffect(() => {
+    if (open && modalRef.current) {
+      modalRef.current.focus();
+    }
+  }, [open]);
+
+  // Focus trap: Tab cycles within modal
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab' || !modalRef.current) return;
+    const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, []);
+
   if (!open) return null;
   const overlayClass = fullscreen ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay';
   return (
@@ -39,17 +63,21 @@ export function Modal(props: {
       className={overlayClass}
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? MODAL_TITLE_ID : undefined}
       onClick={onClose ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
     >
       <div
+        ref={modalRef}
         className={className ? `modal ${className}` : 'modal'}
+        tabIndex={-1}
         onClick={onClose ? (e) => e.stopPropagation() : undefined}
+        onKeyDown={handleKeyDown}
       >
         <div
           className={fullscreen ? 'modal-header modal-header--sticky' : 'modal-header'}
         >
           {title ? (
-            <h3 style={{ margin: 0, flex: 1, ...titleStyle }}>{title}</h3>
+            <h3 id={MODAL_TITLE_ID} style={{ margin: 0, flex: 1, ...titleStyle }}>{title}</h3>
           ) : <span />}
           {onClose ? (
             <button type="button" aria-label="Close" onClick={onClose} className="modal-close-btn">

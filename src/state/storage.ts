@@ -634,6 +634,46 @@ export function exportJSON(): string {
 
 export const ENCRYPTED_IMPORT = 'ENCRYPTED_IMPORT';
 
+/** Sanitize a numeric field: must be a finite number, otherwise return fallback. */
+function safeNum(v: unknown, fallback: number): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return fallback;
+  return v;
+}
+
+/** Sanitize imported records: ensure amounts are finite numbers, dates are valid, required fields exist. */
+function sanitizeImportedData(data: any): any {
+  if (Array.isArray(data.banks)) {
+    data.banks = data.banks.filter((b: any) => b && typeof b.id === 'string').map((b: any) => ({
+      ...b, balanceCents: safeNum(b.balanceCents, 0)
+    }));
+  }
+  if (Array.isArray(data.cards)) {
+    data.cards = data.cards.filter((c: any) => c && typeof c.id === 'string').map((c: any) => ({
+      ...c, balanceCents: safeNum(c.balanceCents, 0)
+    }));
+  }
+  if (Array.isArray(data.purchases)) {
+    data.purchases = data.purchases.filter((p: any) => {
+      if (!p || typeof p.id !== 'string') return false;
+      if (typeof p.dateISO === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(p.dateISO)) return false;
+      return true;
+    }).map((p: any) => ({
+      ...p, amountCents: safeNum(p.amountCents, 0)
+    }));
+  }
+  if (Array.isArray(data.pendingIn)) {
+    data.pendingIn = data.pendingIn.filter((p: any) => p && typeof p.id === 'string').map((p: any) => ({
+      ...p, amountCents: safeNum(p.amountCents, 0)
+    }));
+  }
+  if (Array.isArray(data.pendingOut)) {
+    data.pendingOut = data.pendingOut.filter((p: any) => p && typeof p.id === 'string').map((p: any) => ({
+      ...p, amountCents: safeNum(p.amountCents, 0)
+    }));
+  }
+  return data;
+}
+
 export function importJSON(jsonText: string) {
   const parsed = JSON.parse(jsonText) as any;
 
@@ -656,7 +696,7 @@ export function importJSON(jsonText: string) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw && !isEncrypted(raw)) {
-        const restored = applyDataDefaults(JSON.parse(raw) as LedgerData);
+        const restored = applyDataDefaults(sanitizeImportedData(JSON.parse(raw)));
         saveData(restored);
       }
     } catch (_) {}
@@ -688,14 +728,15 @@ export function importJSON(jsonText: string) {
   // Format B: legacy importFile handler expects a plain "data" object (banks/cards/pending/purchases/recurring...).
   // We merge into STORAGE_KEY only, preserving any other keys.
   if (parsed && typeof parsed === 'object') {
+    const sanitized = sanitizeImportedData(parsed);
     const current = loadData();
     const next: LedgerData = { ...current };
-    if (Array.isArray(parsed.banks)) (next as any).banks = parsed.banks;
-    if (Array.isArray(parsed.cards)) (next as any).cards = parsed.cards;
-    if (Array.isArray(parsed.pendingIn)) (next as any).pendingIn = parsed.pendingIn;
-    if (Array.isArray(parsed.pendingOut)) (next as any).pendingOut = parsed.pendingOut;
-    if (Array.isArray(parsed.purchases)) (next as any).purchases = parsed.purchases;
-    if (Array.isArray(parsed.recurring)) (next as any).recurring = parsed.recurring;
+    if (Array.isArray(sanitized.banks)) (next as any).banks = sanitized.banks;
+    if (Array.isArray(sanitized.cards)) (next as any).cards = sanitized.cards;
+    if (Array.isArray(sanitized.pendingIn)) (next as any).pendingIn = sanitized.pendingIn;
+    if (Array.isArray(sanitized.pendingOut)) (next as any).pendingOut = sanitized.pendingOut;
+    if (Array.isArray(sanitized.purchases)) (next as any).purchases = sanitized.purchases;
+    if (Array.isArray(sanitized.recurring)) (next as any).recurring = sanitized.recurring;
     if (parsed.recurringPosted && typeof parsed.recurringPosted === 'object') (next as any).recurringPosted = parsed.recurringPosted;
     saveData(next);
     return;

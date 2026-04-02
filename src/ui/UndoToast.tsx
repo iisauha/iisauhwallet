@@ -2,24 +2,29 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { applyUndo, clearUndoSnapshot, getUndoSnapshot } from '../state/store';
 
 export function UndoToast() {
-  const [label, setLabel] = useState<string | null>(null);
+  const [info, setInfo] = useState<{ label: string; durationMs: number } | null>(null);
+  const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismiss = useCallback(() => {
-    setLabel(null);
-    clearUndoSnapshot();
+    setVisible(false);
+    setTimeout(() => { setInfo(null); clearUndoSnapshot(); }, 180);
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      setLabel(detail?.label || 'Action');
+      const label = detail?.label || 'Action';
+      const durationMs = detail?.durationMs || 5000;
+      setInfo({ label, durationMs });
+      // Animate in on next frame
+      requestAnimationFrame(() => setVisible(true));
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        setLabel(null);
-        clearUndoSnapshot();
-      }, 8000);
+        setVisible(false);
+        setTimeout(() => { setInfo(null); clearUndoSnapshot(); }, 180);
+      }, durationMs);
     };
     window.addEventListener('undo-available', handler);
     return () => { window.removeEventListener('undo-available', handler); if (timerRef.current) clearTimeout(timerRef.current); };
@@ -29,35 +34,42 @@ export function UndoToast() {
     const snap = getUndoSnapshot();
     if (!snap) { dismiss(); return; }
     applyUndo();
-    setLabel(null);
+    setVisible(false);
+    setTimeout(() => setInfo(null), 180);
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   }, [dismiss]);
 
-  if (!label) return null;
+  if (!info) return null;
 
   return (
     <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
       style={{
         position: 'fixed',
         bottom: 80,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'var(--ui-modal-bg, var(--surface, #1a1a2e))',
-        border: '1px solid var(--ui-border, var(--border, #333))',
-        borderRadius: 12,
-        padding: '10px 16px',
+        right: 16,
+        background: 'var(--ui-card-bg, var(--surface, #222))',
+        border: '1px solid var(--ui-border, var(--border, #444))',
+        borderRadius: 10,
+        padding: '8px 12px',
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
         zIndex: 9999,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-        maxWidth: 'calc(100vw - 32px)',
-        fontSize: '0.9rem',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+        maxWidth: 260,
+        fontSize: '0.82rem',
         color: 'var(--ui-primary-text, var(--text, #eee))',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(8px)',
+        transition: 'opacity 180ms ease, transform 180ms ease',
+        pointerEvents: visible ? 'auto' : 'none',
       }}
     >
       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {label}
+        {info.label}
       </span>
       <button
         type="button"
@@ -65,11 +77,11 @@ export function UndoToast() {
         style={{
           background: 'none',
           border: 'none',
-          color: 'var(--accent, #E8673A)',
+          color: 'var(--accent, #FE841B)',
           fontWeight: 700,
-          fontSize: '0.9rem',
+          fontSize: '0.82rem',
           cursor: 'pointer',
-          padding: '4px 8px',
+          padding: '2px 6px',
           whiteSpace: 'nowrap',
         }}
       >
@@ -83,10 +95,10 @@ export function UndoToast() {
           background: 'none',
           border: 'none',
           color: 'var(--ui-primary-text, var(--text, #eee))',
-          opacity: 0.5,
+          opacity: 0.4,
           cursor: 'pointer',
-          padding: '4px',
-          fontSize: '1rem',
+          padding: '2px',
+          fontSize: '0.9rem',
           lineHeight: 1,
         }}
       >

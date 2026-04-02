@@ -7,8 +7,14 @@ import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
 
 // ── Single-level undo for destructive actions ──────────────────────────────
+import { UNDO_DURATION_KEY } from './keys';
+
 let _undoSnapshot: { data: LedgerData; label: string; expiresAt: number } | null = null;
-const UNDO_WINDOW_MS = 8000;
+
+function getUndoDurationMs(): number {
+  try { const v = parseInt(localStorage.getItem(UNDO_DURATION_KEY) || '5', 10); return (v >= 1 && v <= 30 ? v : 5) * 1000; }
+  catch { return 5000; }
+}
 
 export function getUndoSnapshot() { return _undoSnapshot; }
 export function clearUndoSnapshot() { _undoSnapshot = null; }
@@ -22,8 +28,9 @@ export function applyUndo(): boolean {
 }
 
 function captureUndo(data: LedgerData, label: string) {
-  _undoSnapshot = { data: structuredClone(data), label, expiresAt: Date.now() + UNDO_WINDOW_MS };
-  window.dispatchEvent(new CustomEvent('undo-available', { detail: { label } }));
+  const ms = getUndoDurationMs();
+  _undoSnapshot = { data: structuredClone(data), label, expiresAt: Date.now() + ms };
+  window.dispatchEvent(new CustomEvent('undo-available', { detail: { label, durationMs: ms } }));
 }
 
 export interface LedgerState {
@@ -97,6 +104,14 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       captureUndo(get().data, 'Delete bank account');
       const next = structuredClone(get().data) as LedgerData;
       next.banks = next.banks.filter((b) => b.id !== id && b.type !== 'physical_cash');
+      // Clean up orphaned references
+      next.pendingIn = next.pendingIn.map((p) => p.targetBankId === id ? { ...p, targetBankId: undefined } : p);
+      next.pendingOut = next.pendingOut.map((p) => p.sourceBankId === id ? { ...p, sourceBankId: undefined } : p);
+      if (Array.isArray((next as any).recurring)) {
+        (next as any).recurring = (next as any).recurring.map((r: any) =>
+          r.paymentTargetId === id && (r.paymentSource === 'bank') ? { ...r, paymentTargetId: undefined } : r
+        );
+      }
       saveData(next);
       set({ data: next });
     },
@@ -110,6 +125,14 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       captureUndo(get().data, 'Delete credit card');
       const next = structuredClone(get().data) as LedgerData;
       next.cards = next.cards.filter((c) => c.id !== id);
+      // Clean up orphaned references
+      next.pendingIn = next.pendingIn.map((p) => p.targetCardId === id ? { ...p, targetCardId: undefined, depositTo: 'bank' } : p);
+      next.pendingOut = next.pendingOut.map((p) => p.targetCardId === id ? { ...p, targetCardId: undefined } : p);
+      if (Array.isArray((next as any).recurring)) {
+        (next as any).recurring = (next as any).recurring.map((r: any) =>
+          r.paymentTargetId === id && (r.paymentSource === 'card' || r.paymentSource === 'credit_card') ? { ...r, paymentTargetId: undefined, paymentSource: undefined } : r
+        );
+      }
       saveData(next);
       set({ data: next });
     },
@@ -156,7 +179,12 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       const next = structuredClone(get().data) as LedgerData;
       const card = next.cards.find((c) => c.id === cardId);
       if (!card) return;
-      card.rewardRules = rules && rules.length > 0 ? rules : undefined;
+      // Sanitize: ensure rule values are positive finite numbers
+      const sanitized = (rules || []).map(r => ({
+        ...r,
+        value: typeof r.value === 'number' && Number.isFinite(r.value) && r.value >= 0 ? r.value : 0,
+      }));
+      card.rewardRules = sanitized.length > 0 ? sanitized : undefined;
       card.updatedAt = nowIso();
       saveData(next);
       set({ data: next });

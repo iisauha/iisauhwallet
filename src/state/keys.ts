@@ -122,3 +122,5 @@ export const LAST_EXPORT_DATE_KEY = 'lastExportDate';
 export const BACKUP_LOCATION_LABEL_KEY = 'backupLocationLabel';
 // Backup reminder interval in days (default 1).
 export const BACKUP_REMINDER_DAYS_KEY = 'iisauhwallet_backup_reminder_days_v1';
+// Undo toast duration in seconds (default 5).
+export const UNDO_DURATION_KEY = 'iisauhwallet_undo_duration_v1';
