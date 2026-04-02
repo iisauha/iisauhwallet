@@ -168,9 +168,9 @@ export function PieChart3D({ slices, size = 260, activeId, onSliceClick }: Props
               <line
                 x1={edgePos.x} y1={edgePos.y}
                 x2={sl.labelX} y2={sl.labelY}
-                stroke="var(--ui-border, var(--border))"
+                stroke="var(--ui-primary-text, var(--text))"
                 strokeWidth={1}
-                opacity={0.6}
+                opacity={0.3}
               />
               <text
                 x={sl.labelX}
