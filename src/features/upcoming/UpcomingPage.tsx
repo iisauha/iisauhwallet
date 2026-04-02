@@ -862,11 +862,11 @@ export function UpcomingPage() {
             <span className={displayedFinalNetCashCents < 0 ? 'v neg' : 'v pos'}>{formatCents(displayedFinalNetCashCents)}</span>
           </div>
           <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected income in {windowDays} days</span>
+            <span className="k">Expected income in {windowDays} days</span>
             <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
           </div>
           <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected costs in {windowDays} days</span>
+            <span className="k">Expected costs in {windowDays} days</span>
             <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
           </div>
           <div className="summary-kv amount-remaining-emphasis">
