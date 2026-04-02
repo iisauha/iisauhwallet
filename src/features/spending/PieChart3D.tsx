@@ -60,7 +60,7 @@ function formatPct(value: number, total: number) {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export function PieChart3D({ slices, size = 320, activeId, onSliceClick }: Props) {
+export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props) {
   const total = slices.reduce((s, sl) => s + sl.value, 0);
   const activeSlice = activeId ? slices.find(s => s.id === activeId) : null;
 
@@ -147,7 +147,7 @@ export function PieChart3D({ slices, size = 320, activeId, onSliceClick }: Props
   const innerR = (size / 2 - 40) * 0.35;
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <svg
         viewBox={`0 0 ${size} ${size}`}
         width="100%"
