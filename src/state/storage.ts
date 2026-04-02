@@ -519,6 +519,13 @@ export function exportJSON(): string {
     PUBLIC_LOAN_SUMMARY_KEY,
     FEDERAL_LOAN_PARAMETERS_KEY,
     'iisauhwallet_quick_action_freq_v1',
+    // Theme & appearance
+    APP_THEME_COLOR_KEY,
+    APP_ACCENT_COLOR_KEY,
+    APP_FONT_FAMILY_KEY,
+    APP_FONT_SCALE_KEY,
+    UI_ADVANCED_COLORS_KEY,
+    'iisauhwallet_ui_theme_presets_v1',
   ]);
 
   // Main data key: always use in-memory cache (decrypted). Never export encrypted blob.

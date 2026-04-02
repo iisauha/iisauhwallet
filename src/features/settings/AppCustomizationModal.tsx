@@ -211,7 +211,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                       position: 'absolute', top: -6, right: -6, zIndex: 10,
                       width: 20, height: 20, borderRadius: '50%',
                       background: 'rgba(220,38,38,0.7)', border: '1.5px solid var(--red, #ef4444)',
-                      color: '#000', fontSize: '0.6rem', cursor: 'pointer',
+                      color: '#000', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
