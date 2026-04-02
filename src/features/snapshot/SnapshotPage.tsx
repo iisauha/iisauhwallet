@@ -1182,7 +1182,7 @@ export function SnapshotPage({
                       const current = row.currentBalanceCents || 0;
                       const subCents = Math.max(
                         0,
-                        Math.round(parseFloat(row.subCentsInput.replace(/,/g, '')) * 100) || 0
+                        (() => { const n = parseFloat(row.subCentsInput.replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) : 0; })()
                       );
                       const newBalance = Math.max(0, current - subCents);
                       return (
@@ -1252,7 +1252,7 @@ export function SnapshotPage({
                       for (const row of modal.privateRows) {
                         const cents = Math.max(
                           0,
-                          Math.round(parseFloat(row.subCentsInput.replace(/,/g, '')) * 100) || 0
+                          (() => { const n = parseFloat(row.subCentsInput.replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) : 0; })()
                         );
                         overrides[row.loanId] = cents;
                       }
@@ -1477,14 +1477,15 @@ export function SnapshotPage({
                       onClick={() => {
                         actions.updateCardRewardRules(modal.cardId, validRules);
                         const balanceStr = modal.rewardBalanceStr.trim().replace(/,/g, '');
-                        const balance = balanceStr ? (modal.rewardType === 'cashback' ? Math.round(parseFloat(balanceStr) * 100) : Math.round(parseFloat(balanceStr))) : 0;
+                        const rawBal = parseFloat(balanceStr || '0');
+                        const balance = Number.isFinite(rawBal) ? (modal.rewardType === 'cashback' ? Math.round(rawBal * 100) : Math.round(rawBal)) : 0;
                         const totals: { rewardType: 'cashback' | 'miles' | 'points'; rewardCashbackCents?: number; rewardPoints?: number; rewardMiles?: number } = { rewardType: modal.rewardType };
                         if (modal.rewardType === 'cashback') totals.rewardCashbackCents = Math.max(0, balance);
                         else if (modal.rewardType === 'points') totals.rewardPoints = Math.max(0, balance);
                         else totals.rewardMiles = Math.max(0, balance);
                         actions.updateCardRewardTotals(modal.cardId, totals);
                         const cpp = modal.rewardCppStr.trim() ? parseFloat(modal.rewardCppStr) : undefined;
-                        if ((modal.rewardType === 'points' || modal.rewardType === 'miles') && typeof cpp === 'number' && !Number.isNaN(cpp) && cpp >= 0) {
+                        if ((modal.rewardType === 'points' || modal.rewardType === 'miles') && typeof cpp === 'number' && Number.isFinite(cpp) && cpp >= 0) {
                           actions.updateCardRewardCpp(modal.cardId, modal.rewardType === 'points' ? { avgCentsPerPoint: cpp } : { avgCentsPerMile: cpp });
                         }
                         setModal({ type: 'none' });

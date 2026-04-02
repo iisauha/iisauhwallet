@@ -747,14 +747,16 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
 }
 
 function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
-  const balanceCents = Math.round(parseFloat(e.balance || '0') * 100);
+  const rawBal = parseFloat(e.balance || '0');
+  const balanceCents = Number.isFinite(rawBal) ? Math.round(rawBal * 100) : 0;
   const ratePercent = parseFloat(e.ratePercent || '0');
+  const rawIncome = parseFloat(e.idrManualAnnualIncome || '0');
   const idrManualAnnualIncomeCents =
-    e.idrManualAnnualIncome && parseFloat(e.idrManualAnnualIncome) > 0
-      ? Math.round(parseFloat(e.idrManualAnnualIncome) * 100)
+    Number.isFinite(rawIncome) && rawIncome > 0
+      ? Math.round(rawIncome * 100)
       : undefined;
 
-  if (!(balanceCents >= 0 && !Number.isNaN(ratePercent))) return null;
+  if (!(balanceCents >= 0 && Number.isFinite(ratePercent))) return null;
 
   const isPublic = e.category === 'public';
   const termMonths = isPublic

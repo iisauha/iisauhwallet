@@ -16,8 +16,14 @@ export function parseCents(s: string): number {
   const cleaned = s.replace(/[$,]/g, '').trim();
   if (!cleaned) return 0;
   const num = parseFloat(cleaned);
-  if (Number.isNaN(num)) return 0;
+  if (!Number.isFinite(num)) return 0;
   return Math.round(num * 100);
+}
+
+/** Parse a string to a finite number, returning fallback if NaN/Infinity. */
+export function safeParseFloat(s: string, fallback = 0): number {
+  const n = parseFloat(s.replace(/[$,]/g, '').trim());
+  return Number.isFinite(n) ? n : fallback;
 }
 
 export function sumBankTotalCents(data: LedgerData): number {

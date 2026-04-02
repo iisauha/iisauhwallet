@@ -420,7 +420,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
             borderRadius: 8,
             borderLeft: `3px solid var(--${section.callout!.variant === 'red' ? 'red' : 'accent'})`,
             background: section.callout!.variant === 'red'
-              ? 'rgba(220,38,38,0.1)'
+              ? 'color-mix(in srgb, var(--red, var(--danger)) 12%, transparent)'
               : 'color-mix(in srgb, var(--accent) 12%, transparent)',
             fontSize: '0.8rem',
             lineHeight: 1.4,

@@ -1036,12 +1036,15 @@ function EditBalanceModal({
   const [cppStr, setCppStr] = useState(() => (modal.cpp != null ? String(modal.cpp) : ''));
   const handleSubmit = () => {
     if (rewardType === 'cashback') {
-      const cents = Math.max(0, Math.round(parseFloat(balanceStr || '0') * 100));
+      const rawC = parseFloat(balanceStr || '0');
+      const cents = Number.isFinite(rawC) ? Math.max(0, Math.round(rawC * 100)) : 0;
       onSave('cashback', cents, undefined);
     } else {
-      const val = Math.max(0, Math.round(parseFloat(balanceStr || '0')));
-      const cpp = cppStr.trim() ? parseFloat(cppStr) : undefined;
-      onSave(rewardType, val, Number.isNaN(cpp) || cpp == null ? undefined : cpp);
+      const rawV = parseFloat(balanceStr || '0');
+      const val = Number.isFinite(rawV) ? Math.max(0, Math.round(rawV)) : 0;
+      const rawCpp = cppStr.trim() ? parseFloat(cppStr) : undefined;
+      const cpp = typeof rawCpp === 'number' && Number.isFinite(rawCpp) && rawCpp >= 0 ? rawCpp : undefined;
+      onSave(rewardType, val, cpp);
     }
   };
   return (
