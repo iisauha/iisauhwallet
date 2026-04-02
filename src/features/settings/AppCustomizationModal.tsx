@@ -111,7 +111,6 @@ function deriveAdvancedColors(bg: string, accent: string): AdvancedUIColors {
 
 const PRESET_THEMES: PresetTheme[] = [
   { id: 'royal',    name: 'Royal (Default)', themeColor: '#040812', accentColor: '#d97706', advancedColors: deriveAdvancedColors('#040812', '#d97706') },
-  { id: 'midnight', name: 'Midnight',        themeColor: '#1a1a1a', accentColor: '#E8673A', advancedColors: deriveAdvancedColors('#1a1a1a', '#E8673A') },
   { id: 'cobalt',   name: 'Cobalt',          themeColor: '#080c16', accentColor: '#3b82f6', advancedColors: deriveAdvancedColors('#080c16', '#3b82f6') },
   { id: 'light',    name: 'Light',           themeColor: '#f4f4f0', accentColor: '#E8673A', advancedColors: deriveAdvancedColors('#f4f4f0', '#E8673A') },
   { id: 'frost',    name: 'Frost',           themeColor: '#eef2ff', accentColor: '#1d4ed8', advancedColors: deriveAdvancedColors('#eef2ff', '#1d4ed8') },
