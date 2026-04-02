@@ -3,6 +3,7 @@
 // Passcode key: PBKDF2-derived from user passcode — used for exported backup files.
 
 import type { LedgerData } from './models';
+import { expandFromStorage } from './compaction';
 import {
   STORAGE_KEY,
   INVESTING_KEY,
@@ -105,30 +106,50 @@ export function b64Dec(b64: string): Uint8Array {
 
 // ── Gzip compression (reduces JSON ~3-5x before encryption) ─────────────
 
-const GZ_PREFIX = 'gz1:';
+const GZ_PREFIX = 'gz1:';       // legacy: base64-encoded compressed string
+const GZ_BIN_PREFIX = 'gz2:';   // current: raw-bytes compressed (no intermediate base64)
 
-async function compressString(input: string): Promise<string> {
+/** Compress a string to raw gzip bytes. */
+async function compressToBytes(input: string): Promise<Uint8Array | null> {
   try {
     const stream = new Blob([input]).stream().pipeThrough(new CompressionStream('gzip'));
-    const buf = await new Response(stream).arrayBuffer();
-    return GZ_PREFIX + b64Enc(new Uint8Array(buf));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
   } catch {
-    return input; // fallback: store uncompressed
+    return null;
   }
 }
 
+/** Decompress raw gzip bytes back to a string. */
+async function decompressFromBytes(bytes: Uint8Array): Promise<string> {
+  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
+}
+
+/** Legacy: compress to base64 string (gz1: prefix). Still needed for decompression compat. */
+async function compressString(input: string): Promise<string> {
+  const bytes = await compressToBytes(input);
+  if (!bytes) return input;
+  return GZ_PREFIX + b64Enc(bytes);
+}
+
+/** Decompress from any format: gz2: binary, gz1: base64, or plain uncompressed. */
 async function decompressString(stored: string): Promise<string> {
-  if (!stored.startsWith(GZ_PREFIX)) return stored; // uncompressed legacy data
-  try {
-    const bytes = b64Dec(stored.slice(GZ_PREFIX.length));
-    const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'));
-    return await new Response(stream).text();
-  } catch {
-    return stored; // decompression failed — return raw
+  if (stored.startsWith(GZ_BIN_PREFIX)) {
+    // Should not appear in string context — only in binary path
+    return stored;
   }
+  if (stored.startsWith(GZ_PREFIX)) {
+    try {
+      const bytes = b64Dec(stored.slice(GZ_PREFIX.length));
+      return await decompressFromBytes(bytes);
+    } catch {
+      return stored;
+    }
+  }
+  return stored; // uncompressed legacy data
 }
 
-export { compressString, decompressString };
+export { compressString, decompressString, compressToBytes, decompressFromBytes, GZ_BIN_PREFIX };
 
 // ── Device key management ─────────────────────────────────────────────────
 
@@ -162,6 +183,14 @@ export async function encryptWithDeviceKey(plaintext: string): Promise<string> {
   return ENC_PREFIX + b64Enc(iv) + '.' + b64Enc(new Uint8Array(ct));
 }
 
+/** Encrypt raw bytes (e.g. compressed data) directly — avoids base64 bloat in the middle. */
+export async function encryptBytesWithDeviceKey(data: Uint8Array): Promise<string> {
+  if (!deviceKey) return new TextDecoder().decode(data);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, deviceKey, data.buffer as ArrayBuffer);
+  return ENC_PREFIX + b64Enc(iv) + '.' + b64Enc(new Uint8Array(ct));
+}
+
 export async function decryptWithDeviceKey(stored: string): Promise<string> {
   if (!deviceKey || !stored.startsWith(ENC_PREFIX)) return stored;
   const rest = stored.slice(ENC_PREFIX.length);
@@ -174,6 +203,22 @@ export async function decryptWithDeviceKey(stored: string): Promise<string> {
     return new TextDecoder().decode(plain);
   } catch (_) {
     return stored; // decryption failed — return as-is (corrupt or wrong key)
+  }
+}
+
+/** Decrypt to raw bytes (for binary pipeline — decompress after). */
+export async function decryptToBytes(stored: string): Promise<Uint8Array | null> {
+  if (!deviceKey || !stored.startsWith(ENC_PREFIX)) return null;
+  const rest = stored.slice(ENC_PREFIX.length);
+  const dot = rest.indexOf('.');
+  if (dot === -1) return null;
+  try {
+    const iv = b64Dec(rest.slice(0, dot));
+    const ct = b64Dec(rest.slice(dot + 1));
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv as Uint8Array<ArrayBuffer> }, deviceKey, ct as Uint8Array<ArrayBuffer>);
+    return new Uint8Array(plain);
+  } catch (_) {
+    return null;
   }
 }
 
@@ -270,23 +315,34 @@ async function unwrapRawKey(json: string, secret: string): Promise<Uint8Array | 
 // ── Cache population (shared by initCrypto and post-auth unlock) ───────────
 
 async function populateAuxCache(): Promise<void> {
-  // Main ledger key (may be compressed: gz1:... inside the encrypted blob)
+  // Main ledger key (may be compressed inside the encrypted blob)
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     if (isEncrypted(raw)) {
       try {
-        const decrypted = await decryptWithDeviceKey(raw);
-        const plain = await decompressString(decrypted);
-        dataCache = JSON.parse(plain) as LedgerData;
+        // Try binary pipeline first (gz2: raw gzip bytes inside encrypted blob)
+        const rawBytes = await decryptToBytes(raw);
+        if (rawBytes && rawBytes.length >= 2 && rawBytes[0] === 0x1f && rawBytes[1] === 0x8b) {
+          // Gzip magic number — decompress raw bytes
+          const plain = await decompressFromBytes(rawBytes);
+          dataCache = expandFromStorage(JSON.parse(plain));
+        } else {
+          // Legacy: decrypt as text, then check for gz1: prefix or plain JSON
+          const decrypted = await decryptWithDeviceKey(raw);
+          const plain = await decompressString(decrypted);
+          dataCache = expandFromStorage(JSON.parse(plain));
+        }
       } catch (_) {}
     } else {
       try {
         const plain = await decompressString(raw);
-        dataCache = JSON.parse(plain) as LedgerData;
+        dataCache = expandFromStorage(JSON.parse(plain));
       } catch (_) {}
-      // Re-encrypt (and compress) on next save via setCachedData path
-      const json = dataCache ? JSON.stringify(dataCache) : raw;
-      compressString(json).then((c) => encryptWithDeviceKey(c)).then((ct) => localStorage.setItem(STORAGE_KEY, ct)).catch(() => {});
+      // Re-encrypt on next save via setCachedData path
+      if (dataCache) {
+        const json = JSON.stringify(dataCache);
+        compressToBytes(json).then((gz) => gz ? encryptBytesWithDeviceKey(gz) : encryptWithDeviceKey(json)).then((ct) => localStorage.setItem(STORAGE_KEY, ct)).catch(() => {});
+      }
     }
   }
 

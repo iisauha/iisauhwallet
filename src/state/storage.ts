@@ -58,7 +58,8 @@ import {
   FEDERAL_LOAN_PARAMETERS_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
-import { getCachedData, setCachedData, encryptWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached, b64Enc, b64Dec, compressString, decompressString } from './crypto';
+import { getCachedData, setCachedData, encryptWithDeviceKey, encryptBytesWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached, b64Enc, b64Dec, compressString, decompressString, compressToBytes } from './crypto';
+import { compactForStorage, expandFromStorage } from './compaction';
 
 // Sequence counter: each saveData call increments this. The .then() callback only
 // writes to localStorage if its seq is still the latest, preventing stale fire-and-forgets
@@ -433,7 +434,7 @@ export function loadData(): LedgerData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw || isEncrypted(raw)) return defaultData(); // encrypted but no key — show empty
-    const d = JSON.parse(raw) as LedgerData;
+    const d = expandFromStorage(JSON.parse(raw));
     return applyDataDefaults(d);
   } catch (_) {
     return defaultData();
@@ -443,15 +444,21 @@ export function loadData(): LedgerData {
 export function saveData(data: LedgerData) {
   setCachedData(data); // update in-memory cache synchronously for instant reads
   const seq = ++_writeSeq;
-  const json = JSON.stringify(data);
-  // Compress → encrypt → persist. Compression typically reduces JSON 3-5x.
-  // Falls back to uncompressed plaintext if encryption/compression unavailable.
-  compressString(json)
-    .then((compressed) => encryptWithDeviceKey(compressed).then((ct) => {
+  const json = JSON.stringify(compactForStorage(data));
+  // Compress → encrypt → persist (binary pipeline: no intermediate base64 bloat).
+  // JSON → gzip raw bytes → AES-GCM encrypt bytes → base64 → localStorage.
+  compressToBytes(json)
+    .then((gzBytes) => {
+      const encPromise = gzBytes
+        ? encryptBytesWithDeviceKey(gzBytes)
+        : encryptWithDeviceKey(json); // fallback: encrypt uncompressed
+      return encPromise;
+    })
+    .then((ct) => {
       if (_writeSeq !== seq) return;
       try { localStorage.setItem(STORAGE_KEY, ct); }
       catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') { console.error('localStorage full — data NOT saved'); window.dispatchEvent(new CustomEvent('storage-quota-exceeded')); } }
-    }))
+    })
     .catch(() => {
       if (_writeSeq !== seq) return;
       try { localStorage.setItem(STORAGE_KEY, json); }
