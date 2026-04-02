@@ -31,7 +31,6 @@ import {
   saveData,
 } from '../../state/storage';
 import { useContentGuard } from '../../state/useContentGuard';
-import { IconBox, IconTrash } from '../../ui/icons';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
 import { useDialog } from '../../ui/DialogProvider';
 import { Select } from '../../ui/Select';
@@ -42,7 +41,7 @@ import { ResetPasscodeModal } from './ResetPasscodeModal';
 import { FAQModal } from './FAQModal';
 import { Modal } from '../../ui/Modal';
 import {
-  IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
+  IconBox, IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
   IconExport, IconChevronRight, IconTrash, IconRefresh,
   IconHome, IconArrowExchange, IconCalendar, IconBankBuilding,
   IconBarChartTrend, IconRefreshCircle, IconStar, IconQuestionMark, IconInfoCircle,
