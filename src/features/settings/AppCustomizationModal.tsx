@@ -60,37 +60,51 @@ type PresetTheme = {
   advancedColors: AdvancedUIColors;
 };
 
-/** Derive all 10 advanced UI colors from just a background + accent color. */
+/** Derive all 10 advanced UI colors from just a background + accent color.
+ *  Text lightness/darkness scales with how extreme the background is:
+ *  darker bg → lighter text, lighter bg → darker text. */
 function deriveAdvancedColors(bg: string, accent: string): AdvancedUIColors {
-  // Detect light vs dark theme based on perceived brightness
   const r = parseInt(bg.slice(1, 3), 16), g = parseInt(bg.slice(3, 5), 16), b = parseInt(bg.slice(5, 7), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000; // 0 = black, 255 = white
   const isLight = brightness > 140;
 
   if (isLight) {
+    // Lighter bg → need darker text. Scale: brightness 255 (white) needs max darken,
+    // brightness 140 (threshold) needs less darken.
+    const intensity = Math.min(1, (brightness - 140) / 115); // 0..1 where 1 = very light
+    const titleDarken = 0.75 + intensity * 0.2;   // 0.75..0.95
+    const textDarken = 0.6 + intensity * 0.2;     // 0.6..0.8
+    const borderDarken = 0.1 + intensity * 0.1;   // 0.1..0.2
     return {
       cardBg: '#ffffff',
       surfaceSecondary: darkenHex(bg, 0.04),
       sectionBg: lightenHexBlend(bg, 0.3),
       modalBg: '#ffffff',
       tabBarBg: bg,
-      border: darkenHex(bg, 0.15),
-      titleText: darkenHex(bg, 0.9),
-      primaryText: darkenHex(bg, 0.75),
-      outlineButton: darkenHex(bg, 0.75),
+      border: darkenHex(bg, borderDarken),
+      titleText: darkenHex(bg, titleDarken),
+      primaryText: darkenHex(bg, textDarken),
+      outlineButton: darkenHex(bg, textDarken),
       addButton: accent,
     };
   }
+
+  // Darker bg → need lighter text. Scale: brightness 0 (black) needs max lighten,
+  // brightness 140 (threshold) needs less lighten.
+  const intensity = Math.min(1, (140 - brightness) / 140); // 0..1 where 1 = very dark
+  const titleLighten = 0.8 + intensity * 0.18;   // 0.8..0.98
+  const textLighten = 0.55 + intensity * 0.25;   // 0.55..0.80
+  const borderLighten = 0.1 + intensity * 0.1;   // 0.1..0.2
   return {
-    cardBg: lightenHexBlend(bg, 0.08),
-    surfaceSecondary: lightenHexBlend(bg, 0.04),
-    sectionBg: lightenHexBlend(bg, 0.06),
-    modalBg: lightenHexBlend(bg, 0.12),
+    cardBg: lightenHexBlend(bg, 0.06 + intensity * 0.04),
+    surfaceSecondary: lightenHexBlend(bg, 0.03 + intensity * 0.02),
+    sectionBg: lightenHexBlend(bg, 0.04 + intensity * 0.03),
+    modalBg: lightenHexBlend(bg, 0.08 + intensity * 0.06),
     tabBarBg: bg,
-    border: lightenHexBlend(bg, 0.15),
-    titleText: lightenHexBlend(bg, 0.92),
-    primaryText: lightenHexBlend(bg, 0.7),
-    outlineButton: lightenHexBlend(bg, 0.7),
+    border: lightenHexBlend(bg, borderLighten),
+    titleText: lightenHexBlend(bg, titleLighten),
+    primaryText: lightenHexBlend(bg, textLighten),
+    outlineButton: lightenHexBlend(bg, textLighten),
     addButton: accent,
   };
 }
