@@ -186,8 +186,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
 
   return (
     <div className="tab-panel active" id="recurringContent">
-      <p className="section-title page-title">Recurring</p>
-
       <div
         className="section-header"
         style={{

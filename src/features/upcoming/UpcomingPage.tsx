@@ -294,8 +294,7 @@ export function UpcomingPage() {
 
   return (
     <div className="tab-panel active" id="upcomingContent">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
-        <p className="section-title page-title" style={{ margin: 0 }}>Upcoming</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 20, gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {showCustomInput ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -863,11 +862,11 @@ export function UpcomingPage() {
             <span className={displayedFinalNetCashCents < 0 ? 'v neg' : 'v pos'}>{formatCents(displayedFinalNetCashCents)}</span>
           </div>
           <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected income in window</span>
+            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected income in {windowDays} days</span>
             <span className="v upcoming-income-amount">{formatCents(totalExpectedIncomeCents)}</span>
           </div>
           <div className="summary-kv">
-            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected costs in window</span>
+            <span className="k" style={{ color: 'var(--ui-title-text, var(--ui-primary-text, var(--text)))' }}>Expected costs in {windowDays} days</span>
             <span className="v upcoming-cost-amount">{formatCents(totalExpectedCostsCents)}</span>
           </div>
           <div className="summary-kv amount-remaining-emphasis">
