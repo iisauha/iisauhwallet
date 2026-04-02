@@ -108,28 +108,31 @@ function RecentActivityWidget() {
       {activities.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>No recent activity yet</p>
       ) : (
-        activities.map((a, i) => (
-          <div key={i} className="recent-activity-item">
-            <div className="recent-activity-dot" style={{ background: 'var(--accent)' }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="recent-activity-label" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span>{a.label}</span>
-                {a.category ? (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 400 }}>
-                    {getCategoryName(cfg, a.category)}{a.subcategory ? ` · ${a.subcategory}` : ''}
-                  </span>
-                ) : null}
-              </div>
-              {a.amount != null ? (
-                <div className="recent-activity-type">
-                  {a.descriptor ?? a.type} · {formatCents(a.amount)}
+        activities.map((a, i) => {
+          const d = new Date(a.ts);
+          const timeStr = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+          return (
+            <div key={i} className="recent-activity-item">
+              <div className="recent-activity-dot" style={{ background: 'var(--accent)' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="recent-activity-label" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span>{a.label}</span>
+                  {a.category ? (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 400 }}>
+                      {getCategoryName(cfg, a.category)}{a.subcategory ? ` · ${a.subcategory}` : ''}
+                    </span>
+                  ) : null}
                 </div>
-              ) : (
-                <div className="recent-activity-type">{a.descriptor ?? a.type}</div>
-              )}
+                <div className="recent-activity-type">
+                  {a.descriptor ?? a.type}{a.amount != null ? ` · ${formatCents(a.amount)}` : ''}
+                </div>
+                <div style={{ fontSize: '0.66rem', color: 'var(--muted)', marginTop: 1 }}>
+                  {timeStr}
+                </div>
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
