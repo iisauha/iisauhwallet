@@ -115,3 +115,8 @@ export const CARD_REWARD_ADJUSTMENTS_KEY = 'iisauhwallet_card_reward_adjustments
 export const CARD_REWARD_ONLY_ENTRIES_KEY = 'iisauhwallet_card_reward_only_entries_v1';
 // Rewards: card IDs to show in by-card view even when they have zero activity (user explicitly added).
 export const REWARDS_VISIBLE_CARD_IDS_KEY = 'iisauhwallet_rewards_visible_card_ids_v1';
+
+// Backup reminder: ISO date of last successful export.
+export const LAST_EXPORT_DATE_KEY = 'lastExportDate';
+// Backup preference: user-defined label for their preferred save location (purely informational).
+export const BACKUP_LOCATION_LABEL_KEY = 'backupLocationLabel';

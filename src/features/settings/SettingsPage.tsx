@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { TAB_ORDER_KEY } from '../../state/keys';
+import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
@@ -230,6 +230,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [tabOrder, setTabOrder] = useState<string[]>(() => loadTabOrderFromStorage());
   const [selectedTabKey, setSelectedTabKey] = useState<string | null>(null);
 
+  const [backupLocationLabel, setBackupLocationLabel] = useState<string>(() => localStorage.getItem(BACKUP_LOCATION_LABEL_KEY) || '');
+
   const hasPasscode = loadPasscodeHash() !== null;
   const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
   const [autoLockMinutes, setAutoLockMinutes] = useState(() => loadAutoLockMinutes());
@@ -332,11 +334,16 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
 
   const doExportText = async (text: string) => {
     const fileName = getExportFileName();
+    const markExported = () => {
+      localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString().slice(0, 10));
+      window.dispatchEvent(new CustomEvent('backup-completed'));
+    };
     try {
       const nav: any = navigator as any;
       if (nav.share) {
         const file = new File([text], fileName, { type: 'application/json' });
         await nav.share({ files: [file] });
+        markExported();
         return;
       }
     } catch (_) {}
@@ -346,10 +353,12 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         w.document.open();
         w.document.write('<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,monospace;padding:16px;">' + text.replace(/</g, '&lt;') + '</pre>');
         w.document.close();
+        markExported();
         return;
       }
     } catch (_) {}
     downloadJsonFile(fileName, text);
+    markExported();
   };
 
   const handleExportJSON = async () => {
@@ -612,6 +621,42 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           r.readAsText(f);
         }}
       />
+
+      {/* Backup Preferences */}
+      <p className="settings-group-label">Backup Preferences</p>
+      <div className="card" style={{ padding: '16px', marginBottom: 8 }}>
+        <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>
+          Default save location
+        </label>
+        <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginTop: 4, marginBottom: 10, lineHeight: 1.4 }}>
+          When you export, your file will be suggested to save here. Point this to a cloud-synced folder (iCloud Drive, Google Drive, Dropbox, etc.) on your device for automatic offsite backup.
+        </div>
+        <input
+          type="text"
+          value={backupLocationLabel}
+          onChange={(e) => setBackupLocationLabel(e.target.value)}
+          onBlur={() => {
+            const trimmed = backupLocationLabel.trim();
+            if (trimmed) {
+              localStorage.setItem(BACKUP_LOCATION_LABEL_KEY, trimmed);
+            } else {
+              localStorage.removeItem(BACKUP_LOCATION_LABEL_KEY);
+            }
+            setBackupLocationLabel(trimmed);
+          }}
+          placeholder="e.g. iCloud Drive / iisauh Wallet Backups"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            fontSize: '0.82rem',
+            borderRadius: 8,
+            border: '1px solid var(--ui-border, var(--border))',
+            background: 'var(--ui-surface-secondary, var(--surface))',
+            color: 'var(--ui-primary-text, var(--text))',
+            fontFamily: 'var(--app-font-family)',
+          }}
+        />
+      </div>
 
       {/* About */}
       <p className="settings-group-label">About</p>
