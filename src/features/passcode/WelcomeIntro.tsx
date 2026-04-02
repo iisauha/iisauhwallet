@@ -7,7 +7,7 @@ const STEPS = [
   "You'll also have the option to add a hint and a couple security questions. Super handy if you ever forget your code.",
   "Then you'll get a recovery key! Think of it as a backup way in. Just save it somewhere you'll remember.",
   "After that, a quick guide will show you around so you know where everything lives.",
-  "One more thing. The creator of this app will never ask you for any of your data. Don't trust anyone who does. This app will always be free with no financial gain behind it.",
+  "One last thing. I built this app for people like you and me. I will never ask for your data, and if anyone ever does, don't trust them. This will always be free, no strings attached.",
   "Alright, that's the plan. Let's get started!",
 ];
 
