@@ -64,10 +64,9 @@ const SECTIONS: Section[] = [
     tagline: 'Themes, fonts, colors, and layout.',
     hint: 'Tap your name at the top, then App Customization.',
     items: [
-      { label: 'Themes', detail: 'Royal, Midnight, Aurora, Jade, Plum, Sakura, and more. Each changes background, surfaces, and accent at once.' },
-      { label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Choose Small, Medium, or Large sizing.' },
-      { label: 'Accent color', detail: 'Pick any custom hex color on top of any theme for a truly personal look.' },
-      { label: 'Manage tabs', detail: 'Hide tabs you don\'t use or drag them into a different order.' },
+      { label: 'Themes', detail: 'Royal, Midnight, Aurora, Jade, Plum, Sakura, and more. Like choosing an outfit for your app \u2014 everything changes at once.' },
+      { label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Go Small for more info on screen or Large for easy reading.' },
+      { label: 'Manage tabs', detail: 'Don\'t track loans? Hide that tab. Want Spending first? Drag it there.' },
     ],
   },
   {
@@ -76,11 +75,11 @@ const SECTIONS: Section[] = [
     tagline: 'Your money, right now.',
     hint: 'This is the first tab in the navigation bar.',
     items: [
-      { label: 'Cash', detail: 'All your bank accounts in one place. Swipe through them, tap any card to edit its balance.' },
-      { label: 'Credit cards', detail: 'What you owe on each card. Set up reward rules so the app suggests which card to use when you shop.' },
-      { label: 'Pending inbound', detail: 'Money on the way to you. Tap Post when it arrives and the balance updates.' },
-      { label: 'Pending outbound', detail: 'Payments you\'ve sent that haven\'t cleared. Tap Post when they do.' },
-      { label: 'Net cash', detail: 'Total bank balance minus credit card debt, adjusted for pending items. Your true position right now.' },
+      { label: 'Cash', detail: 'All your bank accounts \u2014 checking, savings, wherever your money sits. Swipe through them and tap to update a balance.' },
+      { label: 'Credit cards', detail: 'Track what you owe on each card. Set up reward rules and the app tells you "use your Amex here, Chase there" when you shop.' },
+      { label: 'Pending inbound', detail: 'Money on the way to you \u2014 a Venmo from a friend, a refund, a bank transfer. Tap Post when it lands.' },
+      { label: 'Pending outbound', detail: 'Payments you\'ve sent but haven\'t cleared yet \u2014 like rent you just paid or a credit card payment in transit.' },
+      { label: 'Net cash', detail: 'The bottom line: "if everything settled right now, what do I actually have?" Banks minus cards, adjusted for pending.' },
     ],
   },
   {
@@ -89,10 +88,10 @@ const SECTIONS: Section[] = [
     tagline: 'See where your money goes.',
     hint: 'Tap the $ tab in the navigation bar.',
     items: [
-      { label: 'Log purchases', detail: 'Tap "+" to log a purchase. The app suggests which card earns the best rewards for that category.' },
-      { label: 'Views', detail: 'Toggle between Categories (donut chart), Sources (by payment method), and Rewards (points/miles/cashback balances).' },
-      { label: 'Search', detail: 'Search by name, category, or subcategory. Supports regex patterns like /coffee|tea/.' },
-      { label: 'Reimbursable', detail: 'Mark work expenses as reimbursable and they\'re excluded from your personal totals.' },
+      { label: 'Log purchases', detail: 'Bought coffee? Groceries? Tap "+" and log it. The app even suggests which card gets you the best rewards.' },
+      { label: 'Views', detail: 'See spending as a donut chart by category, broken down by which card you used, or your total reward balances.' },
+      { label: 'Search', detail: 'Looking for that one purchase? Search by name or category. "How much have I spent on Uber this month?"' },
+      { label: 'Reimbursable', detail: 'Bought something for work? Mark it reimbursable so it doesn\'t count against your personal spending.' },
     ],
   },
   {
@@ -101,9 +100,9 @@ const SECTIONS: Section[] = [
     tagline: 'A calendar for your money.',
     hint: 'Tap the calendar tab in the navigation bar.',
     items: [
-      { label: 'Expected income', detail: 'Upcoming paychecks and deposits pulled from your recurring items. Highlighted in green.' },
-      { label: 'Expected costs', detail: 'Bills and expenses on their expected dates, shown in red. Adjust any single occurrence without changing the recurring item.' },
-      { label: 'Summary', detail: 'Current cash + expected income \u2212 expected costs = what you\'ll have left. Shows min/max range if applicable.' },
+      { label: 'Expected income', detail: 'Your next paycheck, that freelance payment, rental income \u2014 all pulled from your recurring items with a countdown.' },
+      { label: 'Expected costs', detail: 'Rent due in 5 days, Netflix in 12, car insurance in 18. Adjust any one-time amount without changing the recurring item.' },
+      { label: 'Summary', detail: '"I have $3,200 now, $2,800 coming in, $1,900 going out \u2014 I\'ll have $4,100 left." That\'s the summary.' },
     ],
   },
   {
@@ -112,9 +111,9 @@ const SECTIONS: Section[] = [
     tagline: 'Set it once. It flows everywhere.',
     hint: 'Tap the refresh tab in the navigation bar.',
     items: [
-      { label: 'Income', detail: 'Salary, freelance, side income. Set frequency (weekly, biweekly, monthly, yearly) and which account it deposits into.' },
-      { label: 'Expenses', detail: 'Rent, subscriptions, loan payments. Link to a loan to auto-use the current payment amount.' },
-      { label: 'Split amounts', detail: 'Share an expense with a roommate? Set your portion so only your share counts.' },
+      { label: 'Income', detail: 'Your paycheck, side hustle, whatever comes in regularly. Set the frequency and it auto-shows in Upcoming.' },
+      { label: 'Expenses', detail: 'Rent, Spotify, gym, car payment \u2014 anything that repeats. Link it to a loan and it always uses the current amount.' },
+      { label: 'Split amounts', detail: 'Split rent with a roommate? Set your portion and only your share counts toward your totals.' },
     ],
   },
   {
@@ -123,9 +122,9 @@ const SECTIONS: Section[] = [
     tagline: 'Federal and private, tracked together.',
     hint: 'Tap the bank tab in the navigation bar.',
     items: [
-      { label: 'Federal loans', detail: 'Estimates payments for each repayment plan (Standard, IDR, PAYE, SAVE, etc.) and shows years to forgiveness.' },
-      { label: 'Private loans', detail: 'Set balance, rate, and payment mode: custom, amortized, interest-only, or deferred. Supports date-range mode changes.' },
-      { label: 'Loan tools', detail: 'Payment scenario calculator. Experiment without changing your actual loan data.' },
+      { label: 'Federal loans', detail: 'Add your student loans and see estimated payments for each repayment plan \u2014 Standard, IDR, SAVE, and more.' },
+      { label: 'Private loans', detail: 'Car loan, personal loan, private student loan. Set the rate and payment mode \u2014 even switch between deferred and active.' },
+      { label: 'Loan tools', detail: '"What if I paid $50 more per month?" Run scenarios without touching your real data.' },
     ],
   },
   {
@@ -134,10 +133,10 @@ const SECTIONS: Section[] = [
     tagline: 'HYSA, Roth IRA, 401(k), and more.',
     hint: 'Tap the chart tab in the navigation bar.',
     items: [
-      { label: 'Balances', detail: 'Tap any account to update. Everything is manual \u2014 no brokerage connections.' },
-      { label: 'HYSA buckets', detail: 'Reserved (savings) and Bills (for upcoming expenses). The Bills bucket is what Upcoming counts as liquid cash.' },
-      { label: 'Interest accrual', detail: 'For HYSA accounts, tap Accrue Interest and the app calculates monthly interest from the current APY.' },
-      { label: 'Coast FIRE', detail: 'Enter your age, retirement age, and spending. See your FIRE number, whether you\'ve hit Coast FIRE, and a year-by-year projection.' },
+      { label: 'Balances', detail: 'Tap any account to update the balance. No brokerage connections \u2014 you\'re in full control of what\'s shown.' },
+      { label: 'HYSA buckets', detail: 'Split your savings into Reserved (don\'t touch) and Bills (set aside for upcoming expenses like rent or insurance).' },
+      { label: 'Interest accrual', detail: 'Tap one button and the app calculates this month\'s HYSA interest from your APY. No math required.' },
+      { label: 'Coast FIRE', detail: '"Can I stop saving aggressively and still retire on time?" Enter your numbers and find out with a year-by-year chart.' },
     ],
   },
   {
@@ -146,9 +145,9 @@ const SECTIONS: Section[] = [
     tagline: 'Track credit card sign-up bonuses.',
     hint: 'Tap the star tab in the navigation bar.',
     items: [
-      { label: 'Add a tracker', detail: 'Pick the card, set the deadline, and define spending tiers (e.g. spend $500 for 50k points).' },
-      { label: 'Track progress', detail: 'See which tiers you\'ve unlocked, how much more to spend, and days remaining.' },
-      { label: 'Complete & collect', detail: 'Tap Complete when you hit your target. Choose tiers earned and the reward logs to your balance.' },
+      { label: 'Add a tracker', detail: '"Spend $4,000 in 3 months, get 60,000 points." Set it up and the app tracks your progress toward each tier.' },
+      { label: 'Track progress', detail: 'See exactly how much more you need to spend and how many days you have left. No spreadsheet needed.' },
+      { label: 'Complete & collect', detail: 'Hit your target? Tap Complete, pick the tiers you earned, and the reward gets logged to your card\'s balance.' },
     ],
   },
   {
@@ -157,11 +156,11 @@ const SECTIONS: Section[] = [
     tagline: 'Customize, export, restore.',
     hint: 'Tap your name or avatar at the top of the screen.',
     items: [
-      { label: 'Profile', detail: 'Set your display name and photo. Stored on-device only.' },
-      { label: 'Customization', detail: 'Themes, fonts, accent color, surface style, tab order \u2014 all under App Customization.' },
-      { label: 'Backup', detail: 'Export JSON to save everything. Encrypt with your passcode. Back up to iCloud Drive weekly.' },
-      { label: 'Restore', detail: 'Import JSON to restore. Works across devices and browsers. Enter the export passcode.' },
-      { label: 'Recovery key', detail: 'Keep the recovery key from setup somewhere safe. It resets your passcode if you ever forget it.' },
+      { label: 'Profile', detail: 'Set your display name and photo. It\'s just for you \u2014 stored on your device only.' },
+      { label: 'Customization', detail: 'Themes, fonts, surface style, tab order \u2014 make the app look exactly how you want it.' },
+      { label: 'Backup', detail: 'One tap to export everything. Save it to iCloud Drive or Files. Think of it like a save file for a video game.' },
+      { label: 'Restore', detail: 'New phone? Different browser? Import your backup file and everything comes back exactly how you left it.' },
+      { label: 'Recovery key', detail: 'You saved one during setup. Keep it somewhere safe \u2014 it\'s your "forgot my passcode" lifeline.' },
     ],
     callout: { text: 'You\'re all set. Tap Enter App below to get started.', variant: 'accent' },
     calloutOnboardingOnly: true,
