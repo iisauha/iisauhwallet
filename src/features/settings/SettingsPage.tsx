@@ -25,6 +25,7 @@ import {
   hashPasscode,
   verifyPasscode,
   clearDataCache,
+  logActivityEntry,
 } from '../../state/storage';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
 import { useDialog } from '../../ui/DialogProvider';
@@ -283,6 +284,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     if (mode === 'import' && pendingJson) {
       try {
         await importJSONDecrypted(pendingJson, confirmedInput);
+        logActivityEntry({ type: 'backup_import', label: 'Data imported', ts: new Date().toISOString() });
         setChallenge(null);
         setChallengeCountdown(0);
         showAlert('Import done. Reloading…');
@@ -336,6 +338,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     const fileName = getExportFileName();
     const markExported = () => {
       localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString().slice(0, 10));
+      logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
       window.dispatchEvent(new CustomEvent('backup-completed'));
     };
     try {
@@ -607,6 +610,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             const text = String(r.result || '');
             try {
               importJSON(text);
+              logActivityEntry({ type: 'backup_import', label: 'Data imported', ts: new Date().toISOString() });
               showAlert('Import done. Reloading…');
               window.location.reload();
             } catch (err: any) {
@@ -621,15 +625,12 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           r.readAsText(f);
         }}
       />
-
-      {/* Backup Preferences */}
-      <p className="settings-group-label">Backup Preferences</p>
-      <div className="card" style={{ padding: '16px', marginBottom: 8 }}>
+      <div className="card" style={{ padding: '14px 16px', marginTop: 8, marginBottom: 8 }}>
         <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>
           Default save location
         </label>
         <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginTop: 4, marginBottom: 10, lineHeight: 1.4 }}>
-          When you export, your file will be suggested to save here. Point this to a cloud-synced folder (iCloud Drive, Google Drive, Dropbox, etc.) on your device for automatic offsite backup.
+          Point this to a cloud-synced folder (iCloud Drive, Google Drive, Dropbox, etc.) on your device for automatic offsite backup.
         </div>
         <input
           type="text"

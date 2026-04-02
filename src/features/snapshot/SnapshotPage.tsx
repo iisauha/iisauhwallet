@@ -5,7 +5,7 @@ import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_E
 import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
-import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid, loadActivityLog, exportJSON } from '../../state/storage';
+import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid, loadActivityLog, exportJSON, logActivityEntry } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import type { PendingInboundItem, PendingOutboundItem, RewardRule, RewardUnitType } from '../../state/models';
 import { getEffectiveRules } from '../rewards/rewardMatching';
@@ -92,7 +92,10 @@ function RecentActivityWidget() {
         type: 'logged',
         ts: new Date(entry.ts).getTime(),
         amount: entry.amountCents ?? null,
-        descriptor: entry.type === 'delete_purchase' ? 'Deleted purchase' : entry.type,
+        descriptor: entry.type === 'delete_purchase' ? 'Deleted purchase'
+          : entry.type === 'backup_export' ? 'Backup exported'
+          : entry.type === 'backup_import' ? 'Backup imported'
+          : entry.type,
       });
     });
 
@@ -184,6 +187,7 @@ function BackupReminderBanner() {
           const file = new File([text], fileName, { type: 'application/json' });
           await nav.share({ files: [file] });
           localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString().slice(0, 10));
+          logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
           window.dispatchEvent(new CustomEvent('backup-completed'));
           return;
         }
@@ -199,6 +203,7 @@ function BackupReminderBanner() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString().slice(0, 10));
+      logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
       window.dispatchEvent(new CustomEvent('backup-completed'));
     };
     doExport();
