@@ -161,11 +161,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [showSkipWarning, setShowSkipWarning] = useState(false);
   const justLoggedInRef = useRef(false);
 
-  // Auto-lock on inactivity
+  // Auto-lock on inactivity (skip when passcode is paused — no auth gate to show)
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const minutes = loadAutoLockMinutes();
-    if (!storedHash || minutes === 0) return;
+    if (!storedHash || minutes === 0 || loadPasscodePaused()) return;
     const ms = minutes * 60 * 1000;
 
     function resetTimer() {
