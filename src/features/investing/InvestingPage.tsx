@@ -107,8 +107,8 @@ function CoastFireInfoIcon({
         }}
         className="icon-btn"
         style={{
-          width: 24,
-          height: 24,
+          width: 28,
+          height: 28,
           borderRadius: '50%',
           padding: 0,
           display: 'inline-flex',
@@ -121,11 +121,32 @@ function CoastFireInfoIcon({
       >
         i
       </button>
-      <Modal open={open} fullscreen title="Info" onClose={() => onToggle('')}>
-        <div style={{ fontSize: '0.88rem', lineHeight: 1.55, color: 'var(--ui-primary-text, var(--text))', whiteSpace: 'pre-line' }}>
+      {open && (
+        <div
+          onClick={() => onToggle('')}
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginTop: 6,
+            width: 260,
+            padding: '10px 12px',
+            background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
+            border: '1px solid var(--ui-border, var(--border))',
+            borderRadius: 12,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            fontSize: '0.78rem',
+            lineHeight: 1.45,
+            color: 'var(--ui-primary-text, var(--text))',
+            whiteSpace: 'pre-line',
+            zIndex: 100,
+            animation: 'guidePillIn 0.15s ease-out',
+          }}
+        >
           {content}
         </div>
-      </Modal>
+      )}
     </span>
   );
 }

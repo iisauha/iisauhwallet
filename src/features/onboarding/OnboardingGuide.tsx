@@ -75,10 +75,10 @@ const SECTIONS: Section[] = [
     tagline: 'Your financial dashboard.',
     hint: 'This is the first tab in the navigation bar.',
     items: [
-      { label: 'Cash', detail: 'All your bank accounts: checking, savings, wherever your money sits. Swipe through them and tap to update.' },
-      { label: 'Credit cards', detail: 'Track what you owe. Set up reward rules and the app tells you "use your Amex here, Chase there" when you shop.' },
-      { label: 'Pending inbound', detail: 'Money coming your way. A Venmo from a friend, a refund, a bank transfer. Tap Post when it lands.' },
-      { label: 'Pending outbound', detail: 'Payments you\'ve sent that haven\'t cleared. Rent check in the mail, a credit card payment processing.' },
+      { label: 'Bank accounts & cash', detail: 'Your checking accounts, savings accounts (not HYSA, those go in Investing), and physical cash. Swipe through them and tap to update balances.' },
+      { label: 'Credit cards', detail: 'Track what you owe on each card. Set up reward rules and the app tells you "use your Amex here, Chase there" when you shop.' },
+      { label: 'Pending inbound', detail: 'Money someone owes you or that\'s being transferred to you. A Venmo from a friend splitting dinner, a work reimbursement, a bank transfer. Tap Mark Received when it lands.' },
+      { label: 'Pending outbound', detail: 'Payments you\'ve sent that haven\'t cleared yet. Rent check in the mail, a credit card payment processing, a Zelle that\'s pending.' },
       { label: 'Net cash', detail: '"If everything settled right now, what do I actually have?" Banks minus cards, adjusted for pending.' },
     ],
   },
@@ -89,9 +89,10 @@ const SECTIONS: Section[] = [
     hint: 'Tap the $ tab in the navigation bar.',
     items: [
       { label: 'Log purchases', detail: 'Bought coffee? Groceries? Tap "+" and log it. The app suggests which card gets you the best rewards.' },
+      { label: 'Split purchases', detail: 'Splitting a dinner bill? When logging a purchase, mark it as split and enter just your portion. The full amount stays on record but only your share counts.' },
       { label: 'Views', detail: 'See a donut chart of your categories, a breakdown by card, or your total reward balances across all cards.' },
       { label: 'Search', detail: '"How much have I spent on Uber this month?" Search by name or category and find out instantly.' },
-      { label: 'Reimbursable', detail: 'Bought lunch for the team? Mark it reimbursable so it doesn\'t count against your personal spending.' },
+      { label: 'Reimbursable', detail: 'Someone used your card for their purchase and they\'re paying you back (like a friend who Venmos you later). Mark it reimbursable so it doesn\'t count against your spending.' },
     ],
   },
   {
@@ -100,8 +101,9 @@ const SECTIONS: Section[] = [
     tagline: 'Know what\'s coming before it hits.',
     hint: 'Tap the calendar tab in the navigation bar.',
     items: [
-      { label: 'Expected income', detail: 'Your next paycheck, that freelance payment, rental income. All pulled from your recurring items with a countdown.' },
-      { label: 'Expected costs', detail: 'Rent due in 5 days, Netflix in 12, car insurance in 18. Adjust any one-time amount without changing the recurring item.' },
+      { label: 'Powered by Recurring', detail: 'Everything here comes from your Recurring tab. The more income and expenses you set up there, the more accurate this page becomes. Start with your paycheck and biggest bills.' },
+      { label: 'Expected income', detail: 'Your next paycheck, freelance payment, rental income. Each shows a countdown so you know exactly when it lands.' },
+      { label: 'Expected costs', detail: 'Rent due in 5 days, Netflix in 12, car insurance in 18. You can adjust any one-time amount without changing the recurring item.' },
       { label: 'Summary', detail: '"I have $3,200 now, $2,800 coming in, $1,900 going out. I\'ll have $4,100 left." That\'s the summary.' },
     ],
   },
@@ -122,9 +124,9 @@ const SECTIONS: Section[] = [
     tagline: 'Federal and private, all in one place.',
     hint: 'Tap the bank tab in the navigation bar.',
     items: [
-      { label: 'Federal loans', detail: 'Add your student loans and see estimated payments for each plan: Standard, IDR, SAVE, and more.' },
-      { label: 'Private loans', detail: 'Car loan, personal loan, private student loan. Set the rate and payment mode. Switch between deferred and active.' },
-      { label: 'Loan tools', detail: '"What if I paid $50 more per month?" Run scenarios without touching your real data.' },
+      { label: 'Federal loans', detail: 'There\'s a link that takes you to the Student Aid website where you can get your exact loan details. Or if you already know your balances, just type them in directly.' },
+      { label: 'Private loans', detail: 'Car loan, personal loan, private student loan. Set the rate and payment mode. Switch between deferred and active as your situation changes.' },
+      { label: 'Loan tools', detail: 'Run "what if" scenarios. Change your payment amount, see how it affects your payoff timeline and total interest. Nothing you do here changes your actual loan data.' },
     ],
   },
   {
@@ -133,10 +135,10 @@ const SECTIONS: Section[] = [
     tagline: 'Watch your money grow.',
     hint: 'Tap the chart tab in the navigation bar.',
     items: [
-      { label: 'Balances', detail: 'Tap any account to update. No brokerage connections, just you and your numbers. Full control.' },
-      { label: 'HYSA buckets', detail: 'Split savings into Reserved (don\'t touch) and Bills (set aside for rent, insurance, etc.).' },
-      { label: 'Interest accrual', detail: 'One tap and the app calculates this month\'s HYSA interest from your APY. No math required.' },
-      { label: 'Coast FIRE', detail: '"Can I stop saving aggressively and still retire on time?" Enter your numbers and find out.' },
+      { label: 'Balances', detail: 'Tap an account card and enter your current balance from your brokerage app. No connections to any brokerage. You manually update whenever you want.' },
+      { label: 'HYSA buckets', detail: 'Split your high-yield savings into Reserved (savings you won\'t touch) and Bills (money set aside for upcoming expenses like rent or insurance).' },
+      { label: 'Interest accrual', detail: 'Estimates this month\'s HYSA interest by taking your current balance times your APY divided by 12. It\'s a simple estimate and doesn\'t account for daily deposits or withdrawals.' },
+      { label: 'Coast FIRE', detail: '"Can I stop saving aggressively and still retire on time?" Enter your age, retirement age, and expected spending to find out.' },
     ],
   },
   {
