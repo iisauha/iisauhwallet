@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY } from '../../state/keys';
+import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
@@ -232,6 +232,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [selectedTabKey, setSelectedTabKey] = useState<string | null>(null);
 
   const [backupLocationLabel, setBackupLocationLabel] = useState<string>(() => localStorage.getItem(BACKUP_LOCATION_LABEL_KEY) || '');
+  const [backupReminderDays, setBackupReminderDays] = useState<number>(() => parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1);
 
   const hasPasscode = loadPasscodeHash() !== null;
   const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
@@ -629,6 +630,29 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               fontFamily: 'var(--app-font-family)',
             }}
           />
+        </div>
+        <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 12 }}>
+          <div>
+            <div className="settings-row-label">Backup reminder</div>
+            <div className="settings-row-sublabel">How often to remind you to back up</div>
+          </div>
+          <Select
+            className="ll-select-compact"
+            value={backupReminderDays}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              setBackupReminderDays(v);
+              localStorage.setItem(BACKUP_REMINDER_DAYS_KEY, String(v));
+            }}
+          >
+            <option value={1}>Every day</option>
+            <option value={2}>Every 2 days</option>
+            <option value={3}>Every 3 days</option>
+            <option value={4}>Every 4 days</option>
+            <option value={5}>Every 5 days</option>
+            <option value={6}>Every 6 days</option>
+            <option value={7}>Every 7 days</option>
+          </Select>
         </div>
       </div>
       <input

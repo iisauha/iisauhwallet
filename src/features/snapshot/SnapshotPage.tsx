@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
-import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY } from '../../state/keys';
+import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
@@ -155,7 +155,8 @@ function BackupReminderBanner() {
     daysSince = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
   }
 
-  const shouldShow = !dismissed && (daysSince === null || daysSince >= 2);
+  const reminderDays = parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1;
+  const shouldShow = !dismissed && (daysSince === null || daysSince >= reminderDays);
 
   useEffect(() => {
     if (shouldShow) {

@@ -120,3 +120,5 @@ export const REWARDS_VISIBLE_CARD_IDS_KEY = 'iisauhwallet_rewards_visible_card_i
 export const LAST_EXPORT_DATE_KEY = 'lastExportDate';
 // Backup preference: user-defined label for their preferred save location (purely informational).
 export const BACKUP_LOCATION_LABEL_KEY = 'backupLocationLabel';
+// Backup reminder interval in days (default 1).
+export const BACKUP_REMINDER_DAYS_KEY = 'iisauhwallet_backup_reminder_days_v1';

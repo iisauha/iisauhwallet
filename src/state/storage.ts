@@ -526,6 +526,7 @@ export function exportJSON(): string {
     APP_FONT_SCALE_KEY,
     UI_ADVANCED_COLORS_KEY,
     'iisauhwallet_ui_theme_presets_v1',
+    'iisauhwallet_backup_reminder_days_v1',
   ]);
 
   // Main data key: always use in-memory cache (decrypted). Never export encrypted blob.
