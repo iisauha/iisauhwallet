@@ -215,7 +215,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
   const inner = (
     <>
       {/* Progress dots */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: compact ? 6 : 16, flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: compact ? 10 : 16, flexShrink: 0 }}>
         {SECTIONS.map((_, i) => (
           <div
             key={i}
@@ -241,7 +241,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           background: 'var(--ui-card-bg, var(--surface))',
           borderRadius: 16,
           border: '1px solid var(--ui-border, var(--border))',
-          padding: compact ? '8px 12px 6px' : '10px 14px 10px',
+          padding: compact ? '10px 14px 8px' : '10px 14px 10px',
           flex: '1 1 0',
           overflowY: 'auto',
           minHeight: 0,
@@ -249,8 +249,8 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
       >
         <h2
           style={{
-            margin: compact ? '0 0 4px 0' : '0 0 6px 0',
-            fontSize: compact ? '0.88rem' : '0.98rem',
+            margin: compact ? '0 0 6px 0' : '0 0 6px 0',
+            fontSize: compact ? '0.95rem' : '0.98rem',
             fontWeight: 700,
             color: 'var(--ui-title-text, var(--text))',
             lineHeight: 1.3,
@@ -292,7 +292,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
 
   if (canClose) {
     return (
-      <Modal open fullscreen title="App Guide" onClose={onClose}>
+      <Modal open fullscreen title="App Guide" onClose={onClose} className="guide-modal">
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           {inner}
         </div>

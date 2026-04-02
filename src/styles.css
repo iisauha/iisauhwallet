@@ -685,10 +685,13 @@ input[type="date"].ll-control:focus {
 .upcoming-window-select {
   padding-right: 14px;
 }
-/* Compact guide (Settings app guide) — tighter spacing so Next is always visible */
-.guide-compact p { margin-top: 0; margin-bottom: 3px; font-size: 0.76rem !important; line-height: 1.3 !important; }
-.guide-compact ol, .guide-compact ul { margin-top: 0; margin-bottom: 4px; }
-.guide-compact li { margin-bottom: 2px; font-size: 0.76rem !important; line-height: 1.3 !important; }
+/* Settings app guide modal — reduce container padding so Next stays visible */
+.modal.guide-modal { padding: 10px 14px 10px; }
+.guide-modal .modal-header--sticky { margin-bottom: 8px; }
+/* Compact guide (Settings app guide) — readable text, card scrolls */
+.guide-compact p { margin-top: 0; margin-bottom: 6px; font-size: 0.82rem; line-height: 1.45; }
+.guide-compact ol, .guide-compact ul { margin-top: 0; margin-bottom: 6px; }
+.guide-compact li { margin-bottom: 5px; font-size: 0.82rem; line-height: 1.45; }
 
 /* Chart container: subtle fade-in so it doesn’t appear jarring */
 .spending-chart-wrap {
