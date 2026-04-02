@@ -125,26 +125,35 @@ function CoastFireInfoIcon({
         <div
           onClick={() => onToggle('')}
           style={{
-            position: 'absolute',
-            top: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            marginTop: 6,
-            width: 260,
-            padding: '10px 12px',
-            background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
-            border: '1px solid var(--ui-border, var(--border))',
-            borderRadius: 12,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-            fontSize: '0.78rem',
-            lineHeight: 1.45,
-            color: 'var(--ui-primary-text, var(--text))',
-            whiteSpace: 'pre-line',
-            zIndex: 100,
-            animation: 'guidePillIn 0.15s ease-out',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.35)',
+            animation: 'guideTagIn 0.15s ease-out',
           }}
         >
-          {content}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 280,
+              maxWidth: 'calc(100vw - 48px)',
+              padding: '14px 16px',
+              background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
+              border: '1px solid var(--ui-border, var(--border))',
+              borderRadius: 14,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              fontSize: '0.82rem',
+              lineHeight: 1.5,
+              color: 'var(--ui-primary-text, var(--text))',
+              whiteSpace: 'pre-line',
+              animation: 'guidePillIn 0.2s ease-out',
+            }}
+          >
+            {content}
+          </div>
         </div>
       )}
     </span>
