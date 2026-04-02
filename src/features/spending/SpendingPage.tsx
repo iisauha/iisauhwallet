@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
@@ -9,7 +9,8 @@ import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
 import { IconMagnify } from '../../ui/icons';
 import { AddPurchaseModal } from './AddPurchaseModal';
-import { getCategoryColor, renderSpendingPieChart } from './charts';
+import { getCategoryColor } from './charts';
+import { PieChart3D } from './PieChart3D';
 import { computeRewardDeltaForPurchase, type RewardDelta } from '../rewards/rewardMatching';
 
 type FilterKey = 'this_month' | 'last_month' | 'all_time' | 'custom';
@@ -75,7 +76,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   }, [rewardSubtractPopup]);
   const [purchasesCollapsed, setPurchasesCollapsed] = useDropdownCollapsed('spending_purchases', true);
   const [showAllPurchases, setShowAllPurchases] = useState<boolean>(false);
-  const [legendOpen, setLegendOpen] = useState(false);
   const [editingPurchaseKey, setEditingPurchaseKey] = useState<string | null>(null);
   const [drilldownCategoryId, setDrilldownCategoryId] = useState<string | null>(null);
   const [editBalanceModal, setEditBalanceModal] = useState<{
@@ -89,8 +89,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   const [purchasesCarouselRef, setPurchasesCarouselRef] = useState<HTMLDivElement | null>(null);
   const [purchasesCarouselHeight, setPurchasesCarouselHeight] = useState<number | null>(null);
   const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
-
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const { startKey, endKey } = useMemo(() => {
     const now = new Date();
@@ -332,26 +330,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   }, [purchasesCarouselRef, visiblePurchasesKey]);
 
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    if (view !== 'category') return;
-    renderSpendingPieChart(
-      canvasRef.current,
-      byCategory,
-      (categoryId) => {
-        setDrilldownCategoryId((prev) => (prev === categoryId ? null : categoryId));
-      },
-      true
-    );
-  }, [byCategory, view]);
-
-  useLayoutEffect(() => {
-    if (!tabVisible || !canvasRef.current) return;
-    const ch = (canvasRef.current as { __chart?: { resize?: () => void } }).__chart;
-    if (ch?.resize) {
-      requestAnimationFrame(() => ch.resize!());
-    }
-  }, [tabVisible]);
+  // Chart.js canvas removed — using PieChart3D SVG component instead
 
   return (
     <div className="tab-panel active" id="spendingContent">
@@ -498,60 +477,22 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         {view === 'category' ? (
           <>
             {byCategory.length > 0 ? (
-              <>
-                <div
-                  className="spending-chart-wrap"
-                  style={{ position: 'relative', width: '100%', height: 230 }}
-                >
-                  <canvas ref={canvasRef} />
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.78rem', padding: '5px 10px', minHeight: 'unset', marginTop: 6 }}
-                  onClick={() => setLegendOpen(!legendOpen)}
-                >
-                  {legendOpen ? 'Hide Legend' : 'Legend'}
-                </button>
-              </>
+              <PieChart3D
+                slices={byCategory.map((c) => ({
+                  id: c.categoryId,
+                  label: getCategoryName(cfg, c.categoryId),
+                  value: c.amountCents,
+                  color: getCategoryColor(c.categoryId),
+                }))}
+                activeId={drilldownCategoryId}
+                onSliceClick={(id) => setDrilldownCategoryId(prev => prev === id ? null : id)}
+              />
             ) : (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--muted)', fontSize: '0.92rem', lineHeight: 1.5 }}>
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: '1rem' }}>No purchases yet</p>
                 <p style={{ margin: '6px 0 0' }}>Add a purchase to visualize your spending.</p>
               </div>
             )}
-            {legendOpen && byCategory.length > 0 ? (() => {
-              const totalCents = byCategory.reduce((s, c) => s + c.amountCents, 0);
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
-                  {byCategory.map((c) => {
-                    const pct = totalCents > 0 ? Math.round((c.amountCents / totalCents) * 100) : 0;
-                    const isActive = drilldownCategoryId === c.categoryId;
-                    return (
-                      <button
-                        key={c.categoryId}
-                        type="button"
-                        onClick={() => setDrilldownCategoryId(prev => prev === c.categoryId ? null : c.categoryId)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '8px 10px', borderRadius: 10,
-                          border: isActive ? '2px solid var(--accent)' : '1px solid var(--ui-border, var(--border))',
-                          background: isActive ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
-                          cursor: 'pointer', textAlign: 'left', minWidth: 0,
-                          fontFamily: 'var(--app-font-family)',
-                        }}
-                      >
-                        <span style={{ width: 10, height: 10, borderRadius: 3, flexShrink: 0, background: getCategoryColor(c.categoryId) }} />
-                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', fontWeight: 500 }}>
-                          {getCategoryName(cfg, c.categoryId)}
-                        </span>
-                        <span style={{ flexShrink: 0, fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 600 }}>{pct}%</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })() : null}
           </>
         ) : view === 'card' ? (
           <div>
