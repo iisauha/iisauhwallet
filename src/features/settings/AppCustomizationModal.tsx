@@ -113,7 +113,7 @@ const PRESET_THEMES: PresetTheme[] = [
   // Royal first (default)
   {
     id: 'royal',
-    name: 'Royal',
+    name: 'Royal (Default)',
     themeColor: '#040812',
     accentColor: '#d97706',
     advancedColors: {
@@ -254,13 +254,16 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                       const updated = customThemes.filter((ct) => `custom_${ct.id}` !== preset.id);
                       setCustomThemes(updated);
                       saveThemePresets(updated);
-                      if (activeId === preset.id) setActiveId(null);
+                      if (activeId === preset.id) {
+                        // Revert to Royal (default)
+                        handleApply(PRESET_THEMES[0]);
+                      }
                     }}
                     style={{
                       position: 'absolute', top: -6, right: -6, zIndex: 10,
                       width: 20, height: 20, borderRadius: '50%',
                       background: 'rgba(220,38,38,0.7)', border: '1.5px solid var(--red, #ef4444)',
-                      color: 'var(--red, #ef4444)', fontSize: '0.6rem', cursor: 'pointer',
+                      color: '#000', fontSize: '0.6rem', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
