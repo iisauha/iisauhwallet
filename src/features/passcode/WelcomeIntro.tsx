@@ -93,7 +93,7 @@ export function WelcomeIntro({ onDone }: { onDone: () => void }) {
             key={`${stepIdx}-${i}`}
             style={{
               display: 'block',
-              fontSize: i === 0 && stepIdx === 0 ? '1.4rem' : '1.1rem',
+              fontSize: i === 0 && stepIdx === 0 ? '1.8rem' : '1.35rem',
               fontWeight: 600,
               color: 'var(--ui-primary-text, var(--text, #f0f0f0))',
               lineHeight: 1.6,
