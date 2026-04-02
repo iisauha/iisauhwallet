@@ -1305,54 +1305,54 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   />
                 </div>
                 <div className="field" style={{ width: '100%' }}>
-                  <label>Milestone {idx + 1} reward</label>
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-                    <input
-                      className="ll-control"
-                      style={{ flex: 1, minWidth: 0 }}
-                      type="number"
-                      min={0}
-                      step={draft.rewardUnit === 'cash' ? '0.01' : '1'}
-                      inputMode="decimal"
-                      value={draft.rewardAmount}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        setTierDrafts((prev) =>
-                          prev.map((x) => {
-                            if (x.id !== draft.id) return x;
-                            const unit = x.rewardUnit;
-                            if (unit === 'cash') {
-                              // Keep digits + at most one decimal point (max 2 decimals).
-                              const cleaned = raw.replace(/[^0-9.]/g, '');
-                              const firstDot = cleaned.indexOf('.');
-                              let normalized = cleaned;
-                              if (firstDot !== -1) {
-                                normalized = `${cleaned.slice(0, firstDot)}.${cleaned.slice(firstDot + 1).replace(/\./g, '')}`;
-                                const parts = normalized.split('.');
-                                normalized =
-                                  parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
-                              }
-                              return { ...x, rewardAmount: normalized };
+                  <label>Milestone {idx + 1} reward type</label>
+                  <Select
+                    value={draft.rewardUnit}
+                    onChange={(e) => {
+                      const v = e.target.value as RewardUnitDraft;
+                      setTierDrafts((prev) => prev.map((x) => (x.id === draft.id ? { ...x, rewardUnit: v } : x)));
+                    }}
+                    style={{ width: '100%', marginBottom: 0 }}
+                  >
+                    <option value="cash">Cashback ($)</option>
+                    <option value="points">Points</option>
+                    <option value="miles">Miles</option>
+                  </Select>
+                </div>
+                <div className="field" style={{ width: '100%' }}>
+                  <label>Milestone {idx + 1} reward amount</label>
+                  <input
+                    className="ll-control"
+                    style={{ width: '100%' }}
+                    type="number"
+                    min={0}
+                    step={draft.rewardUnit === 'cash' ? '0.01' : '1'}
+                    inputMode="decimal"
+                    value={draft.rewardAmount}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setTierDrafts((prev) =>
+                        prev.map((x) => {
+                          if (x.id !== draft.id) return x;
+                          const unit = x.rewardUnit;
+                          if (unit === 'cash') {
+                            const cleaned = raw.replace(/[^0-9.]/g, '');
+                            const firstDot = cleaned.indexOf('.');
+                            let normalized = cleaned;
+                            if (firstDot !== -1) {
+                              normalized = `${cleaned.slice(0, firstDot)}.${cleaned.slice(firstDot + 1).replace(/\./g, '')}`;
+                              const parts = normalized.split('.');
+                              normalized =
+                                parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
                             }
-                            return { ...x, rewardAmount: raw.replace(/\D/g, '') };
-                          })
-                        );
-                      }}
-                      placeholder={draft.rewardUnit === 'cash' ? 'e.g. 200' : 'e.g. 70000'}
-                    />
-                    <Select
-                      value={draft.rewardUnit}
-                      onChange={(e) => {
-                        const v = e.target.value as RewardUnitDraft;
-                        setTierDrafts((prev) => prev.map((x) => (x.id === draft.id ? { ...x, rewardUnit: v } : x)));
-                      }}
-                      style={{ minWidth: 128, marginBottom: 0 }}
-                    >
-                      <option value="cash">Cashback ($)</option>
-                      <option value="points">Points</option>
-                      <option value="miles">Miles</option>
-                    </Select>
-                  </div>
+                            return { ...x, rewardAmount: normalized };
+                          }
+                          return { ...x, rewardAmount: raw.replace(/\D/g, '') };
+                        })
+                      );
+                    }}
+                    placeholder={draft.rewardUnit === 'cash' ? 'e.g. 200.00' : draft.rewardUnit === 'miles' ? 'e.g. 70000' : 'e.g. 75000'}
+                  />
                 </div>
               </div>
               <div className="btn-row" style={{ marginTop: 8, justifyContent: 'flex-end' }}>
