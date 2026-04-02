@@ -44,11 +44,6 @@ export function WelcomeIntro({ onDone }: { onDone: () => void }) {
     return () => { clearTimeout(inTimer); clearTimeout(fadeTimer); clearTimeout(nextTimer); };
   }, [stepIdx, holdMs, onDone]);
 
-  // Random animation offsets for blobs (stable per mount)
-  const [blobDelays] = useState(() =>
-    [56, 79, 85, 73, 89, 81, 77].map(d => `-${(Math.random() * d).toFixed(2)}s`)
-  );
-
   return (
     <div
       style={{
@@ -61,22 +56,10 @@ export function WelcomeIntro({ onDone }: { onDone: () => void }) {
         justifyContent: 'center',
         zIndex: 99999,
         padding: 28,
-        overflow: 'hidden',
       }}
     >
-      {/* Lava lamp blobs */}
-      {blobDelays.map((delay, i) => (
-        <div
-          key={i}
-          className={`bg-blob bg-blob-${i + 1}`}
-          aria-hidden="true"
-          style={{ animationDelay: delay }}
-        />
-      ))}
       <div
         style={{
-          position: 'relative',
-          zIndex: 1,
           maxWidth: 300,
           textAlign: 'center',
           fontSize: '1.35rem',
@@ -99,7 +82,6 @@ export function WelcomeIntro({ onDone }: { onDone: () => void }) {
       <div
         style={{
           position: 'absolute',
-          zIndex: 1,
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)',
           display: 'flex',
           gap: 8,
