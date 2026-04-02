@@ -338,7 +338,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const doExportText = async (text: string) => {
     const fileName = getExportFileName();
     const markExported = () => {
-      localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString().slice(0, 10));
+      localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString());
       logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
       window.dispatchEvent(new CustomEvent('backup-completed'));
     };
@@ -638,12 +638,14 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               {(() => {
                 const lastStr = localStorage.getItem(LAST_EXPORT_DATE_KEY);
                 if (!lastStr) return 'You haven\'t backed up yet. Reminder will show next time you open the app.';
-                const parts = lastStr.split('-').map(Number);
-                const lastDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                const lastDate = new Date(lastStr);
+                if (isNaN(lastDate.getTime())) return 'You haven\'t backed up yet.';
                 const nextDate = new Date(lastDate.getTime() + backupReminderDays * 24 * 60 * 60 * 1000);
                 const now = new Date();
                 if (nextDate <= now) return 'Reminder is due now. Back up soon!';
-                return `Next reminder on ${nextDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+                const fmt = nextDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const time = nextDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                return `Next reminder on ${fmt} at ${time}`;
               })()}
             </div>
           </div>

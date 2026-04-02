@@ -150,9 +150,10 @@ function BackupReminderBanner() {
 
   let daysSince: number | null = null;
   if (lastExportStr) {
-    const parts = lastExportStr.split('-').map(Number);
-    const lastDate = new Date(parts[0], parts[1] - 1, parts[2]);
-    daysSince = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    const lastDate = new Date(lastExportStr);
+    if (!isNaN(lastDate.getTime())) {
+      daysSince = Math.floor((today.getTime() - new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()).getTime()) / (1000 * 60 * 60 * 24));
+    }
   }
 
   const reminderDays = parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1;
@@ -190,7 +191,7 @@ function BackupReminderBanner() {
         if (nav.share) {
           const file = new File([text], fileName, { type: 'application/json' });
           await nav.share({ files: [file] });
-          localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString().slice(0, 10));
+          localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString());
           logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
           window.dispatchEvent(new CustomEvent('backup-completed'));
           return;
@@ -206,7 +207,7 @@ function BackupReminderBanner() {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString().slice(0, 10));
+      localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString());
       logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
       window.dispatchEvent(new CustomEvent('backup-completed'));
     };
