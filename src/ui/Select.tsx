@@ -39,7 +39,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
     const pr = parseFloat(cs.paddingRight) || 0;
     const bl = parseFloat(cs.borderLeftWidth) || 0;
     const br = parseFloat(cs.borderRightWidth) || 0;
-    sel.style.width = `${Math.ceil(textWidth + pl + pr + bl + br + 2)}px`;
+    sel.style.setProperty('width', `${Math.ceil(textWidth + pl + pr + bl + br + 2)}px`, 'important');
   }, [hasExplicitWidth]);
 
   useEffect(() => {
