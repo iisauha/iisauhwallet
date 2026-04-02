@@ -22,7 +22,7 @@ function isLightHex(hex: string): boolean {
   try {
     const m = hex.slice(1).match(/.{2}/g);
     if (!m || m.length < 3) return false;
-    const [r, g, b] = m.map((x) => parseInt(x, 16));
+    const [r, g, b] = m.map((x) => parseInt(x, 16) || 0);
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
   } catch (_) { return false; }
 }

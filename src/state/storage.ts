@@ -246,7 +246,7 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
         titleText: '#fff8e8',
         primaryText: '#d4b87a',
         outlineButton: '#d4b87a',
-        addButton: '#d97706',
+        addButton: '#FE841B',
       };
     }
     const parsed = JSON.parse(raw);

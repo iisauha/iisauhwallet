@@ -65,7 +65,7 @@ type PresetTheme = {
  *  Text lightness/darkness scales with how extreme the background is:
  *  darker bg → lighter text, lighter bg → darker text. */
 function deriveAdvancedColors(bg: string, accent: string): AdvancedUIColors {
-  const r = parseInt(bg.slice(1, 3), 16), g = parseInt(bg.slice(3, 5), 16), b = parseInt(bg.slice(5, 7), 16);
+  const r = parseInt(bg.slice(1, 3), 16) || 0, g = parseInt(bg.slice(3, 5), 16) || 0, b = parseInt(bg.slice(5, 7), 16) || 0;
   const brightness = (r * 299 + g * 587 + b * 114) / 1000; // 0 = black, 255 = white
   const isLight = brightness > 140;
 
@@ -132,7 +132,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
   const [showCreateCustom, setShowCreateCustom] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customBg, setCustomBg] = useState('#0a1020');
-  const [customAccent, setCustomAccent] = useState('#d97706');
+  const [customAccent, setCustomAccent] = useState('#FE841B');
 
   if (!open) return null;
 

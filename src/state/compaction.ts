@@ -37,7 +37,12 @@ function compactPurchase(p: any): any {
 function expandPurchase(p: any): any {
   const out: any = {};
   for (const [k, v] of Object.entries(p)) {
-    out[PURCHASE_KEY_REVERSE[k] || k] = v;
+    // Map known short keys back to full names; drop unknown _-prefixed keys
+    if (PURCHASE_KEY_REVERSE[k]) {
+      out[PURCHASE_KEY_REVERSE[k]] = v;
+    } else if (!k.startsWith('_')) {
+      out[k] = v; // pass through normal keys unchanged
+    }
   }
   return out;
 }

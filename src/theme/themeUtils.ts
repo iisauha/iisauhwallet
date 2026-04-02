@@ -2,7 +2,7 @@
 function hexToRgb(hex: string): [number, number, number] | null {
   const m = hex.slice(1).match(/.{2}/g);
   if (!m || m.length !== 3) return null;
-  return [parseInt(m[0], 16), parseInt(m[1], 16), parseInt(m[2], 16)];
+  return [parseInt(m[0], 16) || 0, parseInt(m[1], 16) || 0, parseInt(m[2], 16) || 0];
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
