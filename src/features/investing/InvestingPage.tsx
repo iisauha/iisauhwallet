@@ -1640,6 +1640,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
 
   return (
     <div className="tab-panel active" id="investingContent">
+      <p className="section-title page-title">Investing</p>
+
       <Modal open={balanceModal != null} title="Update Balance" onClose={() => setBalanceModal(null)}>
         {balanceModal ? (
           <>

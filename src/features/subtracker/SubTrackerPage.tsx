@@ -464,6 +464,8 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
 
   return (
     <div className="tab-panel active" id="subTrackerContent">
+      <p className="section-title page-title">Bonuses</p>
+
       {subview === 'completed' ? (
         <>
           <button

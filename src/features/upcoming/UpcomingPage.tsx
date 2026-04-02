@@ -294,7 +294,8 @@ export function UpcomingPage() {
 
   return (
     <div className="tab-panel active" id="upcomingContent">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 20, gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12 }}>
+        <p className="section-title page-title" style={{ margin: 0 }}>Upcoming</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {showCustomInput ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

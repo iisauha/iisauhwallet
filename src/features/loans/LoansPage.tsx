@@ -1335,6 +1335,8 @@ export function LoansPage() {
 
   return (
     <div className="tab-panel active" id="loansContent">
+      <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
+
       <div className="summary">
         <div className="summary-compact" style={{ marginBottom: 0 }}>
           <div className="summary-kv" style={{ marginTop: 0 }}>
