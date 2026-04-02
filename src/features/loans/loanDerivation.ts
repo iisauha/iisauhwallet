@@ -71,8 +71,14 @@ function computeAmortizedPaymentCents(
     paymentDollars = principal / n;
   } else {
     const pow = Math.pow(1 + rMonthly, n);
-    paymentDollars = (principal * rMonthly * pow) / (pow - 1);
+    const denom = pow - 1;
+    if (!Number.isFinite(denom) || Math.abs(denom) < 1e-12) {
+      paymentDollars = principal / n;
+    } else {
+      paymentDollars = (principal * rMonthly * pow) / denom;
+    }
   }
+  if (!Number.isFinite(paymentDollars)) return null;
   return Math.round(paymentDollars * 100);
 }
 

@@ -714,7 +714,13 @@ export function SnapshotPage({
                         type="button"
                         className="btn clear-btn"
                         style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                        onClick={() => actions.updateBankBalance(b.id, 0, 'set')}
+                        onClick={() =>
+                          openConfirm(
+                            'Set balance to $0?',
+                            'This will set the balance to $0.00. This cannot be undone.',
+                            () => actions.updateBankBalance(b.id, 0, 'set')
+                          )
+                        }
                       >
                         Clear
                       </button>
@@ -878,7 +884,13 @@ export function SnapshotPage({
                         type="button"
                         className="btn clear-btn"
                         style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
-                        onClick={() => actions.updateCardBalance(c.id, 0, 'set')}
+                        onClick={() =>
+                          openConfirm(
+                            'Set balance to $0?',
+                            'This will set the balance to $0.00. This cannot be undone.',
+                            () => actions.updateCardBalance(c.id, 0, 'set')
+                          )
+                        }
                       >
                         Clear
                       </button>

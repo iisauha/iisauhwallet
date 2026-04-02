@@ -447,8 +447,16 @@ export function saveData(data: LedgerData) {
   // Encrypt and persist asynchronously; fall back to plaintext if encryption unavailable.
   // Only write if this is still the latest save (seq guard prevents stale writes from winning).
   encryptWithDeviceKey(json)
-    .then((ct) => { if (_writeSeq === seq) localStorage.setItem(STORAGE_KEY, ct); })
-    .catch(() => { if (_writeSeq === seq) localStorage.setItem(STORAGE_KEY, json); });
+    .then((ct) => {
+      if (_writeSeq !== seq) return;
+      try { localStorage.setItem(STORAGE_KEY, ct); }
+      catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') console.error('localStorage full — data NOT saved'); }
+    })
+    .catch(() => {
+      if (_writeSeq !== seq) return;
+      try { localStorage.setItem(STORAGE_KEY, json); }
+      catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') console.error('localStorage full — data NOT saved'); }
+    });
 }
 
 /** Clears the in-memory data cache. Call before localStorage.clear() so reload() returns empty data. */
