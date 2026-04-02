@@ -60,7 +60,7 @@ function formatPct(value: number, total: number) {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export function PieChart3D({ slices, size = 260, activeId, onSliceClick }: Props) {
+export function PieChart3D({ slices, size = 320, activeId, onSliceClick }: Props) {
   const total = slices.reduce((s, sl) => s + sl.value, 0);
   const activeSlice = activeId ? slices.find(s => s.id === activeId) : null;
 
