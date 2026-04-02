@@ -75,9 +75,9 @@ const SECTIONS: Section[] = [
     tagline: 'Your financial dashboard.',
     hint: 'This is the first tab in the navigation bar.',
     items: [
-      { label: 'Bank accounts & cash', detail: 'Your checking accounts, savings accounts (not HYSA, those go in Investing), and physical cash. Swipe through them and tap to update balances.' },
-      { label: 'Credit cards', detail: 'Track what you owe on each card. Set up reward rules and the app tells you "use your Amex here, Chase there" when you shop.' },
-      { label: 'Pending inbound', detail: 'Money someone owes you or that\'s being transferred to you. A Venmo from a friend splitting dinner, a work reimbursement, a bank transfer. Tap Mark Received when it lands.' },
+      { label: 'Bank accounts & cash', detail: 'Checking, savings (not HYSA, those go in Investing), and physical cash. Tap a card then tap Add/Set. "Add" adds to your current balance, "Set" replaces it entirely.' },
+      { label: 'Credit cards', detail: 'What you owe on each card. Same Add/Set logic for balances. You can also set up reward rules so the app suggests which card to use at checkout.' },
+      { label: 'Pending inbound', detail: 'Money on the way to you. A Venmo from a friend splitting dinner, a work reimbursement, a bank transfer. Tap Mark Received when it lands.' },
       { label: 'Pending outbound', detail: 'Payments you\'ve sent that haven\'t cleared yet. Rent check in the mail, a credit card payment processing, a Zelle that\'s pending.' },
       { label: 'Net cash', detail: '"If everything settled right now, what do I actually have?" Banks minus cards, adjusted for pending.' },
     ],
@@ -101,9 +101,9 @@ const SECTIONS: Section[] = [
     tagline: 'Know what\'s coming before it hits.',
     hint: 'Tap the calendar tab in the navigation bar.',
     items: [
-      { label: 'Powered by Recurring', detail: 'Everything here comes from your Recurring tab. The more income and expenses you set up there, the more accurate this page becomes. Start with your paycheck and biggest bills.' },
+      { label: 'Works best with Recurring', detail: 'The easiest way to use this: set up your income and bills once in the Recurring tab and they auto-populate here every month (or whatever frequency you set). But you can also add one-time expected income or costs directly here if you need to.' },
       { label: 'Expected income', detail: 'Your next paycheck, freelance payment, rental income. Each shows a countdown so you know exactly when it lands.' },
-      { label: 'Expected costs', detail: 'Rent due in 5 days, Netflix in 12, car insurance in 18. You can adjust any one-time amount without changing the recurring item.' },
+      { label: 'Expected costs', detail: 'Rent due in 5 days, Netflix in 12, car insurance in 18. Each shows a countdown so you can plan ahead.' },
       { label: 'Summary', detail: '"I have $3,200 now, $2,800 coming in, $1,900 going out. I\'ll have $4,100 left." That\'s the summary.' },
     ],
   },
@@ -115,7 +115,7 @@ const SECTIONS: Section[] = [
     items: [
       { label: 'Income', detail: 'Your paycheck, side hustle, whatever comes in regularly. Set the frequency and it auto-shows in Upcoming.' },
       { label: 'Expenses', detail: 'Rent, Spotify, gym, car payment. Anything that repeats. Link to a loan and it always uses the current amount.' },
-      { label: 'Split amounts', detail: 'Split rent with a roommate? Set your portion and only your share counts toward your totals.' },
+      { label: 'Splitting', detail: 'Say your Verizon bill is $60/month but you split it with a roommate. Enter $60 as the full amount and turn on split. Your card still gets charged $60 (so rewards are based on $60), but only your portion counts in your totals. When you mark it complete, a pending inbound is auto-created for your roommate\'s share.' },
     ],
   },
   {
@@ -124,9 +124,9 @@ const SECTIONS: Section[] = [
     tagline: 'Federal and private, all in one place.',
     hint: 'Tap the bank tab in the navigation bar.',
     items: [
-      { label: 'Federal loans', detail: 'There\'s a button that opens the Student Aid website in Safari so you can grab your exact loan details. Or if you already know your balances, just type them in directly.' },
+      { label: 'Federal loans', detail: 'There\'s a button that opens the Student Aid website in Safari so you can grab your exact loan details. Or if you already know your balances, just type them in.' },
       { label: 'Private loans', detail: 'Car loan, personal loan, private student loan. Set the rate and payment mode. Switch between deferred and active as your situation changes.' },
-      { label: 'Posting payments', detail: 'When you link a recurring expense to a loan and mark it complete through Upcoming, a popup shows how much is being subtracted from each loan balance. Confirm or adjust, then the app subtracts it and recomputes your monthly payments based on the new balances.' },
+      { label: 'Posting payments', detail: 'Link a recurring expense to a loan, then when you mark it complete in Upcoming, a popup shows how much is being subtracted from each loan. Confirm or adjust the amounts. After that, go to Loan Tools and tap Recompute to update your monthly payments based on the new balances.' },
     ],
   },
   {
