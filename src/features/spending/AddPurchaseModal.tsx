@@ -57,6 +57,7 @@ export function AddPurchaseModal(props: {
   const [paymentSource, setPaymentSource] = useState<'card' | 'bank' | 'cash' | 'hysa' | ''>('');
   const [paymentTargetId, setPaymentTargetId] = useState('');
   const [hysaSubBucket, setHysaSubBucket] = useState<'liquid' | 'reserved'>('liquid');
+  const [reimbursementBankId, setReimbursementBankId] = useState('');
   const hysaAccounts = useMemo(() => {
     const inv = loadInvesting();
     return (inv.accounts || []).filter((a: any) => a.type === 'hysa');
@@ -200,6 +201,7 @@ export function AddPurchaseModal(props: {
     setHasSelectedCategory(false);
     setShowSubTrackerPopup(false);
     setSuggestedSubTrackerCardId(null);
+    setReimbursementBankId('');
     setAcOpen(false);
     acSuppressRef.current = false;
   }
@@ -952,7 +954,20 @@ export function AddPurchaseModal(props: {
                   <option value="">Select</option>
                   {(data.cards || []).map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}: {formatCents(c.balanceCents || 0)}
+                      Card - {c.name} ({formatCents(c.balanceCents || 0)})
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
+            {props.reimbursementExpected && paymentSource === 'card' && paymentTargetId ? (
+              <div className="field">
+                <label>Reimbursement deposits to</label>
+                <Select value={reimbursementBankId} onChange={(e) => setReimbursementBankId(e.target.value)}>
+                  <option value="">Default (first bank)</option>
+                  {(data.banks || []).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                     </option>
                   ))}
                 </Select>
@@ -965,7 +980,7 @@ export function AddPurchaseModal(props: {
                   <option value="">Select</option>
                   {(data.banks || []).map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name}: {formatCents(b.balanceCents || 0)}
+                      Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                     </option>
                   ))}
                 </Select>
@@ -984,7 +999,7 @@ export function AddPurchaseModal(props: {
                     <option value="">Select</option>
                     {hysaAccounts.map((a: any) => (
                       <option key={a.id} value={a.id}>
-                        {a.name}: {formatCents(a.balanceCents || 0)}
+                        HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                       </option>
                     ))}
                   </Select>
@@ -1165,10 +1180,15 @@ export function AddPurchaseModal(props: {
                   ? purchase.splitSnapshot.amountCents
                   : myPortionCents;
                 if (reimbursementCents > 0) {
-                  actions.addPendingInbound({
+                  const inboundItem: any = {
                     label: `Reimbursement: ${title.trim() || 'Purchase'}`,
-                    amountCents: reimbursementCents
-                  });
+                    amountCents: reimbursementCents,
+                    depositTo: 'bank' as const
+                  };
+                  if (reimbursementBankId) {
+                    inboundItem.targetBankId = reimbursementBankId;
+                  }
+                  actions.addPendingInbound(inboundItem);
                 }
               }
 

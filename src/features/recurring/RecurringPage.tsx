@@ -17,7 +17,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
   const actions = useLedgerStore((s) => s.actions);
   const { showConfirm } = useDialog();
   const cfg = useMemo(() => loadCategoryConfig(), []);
-  const investingState = useMemo(() => loadInvesting(), []);
+  const investingState = useMemo(() => loadInvesting(), [data]);
 
   useEffect(() => {
     actions.processRecurringBillsUpToToday();
@@ -99,7 +99,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
 
   const subs = useMemo(() => getCategorySubcategories(cfg, category), [cfg, category]);
 
-  const loansState = useMemo(() => loadLoans(), []);
+  const loansState = useMemo(() => loadLoans(), [data]);
   const loanPaymentMap = useMemo(() => {
     const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
     return getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
@@ -644,7 +644,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                                   .filter((a) => a.type === 'k401')
                                   .map((a) => (
                                     <option key={a.id} value={a.id}>
-                                      {a.name}
+                                      401(k) - {a.name} ({formatCents(a.balanceCents || 0)})
                                     </option>
                                   ))}
                               </Select>
@@ -983,7 +983,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                   <option value="">- Select bank -</option>
                   {(data.banks || []).map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name}
+                      Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                     </option>
                   ))}
                 </Select>
@@ -1029,7 +1029,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     {paymentSource === 'card'
                       ? (data.cards || []).map((x: any) => (
                           <option key={x.id} value={x.id}>
-                            {x.name}: {formatCents(x.balanceCents || 0)}
+                            Card - {x.name} ({formatCents(x.balanceCents || 0)})
                           </option>
                         ))
                       : paymentSource === 'hysa'
@@ -1037,12 +1037,12 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                             .filter((a: any) => a.type === 'hysa')
                             .map((a: any) => (
                               <option key={a.id} value={`hysa:${a.id}`}>
-                                {a.name}: {formatCents(a.balanceCents || 0)}
+                                HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                               </option>
                             ))
                         : (data.banks || []).map((x: any) => (
                             <option key={x.id} value={x.id}>
-                              {x.name}: {formatCents(x.balanceCents || 0)}
+                              Bank - {x.name} ({formatCents(x.balanceCents || 0)})
                             </option>
                           ))}
                   </Select>
@@ -1114,7 +1114,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                               .filter((a) => a.type === 'hysa' || a.type === 'general')
                               .map((a) => (
                                 <option key={a.id} value={`${a.type}:${a.id}`}>
-                                  {a.type === 'hysa' ? 'HYSA' : 'Investing'} - {a.name}
+                                  {a.type === 'hysa' ? 'HYSA' : 'Investing'} - {a.name} ({formatCents(a.balanceCents || 0)})
                                 </option>
                               ))}
                           </Select>

@@ -229,7 +229,7 @@ export function UpcomingPage() {
     } catch {
       return 0;
     }
-  }, []);
+  }, [data]);
 
   const displayedFinalNetCashCents =
     totals.finalNetCashCents + (linkedHysaLiquidTotalCents > 0 ? linkedHysaLiquidTotalCents : 0);
@@ -924,7 +924,7 @@ export function UpcomingPage() {
                   >
                     <option value="">Select bank...</option>
                     {(data.banks || []).map((b: any) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
+                      <option key={b.id} value={b.id}>Bank - {b.name} ({formatCents(b.balanceCents || 0)})</option>
                     ))}
                   </Select>
                 </div>
@@ -937,7 +937,7 @@ export function UpcomingPage() {
                     >
                       <option value="">None</option>
                       {hysaAccounts.map((a: any) => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
+                        <option key={a.id} value={a.id}>HYSA - {a.name} ({formatCents(a.balanceCents || 0)})</option>
                       ))}
                     </Select>
                   </div>
@@ -980,7 +980,7 @@ export function UpcomingPage() {
                 >
                   <option value="">Select bank...</option>
                   {(data.banks || []).map((b: any) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+                    <option key={b.id} value={b.id}>Bank - {b.name} ({formatCents(b.balanceCents || 0)})</option>
                   ))}
                 </Select>
               </div>
@@ -995,7 +995,7 @@ export function UpcomingPage() {
                 >
                   <option value="">Select card...</option>
                   {(data.cards || []).map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>Card - {c.name} ({formatCents(c.balanceCents || 0)})</option>
                   ))}
                 </Select>
               </div>
@@ -1427,7 +1427,7 @@ export function UpcomingPage() {
                   onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, targetBankId: e.target.value })}
                 >
                   {(data.banks || []).map((b: any) => (
-                    <option key={b.id} value={b.id}>{b.name || 'Bank'}</option>
+                    <option key={b.id} value={b.id}>Bank - {b.name || 'Bank'} ({formatCents(b.balanceCents || 0)})</option>
                   ))}
                 </Select>
               </div>
@@ -1443,7 +1443,7 @@ export function UpcomingPage() {
                   >
                     <option value="">Select...</option>
                     {loadInvesting().accounts.filter((a: any) => a.type === 'hysa').map((a: any) => (
-                      <option key={a.id} value={a.id}>{a.name || 'HYSA'}</option>
+                      <option key={a.id} value={a.id}>HYSA - {a.name || 'HYSA'} ({formatCents(a.balanceCents || 0)})</option>
                     ))}
                   </Select>
                 </div>

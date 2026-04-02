@@ -763,6 +763,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const [hysaAllocationAccount, setHysaAllocationAccount] = useState<HysaAccount | null>(null);
   const [hysaPickerOpen, setHysaPickerOpen] = useState(false);
   const [allocationReservedCents, setAllocationReservedCents] = useState(0);
+  const [allocReservedInput, setAllocReservedInput] = useState<string | null>(null);
+  const [allocBillsInput, setAllocBillsInput] = useState<string | null>(null);
   useEffect(() => {
     if (hysaAllocationAccount) {
       const h = hysaAllocationAccount;
@@ -772,6 +774,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           ? Math.min(h.reservedSavingsCents, total)
           : 0;
       setAllocationReservedCents(cur);
+      setAllocReservedInput(null);
+      setAllocBillsInput(null);
     }
   }, [hysaAllocationAccount]);
   const [transferHysaStep, setTransferHysaStep] = useState<{
@@ -1309,6 +1313,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
         label,
         amountCents,
         outboundType: 'standard',
+        sourceBankId: fromId,
         meta: {
           kind: 'transfer',
           investingType: inv.type,
@@ -1404,6 +1409,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           label: `Transfer to HYSA: ${accountName}`,
           amountCents,
           outboundType: 'standard',
+          sourceBankId: fromId,
           meta: {
             kind: 'transfer',
             investingType: inv.type as 'hysa',
@@ -1597,7 +1603,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                           {(data.banks || [])
                             .filter((b) => b.type === 'bank')
                             .map((b) => (
-                              <option key={b.id} value={b.id}>{b.name}</option>
+                              <option key={b.id} value={b.id}>Bank - {b.name} ({formatCents(b.balanceCents || 0)})</option>
                             ))}
                         </Select>
                       </>
@@ -2318,17 +2324,17 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                 <option value="">Select...</option>
                 {banksSortedByBalance.map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
-                    Bank - {b.name}
+                    Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                   </option>
                 ))}
                 {hysaAccountsSorted.map((a) => (
                   <option key={a.id} value={`hysa:${a.id}`}>
-                    HYSA - {a.name}
+                    HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>
                 ))}
                 {generalAccountsSorted.map((a) => (
                   <option key={a.id} value={`general:${a.id}`}>
-                    Investing - {a.name}
+                    Investing - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>
                 ))}
               </Select>
@@ -2339,30 +2345,54 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                 <option value="">Select...</option>
                 {banksSortedByBalance.map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
-                    Bank - {b.name}
+                    Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                   </option>
                 ))}
                 {hysaAccountsSorted.map((a) => (
                   <option key={a.id} value={`hysa:${a.id}`}>
-                    HYSA - {a.name}
+                    HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>
                 ))}
                 {generalAccountsSorted.map((a) => (
                   <option key={a.id} value={`general:${a.id}`}>
-                    Investing - {a.name}
+                    Investing - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>
                 ))}
               </Select>
                 </div>
                 <div className="field">
                   <label>Amount ($)</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
                     className="ll-control"
+                    style={{ flex: 1 }}
                     value={transferAmount}
                     onChange={(e) => setTransferAmount(e.target.value)}
                     inputMode="decimal"
                     placeholder="0.00"
                   />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ whiteSpace: 'nowrap', fontSize: '0.8rem', padding: '6px 10px' }}
+                    disabled={!transferFrom}
+                    onClick={() => {
+                      if (!transferFrom) return;
+                      const [kind, id] = transferFrom.split(':');
+                      let balCents = 0;
+                      if (kind === 'bank') {
+                        balCents = banksSortedByBalance.find(b => b.id === id)?.balanceCents || 0;
+                      } else if (kind === 'hysa') {
+                        balCents = hysaAccountsSorted.find(a => a.id === id)?.balanceCents || 0;
+                      } else if (kind === 'general') {
+                        balCents = generalAccountsSorted.find(a => a.id === id)?.balanceCents || 0;
+                      }
+                      setTransferAmount((Math.max(0, balCents) / 100).toFixed(2));
+                    }}
+                  >
+                    Full Balance
+                  </button>
+                  </div>
                 </div>
                 <div className="field">
                   <label>Note (optional)</label>
@@ -2449,12 +2479,20 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={reservedDollars}
+                    value={allocReservedInput !== null ? allocReservedInput : reservedDollars}
+                    onFocus={() => setAllocReservedInput(reservedDollars)}
                     onChange={(e) => {
-                      const cents = parseCents(e.target.value);
-                      const next = Number.isFinite(cents) ? Math.max(0, Math.min(cents, totalCents)) : allocationReservedCents;
-                      setAllocationReservedCents(next);
+                      const raw = e.target.value;
+                      setAllocReservedInput(raw);
+                      setAllocBillsInput(null);
+                      const cents = parseCents(raw);
+                      if (Number.isFinite(cents)) {
+                        setAllocationReservedCents(Math.max(0, Math.min(cents, totalCents)));
+                      } else if (raw === '' || raw === '.' || raw === '0.' || raw === '0') {
+                        setAllocationReservedCents(0);
+                      }
                     }}
+                    onBlur={() => setAllocReservedInput(null)}
                     style={{ width: '100%', padding: '8px 10px', fontSize: '1rem' }}
                   />
                 </div>
@@ -2463,12 +2501,21 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <input
                     type="text"
                     inputMode="decimal"
-                    value={billsDollars}
+                    value={allocBillsInput !== null ? allocBillsInput : billsDollars}
+                    onFocus={() => setAllocBillsInput(billsDollars)}
                     onChange={(e) => {
-                      const cents = parseCents(e.target.value);
-                      const bills = Number.isFinite(cents) ? Math.max(0, Math.min(cents, totalCents)) : billsCents;
-                      setAllocationReservedCents(Math.max(0, totalCents - bills));
+                      const raw = e.target.value;
+                      setAllocBillsInput(raw);
+                      setAllocReservedInput(null);
+                      const cents = parseCents(raw);
+                      if (Number.isFinite(cents)) {
+                        const bills = Math.max(0, Math.min(cents, totalCents));
+                        setAllocationReservedCents(Math.max(0, totalCents - bills));
+                      } else if (raw === '' || raw === '.' || raw === '0.' || raw === '0') {
+                        setAllocationReservedCents(totalCents);
+                      }
                     }}
+                    onBlur={() => setAllocBillsInput(null)}
                     style={{ width: '100%', padding: '8px 10px', fontSize: '1rem' }}
                   />
                 </div>
