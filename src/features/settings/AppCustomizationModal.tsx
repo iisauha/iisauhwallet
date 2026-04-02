@@ -110,63 +110,11 @@ function deriveAdvancedColors(bg: string, accent: string): AdvancedUIColors {
 }
 
 const PRESET_THEMES: PresetTheme[] = [
-  // Royal first (default)
-  {
-    id: 'royal',
-    name: 'Royal (Default)',
-    themeColor: '#040812',
-    accentColor: '#d97706',
-    advancedColors: {
-      cardBg: '#0c1428', surfaceSecondary: '#091022', sectionBg: '#0a1224',
-      modalBg: '#101a30', tabBarBg: '#040812', border: '#182040',
-      titleText: '#fff8e8', primaryText: '#d4b87a', outlineButton: '#d4b87a', addButton: '#d97706',
-    },
-  },
-  {
-    id: 'midnight',
-    name: 'Midnight',
-    themeColor: '#1a1a1a',
-    accentColor: '#E8673A',
-    advancedColors: {
-      cardBg: '#252525', surfaceSecondary: '#202020', sectionBg: '#232323',
-      modalBg: '#2d2d2d', tabBarBg: '#1a1a1a', border: '#3a3a3a',
-      titleText: '#f0f0f0', primaryText: '#cccccc', outlineButton: '#cccccc', addButton: '#E8673A',
-    },
-  },
-  {
-    id: 'cobalt',
-    name: 'Cobalt',
-    themeColor: '#080c16',
-    accentColor: '#3b82f6',
-    advancedColors: {
-      cardBg: '#111828', surfaceSecondary: '#0e1524', sectionBg: '#101726',
-      modalBg: '#182030', tabBarBg: '#080c16', border: '#1e2e48',
-      titleText: '#e8f0ff', primaryText: '#a8c0e8', outlineButton: '#a8c0e8', addButton: '#3b82f6',
-    },
-  },
-  // ── Light themes ──────────────────────────────────
-  {
-    id: 'light',
-    name: 'Light',
-    themeColor: '#f4f4f0',
-    accentColor: '#E8673A',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#eeeeea', sectionBg: '#f7f7f4',
-      modalBg: '#ffffff', tabBarBg: '#f4f4f0', border: '#d0d0c8',
-      titleText: '#111111', primaryText: '#333333', outlineButton: '#333333', addButton: '#E8673A',
-    },
-  },
-  {
-    id: 'frost',
-    name: 'Frost',
-    themeColor: '#eef2ff',
-    accentColor: '#1d4ed8',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#e4e8f8', sectionBg: '#f0f3fc',
-      modalBg: '#ffffff', tabBarBg: '#eef2ff', border: '#c0c8e8',
-      titleText: '#0a0e2a', primaryText: '#1e2a5a', outlineButton: '#1e2a5a', addButton: '#1d4ed8',
-    },
-  },
+  { id: 'royal',    name: 'Royal (Default)', themeColor: '#040812', accentColor: '#d97706', advancedColors: deriveAdvancedColors('#040812', '#d97706') },
+  { id: 'midnight', name: 'Midnight',        themeColor: '#1a1a1a', accentColor: '#E8673A', advancedColors: deriveAdvancedColors('#1a1a1a', '#E8673A') },
+  { id: 'cobalt',   name: 'Cobalt',          themeColor: '#080c16', accentColor: '#3b82f6', advancedColors: deriveAdvancedColors('#080c16', '#3b82f6') },
+  { id: 'light',    name: 'Light',           themeColor: '#f4f4f0', accentColor: '#E8673A', advancedColors: deriveAdvancedColors('#f4f4f0', '#E8673A') },
+  { id: 'frost',    name: 'Frost',           themeColor: '#eef2ff', accentColor: '#1d4ed8', advancedColors: deriveAdvancedColors('#eef2ff', '#1d4ed8') },
 ];
 
 const FONT_GROUPS = ['Iconic', 'Modern', 'Classic', 'Serif', 'Mono'] as const;
