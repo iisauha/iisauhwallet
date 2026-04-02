@@ -293,7 +293,7 @@ function getOutboundDestinationLabel(data: LedgerData, p: PendingOutboundItem): 
     const cardName = card?.name || 'Card';
     const hysaSub = p.meta?.hysaSubBucket;
     if (p.paymentSource === 'hysa' || hysaSub != null) {
-      const sourceLabel = hysaSub === 'reserved' ? 'HYSA (Reserved savings)' : 'HYSA (Money in HYSA Designated for Bills)';
+      const sourceLabel = hysaSub === 'reserved' ? 'HYSA (Savings reserve)' : 'HYSA (Bills fund)';
       return `${sourceLabel} to ${cardName} Transfer`;
     }
 
@@ -324,7 +324,7 @@ function renderOutboundCard(
     const cardName = card ? card.name || 'Card' : 'Card';
     const hysaSub = p.meta?.hysaSubBucket;
     if (p.paymentSource === 'hysa' || hysaSub != null) {
-      const sourceLabel = hysaSub === 'reserved' ? 'HYSA (Reserved savings)' : 'HYSA (Money in HYSA Designated for Bills)';
+      const sourceLabel = hysaSub === 'reserved' ? 'HYSA (Savings reserve)' : 'HYSA (Bills fund)';
       label = `CC Payment From ${sourceLabel} → ${cardName}`;
     } else {
       const bank = p.sourceBankId ? (data.banks || []).find((b) => b.id === p.sourceBankId) : undefined;

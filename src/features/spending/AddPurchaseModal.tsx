@@ -906,7 +906,7 @@ export function AddPurchaseModal(props: {
                 }}
                 id="split"
               />
-              <label htmlFor="split">Split</label>
+              <label htmlFor="split">Split with someone else</label>
             </div>
             {isSplit ? (
               <div className="field">
@@ -992,8 +992,8 @@ export function AddPurchaseModal(props: {
                 <div className="field">
                   <label>HYSA Bucket</label>
                   <Select value={hysaSubBucket} onChange={(e) => setHysaSubBucket(e.target.value as any)}>
-                    <option value="liquid">Money Designated for Bills</option>
-                    <option value="reserved">Reserved Savings</option>
+                    <option value="liquid">Bills fund</option>
+                    <option value="reserved">Savings reserve</option>
                   </Select>
                 </div>
               </>

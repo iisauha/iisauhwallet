@@ -287,7 +287,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         logActivityEntry({ type: 'backup_import', label: 'Data imported', ts: new Date().toISOString() });
         setChallenge(null);
         setChallengeCountdown(0);
-        showAlert('Import done. Reloading…');
+        showAlert('Your data has been successfully restored. The app will now reload.');
         window.location.reload();
       } catch (_) {
         onFail();
@@ -561,29 +561,29 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         <SettingsRow
           icon={<IconExport />}
           iconBg="var(--accent)"
-          label="Export JSON"
-          sublabel="Full backup of all your data"
+          label="Export Backup"
+          sublabel="Download a full backup of all your data"
           onClick={handleExportJSON}
         />
         <SettingsRow
           icon={<IconDatabase />}
           iconBg="var(--green)"
-          label="Export Purchases CSV"
-          sublabel="Current month's purchases"
+          label="Export Purchases Spreadsheet"
+          sublabel="This calendar month's purchases as a spreadsheet file"
           onClick={() => hasPasscode ? openChallenge('csv') : exportMonthlyPurchasesCsv()}
         />
         <SettingsRow
           icon={<IconDatabase />}
           iconBg="var(--muted)"
-          label="Import JSON"
-          sublabel="Restore from a backup file"
+          label="Import Backup"
+          sublabel="Restore all data from a backup file (replaces current data)"
           onClick={() => fileRef.current?.click()}
         />
         <SettingsRow
           icon={<IconRefresh />}
           iconBg="var(--accent)"
-          label="Force Refresh"
-          sublabel="Reload the app to get the latest version"
+          label="Check for Updates"
+          sublabel="Clears cached files and reloads. Your data is not affected."
           onClick={async () => {
             if ('serviceWorker' in navigator) {
               const registrations = await navigator.serviceWorker.getRegistrations();
@@ -645,13 +645,13 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             try {
               importJSON(text);
               logActivityEntry({ type: 'backup_import', label: 'Data imported', ts: new Date().toISOString() });
-              showAlert('Import done. Reloading…');
+              showAlert('Your data has been successfully restored. The app will now reload.');
               window.location.reload();
             } catch (err: any) {
               if (err?.message === ENCRYPTED_IMPORT) {
                 openChallenge('import', text);
               } else {
-                showAlert('Invalid JSON.');
+                showAlert('This file doesn\'t appear to be a valid backup. Make sure you selected a backup file exported from this app.');
               }
             }
             e.target.value = '';
@@ -684,7 +684,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           type="button"
           className="settings-row settings-danger-row"
           onClick={async () => {
-            const ok = await showConfirm('Reset all data? This will clear localStorage for this site.');
+            const ok = await showConfirm('Permanently delete ALL your data? This will erase every account, transaction, loan, investment, and setting. This cannot be undone. Consider exporting a backup first.');
             if (!ok) return;
             clearDataCache();
             localStorage.clear();

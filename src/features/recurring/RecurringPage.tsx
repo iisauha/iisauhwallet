@@ -969,7 +969,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
             </div>
             <div className="toggle-row">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} id="active" />
-              <label htmlFor="active">Active</label>
+              <label htmlFor="active">Active <span style={{ fontWeight: 400, fontSize: '0.78rem', color: 'var(--muted)' }}>(inactive items won't appear in Upcoming)</span></label>
             </div>
             <div className="toggle-row">
               <input type="checkbox" checked={autoPay} onChange={(e) => setAutoPay(e.target.checked)} id="autopay" />
@@ -1056,8 +1056,8 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                       onChange={(e) => setHysaSubBucket(e.target.value as 'liquid' | 'reserved' | '')}
                     >
                       <option value="">Select...</option>
-                      <option value="liquid">Money in HYSA Designated for Bills</option>
-                      <option value="reserved">Reserved savings</option>
+                      <option value="liquid">Bills fund</option>
+                      <option value="reserved">Savings reserve</option>
                     </Select>
                   </div>
                 ) : null}

@@ -399,7 +399,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           aria-pressed={view === 'rewards' || view === 'card'}
           style={{ flexShrink: 0 }}
         >
-          {view === 'card' ? 'Sources' : 'Rewards'}
+          {view === 'card' ? 'By Card' : 'Rewards'}
         </button>
         <button
           type="button"
@@ -471,7 +471,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       </div> : null}
 
       <p className="section-title page-title" style={{ marginTop: 4 }}>
-        {view === 'category' ? 'Spending distribution' : view === 'card' ? 'Spending by payment source' : 'Rewards overview'}
+        {view === 'category' ? 'Where your money went' : view === 'card' ? 'Spending by card' : 'Rewards overview'}
       </p>
       <div className={view === 'category' ? 'card card-no-press' : 'card'} style={view === 'category' ? { position: 'relative' } : undefined}>
         {view === 'category' ? (

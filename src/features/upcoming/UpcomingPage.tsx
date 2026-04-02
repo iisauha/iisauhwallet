@@ -949,8 +949,8 @@ export function UpcomingPage() {
                       value={modal.hysaSubBucket}
                       onChange={(e) => setModal({ ...modal, hysaSubBucket: e.target.value as 'liquid' | 'reserved' })}
                     >
-                      <option value="liquid">Bills (Liquid)</option>
-                      <option value="reserved">Reserved (Savings)</option>
+                      <option value="liquid">Bills fund</option>
+                      <option value="reserved">Savings reserve</option>
                     </Select>
                   </div>
                 )}
@@ -1460,7 +1460,7 @@ export function UpcomingPage() {
                     onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, hysaSubBucket: e.target.value as 'liquid' | 'reserved' })}
                   >
                     <option value="liquid">Liquid</option>
-                    <option value="reserved">Reserved Savings</option>
+                    <option value="reserved">Savings reserve</option>
                   </select>
                 </div>
               </>

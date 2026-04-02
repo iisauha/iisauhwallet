@@ -1543,7 +1543,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                           <div>APY {h.interestRate.toFixed(2)}%</div>
                           <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
                           <div style={{ marginTop: 4 }}>
-                            <div>Reserved savings: {formatCents(reservedCents)}</div>
+                            <div>Savings reserve: {formatCents(reservedCents)}</div>
                             <div>Money in HYSA designated for bills: {formatCents(h.linkedCheckingBankId ? liquidCents : 0)}</div>
                           </div>
                         </div>
@@ -1634,7 +1634,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     <div className="tab-panel active" id="investingContent">
       <p className="section-title page-title">Investing</p>
 
-      <Modal open={balanceModal != null} title="Balance" onClose={() => setBalanceModal(null)}>
+      <Modal open={balanceModal != null} title="Update Balance" onClose={() => setBalanceModal(null)}>
         {balanceModal ? (
           <>
             <div className="field">
@@ -1654,7 +1654,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                 checked={balanceModal.useSet}
                 onChange={(e) => setBalanceModal({ ...balanceModal, useSet: e.target.checked })}
               />
-              <label htmlFor="inv-balance-use-set">Set (replace balance)</label>
+              <label htmlFor="inv-balance-use-set">Replace current balance (instead of adding)</label>
             </div>
             {balanceModal.acc.type === 'hysa' && balanceModal.useSet ? (
               <div className="field">
@@ -1675,8 +1675,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   value={balanceModal.hysaBucket}
                   onChange={(e) => setBalanceModal({ ...balanceModal, hysaBucket: e.target.value as 'liquid' | 'reserved' })}
                 >
-                  <option value="liquid">Money Designated for Bills</option>
-                  <option value="reserved">Reserved Savings</option>
+                  <option value="liquid">Bills fund</option>
+                  <option value="reserved">Savings reserve</option>
                 </Select>
               </div>
             ) : null}
@@ -1685,7 +1685,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                 Cancel
               </button>
               <button type="button" className="btn btn-secondary" onClick={submitInvestingBalanceModal}>
-                OK
+                Update Balance
               </button>
             </div>
           </>
@@ -2437,7 +2437,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <div style={{ fontWeight: 600 }}>{formatCents(totalCents)}</div>
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Reserved savings</label>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Savings reserve</label>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -2451,7 +2451,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Money in HYSA Designated for Bills</label>
+                  <label style={{ display: 'block', marginBottom: 4, fontSize: '0.85rem' }}>Bills fund</label>
                   <input
                     type="text"
                     inputMode="decimal"

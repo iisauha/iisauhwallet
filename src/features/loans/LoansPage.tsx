@@ -905,12 +905,12 @@ function LoanCard(props: {
         </div>
       ) : null}
       <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>
-        Payment now: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '-'}
+        Current monthly payment: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '-'}
       </div>
       {l.category === 'private' ? (
         <>
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-            Current range: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '-'}
+            Payment phase: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '-'}
           </div>
           {l.activePrivateRangeMode === 'deferred' && l.deferredDailyInterestCents != null && l.deferredDaysInRange != null && l.deferredInterestTotalCents != null && l.deferredProjectedBalanceCents != null ? (
             <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>

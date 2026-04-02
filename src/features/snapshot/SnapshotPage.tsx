@@ -601,7 +601,7 @@ export function SnapshotPage({
         >
           <div className="stat-tile-icon"><IconCreditCard /></div>
           <div className="stat-tile-value" style={{ color: totalCardDebtCents > 0 ? 'var(--red)' : 'var(--green)' }}>{formatCents(totalCardDebtCents)}</div>
-          <div className="stat-tile-label">CC Balance</div>
+          <div className="stat-tile-label">Credit Card Balance</div>
         </button>
         <button
           type="button"
@@ -611,7 +611,7 @@ export function SnapshotPage({
         >
           <div className="stat-tile-icon"><IconArrowExchange /></div>
           <div className="stat-tile-value" style={{ color: totalCashCents > 0 ? 'var(--green)' : totalCashCents < 0 ? 'var(--red)' : undefined }}>{formatCents(totalCashCents)}</div>
-          <div className="stat-tile-label">Cash</div>
+          <div className="stat-tile-label">Bank Balance</div>
         </button>
         <button
           type="button"
@@ -698,7 +698,7 @@ export function SnapshotPage({
                           setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
                         }
                       >
-                        Add / Set
+                        Update Balance
                       </button>
                       {linkedHysa && onAdjustHysaAllocForAccount ? (
                         <button
@@ -707,7 +707,7 @@ export function SnapshotPage({
                           style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                           onClick={() => onAdjustHysaAllocForAccount((linkedHysa as any).id)}
                         >
-                          Adjust Alloc
+                          Adjust HYSA Split
                         </button>
                       ) : null}
                       <button
@@ -731,8 +731,8 @@ export function SnapshotPage({
                           style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                           onClick={() =>
                             openConfirm(
-                              'Are you sure you want to delete this?',
-                              'Are you sure you want to delete this?',
+                              `Delete ${b.name || 'this account'}?`,
+                              'This will permanently remove this account and its balance. This cannot be undone.',
                               () => actions.deleteBankAccount(b.id)
                             )
                           }
@@ -878,7 +878,7 @@ export function SnapshotPage({
                         style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
                       >
-                        Add / Set
+                        Update Balance
                       </button>
                       <button
                         type="button"
@@ -900,8 +900,8 @@ export function SnapshotPage({
                         style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                         onClick={() =>
                           openConfirm(
-                            'Are you sure you want to delete this?',
-                            'Are you sure you want to delete this?',
+                            `Delete ${c.name || 'this card'}?`,
+                            'This will permanently remove this card and its balance. This cannot be undone.',
                             () => actions.deleteCreditCard(c.id)
                           )
                         }
@@ -954,7 +954,7 @@ export function SnapshotPage({
             data={data}
             items={data.pendingIn || []}
             onPosted={(id) => handlePendingPosted('in', id)}
-            onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('in', id))}
+            onDelete={(id) => openConfirm('Delete this pending deposit?', 'This will permanently remove this item from your pending deposits.', () => actions.deletePending('in', id))}
             onEditInbound={(item: PendingInboundItem) => {
               const depositTo = (item.depositTo || 'bank') as 'bank' | 'card' | 'hysa';
               const firstBankId = (data.banks || [])[0]?.id || '';
@@ -1006,7 +1006,7 @@ export function SnapshotPage({
             data={data}
             items={data.pendingOut || []}
             onPosted={(id) => handlePendingPosted('out', id)}
-            onDelete={(id) => openConfirm('Are you sure you want to delete this?', 'Are you sure you want to delete this?', () => actions.deletePending('out', id))}
+            onDelete={(id) => openConfirm('Delete this pending payment?', 'This will permanently remove this item from your pending payments.', () => actions.deletePending('out', id))}
             onEditOutbound={(item: PendingOutboundItem) => {
               const firstBankId = (data.banks || [])[0]?.id || '';
               const isCc = item.outboundType === 'cc_payment';
@@ -1048,7 +1048,7 @@ export function SnapshotPage({
           </div>
           {totalLinkedHysaCents > 0 ? (
             <div className="summary-kv">
-              <span className="k">Money in HYSA Designated for Bills</span>
+              <span className="k">Bills fund</span>
               <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totalLinkedHysaCents)}</span>
             </div>
           ) : null}
@@ -1451,7 +1451,7 @@ export function SnapshotPage({
                       </div>
                       {(modal.rewardType === 'points' || modal.rewardType === 'miles') ? (
                         <div style={{ flex: '1 1 80px' }}>
-                          <label style={{ fontSize: '0.75rem' }}>CPP</label>
+                          <label style={{ fontSize: '0.75rem' }}>Cents per point</label>
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1494,7 +1494,7 @@ export function SnapshotPage({
 
             {modal.type === 'edit-balance' ? (
               <>
-                <h3>Amount</h3>
+                <h3>Update Balance</h3>
                 <div className="field">
                   <label>Amount ($)</label>
                   <input value={modal.amount} onChange={(e) => setModal({ ...modal, amount: e.target.value })} inputMode="decimal" placeholder="0.00" />
@@ -1506,7 +1506,7 @@ export function SnapshotPage({
                     onChange={(e) => setModal({ ...modal, useSet: e.target.checked })}
                     id="useSet"
                   />
-                  <label htmlFor="useSet">Set (replace value)</label>
+                  <label htmlFor="useSet">Replace current balance (instead of adding)</label>
                 </div>
                 <div className="btn-row">
                   <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
@@ -1523,7 +1523,7 @@ export function SnapshotPage({
                       setModal({ type: 'none' });
                     }}
                   >
-                    OK
+                    Update Balance
                   </button>
                 </div>
               </>
@@ -1531,7 +1531,7 @@ export function SnapshotPage({
 
             {modal.type === 'add-pending' ? (
               <>
-                <h3>{modal.editId ? (modal.kind === 'in' ? 'Edit pending inbound item' : 'Edit pending outbound item') : (modal.kind === 'in' ? 'Add pending inbound item' : 'Add pending outbound item')}</h3>
+                <h3>{modal.editId ? (modal.kind === 'in' ? 'Edit expected deposit' : 'Edit expected payment') : (modal.kind === 'in' ? 'Add expected deposit' : 'Add expected payment')}</h3>
                 <div className="field">
                   <label>Label</label>
                   <input value={modal.label} onChange={(e) => setModal({ ...modal, label: e.target.value })} placeholder="e.g. Venmo" />
@@ -1605,8 +1605,8 @@ export function SnapshotPage({
                           <label>Use which HYSA portion?</label>
                           <Select value={modal.hysaSubBucket} onChange={(e) => setModal({ ...modal, hysaSubBucket: e.target.value as any })}>
                             <option value="">Select...</option>
-                            <option value="liquid">Money in HYSA Designated for Bills</option>
-                            <option value="reserved">Reserved savings</option>
+                            <option value="liquid">Bills fund</option>
+                            <option value="reserved">Savings reserve</option>
                           </Select>
                         </div>
                       </>
@@ -1629,7 +1629,7 @@ export function SnapshotPage({
                     <div className="field">
                       <label>Outbound Type</label>
                       <Select value={modal.outboundType} onChange={(e) => setModal({ ...modal, outboundType: e.target.value as any })}>
-                        <option value="standard">Standard Outbound</option>
+                        <option value="standard">General payment / transfer</option>
                         <option value="cc_payment">Credit Card Payment</option>
                       </Select>
                     </div>
@@ -1687,8 +1687,8 @@ export function SnapshotPage({
                                 onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}
                               >
                                 <option value="">Select...</option>
-                                <option value="liquid">Money in HYSA Designated for Bills</option>
-                                <option value="reserved">Reserved savings</option>
+                                <option value="liquid">Bills fund</option>
+                                <option value="reserved">Savings reserve</option>
                               </Select>
                             </div>
                           </>
@@ -1746,8 +1746,8 @@ export function SnapshotPage({
                               <label>Use which HYSA portion?</label>
                               <Select value={modal.outboundHysaSubBucket} onChange={(e) => setModal({ ...modal, outboundHysaSubBucket: e.target.value as any })}>
                                 <option value="">Select...</option>
-                                <option value="liquid">Money in HYSA Designated for Bills</option>
-                                <option value="reserved">Reserved savings</option>
+                                <option value="liquid">Bills fund</option>
+                                <option value="reserved">Savings reserve</option>
                               </Select>
                             </div>
                           </>
