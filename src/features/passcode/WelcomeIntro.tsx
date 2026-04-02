@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 
 const STEPS = [
   'Hey there :)',
-  "We're so glad you're here. This is your space to take control of your money.",
-  'Everything lives right on your device. No cloud, no servers, just you.',
-  "First up, you'll create a quick passcode. Easy peasy.",
-  "You can toss in a hint and a couple security questions too, totally up to you.",
-  "We'll also hand you a recovery key. Keep it somewhere you trust, it's your safety net.",
-  "Then a quick tour so you know where everything is. We'll keep it short, promise.",
-  "Alright, let's do this!",
+  'This is a personal finance app. Your data stays on this device, nothing is uploaded anywhere.',
+  "You'll start by creating a 6-digit passcode. This encrypts everything stored on your device.",
+  "Next, you can set a passcode hint and security questions. These help you recover access if you forget your code.",
+  "You'll also get a recovery key. It's a one-time backup code, save it somewhere safe.",
+  "After that, a short guide will walk you through how the app works.",
+  "That's everything. Let's get you set up.",
 ];
 
 const MS_PER_WORD = 200;
