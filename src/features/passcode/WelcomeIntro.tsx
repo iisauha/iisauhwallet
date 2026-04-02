@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 
 const STEPS = [
-  'Hey there, welcome in!',
-  'This is your personal finance app. Everything stays on your device, nice and private.',
-  "To keep things secure, you'll pick a short passcode. Think of it like a lock on your front door.",
-  'You can also add a hint and a couple security questions, just in case you forget your code.',
-  "Then we'll give you a recovery key. Save it somewhere safe. It's your backup way back in.",
-  'After all that, a quick walkthrough will show you around so you feel right at home.',
-  "That's it! Just a few quick steps and you're all set. Let's go.",
+  'Hey there :)',
+  "We're so glad you're here. This is your space to take control of your money.",
+  'Everything lives right on your device. No cloud, no servers, just you.',
+  "First up, you'll create a quick passcode. Easy peasy.",
+  "You can toss in a hint and a couple security questions too, totally up to you.",
+  "We'll also hand you a recovery key. Keep it somewhere you trust, it's your safety net.",
+  "Then a quick tour so you know where everything is. We'll keep it short, promise.",
+  "Alright, let's do this!",
 ];
 
-const MS_PER_WORD = 400;
+const MS_PER_WORD = 200;
+const MIN_HOLD = 1400;
 const FADE_DURATION = 350;
 const PAUSE_BETWEEN = 250;
 
@@ -24,7 +26,7 @@ export function WelcomeIntro({ onDone }: { onDone: () => void }) {
   const [fading, setFading] = useState(false);
 
   const text = STEPS[stepIdx];
-  const holdMs = wordCount(text) * MS_PER_WORD;
+  const holdMs = Math.max(MIN_HOLD, wordCount(text) * MS_PER_WORD);
 
   useEffect(() => {
     setVisible(false);
@@ -54,17 +56,17 @@ export function WelcomeIntro({ onDone }: { onDone: () => void }) {
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 99999,
-        padding: 32,
+        padding: 28,
       }}
     >
       <div
         style={{
           maxWidth: 300,
           textAlign: 'center',
-          fontSize: '1.2rem',
+          fontSize: '1.35rem',
           fontWeight: 600,
           color: 'var(--ui-primary-text, var(--text, #f0f0f0))',
-          lineHeight: 1.45,
+          lineHeight: 1.4,
           fontFamily: 'var(--app-font-family)',
           opacity: visible && !fading ? 1 : 0,
           transform: visible && !fading
