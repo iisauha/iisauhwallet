@@ -429,21 +429,21 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       <div className="settings-list">
         <SettingsRow
           icon={<IconPalette />}
-          iconBg="#8B5CF6"
+          iconBg="var(--accent)"
           label="App Customization"
           sublabel="Theme, colors & typography"
           onClick={() => setAppCustomizationOpen(true)}
         />
         <SettingsRow
           icon={<IconLayout />}
-          iconBg="#3B82F6"
+          iconBg="color-mix(in srgb, var(--accent) 80%, #3B82F6)"
           label="Manage Tabs"
           sublabel="Reorder and show/hide navigation tabs"
           onClick={() => setVisibleTabsModalOpen(true)}
         />
         <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="settings-row-icon-wrap" style={{ background: '#F97316' }}>
+            <span className="settings-row-icon-wrap" style={{ background: 'var(--accent)' }}>
               <IconHome />
             </span>
             <div>
@@ -469,7 +469,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       <div className="settings-list">
         <SettingsRow
           icon={<IconUser />}
-          iconBg="#10B981"
+          iconBg="var(--green)"
           label="Edit Account Names"
           sublabel="Rename your bank accounts & cards"
           onClick={() => setEditAccountNamesOpen(true)}
@@ -482,7 +482,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       <div className="settings-list">
         <SettingsRow
           icon={<IconTag />}
-          iconBg="#F59E0B"
+          iconBg="color-mix(in srgb, var(--accent) 70%, #F59E0B)"
           label="Manage Categories"
           sublabel="Add, rename, or remove spending categories"
           onClick={() => setManageOpen(true)}
@@ -497,7 +497,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             {passcodePaused ? (
               <SettingsRow
                 icon={<IconLock />}
-                iconBg="#EF4444"
+                iconBg="var(--red)"
                 label="Resume Passcode Protection"
                 sublabel="Passcode is currently paused"
                 onClick={() => { savePasscodePaused(false); setPasscodePaused(false); }}
@@ -505,20 +505,20 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             ) : (
               <SettingsRow
                 icon={<IconLock />}
-                iconBg="#F97316"
+                iconBg="var(--accent)"
                 label="Pause Passcode Protection"
                 onClick={() => setPausePasscodeStep(1)}
               />
             )}
             <SettingsRow
               icon={<IconLock />}
-              iconBg="#6366F1"
+              iconBg="color-mix(in srgb, var(--accent) 70%, #6366F1)"
               label="Reset Passcode"
               onClick={() => setResetPasscodeOpen(true)}
             />
             <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span className="settings-row-icon-wrap" style={{ background: '#8B5CF6' }}>
+                <span className="settings-row-icon-wrap" style={{ background: 'var(--accent)' }}>
                   <IconLock />
                 </span>
                 <div>
@@ -546,7 +546,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             </div>
             <SettingsRow
               icon={<IconQuestionMark />}
-              iconBg="#10B981"
+              iconBg="var(--green)"
               label="Security FAQ"
               sublabel="Encryption, passcode, and privacy questions"
               onClick={() => setFaqOpen(true)}
@@ -560,28 +560,28 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       <div className="settings-list">
         <SettingsRow
           icon={<IconExport />}
-          iconBg="#0EA5E9"
+          iconBg="var(--accent)"
           label="Export JSON"
           sublabel="Full backup of all your data"
           onClick={handleExportJSON}
         />
         <SettingsRow
           icon={<IconDatabase />}
-          iconBg="#14B8A6"
+          iconBg="var(--green)"
           label="Export Purchases CSV"
           sublabel="Current month's purchases"
           onClick={() => hasPasscode ? openChallenge('csv') : exportMonthlyPurchasesCsv()}
         />
         <SettingsRow
           icon={<IconDatabase />}
-          iconBg="#64748B"
+          iconBg="var(--muted)"
           label="Import JSON"
           sublabel="Restore from a backup file"
           onClick={() => fileRef.current?.click()}
         />
         <SettingsRow
           icon={<IconRefresh />}
-          iconBg="#F97316"
+          iconBg="var(--accent)"
           label="Force Refresh"
           sublabel="Reload the app to get the latest version"
           onClick={async () => {
@@ -665,13 +665,13 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       <div className="settings-list">
         <SettingsRow
           icon={<IconInfoCircle />}
-          iconBg="#0ea5e9"
+          iconBg="var(--accent)"
           label="App Guide (How this app works)"
           onClick={() => setHowItWorksOpen(true)}
         />
         <SettingsRow
           icon={<IconUser />}
-          iconBg="#8B5CF6"
+          iconBg="var(--accent)"
           label="About the Creator"
           onClick={() => setAboutCreatorOpen(true)}
         />

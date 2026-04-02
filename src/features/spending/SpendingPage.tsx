@@ -561,7 +561,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 <span className="amount">{formatCents(c.amountCents)}</span>
               </div>
             ))}
-            {!byCard.length ? <div style={{ color: 'var(--ui-primary-text, var(--text))' }}>No purchases in this period.</div> : null}
+            {!byCard.length ? <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>No purchases in this period.</div> : null}
           </div>
         ) : (
           <div>

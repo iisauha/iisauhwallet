@@ -551,7 +551,7 @@ function CoastFireProjectionChart({
           {
             label: 'Portfolio',
             data: portfolios,
-            borderColor: '#22c55e',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#22c55e',
             backgroundColor: 'transparent',
             borderWidth: 2,
             tension: 0,
@@ -561,7 +561,7 @@ function CoastFireProjectionChart({
           {
             label: 'Coast FIRE',
             data: coastLine,
-            borderColor: '#f97316',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#f97316',
             backgroundColor: 'transparent',
             borderWidth: 1.5,
             borderDash: [4, 4],
@@ -572,7 +572,7 @@ function CoastFireProjectionChart({
           {
             label: 'FIRE Number',
             data: fireLine,
-            borderColor: '#3b82f6',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() ? 'color-mix(in srgb, ' + getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() + ' 60%, #3b82f6)' : '#3b82f6',
             backgroundColor: 'transparent',
             borderWidth: 1.5,
             borderDash: [4, 4],
@@ -599,11 +599,11 @@ function CoastFireProjectionChart({
         },
         scales: {
           x: {
-            grid: { color: 'rgba(51, 65, 85, 0.5)' },
+            grid: { color: 'color-mix(in srgb, var(--ui-border, var(--border)) 50%, transparent)' },
             ticks: { color: primaryTextColor, maxTicksLimit: 8 }
           },
           y: {
-            grid: { color: 'rgba(51, 65, 85, 0.5)' },
+            grid: { color: 'color-mix(in srgb, var(--ui-border, var(--border)) 50%, transparent)' },
             ticks: {
               color: primaryTextColor,
               callback: (v) => (typeof v === 'number' ? `$${(v / 1000).toFixed(0)}k` : v)
@@ -632,7 +632,7 @@ function CoastFireProjectionChart({
             style={{
               position: 'absolute',
               fontSize: '0.75rem',
-              color: '#f97316',
+              color: 'var(--accent)',
               fontWeight: 600,
               bottom: 8,
               left: '50%',

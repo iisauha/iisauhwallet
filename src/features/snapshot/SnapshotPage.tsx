@@ -257,7 +257,7 @@ function BackupReminderBanner() {
             onClick={handleExportNow}
             style={{
               background: 'var(--accent)',
-              color: '#fff',
+              color: 'var(--ui-primary-text, var(--text))',
               border: 'none',
               borderRadius: 20,
               padding: '6px 16px',
