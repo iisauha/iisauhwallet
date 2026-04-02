@@ -603,7 +603,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             Default save location
           </label>
           <div className="settings-row-sublabel" style={{ marginBottom: 10 }}>
-            Point this to a cloud-synced folder (iCloud Drive, Google Drive, Dropbox, etc.) for automatic offsite backup.
+            A personal reminder for yourself. When your backup reminder pops up, it'll show this so you remember where you usually save your backups.
           </div>
           <input
             type="text"
