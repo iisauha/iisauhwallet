@@ -207,6 +207,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
 
   // Re-read after crypto unlock — aux cache may lag behind on mount.
   // Retry at increasing intervals until we get a value or give up.
+  // Also listen for profile-updated events (fired when name/pfp is saved).
   useEffect(() => {
     let cancelled = false;
     const delays = [50, 150, 400, 1000];
@@ -224,7 +225,12 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         });
       }, ms));
     }
-    return () => { cancelled = true; timers.forEach(clearTimeout); };
+    const handleProfileUpdate = () => {
+      setDisplayName(loadUserDisplayName() || '');
+      setProfileImage(loadUserProfileImage());
+    };
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => { cancelled = true; timers.forEach(clearTimeout); window.removeEventListener('profile-updated', handleProfileUpdate); };
   }, []);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
