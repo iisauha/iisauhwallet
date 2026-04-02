@@ -161,7 +161,7 @@ export function PieChart3D({ slices, size = 260, activeId, onSliceClick }: Props
         <circle cx={cx} cy={cy} r={innerR} fill="rgba(0,0,0,0.15)" />
 
         {/* Connector lines + percentage labels */}
-        {computed.filter(sl => sl.pct >= 4).map((sl) => {
+        {computed.map((sl) => {
           const edgePos = polarToXY(cx, cy, sl.radius, sl.midAngle);
           return (
             <g key={`label-${sl.id}`}>
