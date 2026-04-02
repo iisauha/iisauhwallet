@@ -236,16 +236,17 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
   try {
     const raw = localStorage.getItem(UI_ADVANCED_COLORS_KEY);
     if (!raw) {
+      // Default advanced colors derived from Royal theme (#252526 bg, #FE841B accent)
       return {
-        cardBg: '#0c1428',
-        surfaceSecondary: '#091022',
-        sectionBg: '#0a1224',
-        modalBg: '#101a30',
-        tabBarBg: '#040812',
-        border: '#182040',
-        titleText: '#fff8e8',
-        primaryText: '#d4b87a',
-        outlineButton: '#d4b87a',
+        cardBg: '#2e2e30',
+        surfaceSecondary: '#2a2a2c',
+        sectionBg: '#2c2c2e',
+        modalBg: '#333335',
+        tabBarBg: '#1e1e20',
+        border: '#444446',
+        titleText: '#f0f0f0',
+        primaryText: '#d0d0d0',
+        outlineButton: '#d0d0d0',
         addButton: '#FE841B',
       };
     }
