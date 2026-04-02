@@ -3,6 +3,8 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
 import { useAdvancedUIColors } from '../../theme/AdvancedUIColorsContext';
 import type { AdvancedUIColors } from '../../state/storage';
+import { loadThemePresets, saveThemePresets, type SavedThemePreset } from '../../state/storage';
+import { lightenHexBlend, darkenHex } from '../../theme/themeUtils';
 import { Select } from '../../ui/Select';
 
 const FONT_FAMILY_OPTIONS = [
@@ -58,173 +60,43 @@ type PresetTheme = {
   advancedColors: AdvancedUIColors;
 };
 
+/** Derive all 10 advanced UI colors from just a background + accent color. */
+function deriveAdvancedColors(bg: string, accent: string): AdvancedUIColors {
+  // Detect light vs dark theme based on perceived brightness
+  const r = parseInt(bg.slice(1, 3), 16), g = parseInt(bg.slice(3, 5), 16), b = parseInt(bg.slice(5, 7), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  const isLight = brightness > 140;
+
+  if (isLight) {
+    return {
+      cardBg: '#ffffff',
+      surfaceSecondary: darkenHex(bg, 0.04),
+      sectionBg: lightenHexBlend(bg, 0.3),
+      modalBg: '#ffffff',
+      tabBarBg: bg,
+      border: darkenHex(bg, 0.15),
+      titleText: darkenHex(bg, 0.9),
+      primaryText: darkenHex(bg, 0.75),
+      outlineButton: darkenHex(bg, 0.75),
+      addButton: accent,
+    };
+  }
+  return {
+    cardBg: lightenHexBlend(bg, 0.08),
+    surfaceSecondary: lightenHexBlend(bg, 0.04),
+    sectionBg: lightenHexBlend(bg, 0.06),
+    modalBg: lightenHexBlend(bg, 0.12),
+    tabBarBg: bg,
+    border: lightenHexBlend(bg, 0.15),
+    titleText: lightenHexBlend(bg, 0.92),
+    primaryText: lightenHexBlend(bg, 0.7),
+    outlineButton: lightenHexBlend(bg, 0.7),
+    addButton: accent,
+  };
+}
+
 const PRESET_THEMES: PresetTheme[] = [
-  // ── Dark themes ──────────────────────────────────
-  {
-    id: 'midnight',
-    name: 'Midnight',
-    themeColor: '#1a1a1a',
-    accentColor: '#E8673A',
-    advancedColors: {
-      cardBg: '#252525', surfaceSecondary: '#202020', sectionBg: '#232323',
-      modalBg: '#2d2d2d', tabBarBg: '#1a1a1a', border: '#3a3a3a',
-      titleText: '#f0f0f0', primaryText: '#cccccc', outlineButton: '#cccccc', addButton: '#E8673A',
-    },
-  },
-  {
-    id: 'carbon',
-    name: 'Carbon',
-    themeColor: '#080808',
-    accentColor: '#a3e635',
-    advancedColors: {
-      cardBg: '#131313', surfaceSecondary: '#0f0f0f', sectionBg: '#111111',
-      modalBg: '#1a1a1a', tabBarBg: '#080808', border: '#282828',
-      titleText: '#f5f5f5', primaryText: '#c8c8c8', outlineButton: '#c8c8c8', addButton: '#a3e635',
-    },
-  },
-  {
-    id: 'ocean',
-    name: 'Ocean',
-    themeColor: '#0c1927',
-    accentColor: '#38bdf8',
-    advancedColors: {
-      cardBg: '#142233', surfaceSecondary: '#112030', sectionBg: '#132131',
-      modalBg: '#1a2d3e', tabBarBg: '#0c1927', border: '#253d52',
-      titleText: '#e0f0ff', primaryText: '#b8d4ee', outlineButton: '#b8d4ee', addButton: '#38bdf8',
-    },
-  },
-  {
-    id: 'forest',
-    name: 'Forest',
-    themeColor: '#0f1a12',
-    accentColor: '#22c55e',
-    advancedColors: {
-      cardBg: '#162219', surfaceSecondary: '#132116', sectionBg: '#152019',
-      modalBg: '#1c2e20', tabBarBg: '#0f1a12', border: '#2a3f2e',
-      titleText: '#e8f5e0', primaryText: '#c4dcc7', outlineButton: '#c4dcc7', addButton: '#22c55e',
-    },
-  },
-  {
-    id: 'indigo',
-    name: 'Indigo',
-    themeColor: '#0f0e1a',
-    accentColor: '#818cf8',
-    advancedColors: {
-      cardBg: '#1a1929', surfaceSecondary: '#181724', sectionBg: '#191827',
-      modalBg: '#232232', tabBarBg: '#0f0e1a', border: '#322e50',
-      titleText: '#f0eeff', primaryText: '#c4bfe8', outlineButton: '#c4bfe8', addButton: '#818cf8',
-    },
-  },
-  {
-    id: 'cobalt',
-    name: 'Cobalt',
-    themeColor: '#080c16',
-    accentColor: '#3b82f6',
-    advancedColors: {
-      cardBg: '#111828', surfaceSecondary: '#0e1524', sectionBg: '#101726',
-      modalBg: '#182030', tabBarBg: '#080c16', border: '#1e2e48',
-      titleText: '#e8f0ff', primaryText: '#a8c0e8', outlineButton: '#a8c0e8', addButton: '#3b82f6',
-    },
-  },
-  {
-    id: 'olive',
-    name: 'Olive',
-    themeColor: '#131510',
-    accentColor: '#84cc16',
-    advancedColors: {
-      cardBg: '#1c2018', surfaceSecondary: '#181b14', sectionBg: '#1a1e16',
-      modalBg: '#242920', tabBarBg: '#131510', border: '#2e3428',
-      titleText: '#edf2e0', primaryText: '#c8d4a8', outlineButton: '#c8d4a8', addButton: '#84cc16',
-    },
-  },
-  {
-    id: 'rose',
-    name: 'Rose Gold',
-    themeColor: '#1a0e14',
-    accentColor: '#f472b6',
-    advancedColors: {
-      cardBg: '#251520', surfaceSecondary: '#20121c', sectionBg: '#22131e',
-      modalBg: '#2e1a28', tabBarBg: '#1a0e14', border: '#42253a',
-      titleText: '#fce7f3', primaryText: '#e8b4d0', outlineButton: '#e8b4d0', addButton: '#f472b6',
-    },
-  },
-  {
-    id: 'volcanic',
-    name: 'Volcanic',
-    themeColor: '#170800',
-    accentColor: '#fb923c',
-    advancedColors: {
-      cardBg: '#231005', surfaceSecondary: '#1e0c02', sectionBg: '#200e03',
-      modalBg: '#2e1608', tabBarBg: '#170800', border: '#3d1f08',
-      titleText: '#fff0e0', primaryText: '#e8c4a0', outlineButton: '#e8c4a0', addButton: '#fb923c',
-    },
-  },
-  {
-    id: 'amber',
-    name: 'Amber',
-    themeColor: '#1a1200',
-    accentColor: '#fbbf24',
-    advancedColors: {
-      cardBg: '#251a05', surfaceSecondary: '#201600', sectionBg: '#231803',
-      modalBg: '#2e2108', tabBarBg: '#1a1200', border: '#3d2e0a',
-      titleText: '#fff8e0', primaryText: '#d4c08a', outlineButton: '#d4c08a', addButton: '#fbbf24',
-    },
-  },
-  {
-    id: 'slate',
-    name: 'Slate',
-    themeColor: '#0d1117',
-    accentColor: '#94a3b8',
-    advancedColors: {
-      cardBg: '#161b22', surfaceSecondary: '#131820', sectionBg: '#141a21',
-      modalBg: '#1e242d', tabBarBg: '#0d1117', border: '#2a333e',
-      titleText: '#e6edf3', primaryText: '#b1bac4', outlineButton: '#b1bac4', addButton: '#94a3b8',
-    },
-  },
-  {
-    id: 'neon',
-    name: 'Neon',
-    themeColor: '#060810',
-    accentColor: '#00ff88',
-    advancedColors: {
-      cardBg: '#0e1220', surfaceSecondary: '#0b0f1c', sectionBg: '#0c101e',
-      modalBg: '#141828', tabBarBg: '#060810', border: '#1e2840',
-      titleText: '#e0ffe8', primaryText: '#a0f0c0', outlineButton: '#a0f0c0', addButton: '#00ff88',
-    },
-  },
-  {
-    id: 'berry',
-    name: 'Berry',
-    themeColor: '#0e0814',
-    accentColor: '#d946ef',
-    advancedColors: {
-      cardBg: '#1a1024', surfaceSecondary: '#160d20', sectionBg: '#180f22',
-      modalBg: '#22162e', tabBarBg: '#0e0814', border: '#321848',
-      titleText: '#f5e8ff', primaryText: '#d4a8e8', outlineButton: '#d4a8e8', addButton: '#d946ef',
-    },
-  },
-  {
-    id: 'teal',
-    name: 'Deep Teal',
-    themeColor: '#060f0e',
-    accentColor: '#0d9488',
-    advancedColors: {
-      cardBg: '#0e1e1c', surfaceSecondary: '#0b1918', sectionBg: '#0d1c1a',
-      modalBg: '#142826', tabBarBg: '#060f0e', border: '#183028',
-      titleText: '#e0f5f2', primaryText: '#a0d4cc', outlineButton: '#a0d4cc', addButton: '#0d9488',
-    },
-  },
-  {
-    id: 'crimson',
-    name: 'Crimson',
-    themeColor: '#120606',
-    accentColor: '#ef4444',
-    advancedColors: {
-      cardBg: '#1e0e0e', surfaceSecondary: '#190b0b', sectionBg: '#1c0d0d',
-      modalBg: '#281414', tabBarBg: '#120606', border: '#3a1414',
-      titleText: '#fff0f0', primaryText: '#e8b8b8', outlineButton: '#e8b8b8', addButton: '#ef4444',
-    },
-  },
+  // Royal first (default)
   {
     id: 'royal',
     name: 'Royal',
@@ -237,80 +109,25 @@ const PRESET_THEMES: PresetTheme[] = [
     },
   },
   {
-    id: 'copper',
-    name: 'Copper',
-    themeColor: '#110a04',
-    accentColor: '#ea580c',
+    id: 'midnight',
+    name: 'Midnight',
+    themeColor: '#1a1a1a',
+    accentColor: '#E8673A',
     advancedColors: {
-      cardBg: '#1c1008', surfaceSecondary: '#180d06', sectionBg: '#1a0f07',
-      modalBg: '#26180c', tabBarBg: '#110a04', border: '#381a0c',
-      titleText: '#fff4ec', primaryText: '#e0bca0', outlineButton: '#e0bca0', addButton: '#ea580c',
+      cardBg: '#252525', surfaceSecondary: '#202020', sectionBg: '#232323',
+      modalBg: '#2d2d2d', tabBarBg: '#1a1a1a', border: '#3a3a3a',
+      titleText: '#f0f0f0', primaryText: '#cccccc', outlineButton: '#cccccc', addButton: '#E8673A',
     },
   },
   {
-    id: 'aurora',
-    name: 'Aurora',
-    themeColor: '#060c10',
-    accentColor: '#06b6d4',
+    id: 'cobalt',
+    name: 'Cobalt',
+    themeColor: '#080c16',
+    accentColor: '#3b82f6',
     advancedColors: {
-      cardBg: '#0e1c22', surfaceSecondary: '#0b181e', sectionBg: '#0d1a20',
-      modalBg: '#14242c', tabBarBg: '#060c10', border: '#16303a',
-      titleText: '#e0f8ff', primaryText: '#90d0e0', outlineButton: '#90d0e0', addButton: '#06b6d4',
-    },
-  },
-  {
-    id: 'jade',
-    name: 'Jade',
-    themeColor: '#061409',
-    accentColor: '#10b981',
-    advancedColors: {
-      cardBg: '#0c2214', surfaceSecondary: '#091c11', sectionBg: '#0a1f13',
-      modalBg: '#112e1c', tabBarBg: '#061409', border: '#163822',
-      titleText: '#e0ffed', primaryText: '#90d4a8', outlineButton: '#90d4a8', addButton: '#10b981',
-    },
-  },
-  {
-    id: 'plum',
-    name: 'Plum',
-    themeColor: '#14081e',
-    accentColor: '#c084fc',
-    advancedColors: {
-      cardBg: '#1f1230', surfaceSecondary: '#1a0e28', sectionBg: '#1c102c',
-      modalBg: '#281838', tabBarBg: '#14081e', border: '#351a50',
-      titleText: '#f5eeff', primaryText: '#d4a8f0', outlineButton: '#d4a8f0', addButton: '#c084fc',
-    },
-  },
-  {
-    id: 'mocha',
-    name: 'Mocha',
-    themeColor: '#120d08',
-    accentColor: '#c2a87a',
-    advancedColors: {
-      cardBg: '#1e1610', surfaceSecondary: '#19120d', sectionBg: '#1c140f',
-      modalBg: '#282018', tabBarBg: '#120d08', border: '#342518',
-      titleText: '#fff8ec', primaryText: '#d4b888', outlineButton: '#d4b888', addButton: '#c2a87a',
-    },
-  },
-  {
-    id: 'steel',
-    name: 'Steel',
-    themeColor: '#0d1218',
-    accentColor: '#7dd3fc',
-    advancedColors: {
-      cardBg: '#141e28', surfaceSecondary: '#111924', sectionBg: '#131c26',
-      modalBg: '#1a2632', tabBarBg: '#0d1218', border: '#1e3048',
-      titleText: '#e8f4ff', primaryText: '#a8cce8', outlineButton: '#a8cce8', addButton: '#7dd3fc',
-    },
-  },
-  {
-    id: 'wine',
-    name: 'Wine',
-    themeColor: '#150810',
-    accentColor: '#f43f5e',
-    advancedColors: {
-      cardBg: '#221018', surfaceSecondary: '#1e0d14', sectionBg: '#200f16',
-      modalBg: '#2e1422', tabBarBg: '#150810', border: '#3d1828',
-      titleText: '#fff0f4', primaryText: '#e8a8b8', outlineButton: '#e8a8b8', addButton: '#f43f5e',
+      cardBg: '#111828', surfaceSecondary: '#0e1524', sectionBg: '#101726',
+      modalBg: '#182030', tabBarBg: '#080c16', border: '#1e2e48',
+      titleText: '#e8f0ff', primaryText: '#a8c0e8', outlineButton: '#a8c0e8', addButton: '#3b82f6',
     },
   },
   // ── Light themes ──────────────────────────────────
@@ -326,28 +143,6 @@ const PRESET_THEMES: PresetTheme[] = [
     },
   },
   {
-    id: 'arctic',
-    name: 'Arctic',
-    themeColor: '#eef4f8',
-    accentColor: '#0ea5e9',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#e4edf4', sectionBg: '#f0f6fa',
-      modalBg: '#ffffff', tabBarBg: '#eef4f8', border: '#c2d8e8',
-      titleText: '#0a1929', primaryText: '#1e3a52', outlineButton: '#1e3a52', addButton: '#0ea5e9',
-    },
-  },
-  {
-    id: 'sakura',
-    name: 'Sakura',
-    themeColor: '#f8f0f4',
-    accentColor: '#ec4899',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#f0e6ec', sectionBg: '#f5edf2',
-      modalBg: '#ffffff', tabBarBg: '#f8f0f4', border: '#e0c8d8',
-      titleText: '#3a0a22', primaryText: '#6b2042', outlineButton: '#6b2042', addButton: '#ec4899',
-    },
-  },
-  {
     id: 'frost',
     name: 'Frost',
     themeColor: '#eef2ff',
@@ -356,61 +151,6 @@ const PRESET_THEMES: PresetTheme[] = [
       cardBg: '#ffffff', surfaceSecondary: '#e4e8f8', sectionBg: '#f0f3fc',
       modalBg: '#ffffff', tabBarBg: '#eef2ff', border: '#c0c8e8',
       titleText: '#0a0e2a', primaryText: '#1e2a5a', outlineButton: '#1e2a5a', addButton: '#1d4ed8',
-    },
-  },
-  {
-    id: 'mono',
-    name: 'Mono',
-    themeColor: '#f8f8f8',
-    accentColor: '#18181b',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#efefef', sectionBg: '#f4f4f4',
-      modalBg: '#ffffff', tabBarBg: '#f8f8f8', border: '#d4d4d8',
-      titleText: '#09090b', primaryText: '#27272a', outlineButton: '#27272a', addButton: '#18181b',
-    },
-  },
-  {
-    id: 'cream',
-    name: 'Cream',
-    themeColor: '#faf5eb',
-    accentColor: '#b45309',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#f0ead8', sectionBg: '#f7f2e4',
-      modalBg: '#ffffff', tabBarBg: '#faf5eb', border: '#ddd0b8',
-      titleText: '#2c1800', primaryText: '#5c3d1a', outlineButton: '#5c3d1a', addButton: '#b45309',
-    },
-  },
-  {
-    id: 'mint',
-    name: 'Mint',
-    themeColor: '#f0faf4',
-    accentColor: '#059669',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#e0f4ea', sectionBg: '#eaf8f0',
-      modalBg: '#ffffff', tabBarBg: '#f0faf4', border: '#b8e0c8',
-      titleText: '#052e16', primaryText: '#14532d', outlineButton: '#14532d', addButton: '#059669',
-    },
-  },
-  {
-    id: 'lavender',
-    name: 'Lavender',
-    themeColor: '#f5f3ff',
-    accentColor: '#7c3aed',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#ebe8fe', sectionBg: '#f2f0ff',
-      modalBg: '#ffffff', tabBarBg: '#f5f3ff', border: '#c4b8f8',
-      titleText: '#1e0a3e', primaryText: '#3d2070', outlineButton: '#3d2070', addButton: '#7c3aed',
-    },
-  },
-  {
-    id: 'sand',
-    name: 'Sand',
-    themeColor: '#faf7f0',
-    accentColor: '#d97706',
-    advancedColors: {
-      cardBg: '#ffffff', surfaceSecondary: '#f0ece0', sectionBg: '#f8f4ea',
-      modalBg: '#ffffff', tabBarBg: '#faf7f0', border: '#e0d4b0',
-      titleText: '#1a1000', primaryText: '#3d2800', outlineButton: '#3d2800', addButton: '#d97706',
     },
   },
 ];
@@ -425,7 +165,11 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
     const match = PRESET_THEMES.find((p) => p.themeColor === themeColor);
     return match?.id ?? null;
   });
-  const [showAllThemes, setShowAllThemes] = useState(false);
+  const [customThemes, setCustomThemes] = useState<SavedThemePreset[]>(() => loadThemePresets());
+  const [showCreateCustom, setShowCreateCustom] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customBg, setCustomBg] = useState('#0a1020');
+  const [customAccent, setCustomAccent] = useState('#d97706');
 
   if (!open) return null;
 
@@ -456,8 +200,15 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
         {/* ── Themes ───────────────────────────────────────── */}
         <p className="section-title" style={{ marginTop: 16, marginBottom: 10 }}>Theme</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
-          {(showAllThemes ? PRESET_THEMES : PRESET_THEMES.slice(0, 6)).map((preset) => {
+          {[...PRESET_THEMES, ...customThemes.map((ct) => ({
+            id: `custom_${ct.id}`,
+            name: ct.name,
+            themeColor: ct.themeColor,
+            accentColor: ct.accentColor,
+            advancedColors: ct.advancedColors,
+          }))].map((preset) => {
             const isActive = activeId === preset.id;
+            const isCustom = preset.id.startsWith('custom_');
             return (
               <button
                 key={preset.id}
@@ -478,9 +229,30 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                     : '0 2px 8px rgba(0,0,0,0.2)',
                   transition: 'box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease',
                   transform: isActive ? 'scale(1.03)' : 'scale(1)',
+                  position: 'relative',
                 }}
               >
-                {/* Mini card preview */}
+                {isCustom && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const updated = customThemes.filter((ct) => `custom_${ct.id}` !== preset.id);
+                      setCustomThemes(updated);
+                      saveThemePresets(updated);
+                      if (activeId === preset.id) setActiveId(null);
+                    }}
+                    style={{
+                      position: 'absolute', top: 3, right: 3,
+                      width: 18, height: 18, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.5)', border: 'none',
+                      color: '#fff', fontSize: '0.6rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
                 <div style={{
                   background: preset.advancedColors.cardBg,
                   borderRadius: 5,
@@ -527,23 +299,135 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={() => setShowAllThemes((v) => !v)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--accent)',
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            padding: '4px 0',
-            marginBottom: 18,
-            letterSpacing: '0.01em',
-          }}
-        >
-          {showAllThemes ? '↑ Show fewer themes' : `+ See more themes (${PRESET_THEMES.length - 6} more)`}
-        </button>
+
+        {/* ── Create Custom Theme ─────────────────────────── */}
+        {showCreateCustom ? (
+          <div style={{
+            background: 'var(--ui-card-bg, var(--surface))',
+            border: '1px solid var(--ui-border, var(--border))',
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 16,
+          }}>
+            <p style={{ margin: '0 0 10px', fontSize: '0.88rem', fontWeight: 600, color: 'var(--ui-primary-text, var(--text))' }}>
+              Create your own theme
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 4 }}>Theme name</label>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="e.g. Ocean Night"
+                  className="ll-control"
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 4 }}>Background</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="color"
+                      value={customBg}
+                      onChange={(e) => setCustomBg(e.target.value)}
+                      style={{ width: 36, height: 36, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 0 }}
+                    />
+                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{customBg}</span>
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 4 }}>Accent</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="color"
+                      value={customAccent}
+                      onChange={(e) => setCustomAccent(e.target.value)}
+                      style={{ width: 36, height: 36, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 0 }}
+                    />
+                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{customAccent}</span>
+                  </div>
+                </div>
+              </div>
+              {/* Live preview */}
+              <div style={{
+                background: customBg,
+                borderRadius: 10,
+                padding: '10px 12px',
+                border: `1px solid ${lightenHexBlend(customBg, 0.15)}`,
+              }}>
+                <div style={{
+                  background: lightenHexBlend(customBg, 0.08),
+                  borderRadius: 5,
+                  height: 20,
+                  border: `1px solid ${lightenHexBlend(customBg, 0.15)}`,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  marginBottom: 6,
+                }}>
+                  <div style={{ position: 'absolute', top: 5, left: 5, width: '40%', height: 3, borderRadius: 2, background: lightenHexBlend(customBg, 0.7), opacity: 0.5 }} />
+                  <div style={{ position: 'absolute', top: 11, left: 5, width: '60%', height: 3, borderRadius: 2, background: customAccent, opacity: 0.7 }} />
+                </div>
+                <span style={{ fontSize: '0.72rem', color: lightenHexBlend(customBg, 0.7), fontWeight: 600 }}>
+                  {customName || 'Preview'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1, fontSize: '0.82rem', padding: '8px 12px', minHeight: 'unset' }}
+                  onClick={() => setShowCreateCustom(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ flex: 1, fontSize: '0.82rem', padding: '8px 12px', minHeight: 'unset' }}
+                  disabled={!customName.trim()}
+                  onClick={() => {
+                    const id = `${Date.now()}`;
+                    const advanced = deriveAdvancedColors(customBg, customAccent);
+                    const newPreset: SavedThemePreset = {
+                      id,
+                      name: customName.trim(),
+                      themeColor: customBg,
+                      accentColor: customAccent,
+                      advancedColors: advanced,
+                    };
+                    const updated = [...customThemes, newPreset];
+                    setCustomThemes(updated);
+                    saveThemePresets(updated);
+                    handleApply({ ...newPreset, id: `custom_${id}` });
+                    setShowCreateCustom(false);
+                    setCustomName('');
+                  }}
+                >
+                  Create Theme
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowCreateCustom(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '4px 0',
+              marginBottom: 18,
+            }}
+          >
+            + Create your own theme
+          </button>
+        )}
 
         {/* ── Typography ───────────────────────────────────── */}
         <p className="section-title" style={{ marginTop: 4, marginBottom: 10 }}>Typography</p>
