@@ -499,11 +499,14 @@ input[type="date"].ll-control:focus {
 }
 .ll-select.ll-select-compact {
   min-height: unset !important;
-  height: 30px !important;
-  padding: 4px 28px 4px 8px !important;
+  height: auto !important;
+  padding: 4px 10px !important;
   font-size: 0.75rem !important;
   border-radius: 8px !important;
   color: var(--ui-title-text, var(--ui-primary-text, var(--text))) !important;
+}
+.ll-select-compact::after {
+  display: none !important;
 }
 
 .modal-overlay {
