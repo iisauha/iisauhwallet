@@ -47,9 +47,13 @@ function resolveOverlaps(labels: { x: number; y: number; side: 'left' | 'right' 
 }
 
 function formatDollars(cents: number) {
-  const abs = Math.abs(cents);
-  if (abs >= 100000) return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatPct(value: number, total: number) {
+  if (total <= 0) return '0%';
+  const raw = (value / total) * 100;
+  return raw.toPrecision(3) + '%';
 }
 
 /* ------------------------------------------------------------------ */
@@ -122,6 +126,7 @@ export function PieChart3D({ slices, size = 260, activeId, onSliceClick }: Props
       return {
         id: sl.id,
         pct: sl.pct,
+        value: sl.value,
         rawX: pos.x,
         x: pos.x,
         y: pos.y,
@@ -222,7 +227,7 @@ export function PieChart3D({ slices, size = 260, activeId, onSliceClick }: Props
               fontWeight={500}
               fontFamily="var(--app-font-family)"
             >
-              {Math.round((activeSlice.value / total) * 100)}%
+              {formatPct(activeSlice.value, total)}
             </text>
           </g>
         )}
@@ -247,7 +252,7 @@ export function PieChart3D({ slices, size = 260, activeId, onSliceClick }: Props
               fontWeight={600}
               fontFamily="var(--app-font-family)"
             >
-              {lbl.pct}%
+              {formatPct(lbl.value, total)}
             </text>
           </g>
         ))}
