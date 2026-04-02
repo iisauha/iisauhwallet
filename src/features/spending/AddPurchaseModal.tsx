@@ -7,6 +7,7 @@ import { getCategoryName, getCategorySubcategories, loadCategoryConfig, loadSubT
 import type { SubTrackerEntry } from '../../state/storage';
 import { computeRewardDeltaForPurchase, suggestAllCardsForPurchase, type RewardDelta, type SuggestResult } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
+import { useContentGuard } from '../../state/useContentGuard';
 
 function todayKey() {
   const d = new Date();
@@ -43,6 +44,7 @@ export function AddPurchaseModal(props: {
 }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const contentGuard = useContentGuard();
   const cfg = useMemo(() => loadCategoryConfig(), []);
 
   const [title, setTitle] = useState('');
@@ -758,10 +760,9 @@ export function AddPurchaseModal(props: {
               value={title}
               onChange={(e) => {
                 const v = e.target.value;
+                if (contentGuard(v, () => setTitle(''))) return;
                 setTitle(v);
                 acSuppressRef.current = false;
-                // open dropdown only if there are suggestions (will be computed next render)
-                // We just ensure suppress is cleared so suggestions can show
               }}
               onFocus={() => {
                 if (!acSuppressRef.current && title.trim()) setAcOpen(true);
@@ -884,7 +885,7 @@ export function AddPurchaseModal(props: {
         ) : null}
         <div className="field">
           <label>Notes (optional)</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+          <textarea value={notes} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setNotes(''))) setNotes(v); }} placeholder="Optional" />
         </div>
 
         {!props.reimbursementExpected ? (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { HelpTip } from '../../ui/HelpTip';
+import { useContentGuard } from '../../state/useContentGuard';
 import type { RecurringItem } from '../../state/models';
 import { useLedgerStore } from '../../state/store';
 import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInvesting, loadLoans, getVisiblePaymentNowCents } from '../../state/storage';
@@ -16,6 +17,7 @@ import { useDialog } from '../../ui/DialogProvider';
 export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncomeTrigger = 0 }: { addTrigger?: number; addExpenseTrigger?: number; addIncomeTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const contentGuard = useContentGuard();
   const { showConfirm } = useDialog();
   const cfg = useMemo(() => loadCategoryConfig(), []);
   const investingState = useMemo(() => loadInvesting(), [data]);
@@ -534,7 +536,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
             </div>
             <div className="field">
               <label>Name / Merchant</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Rent" />
+              <input value={name} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setName(''))) setName(v); }} placeholder="e.g. Rent" />
             </div>
             <div className="field">
               <label>Amount ($)</label>
@@ -899,7 +901,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
 
             <div className="field">
               <label>Notes (optional)</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+              <textarea value={notes} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setNotes(''))) setNotes(v); }} placeholder="Optional" />
             </div>
 
             <div className="field">

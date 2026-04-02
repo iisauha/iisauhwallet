@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { CategoryConfig } from '../../state/models';
+import { useContentGuard } from '../../state/useContentGuard';
 
 export function ManageCategoriesModal(props: {
   open: boolean;
@@ -8,6 +9,7 @@ export function ManageCategoriesModal(props: {
   save: (cfg: CategoryConfig) => void;
 }) {
   const initial = useMemo(() => props.load(), [props]);
+  const contentGuard = useContentGuard();
   const [cfg, setCfg] = useState<CategoryConfig>(initial);
   const [newCatName, setNewCatName] = useState('');
   const [addSubOpen, setAddSubOpen] = useState<Record<string, boolean>>({});
@@ -72,7 +74,7 @@ export function ManageCategoriesModal(props: {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input
               value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
+              onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setNewCatName(''))) setNewCatName(v); }}
               onKeyDown={(e) => { if (e.key === 'Enter') { addCategoryByName(newCatName); setNewCatName(''); } }}
               placeholder="Category name"
               style={{ flex: 1, minWidth: 180 }}
@@ -138,7 +140,7 @@ export function ManageCategoriesModal(props: {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <input
                         value={addSubText[id] || ''}
-                        onChange={(e) => setAddSubText((prev) => ({ ...prev, [id]: e.target.value }))}
+                        onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setAddSubText((prev) => ({ ...prev, [id]: '' })))) setAddSubText((prev) => ({ ...prev, [id]: v })); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') addSubcategory(id); }}
                         placeholder="Subcategory name"
                         style={{ flex: 1, minWidth: 160 }}

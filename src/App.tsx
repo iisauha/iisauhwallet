@@ -279,14 +279,19 @@ function MainApp() {
   const [investingHysaAllocAccountId, setInvestingHysaAllocAccountId] = useState<string | null>(null);
 
   // Storage quota exceeded alert
-  const { showAlert: showQuotaAlert } = useDialog();
+  const { showAlert } = useDialog();
   useEffect(() => {
-    const handler = () => {
-      showQuotaAlert('Storage is full. Some data may not have been saved. Consider exporting a backup and archiving old purchases in Settings.');
+    const quotaHandler = () => {
+      showAlert('Storage is full. Some data may not have been saved. Consider exporting a backup and archiving old purchases in Settings.');
     };
-    window.addEventListener('storage-quota-exceeded', handler);
-    return () => window.removeEventListener('storage-quota-exceeded', handler);
-  }, [showQuotaAlert]);
+    const contentHandler = (e: Event) => {
+      const msg = (e as CustomEvent).detail?.message;
+      if (msg) showAlert(msg);
+    };
+    window.addEventListener('storage-quota-exceeded', quotaHandler);
+    window.addEventListener('content-warning', contentHandler);
+    return () => { window.removeEventListener('storage-quota-exceeded', quotaHandler); window.removeEventListener('content-warning', contentHandler); };
+  }, [showAlert]);
 
   // Random animation start offsets so blobs begin at a different point each refresh
   const blobDelays = useMemo(() => {

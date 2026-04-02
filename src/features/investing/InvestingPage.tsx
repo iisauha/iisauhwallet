@@ -3,6 +3,7 @@ import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { HelpTip } from '../../ui/HelpTip';
+import { useContentGuard } from '../../state/useContentGuard';
 import { IconPlus } from '../../ui/icons';
 import {
   loadInvesting,
@@ -685,6 +686,7 @@ let _lastProcessedHysaAllocTrigger = 0;
 export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 0, openHysaAllocAccountId = null }: { openTransferTrigger?: number; openHysaAllocTrigger?: number; openHysaAllocAccountId?: string | null }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const contentGuard = useContentGuard();
   const { showAlert, showConfirm } = useDialog();
   const cfg = useMemo(() => loadCategoryConfig(), []);
 
@@ -2400,7 +2402,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <input
                     className="ll-control"
                     value={transferNote}
-                    onChange={(e) => setTransferNote(e.target.value)}
+                    onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setTransferNote(''))) setTransferNote(v); }}
                   />
                 </div>
                 {transferError ? (

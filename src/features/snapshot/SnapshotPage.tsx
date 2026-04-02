@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { HelpTip } from '../../ui/HelpTip';
+import { useContentGuard } from '../../state/useContentGuard';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
@@ -314,6 +315,7 @@ export function SnapshotPage({
 }) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const contentGuard = useContentGuard();
 
   const legacyShowZero = loadBoolPref(SHOW_ZERO_BALANCES_KEY, false);
   const [showZeroCashItems, setShowZeroCashItems] = useState<boolean>(loadBoolPref(SHOW_ZERO_CASH_KEY, legacyShowZero));
@@ -1104,7 +1106,7 @@ export function SnapshotPage({
                 <h3>New bank account</h3>
                 <div className="field">
                   <label>Name</label>
-                  <input value={modal.name} onChange={(e) => setModal({ ...modal, name: e.target.value })} placeholder="Bank" />
+                  <input value={modal.name} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setModal({ ...modal, name: '' }))) setModal({ ...modal, name: v }); }} placeholder="Bank" />
                 </div>
                 <div className="btn-row">
                   <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
@@ -1268,7 +1270,7 @@ export function SnapshotPage({
                 <h3>New credit card</h3>
                 <div className="field">
                   <label>Name</label>
-                  <input value={modal.name} onChange={(e) => setModal({ ...modal, name: e.target.value })} placeholder="Card" />
+                  <input value={modal.name} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setModal({ ...modal, name: '' }))) setModal({ ...modal, name: v }); }} placeholder="Card" />
                 </div>
                 <div className="btn-row">
                   <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
@@ -1537,7 +1539,7 @@ export function SnapshotPage({
                 <h3>{modal.editId ? (modal.kind === 'in' ? 'Edit expected deposit' : 'Edit expected payment') : (modal.kind === 'in' ? 'Add expected deposit' : 'Add expected payment')}</h3>
                 <div className="field">
                   <label>Label</label>
-                  <input value={modal.label} onChange={(e) => setModal({ ...modal, label: e.target.value })} placeholder="e.g. Venmo" />
+                  <input value={modal.label} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setModal({ ...modal, label: '' }))) setModal({ ...modal, label: v }); }} placeholder="e.g. Venmo" />
                 </div>
                 <div className="field">
                   <label>Amount ($)</label>

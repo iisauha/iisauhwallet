@@ -30,6 +30,7 @@ import {
   archiveOldPurchases,
   saveData,
 } from '../../state/storage';
+import { useContentGuard } from '../../state/useContentGuard';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
 import { useDialog } from '../../ui/DialogProvider';
 import { Select } from '../../ui/Select';
@@ -197,6 +198,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const { showAlert, showConfirm } = useDialog();
+  const contentGuard = useContentGuard();
   const [manageOpen, setManageOpen] = useState(false);
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
@@ -418,7 +420,12 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           <input
             type="text"
             value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!contentGuard(v, () => { setDisplayName(''); saveUserDisplayName(null); window.dispatchEvent(new CustomEvent('profile-updated')); })) {
+                setDisplayName(v);
+              }
+            }}
             onBlur={() => {
               saveUserDisplayName(displayName || null);
               window.dispatchEvent(new CustomEvent('profile-updated'));

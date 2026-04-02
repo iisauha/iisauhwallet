@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IconPlus } from '../../ui/icons';
 import { calcFinalNetCashCents, formatCents, parseCents, toLocalDateKey } from '../../state/calc';
+import { useContentGuard } from '../../state/useContentGuard';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import {
@@ -40,6 +41,7 @@ function todayKey() {
 export function UpcomingPage() {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const contentGuard = useContentGuard();
   const { showConfirm } = useDialog();
 
   const [windowDays, setWindowDays] = useState(() => loadUpcomingWindowPreference().days);
@@ -897,7 +899,7 @@ export function UpcomingPage() {
             </div>
             <div className="field">
               <label>Title / Label</label>
-              <input value={modal.title} onChange={(e) => setModal({ ...modal, title: e.target.value })} placeholder="e.g. Paycheck" />
+              <input value={modal.title} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setModal({ ...modal, title: '' }))) setModal({ ...modal, title: v }); }} placeholder="e.g. Paycheck" />
             </div>
             <div className="field">
               <label>Amount ($)</label>
@@ -911,7 +913,7 @@ export function UpcomingPage() {
 
             <div className="field">
               <label>Notes (optional)</label>
-              <textarea value={modal.notes} onChange={(e) => setModal({ ...modal, notes: e.target.value })} placeholder="Optional" />
+              <textarea value={modal.notes} onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setModal({ ...modal, notes: '' }))) setModal({ ...modal, notes: v }); }} placeholder="Optional" />
             </div>
 
             {modal.kind === 'income' && (

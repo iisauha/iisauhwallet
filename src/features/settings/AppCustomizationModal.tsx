@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useContentGuard } from '../../state/useContentGuard';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppearance } from '../../theme/AppearanceContext';
 import { useAdvancedUIColors } from '../../theme/AdvancedUIColorsContext';
@@ -122,6 +123,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
   const { themeColor, setThemeColor, setAccentColor } = useTheme();
   const { fontFamily, fontScale, setFontFamily, setFontScale } = useAppearance();
   const advCtx = useAdvancedUIColors();
+  const contentGuard = useContentGuard();
   const [activeId, setActiveId] = useState<string | null>(() => {
     const match = PRESET_THEMES.find((p) => p.themeColor === themeColor);
     return match?.id ?? null;
@@ -282,7 +284,7 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                 <input
                   type="text"
                   value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
+                  onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setCustomName(''))) setCustomName(v); }}
                   placeholder="e.g. Ocean Night"
                   className="ll-control"
                   style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem' }}

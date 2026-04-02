@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLedgerStore } from '../../state/store';
 import { loadInvesting, saveInvesting } from '../../state/storage';
+import { useContentGuard } from '../../state/useContentGuard';
 
 export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const data = useLedgerStore((s) => s.data);
@@ -29,9 +30,14 @@ export function EditAccountNamesModal({ open, onClose }: { open: boolean; onClos
   const getCardName = (id: string, defaultName: string) => cardNames[id] ?? defaultName;
   const getInvestingName = (id: string, defaultName: string) => investingNames[id] ?? defaultName;
 
-  const setBankName = (id: string, name: string) => setBankNames((prev) => ({ ...prev, [id]: name }));
-  const setCardName = (id: string, name: string) => setCardNames((prev) => ({ ...prev, [id]: name }));
-  const setInvestingName = (id: string, name: string) => setInvestingNames((prev) => ({ ...prev, [id]: name }));
+  const contentGuard = useContentGuard();
+  const guardedSetName = (id: string, name: string, setter: (fn: (prev: Record<string, string>) => Record<string, string>) => void) => {
+    if (contentGuard(name, () => setter((prev) => ({ ...prev, [id]: '' })))) return;
+    setter((prev) => ({ ...prev, [id]: name }));
+  };
+  const setBankName = (id: string, name: string) => guardedSetName(id, name, setBankNames);
+  const setCardName = (id: string, name: string) => guardedSetName(id, name, setCardNames);
+  const setInvestingName = (id: string, name: string) => guardedSetName(id, name, setInvestingNames);
 
   const handleSave = () => {
     banks.forEach((b) => {

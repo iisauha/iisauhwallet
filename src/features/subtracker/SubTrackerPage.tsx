@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { useContentGuard } from '../../state/useContentGuard';
 import { useLedgerStore } from '../../state/store';
 import {
   loadSubTracker,
@@ -177,6 +178,7 @@ function CompletedBonusEditorModal({
     if (banks[0]?.id) return `bank:${banks[0].id}`;
     return 'manual';
   })();
+  const contentGuardModal = useContentGuard();
   const [accountValue, setAccountValue] = useState<string>(initAccountValue);
   const [manualAccountName, setManualAccountName] = useState<string>(() => {
     if (init?.bankAccountRef?.type === 'manual') return init.bankAccountRef.name || '';
@@ -282,7 +284,7 @@ function CompletedBonusEditorModal({
           <input
             className="ll-control"
             value={manualAccountName}
-            onChange={(e) => setManualAccountName(e.target.value)}
+            onChange={(e) => { const v = e.target.value; if (!contentGuardModal(v, () => setManualAccountName(''))) setManualAccountName(v); }}
             placeholder="e.g. Chase Sapphire Preferred or Old Checking"
           />
         </div>
@@ -292,7 +294,7 @@ function CompletedBonusEditorModal({
         <input
           className="ll-control"
           value={rewardLabel}
-          onChange={(e) => setRewardLabel(e.target.value)}
+          onChange={(e) => { const v = e.target.value; if (!contentGuardModal(v, () => setRewardLabel(''))) setRewardLabel(v); }}
           placeholder="e.g. 90,000 miles, 75,000 points, $200 cash back"
         />
       </div>
@@ -338,7 +340,7 @@ function CompletedBonusEditorModal({
       </div>
       <div className="field">
         <label>Notes (optional)</label>
-        <input className="ll-control" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
+        <input className="ll-control" value={notes} onChange={(e) => { const v = e.target.value; if (!contentGuardModal(v, () => setNotes(''))) setNotes(v); }} placeholder="Optional" />
       </div>
       <div className="btn-row">
         <button type="button" className="btn btn-secondary" onClick={onClose}>
@@ -355,6 +357,7 @@ function CompletedBonusEditorModal({
 export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {}) {
   const data = useLedgerStore((s) => s.data);
   const actions = useLedgerStore((s) => s.actions);
+  const contentGuard = useContentGuard();
   const { showAlert } = useDialog();
   const cards = data.cards || [];
   const banks = (data.banks || []).map((b: any) => ({ id: b.id, name: b.name || 'Bank' }));
@@ -1212,7 +1215,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               <input
                 className="ll-control"
                 value={manualName}
-                onChange={(e) => setManualName(e.target.value)}
+                onChange={(e) => { const v = e.target.value; if (!contentGuard(v, () => setManualName(''))) setManualName(v); }}
                 placeholder="e.g. Chase Sapphire Preferred"
               />
             </div>
