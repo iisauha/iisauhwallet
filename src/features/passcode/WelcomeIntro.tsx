@@ -8,7 +8,7 @@ const STEPS = [
   "Then you'll get a recovery key! Think of it as a backup way in. Just save it somewhere you'll remember.",
   "After that, a quick guide will show you around so you know where everything lives.",
   "One last thing. I built this app for people like you and me. I will never ask for your data, and if anyone ever does, don't trust them. This will always be free, no strings attached.",
-  "Alright, that's the plan. Let's get started!",
+  "Alright, that's the rundown. Let's get started!",
 ];
 
 const MS_PER_WORD = 250;
