@@ -497,6 +497,14 @@ input[type="date"].ll-control:focus {
   background: var(--ui-card-bg, var(--surface));
   color: var(--ui-primary-text, var(--text));
 }
+.ll-select.ll-select-compact {
+  min-height: unset !important;
+  height: 30px !important;
+  padding: 4px 28px 4px 8px !important;
+  font-size: 0.75rem !important;
+  border-radius: 8px !important;
+  color: var(--ui-title-text, var(--ui-primary-text, var(--text))) !important;
+}
 
 .modal-overlay {
   position: fixed;

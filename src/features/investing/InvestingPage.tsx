@@ -1582,7 +1582,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                           Adjust HYSA Split
                         </button>
                         <Select
-                          style={{ fontSize: '0.72rem', padding: '3px 24px 3px 6px', minHeight: 'unset', width: 'auto', height: 28 }}
+                          className="ll-select-compact"
+                          style={{ width: 'auto' }}
                           value={(a as HysaAccount).linkedCheckingBankId || ''}
                           onChange={(e) => {
                             const bankId = e.target.value || undefined;
