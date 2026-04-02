@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 
 const STEPS = [
-  'Hey there!',
-  'Welcome to your personal finance app.',
-  "First, you'll create a passcode to keep your data safe.",
-  "Then, you'll set up a recovery key in case you forget it.",
-  "After that, a quick guide will show you how everything works.",
-  "And then you're in. Let's get started.",
+  'Hey there, welcome in!',
+  'This is your personal finance app. Everything stays on your device, nice and private.',
+  "To keep things secure, you'll pick a short passcode. Think of it like a lock on your front door.",
+  "You can also add a hint and a couple security questions, just in case you forget your code.",
+  "Then we'll give you a recovery key. Save it somewhere safe. It's your backup way back in.",
+  "After all that, a quick walkthrough will show you around so you feel right at home.",
+  "That's it! Just a few quick steps and you're all set. Let's go.",
 ];
 
 const STEP_DURATION = 2400;
