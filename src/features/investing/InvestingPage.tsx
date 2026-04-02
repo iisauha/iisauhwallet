@@ -1583,7 +1583,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                         </button>
                         <Select
                           className="ll-select-compact"
-                          style={{ width: 'auto' }}
                           value={(a as HysaAccount).linkedCheckingBankId || ''}
                           onChange={(e) => {
                             const bankId = e.target.value || undefined;
