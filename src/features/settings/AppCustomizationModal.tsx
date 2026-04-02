@@ -243,10 +243,10 @@ export function AppCustomizationModal({ open, onClose }: { open: boolean; onClos
                       if (activeId === preset.id) setActiveId(null);
                     }}
                     style={{
-                      position: 'absolute', top: 3, right: 3,
-                      width: 18, height: 18, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.5)', border: 'none',
-                      color: '#fff', fontSize: '0.6rem', cursor: 'pointer',
+                      position: 'absolute', top: -6, right: -6, zIndex: 10,
+                      width: 20, height: 20, borderRadius: '50%',
+                      background: 'rgba(220,38,38,0.15)', border: '1.5px solid var(--red, #ef4444)',
+                      color: 'var(--red, #ef4444)', fontSize: '0.6rem', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
