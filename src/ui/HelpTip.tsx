@@ -3,10 +3,13 @@ import { IconInfoCircle } from './icons';
 
 export function HelpTip({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) { setVisible(false); return; }
+    // Trigger entrance animation on next frame
+    requestAnimationFrame(() => setVisible(true));
     const handler = (e: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
@@ -29,23 +32,25 @@ export function HelpTip({ text }: { text: string }) {
         <div
           role="tooltip"
           style={{
-            position: 'absolute',
-            bottom: '100%',
+            position: 'fixed',
+            top: '50%',
             left: '50%',
-            transform: 'translateX(-50%)',
-            marginBottom: 6,
+            transform: visible ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.9)',
+            opacity: visible ? 1 : 0,
+            transition: 'opacity 180ms ease-out, transform 180ms ease-out',
             background: 'var(--ui-modal-bg, var(--surface, #1a1a2e))',
             border: '1px solid var(--ui-border, var(--border, #333))',
-            borderRadius: 10,
-            padding: '8px 12px',
-            fontSize: '0.82rem',
-            lineHeight: 1.45,
+            borderRadius: 12,
+            padding: '12px 16px',
+            fontSize: '0.84rem',
+            lineHeight: 1.5,
             color: 'var(--ui-primary-text, var(--text, #eee))',
-            maxWidth: 260,
-            minWidth: 180,
-            zIndex: 1000,
+            maxWidth: 280,
+            minWidth: 200,
+            zIndex: 10000,
             whiteSpace: 'pre-wrap',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+            textAlign: 'left',
           }}
         >
           {text}

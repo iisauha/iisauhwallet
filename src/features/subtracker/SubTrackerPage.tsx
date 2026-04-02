@@ -1290,11 +1290,12 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                 background: 'var(--ui-modal-bg, var(--surface))'
               }}
             >
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <div className="field" style={{ flex: 1, minWidth: 140 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="field" style={{ width: '100%' }}>
                   <label>Milestone {idx + 1} spend target ($)</label>
                   <input
                     className="ll-control"
+                    style={{ width: '100%' }}
                     value={draft.spendTarget}
                     onChange={(e) =>
                       setTierDrafts((prev) => prev.map((x) => (x.id === draft.id ? { ...x, spendTarget: e.target.value } : x)))
@@ -1303,11 +1304,12 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                     placeholder="e.g. 3000"
                   />
                 </div>
-                <div className="field" style={{ flex: 1, minWidth: 180 }}>
+                <div className="field" style={{ width: '100%' }}>
                   <label>Milestone {idx + 1} reward</label>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                     <input
                       className="ll-control"
+                      style={{ flex: 1, minWidth: 0 }}
                       type="number"
                       min={0}
                       step={draft.rewardUnit === 'cash' ? '0.01' : '1'}

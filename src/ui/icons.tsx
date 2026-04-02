@@ -422,3 +422,24 @@ export function IconQuestionMark() {
     </svg>
   );
 }
+
+export function IconBox() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M21 8V21H3V8" />
+      <path d="M23 3H1v5h22V3Z" />
+      <path d="M10 12h4" />
+    </svg>
+  );
+}
+
+export function IconArchive() {
+  return (
+    <svg {...SVG_PROPS}>
+      <path d="M21 8v13H3V8" />
+      <path d="M1 3h22v5H1V3Z" />
+      <path d="M10 12h4" />
+      <path d="M12 12v4" />
+    </svg>
+  );
+}
