@@ -686,7 +686,7 @@ input[type="date"].ll-control:focus {
   padding-right: 14px;
 }
 /* Settings app guide modal — reduce container padding so Next stays visible */
-.modal.guide-modal { padding: 10px 14px 10px; }
+.modal.guide-modal { padding: 10px 14px 10px; overflow: hidden; display: flex; flex-direction: column; }
 .guide-modal .modal-header--sticky { margin-bottom: 8px; }
 /* Compact guide (Settings app guide) — readable text, card scrolls */
 .guide-compact p { margin-top: 0; margin-bottom: 6px; font-size: 0.82rem; line-height: 1.45; }
