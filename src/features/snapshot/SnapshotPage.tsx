@@ -722,7 +722,7 @@ export function SnapshotPage({
                           )
                         }
                       >
-                        Clear
+                        Set to $0
                       </button>
                       {b.type !== 'physical_cash' ? (
                         <button
@@ -892,7 +892,7 @@ export function SnapshotPage({
                           )
                         }
                       >
-                        Clear
+                        Set to $0
                       </button>
                       <button
                         type="button"
@@ -1085,7 +1085,7 @@ export function SnapshotPage({
             </>
           ) : null}
           <div className={finalNetCashDisplayClass} >
-            <span className="k">Final Net Cash</span>
+            <span className="k">Final Net Cash<span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 400, color: 'var(--muted)', marginTop: 1 }}>Banks minus cards, adjusted for pending</span></span>
             <span className="v" style={{ color: displayedFinalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
               {formatCents(displayedFinalNetCashCents)}
             </span>

@@ -923,7 +923,7 @@ export function AddPurchaseModal(props: {
 
         <div className="toggle-row">
           <input type="checkbox" checked={applyToSnapshot} onChange={(e) => setApplyToSnapshot(e.target.checked)} id="apply" />
-          <label htmlFor="apply">Apply to Snapshot</label>
+          <label htmlFor="apply">Update account balance</label>
         </div>
 
         {applyToSnapshot ? (

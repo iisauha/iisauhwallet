@@ -135,13 +135,13 @@ function renderInboundCard(
           ) : null}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start', marginTop: 10 }}>
-          <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Posted</button>
+          <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Mark Received</button>
           <button type="button" className="btn-delete" style={btnStyle} onClick={() => onDelete?.(p.id)}>Delete</button>
           {onEdit ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onEdit(p)}>Edit</button>
           ) : null}
           {!inJoinMode && onStartJoin ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Join</button>
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Combine</button>
           ) : inJoinMode && isEligible && !isSelected && onToggleJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Join with this</button>
           ) : inJoinMode && isSelected && selectedIds!.size > 1 && onToggleJoin ? (
@@ -354,13 +354,13 @@ function renderOutboundCard(
           ) : null}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start', marginTop: 10 }}>
-          <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Posted</button>
+          <button type="button" className="btn btn-posted" style={btnStyle} onClick={() => onPosted?.(p.id)}>Mark Cleared</button>
           <button type="button" className="btn-delete" style={btnStyle} onClick={() => onDelete?.(p.id)}>Delete</button>
           {onEdit ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onEdit(p)}>Edit</button>
           ) : null}
           {!inJoinMode && onStartJoin ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Join</button>
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Combine</button>
           ) : inJoinMode && isEligible && !isSelected && onToggleJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Join with this</button>
           ) : inJoinMode && isSelected && selectedIds!.size > 1 && onToggleJoin ? (
