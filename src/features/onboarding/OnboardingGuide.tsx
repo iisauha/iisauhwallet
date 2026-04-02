@@ -124,9 +124,9 @@ const SECTIONS: Section[] = [
     tagline: 'Federal and private, all in one place.',
     hint: 'Tap the bank tab in the navigation bar.',
     items: [
-      { label: 'Federal loans', detail: 'There\'s a link that takes you to the Student Aid website where you can get your exact loan details. Or if you already know your balances, just type them in directly.' },
+      { label: 'Federal loans', detail: 'There\'s a button that opens the Student Aid website in Safari so you can grab your exact loan details. Or if you already know your balances, just type them in directly.' },
       { label: 'Private loans', detail: 'Car loan, personal loan, private student loan. Set the rate and payment mode. Switch between deferred and active as your situation changes.' },
-      { label: 'Loan tools', detail: 'Run "what if" scenarios. Change your payment amount, see how it affects your payoff timeline and total interest. Nothing you do here changes your actual loan data.' },
+      { label: 'Posting payments', detail: 'When you link a recurring expense to a loan and mark it complete through Upcoming, a popup shows how much is being subtracted from each loan balance. Confirm or adjust, then the app subtracts it and recomputes your monthly payments based on the new balances.' },
     ],
   },
   {
@@ -135,7 +135,7 @@ const SECTIONS: Section[] = [
     tagline: 'Watch your money grow.',
     hint: 'Tap the chart tab in the navigation bar.',
     items: [
-      { label: 'Balances', detail: 'Tap an account card and enter your current balance from your brokerage app. No connections to any brokerage. You manually update whenever you want.' },
+      { label: 'Balances', detail: 'Tap an account card, then tap Add/Set. "Add" adds to your current balance, "Set" replaces it with a new amount. Check your brokerage app for the latest number.' },
       { label: 'HYSA buckets', detail: 'Split your high-yield savings into Reserved (savings you won\'t touch) and Bills (money set aside for upcoming expenses like rent or insurance).' },
       { label: 'Interest accrual', detail: 'Estimates this month\'s HYSA interest by taking your current balance times your APY divided by 12. It\'s a simple estimate and doesn\'t account for daily deposits or withdrawals.' },
       { label: 'Coast FIRE', detail: '"Can I stop saving aggressively and still retire on time?" Enter your age, retirement age, and expected spending to find out.' },
