@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 
 const STEPS = [
-  'Hey there :)',
-  'Welcome to your personal finance app. All your data stays right here on your device, nothing leaves.',
-  "First things first, you'll pick a 6-digit passcode. This keeps everything on your device encrypted and secure.",
-  "You'll also have the option to add a hint and a couple security questions. Handy if you ever forget your code.",
-  "Then you'll get a recovery key. Think of it as a backup way in. Just save it somewhere you'll remember.",
-  "After that, a quick guide will show you around so you know where everything lives.",
-  "Alright, that's the plan. Let's get started.",
+  'Hey there! :)',
+  'Welcome to your personal finance app! All your data stays right here on your device. Nothing leaves, ever.',
+  "First things first! You'll pick a 6-digit passcode. This keeps everything on your device encrypted and secure.",
+  "You'll also have the option to add a hint and a couple security questions! Super handy if you ever forget your code.",
+  "Then you'll get a recovery key! Think of it as a backup way in. Just save it somewhere you'll remember.",
+  "After that, a quick guide will show you around! You'll know where everything lives in no time.",
+  "Alright, that's the plan! Let's get started!",
 ];
 
-const MS_PER_WORD = 200;
+const MS_PER_WORD = 250;
 const MIN_HOLD = 1400;
 const FADE_DURATION = 350;
 const PAUSE_BETWEEN = 250;
