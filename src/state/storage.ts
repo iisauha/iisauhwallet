@@ -1286,9 +1286,9 @@ export function savePublicLoanShowPaymentActions(value: boolean) {
 }
 
 /** Default base for surface/border/muted when only app background is customized. Exported for theme init. */
-export const DEFAULT_THEME_COLOR = '#040812';
+export const DEFAULT_THEME_COLOR = '#252526';
 // System default accent used for navigation buttons and primary actions.
-export const DEFAULT_ACCENT_COLOR = '#d97706';
+export const DEFAULT_ACCENT_COLOR = '#FE841B';
 
 function isValidHex(hex: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(hex);

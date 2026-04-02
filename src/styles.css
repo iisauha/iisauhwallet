@@ -4,16 +4,16 @@
 /* Prevent pinch-to-zoom on all touch devices */
 html { touch-action: manipulation; }
 :root {
-  --bg: #1a1a1a;
-  --bg-secondary: #202020;
-  --surface: #252525;
-  --surface-hover: #2e2e2e;
-  --border: #3a3a3a;
-  --border-subtle: #303030;
+  --bg: #252526;
+  --bg-secondary: #2b2b2c;
+  --surface: #303032;
+  --surface-hover: #3a3a3c;
+  --border: #444446;
+  --border-subtle: #3a3a3c;
   --text: #f0f0f0;
   --muted: #a0a0a0;
-  --accent: #E8673A;
-  --accent-hover: #f07848;
+  --accent: #FE841B;
+  --accent-hover: #ff9a40;
   --danger: #dc2626;
   /* Semantic colors: never overridden by theme. Positive = income/gains, negative = expenses/losses. */
   --semantic-positive: #16a34a;
