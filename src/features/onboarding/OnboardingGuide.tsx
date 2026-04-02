@@ -1,12 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../../ui/Modal';
 import {
-  IconHome, IconShield, IconPalette, IconSnapshot, IconCoin,
+  IconHome, IconShield, IconPalette, IconCoin,
   IconCalendar, IconRefreshCircle, IconBankBuilding, IconBarChartTrend,
   IconStar, IconGear, IconDatabase, IconCreditCard, IconLock,
   IconWallet, IconArrowDownRight, IconArrowUpRight, IconTag,
-  IconMagnify, IconLayout, IconUser, IconExport,
+  IconMagnify, IconUser, IconExport,
 } from '../../ui/icons';
+
+/* ------------------------------------------------------------------ */
+/*  Inline SVG icons not in the shared library                         */
+/* ------------------------------------------------------------------ */
+
+/** Simple share/upload icon */
+function IconShare() {
+  return (
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" y1="2" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+/** Globe icon for Safari */
+function IconGlobe() {
+  return (
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" />
+    </svg>
+  );
+}
+
+/** Checkmark icon for "uncheck" step */
+function IconCheckSquare() {
+  return (
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+/** Simple eye icon for views */
+function IconEyeSimple() {
+  return (
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+/** Dashboard / grid icon for Snapshot hero */
+function IconDashboard() {
+  return (
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="9" rx="1" />
+      <rect x="14" y="3" width="7" height="5" rx="1" />
+      <rect x="14" y="12" width="7" height="9" rx="1" />
+      <rect x="3" y="16" width="7" height="5" rx="1" />
+    </svg>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Data types                                                         */
@@ -25,10 +87,12 @@ type Section = {
   items: DetailItem[];
   /** Optional callout shown below the items (e.g. warnings, tips). */
   callout?: { text: string; variant: 'accent' | 'red' };
+  /** If true, the callout is only shown in onboarding (not Settings). */
+  calloutOnboardingOnly?: boolean;
 };
 
 /* ------------------------------------------------------------------ */
-/*  Slide data — icon hero + progressive-disclosure pills              */
+/*  Slide data                                                         */
 /* ------------------------------------------------------------------ */
 
 const SECTIONS: Section[] = [
@@ -37,10 +101,10 @@ const SECTIONS: Section[] = [
     title: 'Add to Home Screen',
     tagline: 'Make it feel like a real app.',
     items: [
-      { icon: <IconMagnify />, label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
-      { icon: <IconLayout />, label: 'Share menu', detail: 'Tap the three dots (bottom right) then tap Share at the top.' },
+      { icon: <IconGlobe />, label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
+      { icon: <IconShare />, label: 'Share menu', detail: 'Tap the three dots (bottom right) then tap Share at the top.' },
       { icon: <IconHome />, label: 'Add to Home Screen', detail: 'Tap View More, then Add to Home Screen. Name it whatever you like.' },
-      { icon: <IconLock />, label: 'Uncheck "Open as Web App"', detail: 'This is important. The app is built to run as a regular Safari page. Leaving it checked causes bugs.' },
+      { icon: <IconCheckSquare />, label: 'Uncheck "Open as Web App"', detail: 'This is important. The app is built to run as a regular Safari page. Leaving it checked causes bugs.' },
     ],
   },
   {
@@ -60,13 +124,13 @@ const SECTIONS: Section[] = [
     tagline: 'Themes, fonts, colors, and layout.',
     items: [
       { icon: <IconPalette />, label: 'Themes', detail: 'Royal, Midnight, Aurora, Jade, Plum, Sakura, and more. Each changes background, surfaces, and accent at once.' },
-      { icon: <IconLayout />, label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Choose Small, Medium, or Large sizing.' },
-      { icon: <IconTag />, label: 'Accent color', detail: 'Pick any custom hex color on top of any theme for a truly personal look.' },
+      { icon: <IconTag />, label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Choose Small, Medium, or Large sizing.' },
+      { icon: <IconCoin />, label: 'Accent color', detail: 'Pick any custom hex color on top of any theme for a truly personal look.' },
       { icon: <IconGear />, label: 'Manage tabs', detail: 'Hide tabs you don\'t use or drag them into a different order.' },
     ],
   },
   {
-    icon: <IconSnapshot />,
+    icon: <IconDashboard />,
     title: 'Snapshot',
     tagline: 'Your money, right now.',
     items: [
@@ -83,7 +147,7 @@ const SECTIONS: Section[] = [
     tagline: 'See where your money goes.',
     items: [
       { icon: <IconTag />, label: 'Log purchases', detail: 'Tap "+" to log a purchase. The app suggests which card earns the best rewards for that category.' },
-      { icon: <IconLayout />, label: 'Views', detail: 'Toggle between Categories (donut chart), Sources (by payment method), and Rewards (points/miles/cashback balances).' },
+      { icon: <IconEyeSimple />, label: 'Views', detail: 'Toggle between Categories (donut chart), Sources (by payment method), and Rewards (points/miles/cashback balances).' },
       { icon: <IconMagnify />, label: 'Search', detail: 'Search by name, category, or subcategory. Supports regex patterns like /coffee|tea/.' },
       { icon: <IconCoin />, label: 'Reimbursable', detail: 'Mark work expenses as reimbursable and they\'re excluded from your personal totals.' },
     ],
@@ -151,19 +215,21 @@ const SECTIONS: Section[] = [
       { icon: <IconLock />, label: 'Recovery key', detail: 'Keep the recovery key from setup somewhere safe. It resets your passcode if you ever forget it.' },
     ],
     callout: { text: 'You\'re all set. Tap Enter App below to get started.', variant: 'accent' },
+    calloutOnboardingOnly: true,
   },
 ];
 
 /* ------------------------------------------------------------------ */
-/*  Expandable pill component                                          */
+/*  Expandable pill with staggered entrance                            */
 /* ------------------------------------------------------------------ */
 
-function DetailPill({ icon, label, detail }: DetailItem) {
+function DetailPill({ icon, label, detail, delay }: DetailItem & { delay: number }) {
   const [open, setOpen] = useState(false);
   return (
     <button
       type="button"
       onClick={() => setOpen(!open)}
+      className="guide-pill"
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -175,13 +241,16 @@ function DetailPill({ icon, label, detail }: DetailItem) {
           : 'var(--ui-surface-secondary, color-mix(in srgb, var(--surface) 60%, transparent))',
         border: '1px solid var(--ui-border, var(--border))',
         borderRadius: 10,
-        padding: '8px 10px',
+        padding: '9px 11px',
         cursor: 'pointer',
         color: 'var(--ui-primary-text, var(--text))',
         fontFamily: 'inherit',
         fontSize: '0.8rem',
         lineHeight: 1.4,
-        transition: 'background 0.15s ease',
+        transition: 'background 0.15s ease, border-color 0.15s ease',
+        opacity: 0,
+        animation: `guidePillIn 0.3s ease-out ${delay}ms forwards`,
+        borderColor: open ? 'color-mix(in srgb, var(--accent) 30%, var(--ui-border, var(--border)))' : undefined,
       }}
     >
       <span style={{
@@ -199,17 +268,24 @@ function DetailPill({ icon, label, detail }: DetailItem) {
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontWeight: 600 }}>{label}</span>
         {open && (
-          <span style={{ display: 'block', marginTop: 3, color: 'var(--muted)', fontSize: '0.78rem', lineHeight: 1.4 }}>
+          <span style={{
+            display: 'block',
+            marginTop: 3,
+            color: 'var(--muted)',
+            fontSize: '0.78rem',
+            lineHeight: 1.4,
+            animation: 'guidePillIn 0.2s ease-out',
+          }}>
             {detail}
           </span>
         )}
       </span>
       <span style={{
         flexShrink: 0,
-        fontSize: '0.7rem',
+        fontSize: '0.65rem',
         color: 'var(--muted)',
-        marginTop: 3,
-        transition: 'transform 0.15s ease',
+        marginTop: 4,
+        transition: 'transform 0.2s ease',
         transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
       }}>
         &#9662;
@@ -238,29 +314,61 @@ export function isOnboardingDone(): boolean {
 
 export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => void; canClose?: boolean; onClose?: () => void }) {
   const [idx, setIdx] = useState(0);
+  // Bump key on slide change so pill entrance animations replay
+  const [slideKey, setSlideKey] = useState(0);
   const section = SECTIONS[idx];
   const isLast = idx === SECTIONS.length - 1;
   const isFirst = idx === 0;
 
   const compact = !!canClose;
 
+  function go(next: number) {
+    setIdx(next);
+    setSlideKey(k => k + 1);
+  }
+
   function handleNext() {
     if (isLast) {
       markOnboardingDone();
       onDone();
     } else {
-      setIdx(idx + 1);
+      go(idx + 1);
     }
   }
 
   function handleBack() {
-    if (!isFirst) setIdx(idx - 1);
+    if (!isFirst) go(idx - 1);
   }
+
+  // Inject keyframes once
+  useEffect(() => {
+    const id = 'guide-keyframes';
+    if (document.getElementById(id)) return;
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = `
+      @keyframes guidePillIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes guideHeroIn {
+        from { opacity: 0; transform: scale(0.8); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+      @keyframes guideTagIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
+  const showCallout = section.callout && !(compact && section.calloutOnboardingOnly);
 
   const inner = (
     <>
       {/* Progress dots */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: compact ? 10 : 16, flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: compact ? 8 : 14, flexShrink: 0 }}>
         {SECTIONS.map((_, i) => (
           <div
             key={i}
@@ -281,6 +389,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
 
       {/* Card */}
       <div
+        key={slideKey}
         className={compact ? 'guide-compact' : undefined}
         style={{
           background: 'var(--ui-card-bg, var(--surface))',
@@ -292,31 +401,34 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
+          justifyContent: 'center',
         }}
       >
         {/* Hero icon + title + tagline */}
-        <div style={{ textAlign: 'center', marginBottom: 12, flexShrink: 0 }}>
+        <div style={{ textAlign: 'center', marginBottom: 14, flexShrink: 0 }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: 56,
+            height: 56,
+            borderRadius: 16,
             background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
             color: 'var(--accent)',
-            marginBottom: 8,
+            marginBottom: 10,
+            animation: 'guideHeroIn 0.35s ease-out',
           }}>
             <span style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {section.icon}
             </span>
           </div>
           <h2 style={{
-            margin: '0 0 2px 0',
-            fontSize: '1rem',
+            margin: '0 0 3px 0',
+            fontSize: '1.05rem',
             fontWeight: 700,
             color: 'var(--ui-title-text, var(--text))',
             lineHeight: 1.3,
+            animation: 'guideTagIn 0.3s ease-out 0.1s both',
           }}>
             {section.title}
           </h2>
@@ -325,34 +437,37 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
             fontSize: '0.82rem',
             color: 'var(--muted)',
             lineHeight: 1.3,
+            animation: 'guideTagIn 0.3s ease-out 0.15s both',
           }}>
             {section.tagline}
           </p>
         </div>
 
-        {/* Expandable pills */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0 }}>
+        {/* Expandable pills — staggered entrance */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flexShrink: 0 }}>
           {section.items.map((item, i) => (
-            <DetailPill key={`${idx}-${i}`} {...item} />
+            <DetailPill key={`${slideKey}-${i}`} {...item} delay={80 + i * 60} />
           ))}
         </div>
 
         {/* Optional callout */}
-        {section.callout && (
+        {showCallout && (
           <div style={{
-            marginTop: 10,
+            marginTop: 12,
             padding: '8px 12px',
             borderRadius: 8,
-            borderLeft: `3px solid var(--${section.callout.variant === 'red' ? 'red' : 'accent'})`,
-            background: section.callout.variant === 'red'
+            borderLeft: `3px solid var(--${section.callout!.variant === 'red' ? 'red' : 'accent'})`,
+            background: section.callout!.variant === 'red'
               ? 'rgba(220,38,38,0.1)'
               : 'color-mix(in srgb, var(--accent) 12%, transparent)',
             fontSize: '0.8rem',
             lineHeight: 1.4,
             color: 'var(--ui-primary-text, var(--text))',
             flexShrink: 0,
+            opacity: 0,
+            animation: `guidePillIn 0.3s ease-out ${80 + section.items.length * 60}ms forwards`,
           }}>
-            {section.callout.text}
+            {section.callout!.text}
           </div>
         )}
       </div>
