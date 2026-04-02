@@ -70,7 +70,7 @@ function HysaMoveRow({
         onClick={() => applyMove('reservedToBills')}
         disabled={reservedCents <= 0 || !moveAmount.trim()}
       >
-        Reserved → Bills
+        Savings reserve → Bills fund
       </button>
       <button
         type="button"
@@ -78,7 +78,7 @@ function HysaMoveRow({
         onClick={() => applyMove('billsToReserved')}
         disabled={billsCents <= 0 || !moveAmount.trim()}
       >
-        Bills → Reserved
+        Bills fund → Savings reserve
       </button>
     </div>
   );
@@ -1579,7 +1579,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                           style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
                           onClick={() => openHysaAllocationModal(a as HysaAccount)}
                         >
-                          Adjust Alloc
+                          Adjust HYSA Split
                         </button>
                         <select
                           className="btn btn-secondary"
@@ -2425,7 +2425,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
 
       <Modal
         open={!!hysaAllocationAccount}
-        title="Adjust HYSA Allocation"
+        title="Adjust HYSA Split"
         onClose={() => setHysaAllocationAccount(null)}
       >
         {hysaAllocationAccount ? (

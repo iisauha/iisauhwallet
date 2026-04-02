@@ -913,7 +913,7 @@ export function AddPurchaseModal(props: {
                 <label>My Portion ($)</label>
                 <input value={myPortion} onChange={(e) => setMyPortion(e.target.value)} inputMode="decimal" placeholder="0.00" />
                 <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: 6 }}>
-                  Reimbursement (Inbound): {inboundCents > 0 ? `$${(inboundCents / 100).toFixed(2)}` : '$0.00'}
+                  Amount others owe you: {inboundCents > 0 ? `$${(inboundCents / 100).toFixed(2)}` : '$0.00'}
                 </div>
                 {splitError ? <div style={{ color: 'var(--danger)', marginTop: 6 }}>{splitError}</div> : null}
               </div>
@@ -973,7 +973,7 @@ export function AddPurchaseModal(props: {
             ) : null}
             {paymentSource === 'cash' ? (
               <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem', marginTop: -6, marginBottom: 10 }}>
-                Will apply against Physical Cash ({PHYSICAL_CASH_ID}).
+                This will be deducted from your Physical Cash balance.
               </div>
             ) : null}
             {paymentSource === 'hysa' ? (

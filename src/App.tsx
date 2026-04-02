@@ -192,16 +192,16 @@ function incrementActionFreq(action: QuickAction): void {
 function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
   const allItems: { icon: React.ReactNode; label: string; action: QuickAction }[] = [
     { icon: <IconArrowExchange />, label: 'Add a purchase', action: 'log-purchase' },
-    { icon: <IconArrowExchange />, label: 'Add a Purchase (Full Reimbursement Expected)', action: 'add-reimbursable' },
+    { icon: <IconArrowExchange />, label: 'Add a Purchase (Full reimbursement expected)', action: 'add-reimbursable' },
     { icon: <IconSnapshot />, label: 'Add expected payment', action: 'add-pending-out' },
     { icon: <IconSnapshot />, label: 'Add expected deposit', action: 'add-pending-in' },
     { icon: <IconRefreshCircle />, label: 'Add recurring expense', action: 'add-recurring-expense' },
     { icon: <IconRefreshCircle />, label: 'Add recurring income', action: 'add-recurring-income' },
-    { icon: <IconSnapshot />, label: 'Update a balance', action: 'update-balance' },
+    { icon: <IconSnapshot />, label: 'Update Balance', action: 'update-balance' },
     { icon: <IconBarChartTrend />, label: 'Transfer to Investing', action: 'transfer-investing' },
     { icon: <IconBarChartTrend />, label: 'Adjust HYSA Split', action: 'adjust-hysa-alloc' },
     { icon: <IconStar />, label: 'Add a bonus card', action: 'add-bonus' },
-    { icon: <IconExport />, label: 'Export backup', action: 'export' },
+    { icon: <IconExport />, label: 'Export Backup', action: 'export' },
   ];
 
   const [showAll, setShowAll] = useState(false);

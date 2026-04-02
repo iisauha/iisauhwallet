@@ -1343,7 +1343,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                       }}
                       style={{ minWidth: 128, marginBottom: 0 }}
                     >
-                      <option value="cash">Cash back ($)</option>
+                      <option value="cash">Cashback ($)</option>
                       <option value="points">Points</option>
                       <option value="miles">Miles</option>
                     </Select>

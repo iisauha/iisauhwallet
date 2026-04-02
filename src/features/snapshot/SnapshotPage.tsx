@@ -627,7 +627,7 @@ export function SnapshotPage({
 
       <div className={`snapshot-section-body${activeSection === 'cash' ? ' open' : ''}`}>
       <div className="snapshot-section-label" id="snapshotCash">
-        <span>Cash</span>
+        <span>Bank Accounts</span>
         <div className="snapshot-section-label-actions">
           <button
             type="button"
@@ -1043,7 +1043,7 @@ export function SnapshotPage({
       <div className="summary net-cash-card" id="snapshotSummary">
         <div className="summary-compact">
           <div className="summary-kv">
-            <span className="k">Current Cash in Checking Accounts</span>
+            <span className="k">Current Bank Balance</span>
             <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.bankTotalCents)}</span>
           </div>
           {totalLinkedHysaCents > 0 ? (
@@ -1451,7 +1451,7 @@ export function SnapshotPage({
                       </div>
                       {(modal.rewardType === 'points' || modal.rewardType === 'miles') ? (
                         <div style={{ flex: '1 1 80px' }}>
-                          <label style={{ fontSize: '0.75rem' }}>Cents per point</label>
+                          <label style={{ fontSize: '0.75rem' }}>Cents per point/mile</label>
                           <input
                             type="text"
                             inputMode="decimal"

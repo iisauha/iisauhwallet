@@ -143,9 +143,9 @@ function renderInboundCard(
           {!inJoinMode && onStartJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Combine</button>
           ) : inJoinMode && isEligible && !isSelected && onToggleJoin ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Join with this</button>
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Combine with this</button>
           ) : inJoinMode && isSelected && selectedIds!.size > 1 && onToggleJoin ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Remove from join</button>
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Remove from combine</button>
           ) : null}
           {inJoinMode && onExitJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={onExitJoin}>Exit</button>
@@ -232,7 +232,7 @@ export function PendingInboundList(props: {
           style={{ padding: '10px 12px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-            Join {selectedItems.length} items into one:{' '}
+            Combine {selectedItems.length} items into one:{' '}
             <strong>{formatCents(totalCents)}</strong>{' '}
             - Transfer to {firstSelected ? getInboundDestinationName(props.data, firstSelected) : ''}
           </div>
@@ -248,7 +248,7 @@ export function PendingInboundList(props: {
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn-posted" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={confirmJoin}>
-                Confirm join
+                Confirm combine
               </button>
               <button type="button" className="btn btn-secondary" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={() => setJoinStep('idle')}>
                 Cancel
@@ -362,9 +362,9 @@ function renderOutboundCard(
           {!inJoinMode && onStartJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onStartJoin(p.id)}>Combine</button>
           ) : inJoinMode && isEligible && !isSelected && onToggleJoin ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Join with this</button>
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Combine with this</button>
           ) : inJoinMode && isSelected && selectedIds!.size > 1 && onToggleJoin ? (
-            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Remove from join</button>
+            <button type="button" className="btn btn-secondary" style={btnStyle} onClick={() => onToggleJoin(p.id)}>Remove from combine</button>
           ) : null}
           {inJoinMode && onExitJoin ? (
             <button type="button" className="btn btn-secondary" style={btnStyle} onClick={onExitJoin}>Exit</button>
@@ -452,7 +452,7 @@ export function PendingOutboundList(props: {
           style={{ padding: '10px 12px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>
-            Join {selectedItems.length} items into one:{' '}
+            Combine {selectedItems.length} items into one:{' '}
             <strong>{formatCents(totalCents)}</strong>{' '}
             - {firstSelected ? getOutboundDestinationLabel(props.data, firstSelected) : ''}
           </div>
@@ -468,7 +468,7 @@ export function PendingOutboundList(props: {
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button type="button" className="btn btn-posted" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={confirmJoinOut}>
-                Confirm join
+                Confirm combine
               </button>
               <button type="button" className="btn btn-secondary" style={{ minHeight: 36, padding: '8px 14px', fontSize: '0.9rem' }} onClick={() => setJoinStep('idle')}>
                 Cancel
