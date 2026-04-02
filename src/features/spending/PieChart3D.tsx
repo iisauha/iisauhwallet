@@ -173,7 +173,7 @@ export function PieChart3D({ slices, size = 260, activeId, onSliceClick }: Props
                 opacity={0.3}
               />
               <text
-                x={sl.labelX}
+                x={sl.labelX + (sl.labelX > cx ? 4 : -4)}
                 y={sl.labelY}
                 textAnchor={sl.labelX > cx ? 'start' : 'end'}
                 dominantBaseline="central"
