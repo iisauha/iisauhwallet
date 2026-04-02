@@ -40,11 +40,13 @@ import {
 } from '../../state/crypto';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
+import { WelcomeIntro } from './WelcomeIntro';
 
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCKOUT_HOURS = 24;
 
 type Step =
+  | 'welcome-intro'
   | 'enter'
   | 'create'
   | 'confirm'
@@ -247,7 +249,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!storedHash) {
-      setStep('create');
+      setStep('welcome-intro');
       setInput('');
       setConfirmInput('');
       setError('');
@@ -598,6 +600,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   if (loadPasscodePaused() || authenticated) {
     return <>{children}</>;
+  }
+
+  if (step === 'welcome-intro') {
+    return <WelcomeIntro onDone={() => setStep('create')} />;
   }
 
   const lockoutEnd = getLockoutEnd();
