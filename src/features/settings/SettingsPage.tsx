@@ -210,33 +210,22 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [displayName, setDisplayName] = useState<string>(() => loadUserDisplayName() || '');
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
 
-  // Re-read after crypto unlock — aux cache may lag behind on mount.
-  // Retry at increasing intervals until we get a value or give up.
-  // Also listen for profile-updated events (fired when name/pfp is saved).
+  // Keep name/pfp in sync: re-read on mount, on profile-updated, and on
+  // any data change (covers crypto unlock, import, and cache repopulation).
+  const data = useLedgerStore((s) => s.data);
   useEffect(() => {
-    let cancelled = false;
-    const delays = [50, 150, 400, 1000];
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    for (const ms of delays) {
-      timers.push(setTimeout(() => {
-        if (cancelled) return;
-        setDisplayName((prev) => {
-          if (prev) return prev; // already have a value
-          return loadUserDisplayName() || '';
-        });
-        setProfileImage((prev) => {
-          if (prev) return prev;
-          return loadUserProfileImage();
-        });
-      }, ms));
-    }
-    const handleProfileUpdate = () => {
+    const refresh = () => {
       setDisplayName(loadUserDisplayName() || '');
       setProfileImage(loadUserProfileImage());
     };
-    window.addEventListener('profile-updated', handleProfileUpdate);
-    return () => { cancelled = true; timers.forEach(clearTimeout); window.removeEventListener('profile-updated', handleProfileUpdate); };
-  }, []);
+    // Immediate re-read (catches lazy-load timing gaps)
+    refresh();
+    // Also re-read at short delays for crypto unlock lag
+    const t1 = setTimeout(refresh, 80);
+    const t2 = setTimeout(refresh, 500);
+    window.addEventListener('profile-updated', refresh);
+    return () => { clearTimeout(t1); clearTimeout(t2); window.removeEventListener('profile-updated', refresh); };
+  }, [data]);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>(() => loadHiddenTabs());
   const [visibleTabsModalOpen, setVisibleTabsModalOpen] = useState(false);
   const [tabOrder, setTabOrder] = useState<string[]>(() => loadTabOrderFromStorage());
@@ -721,6 +710,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           iconBg="var(--accent)"
           label="Storage Usage"
           sublabel={(() => {
+            // Re-read on every render (data dep triggers re-render after saves complete)
+            void data;
             const { totalBytes, purchaseCount } = estimateStorageUsage();
             const kb = (totalBytes / 1024).toFixed(0);
             const mb = (totalBytes / (1024 * 1024)).toFixed(2);

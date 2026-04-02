@@ -18,6 +18,7 @@ import { ReminderProvider } from './state/ReminderContext';
 import { DialogProvider, useDialog } from './ui/DialogProvider';
 import { UndoToast } from './ui/UndoToast';
 import { TAB_ORDER_KEY } from './state/keys';
+import { useLedgerStore } from './state/store';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
 import {
   IconSnapshot, IconArrowExchange, IconCalendar, IconRefreshCircle,
@@ -104,25 +105,23 @@ function saveTabOrder(order: TabKey[]): void {
 
 
 function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
+  const data = useLedgerStore((s) => s.data);
   const [displayName, setDisplayName] = useState<string | null>(() => loadUserDisplayName());
   const [profileImage, setProfileImage] = useState<string | null>(() => loadUserProfileImage());
 
   useEffect(() => {
-    // Re-read after crypto may have initialized
-    const timer = setTimeout(() => {
-      setDisplayName(loadUserDisplayName());
-      setProfileImage(loadUserProfileImage());
-    }, 100);
-    const handleProfileUpdate = () => {
+    const refresh = () => {
       setDisplayName(loadUserDisplayName());
       setProfileImage(loadUserProfileImage());
     };
-    window.addEventListener('profile-updated', handleProfileUpdate);
+    refresh();
+    const timer = setTimeout(refresh, 100);
+    window.addEventListener('profile-updated', refresh);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('profile-updated', handleProfileUpdate);
+      window.removeEventListener('profile-updated', refresh);
     };
-  }, []);
+  }, [data]);
 
   return (
     <header className="app-header">
