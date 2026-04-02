@@ -107,11 +107,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       // Clean up orphaned references
       next.pendingIn = next.pendingIn.map((p) => p.targetBankId === id ? { ...p, targetBankId: undefined } : p);
       next.pendingOut = next.pendingOut.map((p) => p.sourceBankId === id ? { ...p, sourceBankId: undefined } : p);
-      if (Array.isArray((next as any).recurring)) {
-        (next as any).recurring = (next as any).recurring.map((r: any) =>
-          r.paymentTargetId === id && (r.paymentSource === 'bank') ? { ...r, paymentTargetId: undefined } : r
-        );
-      }
+      next.recurring = next.recurring.map((r) =>
+        (r as any).paymentTargetId === id && (r as any).paymentSource === 'bank' ? { ...r, paymentTargetId: undefined } as RecurringItem : r
+      );
       saveData(next);
       set({ data: next });
     },
@@ -128,11 +126,10 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       // Clean up orphaned references
       next.pendingIn = next.pendingIn.map((p) => p.targetCardId === id ? { ...p, targetCardId: undefined, depositTo: 'bank' } : p);
       next.pendingOut = next.pendingOut.map((p) => p.targetCardId === id ? { ...p, targetCardId: undefined } : p);
-      if (Array.isArray((next as any).recurring)) {
-        (next as any).recurring = (next as any).recurring.map((r: any) =>
-          r.paymentTargetId === id && (r.paymentSource === 'card' || r.paymentSource === 'credit_card') ? { ...r, paymentTargetId: undefined, paymentSource: undefined } : r
-        );
-      }
+      next.recurring = next.recurring.map((r) => {
+        const ps = (r as any).paymentSource;
+        return (r as any).paymentTargetId === id && (ps === 'card' || ps === 'credit_card') ? { ...r, paymentTargetId: undefined, paymentSource: undefined } as RecurringItem : r;
+      });
       saveData(next);
       set({ data: next });
     },

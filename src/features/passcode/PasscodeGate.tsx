@@ -206,7 +206,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [securityA2, setSecurityA2] = useState('');
   const [generatedRecoveryKey, setGeneratedRecoveryKey] = useState('');
   const [error, setError] = useState('');
-  const [failedAttempts, setFailedAttempts] = useState(loadPasscodeFailedAttempts);
+  const [failedAttempts, setFailedAttempts] = useState(() => loadPasscodeFailedAttempts());
   const [delayUntil, setDelayUntil] = useState(0); // ms timestamp; 0 = no delay
   const [countdown, setCountdown] = useState(0); // seconds remaining
 

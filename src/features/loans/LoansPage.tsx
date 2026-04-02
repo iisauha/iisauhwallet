@@ -1115,15 +1115,15 @@ export function LoansPage() {
   const data = useLedgerStore((s) => s.data);
   const { showConfirm } = useDialog();
   const [state, setState] = useState<LoansState>(() => loadLoans());
-  const [showPublic, setShowPublic] = useState(loadLoansSectionShowPublic);
-  const [showPrivate, setShowPrivate] = useState(loadLoansSectionShowPrivate);
+  const [showPublic, setShowPublic] = useState(() => loadLoansSectionShowPublic());
+  const [showPrivate, setShowPrivate] = useState(() => loadLoansSectionShowPrivate());
   useEffect(() => {
     // Ensure mutual exclusivity if persisted settings are inconsistent.
     if (showPublic && showPrivate) {
       setShowPrivate(false);
       saveLoansSectionShowPrivate(false);
     }
-  }, []);
+  }, [showPublic, showPrivate]);
   const [showConsolidationModal, setShowConsolidationModal] = useState(false);
   const [showLoanToolsModal, setShowLoanToolsModal] = useState(false);
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);

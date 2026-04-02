@@ -236,7 +236,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [undoDuration, setUndoDuration] = useState<number>(() => parseInt(localStorage.getItem(UNDO_DURATION_KEY) || '5', 10) || 5);
 
   const hasPasscode = loadPasscodeHash() !== null;
-  const [passcodePaused, setPasscodePaused] = useState(loadPasscodePaused());
+  const [passcodePaused, setPasscodePaused] = useState(() => loadPasscodePaused());
   const [autoLockMinutes, setAutoLockMinutes] = useState(() => loadAutoLockMinutes());
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(() => loadShowWelcomeScreen());
 
