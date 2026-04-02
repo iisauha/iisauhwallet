@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../../ui/Modal';
 import {
   IconHome, IconShield, IconPalette, IconCoin,
   IconCalendar, IconRefreshCircle, IconBankBuilding, IconBarChartTrend,
-  IconStar, IconGear, IconDatabase, IconCreditCard, IconLock,
-  IconWallet, IconArrowDownRight, IconArrowUpRight, IconTag,
-  IconMagnify, IconUser, IconExport, IconEye, IconCheckCircle,
-  IconChevronRight, IconArrowExchange,
+  IconStar, IconDatabase, IconWallet,
 } from '../../ui/icons';
 
 /* ------------------------------------------------------------------ */
@@ -14,7 +11,6 @@ import {
 /* ------------------------------------------------------------------ */
 
 type DetailItem = {
-  icon: React.ReactNode;
   label: string;
   detail: string;
 };
@@ -23,10 +19,12 @@ type Section = {
   icon: React.ReactNode;
   title: string;
   tagline: string;
+  /** Helper text telling users where to find this feature. */
+  hint?: string;
   items: DetailItem[];
-  /** Show numbered steps instead of icons on pills. */
+  /** Show numbered steps instead of bullet labels. */
   numbered?: boolean;
-  /** Optional callout shown below the items (e.g. warnings, tips). */
+  /** Optional callout shown below the items. */
   callout?: { text: string; variant: 'accent' | 'red' };
   /** If true, the callout is only shown in onboarding (not Settings). */
   calloutOnboardingOnly?: boolean;
@@ -43,10 +41,10 @@ const SECTIONS: Section[] = [
     tagline: 'Make it feel like a real app.',
     numbered: true,
     items: [
-      { icon: <IconChevronRight />, label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
-      { icon: <IconExport />, label: 'Share menu', detail: 'Tap the three dots (bottom right) then tap Share at the top.' },
-      { icon: <IconHome />, label: 'Add to Home Screen', detail: 'Tap View More, then Add to Home Screen. Name it whatever you like.' },
-      { icon: <IconCheckCircle />, label: 'Uncheck "Open as Web App"', detail: 'This is important. The app is built to run as a regular Safari page. Leaving it checked causes bugs.' },
+      { label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
+      { label: 'Share menu', detail: 'Tap the three dots (bottom right) then tap Share at the top.' },
+      { label: 'Add to Home Screen', detail: 'Tap View More, then Add to Home Screen. Name it whatever you like.' },
+      { label: 'Uncheck "Open as Web App"', detail: 'This is important. The app is built to run as a regular Safari page. Leaving it checked causes bugs.' },
     ],
   },
   {
@@ -54,9 +52,9 @@ const SECTIONS: Section[] = [
     title: 'Security',
     tagline: 'Your data never leaves your device.',
     items: [
-      { icon: <IconLock />, label: '100% local', detail: 'Everything is stored in Safari\'s local storage. No servers, no cloud. The app creator can never see your data.' },
-      { icon: <IconShield />, label: 'Passcode protected', detail: 'A 6-digit passcode is the gate. Lockout protection kicks in after failed attempts.' },
-      { icon: <IconExport />, label: 'Encrypted backups', detail: 'When you export a backup you can encrypt it with your passcode. Without it, the file is unreadable gibberish.' },
+      { label: '100% local', detail: 'Everything is stored in Safari\'s local storage. No servers, no cloud. The app creator can never see your data.' },
+      { label: 'Passcode protected', detail: 'A 6-digit passcode is the gate. Lockout protection kicks in after failed attempts.' },
+      { label: 'Encrypted backups', detail: 'When you export a backup you can encrypt it with your passcode. Without it, the file is unreadable gibberish.' },
     ],
     callout: { text: 'Never type actual card numbers, account numbers, passwords, or SSNs. Track balances and names only.', variant: 'red' },
   },
@@ -64,97 +62,106 @@ const SECTIONS: Section[] = [
     icon: <IconPalette />,
     title: 'Make It Yours',
     tagline: 'Themes, fonts, colors, and layout.',
+    hint: 'Tap your name at the top, then App Customization.',
     items: [
-      { icon: <IconPalette />, label: 'Themes', detail: 'Royal, Midnight, Aurora, Jade, Plum, Sakura, and more. Each changes background, surfaces, and accent at once.' },
-      { icon: <IconGear />, label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Choose Small, Medium, or Large sizing.' },
-      { icon: <IconTag />, label: 'Accent color', detail: 'Pick any custom hex color on top of any theme for a truly personal look.' },
-      { icon: <IconArrowExchange />, label: 'Manage tabs', detail: 'Hide tabs you don\'t use or drag them into a different order.' },
+      { label: 'Themes', detail: 'Royal, Midnight, Aurora, Jade, Plum, Sakura, and more. Each changes background, surfaces, and accent at once.' },
+      { label: 'Fonts & size', detail: 'Dozens of font families. Tap any to preview instantly. Choose Small, Medium, or Large sizing.' },
+      { label: 'Accent color', detail: 'Pick any custom hex color on top of any theme for a truly personal look.' },
+      { label: 'Manage tabs', detail: 'Hide tabs you don\'t use or drag them into a different order.' },
     ],
   },
   {
     icon: <IconWallet />,
     title: 'Snapshot',
     tagline: 'Your money, right now.',
+    hint: 'This is the first tab in the navigation bar.',
     items: [
-      { icon: <IconWallet />, label: 'Cash', detail: 'All your bank accounts in one place. Swipe through them, tap any card to edit its balance.' },
-      { icon: <IconCreditCard />, label: 'Credit cards', detail: 'What you owe on each card. Set up reward rules so the app suggests which card to use when you shop.' },
-      { icon: <IconArrowDownRight />, label: 'Pending inbound', detail: 'Money on the way to you. Tap Post when it arrives and the balance updates.' },
-      { icon: <IconArrowUpRight />, label: 'Pending outbound', detail: 'Payments you\'ve sent that haven\'t cleared. Tap Post when they do.' },
-      { icon: <IconCoin />, label: 'Net cash', detail: 'Total bank balance minus credit card debt, adjusted for pending items. Your true position right now.' },
+      { label: 'Cash', detail: 'All your bank accounts in one place. Swipe through them, tap any card to edit its balance.' },
+      { label: 'Credit cards', detail: 'What you owe on each card. Set up reward rules so the app suggests which card to use when you shop.' },
+      { label: 'Pending inbound', detail: 'Money on the way to you. Tap Post when it arrives and the balance updates.' },
+      { label: 'Pending outbound', detail: 'Payments you\'ve sent that haven\'t cleared. Tap Post when they do.' },
+      { label: 'Net cash', detail: 'Total bank balance minus credit card debt, adjusted for pending items. Your true position right now.' },
     ],
   },
   {
     icon: <IconCoin />,
     title: 'Spending',
     tagline: 'See where your money goes.',
+    hint: 'Tap the $ tab in the navigation bar.',
     items: [
-      { icon: <IconTag />, label: 'Log purchases', detail: 'Tap "+" to log a purchase. The app suggests which card earns the best rewards for that category.' },
-      { icon: <IconEye />, label: 'Views', detail: 'Toggle between Categories (donut chart), Sources (by payment method), and Rewards (points/miles/cashback balances).' },
-      { icon: <IconMagnify />, label: 'Search', detail: 'Search by name, category, or subcategory. Supports regex patterns like /coffee|tea/.' },
-      { icon: <IconCoin />, label: 'Reimbursable', detail: 'Mark work expenses as reimbursable and they\'re excluded from your personal totals.' },
+      { label: 'Log purchases', detail: 'Tap "+" to log a purchase. The app suggests which card earns the best rewards for that category.' },
+      { label: 'Views', detail: 'Toggle between Categories (donut chart), Sources (by payment method), and Rewards (points/miles/cashback balances).' },
+      { label: 'Search', detail: 'Search by name, category, or subcategory. Supports regex patterns like /coffee|tea/.' },
+      { label: 'Reimbursable', detail: 'Mark work expenses as reimbursable and they\'re excluded from your personal totals.' },
     ],
   },
   {
     icon: <IconCalendar />,
     title: 'Upcoming',
     tagline: 'A calendar for your money.',
+    hint: 'Tap the calendar tab in the navigation bar.',
     items: [
-      { icon: <IconArrowDownRight />, label: 'Expected income', detail: 'Upcoming paychecks and deposits pulled from your recurring items. Highlighted in green.' },
-      { icon: <IconArrowUpRight />, label: 'Expected costs', detail: 'Bills and expenses on their expected dates, shown in red. Adjust any single occurrence without changing the recurring item.' },
-      { icon: <IconWallet />, label: 'Summary', detail: 'Current cash + expected income \u2212 expected costs = what you\'ll have left. Shows min/max range if applicable.' },
+      { label: 'Expected income', detail: 'Upcoming paychecks and deposits pulled from your recurring items. Highlighted in green.' },
+      { label: 'Expected costs', detail: 'Bills and expenses on their expected dates, shown in red. Adjust any single occurrence without changing the recurring item.' },
+      { label: 'Summary', detail: 'Current cash + expected income \u2212 expected costs = what you\'ll have left. Shows min/max range if applicable.' },
     ],
   },
   {
     icon: <IconRefreshCircle />,
     title: 'Recurring',
     tagline: 'Set it once. It flows everywhere.',
+    hint: 'Tap the refresh tab in the navigation bar.',
     items: [
-      { icon: <IconArrowDownRight />, label: 'Income', detail: 'Salary, freelance, side income. Set frequency (weekly, biweekly, monthly, yearly) and which account it deposits into.' },
-      { icon: <IconArrowUpRight />, label: 'Expenses', detail: 'Rent, subscriptions, loan payments. Link to a loan to auto-use the current payment amount.' },
-      { icon: <IconCoin />, label: 'Split amounts', detail: 'Share an expense with a roommate? Set your portion so only your share counts.' },
+      { label: 'Income', detail: 'Salary, freelance, side income. Set frequency (weekly, biweekly, monthly, yearly) and which account it deposits into.' },
+      { label: 'Expenses', detail: 'Rent, subscriptions, loan payments. Link to a loan to auto-use the current payment amount.' },
+      { label: 'Split amounts', detail: 'Share an expense with a roommate? Set your portion so only your share counts.' },
     ],
   },
   {
     icon: <IconBankBuilding />,
     title: 'Loans',
     tagline: 'Federal and private, tracked together.',
+    hint: 'Tap the bank tab in the navigation bar.',
     items: [
-      { icon: <IconBankBuilding />, label: 'Federal loans', detail: 'Estimates payments for each repayment plan (Standard, IDR, PAYE, SAVE, etc.) and shows years to forgiveness.' },
-      { icon: <IconCreditCard />, label: 'Private loans', detail: 'Set balance, rate, and payment mode: custom, amortized, interest-only, or deferred. Supports date-range mode changes.' },
-      { icon: <IconGear />, label: 'Loan tools', detail: 'Payment scenario calculator. Experiment without changing your actual loan data.' },
+      { label: 'Federal loans', detail: 'Estimates payments for each repayment plan (Standard, IDR, PAYE, SAVE, etc.) and shows years to forgiveness.' },
+      { label: 'Private loans', detail: 'Set balance, rate, and payment mode: custom, amortized, interest-only, or deferred. Supports date-range mode changes.' },
+      { label: 'Loan tools', detail: 'Payment scenario calculator. Experiment without changing your actual loan data.' },
     ],
   },
   {
     icon: <IconBarChartTrend />,
     title: 'Investing',
     tagline: 'HYSA, Roth IRA, 401(k), and more.',
+    hint: 'Tap the chart tab in the navigation bar.',
     items: [
-      { icon: <IconBarChartTrend />, label: 'Balances', detail: 'Tap any account to update. Everything is manual \u2014 no brokerage connections.' },
-      { icon: <IconWallet />, label: 'HYSA buckets', detail: 'Reserved (savings) and Bills (for upcoming expenses). The Bills bucket is what Upcoming counts as liquid cash.' },
-      { icon: <IconCoin />, label: 'Interest accrual', detail: 'For HYSA accounts, tap Accrue Interest and the app calculates monthly interest from the current APY.' },
-      { icon: <IconStar />, label: 'Coast FIRE', detail: 'Enter your age, retirement age, and spending. See your FIRE number, whether you\'ve hit Coast FIRE, and a year-by-year projection.' },
+      { label: 'Balances', detail: 'Tap any account to update. Everything is manual \u2014 no brokerage connections.' },
+      { label: 'HYSA buckets', detail: 'Reserved (savings) and Bills (for upcoming expenses). The Bills bucket is what Upcoming counts as liquid cash.' },
+      { label: 'Interest accrual', detail: 'For HYSA accounts, tap Accrue Interest and the app calculates monthly interest from the current APY.' },
+      { label: 'Coast FIRE', detail: 'Enter your age, retirement age, and spending. See your FIRE number, whether you\'ve hit Coast FIRE, and a year-by-year projection.' },
     ],
   },
   {
     icon: <IconStar />,
     title: 'Bonuses',
     tagline: 'Track credit card sign-up bonuses.',
+    hint: 'Tap the star tab in the navigation bar.',
     items: [
-      { icon: <IconCreditCard />, label: 'Add a tracker', detail: 'Pick the card, set the deadline, and define spending tiers (e.g. spend $500 for 50k points).' },
-      { icon: <IconBarChartTrend />, label: 'Track progress', detail: 'See which tiers you\'ve unlocked, how much more to spend, and days remaining.' },
-      { icon: <IconStar />, label: 'Complete & collect', detail: 'Tap Complete when you hit your target. Choose tiers earned and the reward logs to your balance.' },
+      { label: 'Add a tracker', detail: 'Pick the card, set the deadline, and define spending tiers (e.g. spend $500 for 50k points).' },
+      { label: 'Track progress', detail: 'See which tiers you\'ve unlocked, how much more to spend, and days remaining.' },
+      { label: 'Complete & collect', detail: 'Tap Complete when you hit your target. Choose tiers earned and the reward logs to your balance.' },
     ],
   },
   {
     icon: <IconDatabase />,
     title: 'Settings & Backup',
     tagline: 'Customize, export, restore.',
+    hint: 'Tap your name or avatar at the top of the screen.',
     items: [
-      { icon: <IconUser />, label: 'Profile', detail: 'Set your display name and photo. Stored on-device only.' },
-      { icon: <IconPalette />, label: 'Customization', detail: 'Themes, fonts, accent color, surface style, tab order \u2014 all under App Customization.' },
-      { icon: <IconExport />, label: 'Backup', detail: 'Export JSON to save everything. Encrypt with your passcode. Back up to iCloud Drive weekly.' },
-      { icon: <IconDatabase />, label: 'Restore', detail: 'Import JSON to restore. Works across devices and browsers. Enter the export passcode.' },
-      { icon: <IconLock />, label: 'Recovery key', detail: 'Keep the recovery key from setup somewhere safe. It resets your passcode if you ever forget it.' },
+      { label: 'Profile', detail: 'Set your display name and photo. Stored on-device only.' },
+      { label: 'Customization', detail: 'Themes, fonts, accent color, surface style, tab order \u2014 all under App Customization.' },
+      { label: 'Backup', detail: 'Export JSON to save everything. Encrypt with your passcode. Back up to iCloud Drive weekly.' },
+      { label: 'Restore', detail: 'Import JSON to restore. Works across devices and browsers. Enter the export passcode.' },
+      { label: 'Recovery key', detail: 'Keep the recovery key from setup somewhere safe. It resets your passcode if you ever forget it.' },
     ],
     callout: { text: 'You\'re all set. Tap Enter App below to get started.', variant: 'accent' },
     calloutOnboardingOnly: true,
@@ -165,7 +172,7 @@ const SECTIONS: Section[] = [
 /*  Static pill with staggered entrance                                */
 /* ------------------------------------------------------------------ */
 
-function DetailPill({ icon, label, detail, delay, step }: DetailItem & { delay: number; step?: number }) {
+function DetailPill({ label, detail, delay, step }: { label: string; detail: string; delay: number; step?: number }) {
   return (
     <div
       className="guide-pill"
@@ -187,7 +194,7 @@ function DetailPill({ icon, label, detail, delay, step }: DetailItem & { delay: 
         borderLeft: '3px solid color-mix(in srgb, var(--accent) 40%, transparent)',
       }}
     >
-      {step != null ? (
+      {step != null && (
         <span style={{
           flexShrink: 0,
           width: 24,
@@ -202,19 +209,6 @@ function DetailPill({ icon, label, detail, delay, step }: DetailItem & { delay: 
           fontWeight: 700,
         }}>
           {step}
-        </span>
-      ) : (
-        <span style={{
-          flexShrink: 0,
-          width: 22,
-          height: 22,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--accent)',
-          opacity: 0.85,
-        }}>
-          {icon}
         </span>
       )}
       <span style={{ flex: 1, minWidth: 0 }}>
@@ -253,8 +247,8 @@ export function isOnboardingDone(): boolean {
 
 export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => void; canClose?: boolean; onClose?: () => void }) {
   const [idx, setIdx] = useState(0);
-  // Bump key on slide change so pill entrance animations replay
   const [slideKey, setSlideKey] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
   const section = SECTIONS[idx];
   const isLast = idx === SECTIONS.length - 1;
   const isFirst = idx === 0;
@@ -265,6 +259,11 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
     setIdx(next);
     setSlideKey(k => k + 1);
   }
+
+  // Scroll card to top on slide change
+  useEffect(() => {
+    cardRef.current?.scrollTo(0, 0);
+  }, [idx]);
 
   function handleNext() {
     if (isLast) {
@@ -329,6 +328,7 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
       {/* Card */}
       <div
         key={slideKey}
+        ref={cardRef}
         className={compact ? 'guide-compact' : undefined}
         style={{
           background: 'var(--ui-card-bg, var(--surface))',
@@ -340,10 +340,9 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
         }}
       >
-        {/* Hero icon + title + tagline */}
+        {/* Hero icon + title + tagline + hint */}
         <div style={{ textAlign: 'center', marginBottom: 14, flexShrink: 0 }}>
           <div style={{
             display: 'inline-flex',
@@ -380,14 +379,27 @@ export function OnboardingGuide({ onDone, canClose, onClose }: { onDone: () => v
           }}>
             {section.tagline}
           </p>
+          {section.hint && (
+            <p style={{
+              margin: '6px 0 0 0',
+              fontSize: '0.74rem',
+              color: 'var(--accent)',
+              lineHeight: 1.3,
+              opacity: 0.8,
+              animation: 'guideTagIn 0.3s ease-out 0.2s both',
+            }}>
+              {section.hint}
+            </p>
+          )}
         </div>
 
-        {/* Expandable pills — staggered entrance */}
+        {/* Pills — staggered entrance */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flexShrink: 0 }}>
           {section.items.map((item, i) => (
             <DetailPill
               key={`${slideKey}-${i}`}
-              {...item}
+              label={item.label}
+              detail={item.detail}
               delay={80 + i * 60}
               step={section.numbered ? i + 1 : undefined}
             />
