@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-const DEFAULT_DURATION_MS = 280;
+const DEFAULT_DURATION_MS = 600;
+const MOUNT_DELAY_MS = 350;
 const CACHE_PREFIX = 'animnum_';
 
 type Props = {
@@ -47,45 +48,58 @@ export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS
     return value;
   });
   const rafRef = useRef<number | null>(null);
+  const delayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startValueRef = useRef(displayValue);
   const startTimeRef = useRef(0);
   const spanRef = useRef<HTMLSpanElement>(null);
+  const mountedAt = useRef(performance.now());
 
   useEffect(() => {
     startValueRef.current = displayValue;
     if (displayValue === value) {
-      // Already at target — cache and skip
       if (cacheKey) setCachedValue(cacheKey, value);
       return;
     }
 
     const endVal = value;
-    startTimeRef.current = performance.now();
 
-    // Trigger micro-bounce
-    if (bounce && spanRef.current) {
-      spanRef.current.classList.remove('value-bounce');
-      void spanRef.current.offsetWidth;
-      spanRef.current.classList.add('value-bounce');
-    }
+    const startAnimation = () => {
+      startTimeRef.current = performance.now();
 
-    const tick = (now: number) => {
-      const elapsed = now - startTimeRef.current;
-      const t = Math.min(elapsed / durationMs, 1);
-      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      const current = Math.round(startValueRef.current + (endVal - startValueRef.current) * eased);
-      setDisplayValue(current);
-      if (t < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        setDisplayValue(endVal);
-        if (cacheKey) setCachedValue(cacheKey, endVal);
+      if (bounce && spanRef.current) {
+        spanRef.current.classList.remove('value-bounce');
+        void spanRef.current.offsetWidth;
+        spanRef.current.classList.add('value-bounce');
       }
+
+      const tick = (now: number) => {
+        const elapsed = now - startTimeRef.current;
+        const t = Math.min(elapsed / durationMs, 1);
+        const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const current = Math.round(startValueRef.current + (endVal - startValueRef.current) * eased);
+        setDisplayValue(current);
+        if (t < 1) {
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          setDisplayValue(endVal);
+          if (cacheKey) setCachedValue(cacheKey, endVal);
+        }
+      };
+
+      rafRef.current = requestAnimationFrame(tick);
     };
 
-    rafRef.current = requestAnimationFrame(tick);
+    // If component just mounted, wait a beat so user can register the tab
+    const sinceMount = performance.now() - mountedAt.current;
+    if (sinceMount < MOUNT_DELAY_MS) {
+      delayRef.current = setTimeout(startAnimation, MOUNT_DELAY_MS - sinceMount);
+    } else {
+      startAnimation();
+    }
+
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      if (delayRef.current != null) clearTimeout(delayRef.current);
     };
   }, [value, durationMs]);
 
