@@ -1080,12 +1080,17 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       )}
 
       {aboutCreatorOpen && (
-        <Modal open={true} title="About me" onClose={() => setAboutCreatorOpen(false)}>
-          <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
-            <p style={{ margin: '0 0 12px 0' }}>Hi, my name is Isaiah. I built this app, iisauhwallet, because I am really into credit cards, points, and personal finance tracking.</p>
-            <p style={{ margin: '0 0 12px 0' }}>I was trying to find an app that could do everything in one place. Automatic bank syncing can be frustrating, and most apps push subscriptions when they should help you budget.</p>
-            <p style={{ margin: '0 0 12px 0' }}>Another gap I noticed: most apps don't properly track money in transit, like transfers between banks or Venmo. The goal is simple: always know exactly where your money is.</p>
-            <p style={{ margin: 0 }}>I hope you enjoy it.</p>
+        <Modal open={true} fullscreen title="About me" onClose={() => setAboutCreatorOpen(false)}>
+          <div style={{ fontSize: '0.92rem', lineHeight: 1.7, color: 'var(--ui-primary-text, var(--text))', fontFamily: 'var(--app-font-family)' }}>
+            <p style={{ margin: '0 0 14px 0' }}>Hey there! My name is Isaiah. At the time of writing this I'm a senior at Columbia University. Like most college students I've had to figure out budgeting along the way, but honestly I've always just been into personal finance stuff: credit cards, points, tracking my money, all of that.</p>
+            <p style={{ margin: '0 0 14px 0' }}>I always wanted one app that could handle everything. Tracking every dollar whether it's in your bank, sitting in Venmo, or somewhere in between. Something that covers sign-up bonuses, loans, spending, all of it in one place. I just could never find something that actually did that well.</p>
+            <p style={{ margin: '0 0 14px 0' }}>There are some apps I like that do a lot and sync your bank automatically. But money is personal and complicated, and the way you actually move money around your own system is something these apps don't always get right. Bank sync issues are also just kind of a constant headache. And honestly what really pushed me to build this was seeing apps charge a monthly subscription just to help you budget. I get that it costs money to run an app but it still felt off to me.</p>
+            <p style={{ margin: '0 0 14px 0' }}>That's basically why I built this. It's a pretty detailed manual personal finance tracker that lets you see where every dollar is at any given time. It covers things like bank and credit card balance tracking, pending inbound and outbound transfers, recurring income and expenses, a spending log with categories, credit card sign-up bonus tracking, federal and private loan management, investing and retirement projections (including Coast FIRE), and upcoming cash flow forecasting.</p>
+            <p style={{ margin: '0 0 14px 0' }}>I built it with Claude over about a month, going back and forth on ideas, cleaning up the UI, and making sure everything felt secure and usable. It was honestly pretty cool to see it all come together.</p>
+            <p style={{ margin: '0 0 14px 0' }}>As mentioned in the app guide, please don't enter sensitive info like SSNs or card numbers. I don't have access to your data and there's no financial gain on my end. Hope you find it useful!</p>
+            <p style={{ margin: 0 }}>Questions or concerns? Feel free to email me at{' '}
+              <span style={{ color: 'var(--ui-add-btn, var(--accent))', fontWeight: 600 }}>iaa2137@columbia.edu</span>
+            </p>
           </div>
         </Modal>
       )}
