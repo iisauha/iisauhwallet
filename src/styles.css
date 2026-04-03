@@ -1235,7 +1235,7 @@ input[type="date"].ll-control:focus {
   -webkit-tap-highlight-color: transparent;
   line-height: 1;
 }
-.snapshot-add-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+.snapshot-add-btn svg, .snapshot-add-btn > span[aria-hidden] { width: 12px; height: 12px; flex-shrink: 0; }
 .snapshot-add-btn:active { opacity: 0.75; }
 /* Neutral utility/toggle buttons (Hide $0, filters, nav actions) */
 .snapshot-util-btn {
