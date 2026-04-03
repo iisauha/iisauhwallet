@@ -4,6 +4,13 @@ import { CATEGORY_COLORS, getCategoryName, loadCategoryConfig } from '../../stat
 
 export type SpendingSlice = { categoryId: string; amountCents: number };
 
+// Old palette colors that should be replaced with the new distinct ones
+const OLD_PALETTE_COLORS = new Set([
+  '#FF8C42', '#3B82F6', '#6366F1', '#F59E0B', '#8B5CF6',
+  '#14B8A6', '#0EA5E9', '#EC4899', '#22C55E', '#F97316',
+  '#A855F7', '#EAB308'
+]);
+
 function loadCategoryColorMap() {
   const base = { ...CATEGORY_COLORS };
   let stored: Record<string, string> = {};
@@ -14,7 +21,11 @@ function loadCategoryColorMap() {
       if (parsed && typeof parsed === 'object') stored = parsed;
     }
   } catch (_) {}
-  return { ...base, ...stored };
+  // Strip out old palette colors so they get reassigned from the new palette
+  for (const key of Object.keys(stored)) {
+    if (OLD_PALETTE_COLORS.has(stored[key])) delete stored[key];
+  }
+  return { ...stored, ...base };
 }
 
 function saveCategoryColorMapMerge(newAssignments: Record<string, string>) {
@@ -32,7 +43,11 @@ function saveCategoryColorMapMerge(newAssignments: Record<string, string>) {
 
 export function categoryColorMap(): Record<string, string> {
   const anyFn = categoryColorMap as any;
-  if (!anyFn.cache) anyFn.cache = loadCategoryColorMap();
+  if (!anyFn.cache) {
+    anyFn.cache = loadCategoryColorMap();
+    // Persist cleaned map so old colors don't come back
+    try { localStorage.setItem(CATEGORY_COLOR_MAP_KEY, JSON.stringify(anyFn.cache)); } catch (_) {}
+  }
   return anyFn.cache;
 }
 
