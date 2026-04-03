@@ -240,29 +240,32 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
         )}
 
         {/* Connector lines + percentage labels (>= 3% only, anti-overlap) */}
-        {labels.map((lbl) => (
-          <g key={`label-${lbl.id}`}>
-            <line
-              x1={lbl.edgeX} y1={lbl.edgeY}
-              x2={lbl.x} y2={lbl.y}
-              stroke="var(--ui-primary-text, var(--text))"
-              strokeWidth={1}
-              opacity={0.3}
-            />
-            <text
-              x={lbl.x + (lbl.side === 'right' ? 4 : -4)}
-              y={lbl.y}
-              textAnchor={lbl.side === 'right' ? 'start' : 'end'}
-              dominantBaseline="central"
-              fill="var(--ui-primary-text, var(--text))"
-              fontSize={11}
-              fontWeight={600}
-              fontFamily="var(--app-font-family)"
-            >
-              {formatPct(lbl.value, total)}
-            </text>
-          </g>
-        ))}
+        {labels.map((lbl) => {
+          const dimmed = !!activeId && activeId !== lbl.id;
+          return (
+            <g key={`label-${lbl.id}`} style={{ transition: 'opacity 0.25s ease' }} opacity={dimmed ? 0.2 : 1}>
+              <line
+                x1={lbl.edgeX} y1={lbl.edgeY}
+                x2={lbl.x} y2={lbl.y}
+                stroke="var(--ui-primary-text, var(--text))"
+                strokeWidth={1}
+                opacity={0.3}
+              />
+              <text
+                x={lbl.x + (lbl.side === 'right' ? 4 : -4)}
+                y={lbl.y}
+                textAnchor={lbl.side === 'right' ? 'start' : 'end'}
+                dominantBaseline="central"
+                fill="var(--ui-primary-text, var(--text))"
+                fontSize={11}
+                fontWeight={600}
+                fontFamily="var(--app-font-family)"
+              >
+                {formatPct(lbl.value, total)}
+              </text>
+            </g>
+          );
+        })}
 
         {/* Radial gradient for 3D highlight effect */}
         <defs>
