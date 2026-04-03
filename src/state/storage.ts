@@ -867,6 +867,7 @@ export type SubTrackerEntry = {
   tiers: SubTrackerTier[];
   spendCents: number;
   appliedPurchaseIds?: string[];
+  completedTierIds?: string[]; // tier IDs that have been completed
   createdAt?: string;
   updatedAt?: string;
 };
@@ -888,6 +889,7 @@ export type CompletedBonus = {
   bankAccountRef?: CompletedBonusBankAccountRef;
   completedAt: string;
   notes?: string;
+  sourceEntryId?: string; // links back to the SubTrackerEntry for milestone merging
 };
 
 export type SubTrackerData = {

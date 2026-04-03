@@ -91,47 +91,40 @@ function formatTierRewardHashNumeric(parsed: { quantity: number; unitType: Compl
   return formatTierRewardQtyPlain(qty, parsed.unitType);
 }
 
-function entryToCompletedBonus(
+function formatCompactQty(qty: number, unitType: CompletedBonusUnitType): string {
+  if (!Number.isFinite(qty)) return '0';
+  if (unitType === 'cash') return Number.isInteger(qty) ? qty.toFixed(0) : qty.toFixed(2).replace(/\.00$/, '');
+  if ((unitType === 'points' || unitType === 'miles') && qty >= 1000) {
+    const k = qty / 1000;
+    const decimals = Math.abs(k - Math.round(k)) < 1e-9 ? 0 : 1;
+    const kStr = k.toFixed(decimals).replace(/\.0$/, '');
+    return `${kStr}k`;
+  }
+  return String(Math.round(qty));
+}
+
+function tierToCompletedBonus(
   e: SubTrackerEntry,
   cardName: string,
-  achievedTiers: SubTrackerTier[],
+  tier: SubTrackerTier,
   centsPerUnitOverride?: number
 ): CompletedBonus {
-  const parsedTiers = achievedTiers
-    .filter((t) => t && typeof t.rewardText === 'string')
-    .map((t) => ({ tier: t, parsed: parseRewardText(t.rewardText || '') }));
-
-  const firstUnitType = parsedTiers[0]?.parsed.unitType || 'other';
-  const unitType = parsedTiers.every((x) => x.parsed.unitType === firstUnitType)
-    ? firstUnitType
-    : parsedTiers.find((x) => x.parsed.unitType !== 'other')?.parsed.unitType || firstUnitType;
-
-  const totalQuantity = parsedTiers.reduce((s, x) => s + (Number.isFinite(x.parsed.quantity) ? x.parsed.quantity : 0), 0);
-
-  const formatCompactQty = (qty: number) => {
-    if (!Number.isFinite(qty)) return '0';
-    if (unitType === 'cash') return Number.isInteger(qty) ? qty.toFixed(0) : qty.toFixed(2).replace(/\.00$/, '');
-    if ((unitType === 'points' || unitType === 'miles') && qty >= 1000) {
-      const k = qty / 1000;
-      const decimals = Math.abs(k - Math.round(k)) < 1e-9 ? 0 : 1;
-      const kStr = k.toFixed(decimals).replace(/\.0$/, '');
-      return `${kStr}k`;
-    }
-    return String(Math.round(qty));
-  };
+  const parsed = parseRewardText(tier.rewardText || '');
+  const unitType = parsed.unitType !== 'other' ? parsed.unitType : 'points';
+  const quantity = Number.isFinite(parsed.quantity) ? parsed.quantity : 0;
 
   const rewardLabel =
-    totalQuantity > 0
+    quantity > 0
       ? unitType === 'cash'
-        ? `$${formatCompactQty(totalQuantity)}`
-        : `${formatCompactQty(totalQuantity)} ${unitType}`
+        ? `$${formatCompactQty(quantity, unitType)}`
+        : `${formatCompactQty(quantity, unitType)} ${unitType}`
       : 'Bonus';
   return {
     id: uid(),
     cardId: e.cardRef.type === 'card' ? e.cardRef.cardId : undefined,
     cardName,
     unitType,
-    rewardQuantity: totalQuantity,
+    rewardQuantity: quantity,
     rewardLabel,
     centsPerUnit:
       unitType === 'points' || unitType === 'miles'
@@ -139,6 +132,32 @@ function entryToCompletedBonus(
           ? centsPerUnitOverride
           : 1
         : undefined,
+    completedAt: todayKey(),
+    notes: undefined,
+    sourceEntryId: e.id
+  };
+}
+
+/** Merge multiple completed bonuses from the same entry into one combined bonus. */
+function mergeCompletedBonuses(bonuses: CompletedBonus[]): CompletedBonus {
+  const first = bonuses[0];
+  const totalQuantity = bonuses.reduce((s, b) => s + b.rewardQuantity, 0);
+  const unitType = first.unitType;
+  const rewardLabel =
+    totalQuantity > 0
+      ? unitType === 'cash'
+        ? `$${formatCompactQty(totalQuantity, unitType)}`
+        : `${formatCompactQty(totalQuantity, unitType)} ${unitType}`
+      : 'Bonus';
+  return {
+    id: uid(),
+    cardId: first.cardId,
+    cardName: first.cardName,
+    unitType,
+    rewardQuantity: totalQuantity,
+    rewardLabel,
+    centsPerUnit: first.centsPerUnit,
+    bankAccountRef: first.bankAccountRef,
     completedAt: todayKey(),
     notes: undefined
   };
@@ -703,6 +722,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                     const parsed = parseRewardText(t.rewardText || '');
                     const label = formatTierRewardHashNumeric(parsed);
                     const rewardDisplay = idx === 0 ? label : `+${label}`;
+                    const isTierCompleted = (e.completedTierIds || []).includes(t.id);
                     return (
                       <div
                         key={t.id + ':label'}
@@ -713,7 +733,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                           transform: 'translateX(-50%)',
                           fontSize: '0.68rem',
                           fontWeight: 600,
-                          color: 'var(--ui-primary-text, var(--text))',
+                          color: isTierCompleted ? 'var(--green, #16a34a)' : 'var(--ui-primary-text, var(--text))',
                           whiteSpace: 'nowrap',
                           zIndex: 4,
                           maxWidth: 140,
@@ -721,7 +741,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        {rewardDisplay}
+                        {isTierCompleted ? '✓ ' : ''}{rewardDisplay}
                       </div>
                     );
                   })}
@@ -732,6 +752,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                     const parsed = parseRewardText(last.rewardText || '');
                     const label = formatTierRewardHashNumeric(parsed);
                     const rewardDisplay = lastIdx === 0 ? label : `+${label}`;
+                    const isLastTierCompleted = (e.completedTierIds || []).includes(last.id);
                     return (
                       <div
                         style={{
@@ -741,7 +762,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                           transform: 'translateX(-100%)',
                           fontSize: '0.68rem',
                           fontWeight: 600,
-                          color: 'var(--ui-primary-text, var(--text))',
+                          color: isLastTierCompleted ? 'var(--green, #16a34a)' : 'var(--ui-primary-text, var(--text))',
                           whiteSpace: 'nowrap',
                           zIndex: 4,
                           maxWidth: 170,
@@ -749,7 +770,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        {rewardDisplay}
+                        {isLastTierCompleted ? '✓ ' : ''}{rewardDisplay}
                       </div>
                     );
                   })() : null}
@@ -906,21 +927,28 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                 className="btn btn-complete-green"
                 style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset', flexShrink: 0 }}
                 onClick={() => {
-                  const achievedTiers = tiers.filter((t) => (t.spendTargetCents || 0) <= spendCents);
-                  if (!achievedTiers.length) {
-                    const firstTarget = tiers.length ? Math.min(...tiers.map(t => t.spendTargetCents || 0)) : 0;
-                    showAlert(`Your current spend (${formatCents(spendCents)}) hasn't reached the first milestone target (${formatCents(firstTarget)}). Please adjust your spend amount before completing.`);
+                  const alreadyCompleted = new Set(e.completedTierIds || []);
+                  // Find the next uncompleted tier in order
+                  const nextTier = tiers.find((t) => !alreadyCompleted.has(t.id));
+                  if (!nextTier) {
+                    showAlert('All milestones for this card have already been completed.');
                     return;
                   }
-                  const parsed = achievedTiers
-                    .map((t) => parseRewardText(t.rewardText || ''))
-                    .filter((p) => p.unitType !== 'other' && p.quantity > 0);
-                  const unitTypes = Array.from(new Set(parsed.map((p) => p.unitType)));
-                  if (unitTypes.length !== 1) {
-                    showAlert('All milestone rewards must use the same unit type (cash back, points, or miles) to complete.');
+
+                  // Check if spend reaches this tier
+                  if ((nextTier.spendTargetCents || 0) > spendCents) {
+                    const remaining = (nextTier.spendTargetCents || 0) - spendCents;
+                    const milestoneIdx = tiers.indexOf(nextTier) + 1;
+                    showAlert(`Your current spend (${formatCents(spendCents)}) hasn't reached milestone ${milestoneIdx} target (${formatCents(nextTier.spendTargetCents || 0)}). You still need ${formatCents(remaining)} more.`);
                     return;
                   }
-                  const unitType = unitTypes[0] as 'cash' | 'points' | 'miles';
+
+                  const parsed = parseRewardText(nextTier.rewardText || '');
+                  if (parsed.unitType === 'other' || parsed.quantity <= 0) {
+                    showAlert('Could not determine the reward type for this milestone. Please check the reward text.');
+                    return;
+                  }
+                  const unitType = parsed.unitType as 'cash' | 'points' | 'miles';
                   const linkedCardId = e.cardRef.type === 'card' ? e.cardRef.cardId : undefined;
                   const card = linkedCardId ? cards.find((c) => c.id === linkedCardId) : undefined;
                   const centsPerUnitOverride =
@@ -930,11 +958,30 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                         ? card?.avgCentsPerMile
                         : undefined;
 
-                  const bonus = entryToCompletedBonus(e, name, achievedTiers, centsPerUnitOverride);
-                  persist({
-                    entries: entries.filter((x) => x.id !== e.id),
-                    completedBonuses: [...completedBonuses, bonus]
-                  });
+                  const bonus = tierToCompletedBonus(e, name, nextTier, centsPerUnitOverride);
+                  const newCompletedTierIds = [...(e.completedTierIds || []), nextTier.id];
+                  const allTiersCompleted = newCompletedTierIds.length >= tiers.length;
+
+                  if (allTiersCompleted) {
+                    // All milestones done — merge all per-milestone bonuses into one, remove entry
+                    const priorBonuses = completedBonuses.filter((b) => b.sourceEntryId === e.id);
+                    const allBonuses = [...priorBonuses, bonus];
+                    // Remove prior per-milestone bonuses, add the merged one
+                    const withoutPrior = completedBonuses.filter((b) => b.sourceEntryId !== e.id);
+                    const merged = allBonuses.length > 1 ? mergeCompletedBonuses(allBonuses) : { ...bonus, sourceEntryId: undefined };
+                    persist({
+                      entries: entries.filter((x) => x.id !== e.id),
+                      completedBonuses: [...withoutPrior, merged]
+                    });
+                  } else {
+                    // Partial completion — mark tier as completed, keep entry
+                    persist({
+                      entries: entries.map((x) =>
+                        x.id === e.id ? { ...x, completedTierIds: newCompletedTierIds } : x
+                      ),
+                      completedBonuses: [...completedBonuses, bonus]
+                    });
+                  }
 
                   // Optional: offer to add the earned rewards to the card's rewards overview.
                   if (e.cardRef.type === 'card' && card) {
@@ -984,7 +1031,11 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   }
                 }}
               >
-                Complete
+                {(() => {
+                  const done = (e.completedTierIds || []).length;
+                  if (done > 0 && tiers.length > 1) return `Complete (${done}/${tiers.length} done)`;
+                  return 'Complete';
+                })()}
               </button>
             </div>
             {requiredPace != null && currentPace != null ? (
@@ -1073,7 +1124,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-              You completed this sign-up bonus and earned{" "}
+              You completed a milestone and earned{" "}
               <strong>
                 {rewardAddPrompt.unitType === 'cash'
                   ? formatCents(Math.round(rewardAddPrompt.earnedQuantity * 100))
