@@ -394,16 +394,7 @@ function CoastFireResultView({
         <div className="summary-kv" style={{ marginTop: 8 }}>
           <span className="k">
             Projected value at retirement if you continue contributing
-            <HelpTip text={(() => {
-                const yearsToRetirement = a.retirementAge - a.currentAge;
-                const annualContrib = monthlyContrib * 12;
-                const rPct = result.realReturnPercent;
-                const pvStr = fmt(result.pv);
-                const monthlyStr = fmt(monthlyContrib);
-                const annualStr = fmt(annualContrib);
-                const fvStr = result.realReturnWarning ? '-' : fmt(result.fvWithContrib);
-                return `This projection uses your current invested assets, your monthly contribution amount, and your inflation-adjusted return to estimate your portfolio value at retirement if you continue contributing at the same rate.\n\nFormula:\nFV = PV(1+r)^t + C × [((1+r)^t − 1) / r]\n\nWhere:\n• PV = current invested assets\n• r = inflation-adjusted annual return\n• t = years until retirement\n• C = annual contribution amount (monthly × 12)\n\nUsing your values:\n• PV = ${pvStr}\n• Monthly contribution = ${monthlyStr}\n• Annual contribution = ${annualStr}\n• r = ${rPct.toFixed(1)}%\n• t = ${yearsToRetirement} years\n\nProjected value = ${fvStr}`;
-              })()} />
+            <HelpTip text="This is your estimated portfolio value at retirement age if you keep contributing at your current monthly rate. It accounts for your current invested assets, ongoing contributions, and your inflation-adjusted rate of return over the remaining years until retirement." />
           </span>
           <span className="v amount-pos">
             {result.realReturnWarning ? '-' : fmt(result.fvWithContrib)}
