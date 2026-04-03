@@ -116,52 +116,49 @@ function exportPurchasesSpreadsheet(range: CsvExportRange) {
   const byMonth = new Map<string, typeof allPurchases>();
   for (const p of allPurchases) {
     const d = (p as { dateISO?: string }).dateISO || '';
-    const monthKey = d.slice(0, 7); // "YYYY-MM"
-    if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
-    byMonth.get(monthKey)!.push(p);
+    const mk = d.slice(0, 7); // "YYYY-MM"
+    if (!byMonth.has(mk)) byMonth.set(mk, []);
+    byMonth.get(mk)!.push(p);
   }
 
-  // Sort months chronologically
   const sortedMonths = Array.from(byMonth.keys()).sort();
+  const rows: string[][] = [];
 
-  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-  // Build multi-sheet Excel-compatible HTML workbook
-  let sheets = '';
-  for (const monthKey of sortedMonths) {
+  for (let mi = 0; mi < sortedMonths.length; mi++) {
+    const monthKey = sortedMonths[mi];
     const purchases = byMonth.get(monthKey)!;
     const [yr, mo] = monthKey.split('-').map(Number);
-    const sheetName = new Date(yr, mo - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const monthLabel = new Date(yr, mo - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
-    let rows = '';
-    rows += '<tr><th>Title</th><th>Date</th><th>Amount</th><th>Category</th><th>Subcategory</th><th>Notes</th></tr>\n';
+    // Month header
+    if (mi > 0) rows.push([]); // blank separator between months
+    rows.push([`--- ${monthLabel} ---`, '', '', '', '', '']);
+    rows.push(['Title', 'Date', 'Amount', 'Category', 'Subcategory', 'Notes']);
+
     for (const p of purchases) {
       const pp = p as { title?: string; dateISO?: string; amountCents?: number; category?: string; subcategory?: string; notes?: string };
-      rows += `<tr><td>${esc(pp.title ?? '')}</td><td>${esc(pp.dateISO ?? '')}</td><td>${((pp.amountCents ?? 0) / 100).toFixed(2)}</td><td>${esc(getCategoryName(cfg, pp.category ?? 'uncategorized'))}</td><td>${esc(pp.subcategory ?? '')}</td><td>${esc(pp.notes ?? '')}</td></tr>\n`;
+      rows.push([
+        escapeCsvCell(pp.title ?? ''),
+        escapeCsvCell(pp.dateISO ?? ''),
+        ((pp.amountCents ?? 0) / 100).toFixed(2),
+        escapeCsvCell(getCategoryName(cfg, pp.category ?? 'uncategorized')),
+        escapeCsvCell(pp.subcategory ?? ''),
+        escapeCsvCell(pp.notes ?? ''),
+      ]);
     }
-    // Total row
-    const total = purchases.reduce((s: number, p: any) => s + ((p.amountCents ?? 0) / 100), 0);
-    rows += `<tr><td><b>Total</b></td><td></td><td><b>${total.toFixed(2)}</b></td><td></td><td></td><td></td></tr>\n`;
 
-    sheets += `<x:WorksheetOptions><x:Name>${esc(sheetName)}</x:Name></x:WorksheetOptions>\n`;
-    sheets += `<ss:Worksheet ss:Name="${esc(sheetName)}"><ss:Table>\n${rows}</ss:Table></ss:Worksheet>\n`;
+    const total = purchases.reduce((s: number, p: any) => s + ((p.amountCents ?? 0) / 100), 0);
+    rows.push(['Total', '', total.toFixed(2), '', '', '']);
   }
 
   if (!sortedMonths.length) {
-    sheets = '<ss:Worksheet ss:Name="No Data"><ss:Table><tr><td>No purchases found for the selected period.</td></tr></ss:Table></ss:Worksheet>';
+    rows.push(['No purchases found for the selected period.']);
   }
 
-  const workbook = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<ss:Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
-  xmlns:x="urn:schemas-microsoft-com:office:excel"
-  xmlns="urn:schemas-microsoft-com:office:spreadsheet">
-${sheets}
-</ss:Workbook>`;
-
+  const csv = rows.map((r) => r.join(',')).join('\r\n');
   const now = new Date();
-  const filename = `purchases_${label.toLowerCase().replace(/\s+/g, '_')}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.xls`;
-  const blob = new Blob([workbook], { type: 'application/vnd.ms-excel' });
+  const filename = `purchases_${label.toLowerCase().replace(/\s+/g, '_')}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.csv`;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
