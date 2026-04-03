@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
-import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry, loadInvesting } from '../../state/storage';
 import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
@@ -726,9 +725,8 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               if (newIdx !== purchasesIdxRef.current) {
                 purchasesIdxRef.current = newIdx;
                 setPurchasesCarouselIdx(newIdx);
+                purchasesCarousel.syncHeight();
               }
-              purchasesCarousel.handleScroll();
-              scheduleSnapCorrection(el);
             }}
           >
           {visiblePurchases.map((p: any) => {
