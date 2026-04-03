@@ -38,43 +38,17 @@ function describeArc(cx: number, cy: number, outerR: number, startAngle: number,
   ].join(' ');
 }
 
-/** Resolve vertical overlaps while keeping labels close to their ideal radial position.
- *  Uses relaxation: iteratively push apart overlapping labels then pull back toward ideal. */
-function resolveOverlaps(labels: { x: number; y: number; idealY: number; side: 'left' | 'right' }[], minGap: number, _cy: number) {
+/** Push label positions apart so they don't overlap vertically. */
+function resolveOverlaps(labels: { x: number; y: number; side: 'left' | 'right' }[], minGap: number) {
+  // Separate into left and right sides, resolve each independently
   for (const side of ['left', 'right'] as const) {
     const group = labels.filter(l => l.side === side);
-    if (group.length < 2) continue;
-    group.sort((a, b) => a.idealY - b.idealY);
-
-    // Start from ideal positions
-    for (const lbl of group) lbl.y = lbl.idealY;
-
-    // Relaxation: 4 iterations of separate → pull back toward ideal
-    for (let iter = 0; iter < 4; iter++) {
-      // Push apart: enforce minGap downward
-      for (let i = 1; i < group.length; i++) {
-        if (group[i].y - group[i - 1].y < minGap) {
-          group[i].y = group[i - 1].y + minGap;
-        }
-      }
-      // Push apart: enforce minGap upward
-      for (let i = group.length - 2; i >= 0; i--) {
-        if (group[i + 1].y - group[i].y < minGap) {
-          group[i].y = group[i + 1].y - minGap;
-        }
-      }
-      // Pull back toward ideal (weaker each iteration so it converges)
-      const strength = 0.3 / (iter + 1);
-      for (const lbl of group) {
-        lbl.y += (lbl.idealY - lbl.y) * strength;
-      }
-    }
-
-    // Final hard enforce of minGap
     group.sort((a, b) => a.y - b.y);
     for (let i = 1; i < group.length; i++) {
-      if (group[i].y - group[i - 1].y < minGap) {
-        group[i].y = group[i - 1].y + minGap;
+      const prev = group[i - 1];
+      const curr = group[i];
+      if (curr.y - prev.y < minGap) {
+        curr.y = prev.y + minGap;
       }
     }
   }
@@ -146,25 +120,22 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
     return items;
   }, [slices, total, size]);
 
-  // Compute label positions: place each along its radial line, then resolve overlaps
+  // Compute label positions with overlap resolution
   const labels = useMemo(() => {
     if (computed.length === 0) return [];
     const cx = size / 2;
     const cy = size / 2;
     const maxR = size / 2 - 40;
-    const labelGap = 22; // distance from slice outer edge to label
-
+    const labelR = maxR + 22;
     const visible = computed.filter(sl => sl.pct >= 3);
     const positions = visible.map(sl => {
-      const labelR = sl.radius + labelGap;
       const pos = polarToXY(cx, cy, labelR, sl.midAngle);
       const edge = polarToXY(cx, cy, sl.radius, sl.midAngle);
       return {
         id: sl.id,
         pct: sl.pct,
         value: sl.value,
-        midAngle: sl.midAngle,
-        idealY: pos.y,
+        rawX: pos.x,
         x: pos.x,
         y: pos.y,
         edgeX: edge.x,
@@ -173,7 +144,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
       };
     });
 
-    resolveOverlaps(positions, 14, cy);
+    resolveOverlaps(positions, 14);
     return positions;
   }, [computed, size]);
 
