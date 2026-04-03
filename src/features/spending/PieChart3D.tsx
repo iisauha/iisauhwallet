@@ -38,17 +38,43 @@ function describeArc(cx: number, cy: number, outerR: number, startAngle: number,
   ].join(' ');
 }
 
-/** Push label positions apart so they don't overlap vertically. */
-function resolveOverlaps(labels: { x: number; y: number; side: 'left' | 'right' }[], minGap: number) {
-  // Separate into left and right sides, resolve each independently
+/** Push label positions apart so they don't overlap vertically.
+ *  Resolves in both directions from the center, keeping labels
+ *  as close to their natural position as possible. */
+function resolveOverlaps(labels: { x: number; y: number; side: 'left' | 'right' }[], minGap: number, cy: number) {
   for (const side of ['left', 'right'] as const) {
     const group = labels.filter(l => l.side === side);
+    if (group.length < 2) continue;
     group.sort((a, b) => a.y - b.y);
+
+    // Pass 1: push downward — any label too close to the one above gets pushed down
     for (let i = 1; i < group.length; i++) {
-      const prev = group[i - 1];
-      const curr = group[i];
-      if (curr.y - prev.y < minGap) {
-        curr.y = prev.y + minGap;
+      const gap = group[i].y - group[i - 1].y;
+      if (gap < minGap) {
+        group[i].y = group[i - 1].y + minGap;
+      }
+    }
+
+    // Pass 2: push upward — if bottom labels got shoved too far down, pull back up
+    for (let i = group.length - 2; i >= 0; i--) {
+      const gap = group[i + 1].y - group[i].y;
+      if (gap < minGap) {
+        group[i].y = group[i + 1].y - minGap;
+      }
+    }
+
+    // Pass 3: re-center the group around the chart center so labels don't all drift one way
+    const groupCenter = (group[0].y + group[group.length - 1].y) / 2;
+    const drift = groupCenter - cy;
+    if (Math.abs(drift) > minGap / 2) {
+      const correction = drift * 0.4; // partial correction to stay near natural positions
+      for (const lbl of group) lbl.y -= correction;
+    }
+
+    // Pass 4: final separation — ensure minGap after centering adjustment
+    for (let i = 1; i < group.length; i++) {
+      if (group[i].y - group[i - 1].y < minGap) {
+        group[i].y = group[i - 1].y + minGap;
       }
     }
   }
@@ -144,7 +170,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
       };
     });
 
-    resolveOverlaps(positions, 14);
+    resolveOverlaps(positions, 14, cy);
     return positions;
   }, [computed, size]);
 
