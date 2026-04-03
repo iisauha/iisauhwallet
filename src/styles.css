@@ -2228,3 +2228,132 @@ body:has(.quick-sheet) .fab {
   pointer-events: none;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   LUXURY POLISH — Single commit, revert with: git revert <hash>
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── #1 Animated gradient border on expanded/active sections ───── */
+@keyframes borderGlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.section-header[aria-expanded="true"] + * .card,
+.card-carousel-item .card:focus-within {
+  border-image: linear-gradient(
+    135deg,
+    var(--ui-add-btn, var(--accent)),
+    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 50%, var(--green)),
+    var(--ui-add-btn, var(--accent))
+  ) 1;
+  border-width: 1px;
+  border-style: solid;
+  transition: border-image 0.6s ease;
+}
+/* Rounded-corner version using pseudo-element (border-image breaks border-radius) */
+.card.luxury-glow-border {
+  position: relative;
+}
+.card.luxury-glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(var(--radius-card, 16px) + 2px);
+  background: linear-gradient(
+    135deg,
+    var(--ui-add-btn, var(--accent)),
+    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 40%, var(--green)),
+    color-mix(in srgb, var(--accent) 60%, #ff6b35),
+    var(--ui-add-btn, var(--accent))
+  );
+  background-size: 300% 300%;
+  animation: borderGlow 4s ease infinite;
+  z-index: -1;
+  opacity: 0.6;
+}
+
+/* ─── #4 Parallax depth: section headers scroll slightly slower ─── */
+.section-header {
+  transform: translateZ(0);
+  will-change: transform;
+  position: sticky;
+  top: var(--header-h, 60px);
+  z-index: 8;
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+}
+
+/* ─── #5 Staggered card entry animation ─────────────────────────── */
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.card-carousel-item {
+  animation: cardSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.card-carousel-item:nth-child(1) { animation-delay: 0s; }
+.card-carousel-item:nth-child(2) { animation-delay: 0.04s; }
+.card-carousel-item:nth-child(3) { animation-delay: 0.08s; }
+.card-carousel-item:nth-child(4) { animation-delay: 0.12s; }
+.card-carousel-item:nth-child(5) { animation-delay: 0.16s; }
+
+/* Stagger for standalone cards inside dropdowns */
+.tab-panel .card {
+  animation: cardSlideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stat tiles stagger */
+.stat-tile {
+  animation: cardSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stat-tile:nth-child(1) { animation-delay: 0s; }
+.stat-tile:nth-child(2) { animation-delay: 0.05s; }
+.stat-tile:nth-child(3) { animation-delay: 0.10s; }
+
+/* ─── #6 Ambient accent glow on net cash card ───────────────────── */
+@keyframes netCashGlow {
+  0%, 100% {
+    box-shadow:
+      var(--shadow, 0 1px 6px rgba(0,0,0,0.18)),
+      -4px 0 16px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 20%, transparent);
+  }
+  50% {
+    box-shadow:
+      var(--shadow, 0 1px 6px rgba(0,0,0,0.18)),
+      -4px 0 28px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 35%, transparent),
+      0 0 40px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 10%, transparent);
+  }
+}
+.net-cash-card {
+  animation: netCashGlow 4s ease-in-out infinite;
+}
+
+/* ─── #7 Smooth color transitions on all monetary amounts ────────── */
+.amount,
+.amount-pos,
+.amount-neg,
+.amount-credit,
+.summary-kv .v,
+.stat-tile-value,
+.net-cash-row-value,
+.final-net-cash .v,
+.pending-amount {
+  transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+
+/* ─── #3 Micro-bounce keyframe (applied via JS class) ────────────── */
+@keyframes valueBounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.value-bounce {
+  animation: valueBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+

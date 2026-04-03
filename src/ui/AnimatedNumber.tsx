@@ -13,24 +13,37 @@ type Props = {
   className?: string;
   /** Optional style for the wrapper span */
   style?: React.CSSProperties;
+  /** Add a micro-bounce when the value changes (default: false) */
+  bounce?: boolean;
 };
 
 /**
  * Displays a numeric value with a smooth count-up/count-down animation when the value changes.
  * UI-only; does not affect underlying data or calculations.
  */
-export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS, className, style }: Props) {
+export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS, className, style, bounce }: Props) {
   const [displayValue, setDisplayValue] = useState(value);
   const rafRef = useRef<number | null>(null);
   const startValueRef = useRef(value);
   const startTimeRef = useRef(0);
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const firstRender = useRef(true);
 
   useEffect(() => {
+    // Skip bounce on first render (mount)
+    if (firstRender.current) { firstRender.current = false; return; }
     startValueRef.current = displayValue;
     if (displayValue === value) return;
 
     const endVal = value;
     startTimeRef.current = performance.now();
+
+    // Trigger micro-bounce
+    if (bounce && spanRef.current) {
+      spanRef.current.classList.remove('value-bounce');
+      void spanRef.current.offsetWidth; // force reflow to restart animation
+      spanRef.current.classList.add('value-bounce');
+    }
 
     const tick = (now: number) => {
       const elapsed = now - startTimeRef.current;
@@ -56,7 +69,7 @@ export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS
   }, [value, displayValue]);
 
   return (
-    <span className={className} style={style}>
+    <span ref={spanRef} className={className} style={{ display: 'inline-block', ...style }}>
       {format(displayValue)}
     </span>
   );

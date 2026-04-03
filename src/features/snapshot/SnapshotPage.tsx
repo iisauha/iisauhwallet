@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
@@ -585,7 +586,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'cards'}
         >
           <div className="stat-tile-icon"><IconCreditCard /></div>
-          <div className="stat-tile-value" style={{ color: totalCardDebtCents > 0 ? 'var(--red)' : 'var(--green)' }}>{formatCents(totalCardDebtCents)}</div>
+          <div className="stat-tile-value" style={{ color: totalCardDebtCents > 0 ? 'var(--red)' : 'var(--green)' }}><AnimatedNumber value={totalCardDebtCents} format={formatCents} bounce /></div>
           <div className="stat-tile-label">Credit Card Balance</div>
         </button>
         <button
@@ -595,7 +596,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'cash'}
         >
           <div className="stat-tile-icon"><IconArrowExchange /></div>
-          <div className="stat-tile-value" style={{ color: totalCashCents > 0 ? 'var(--green)' : totalCashCents < 0 ? 'var(--red)' : undefined }}>{formatCents(totalCashCents)}</div>
+          <div className="stat-tile-value" style={{ color: totalCashCents > 0 ? 'var(--green)' : totalCashCents < 0 ? 'var(--red)' : undefined }}><AnimatedNumber value={totalCashCents} format={formatCents} bounce /></div>
           <div className="stat-tile-label">Bank Balance</div>
         </button>
         <button
@@ -1008,7 +1009,7 @@ export function SnapshotPage({
         <div className="summary-compact">
           <div className="summary-kv">
             <span className="k">Current Bank Balance</span>
-            <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.bankTotalCents)}</span>
+            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.bankTotalCents} format={formatCents} /></span>
           </div>
           {totalLinkedHysaCents > 0 ? (
             <div className="summary-kv">
@@ -1018,11 +1019,11 @@ export function SnapshotPage({
           ) : null}
           <div className="summary-kv">
             <span className="k">Total Credit Card Balance</span>
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.ccDebtCents)}</span>
+            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.ccDebtCents} format={formatCents} /></span>
           </div>
           <div className="summary-kv">
             <span className="k">Total Pending Inbound</span>
-            <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totals.pendingInCents)}</span>
+            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.pendingInCents} format={formatCents} /></span>
           </div>
           <div
             className="summary-kv"
@@ -1034,7 +1035,7 @@ export function SnapshotPage({
               Total Pending Outbound
               <span style={{ marginLeft: 6, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
             </span>
-            <span className="v" style={{ color: 'var(--red)' }}>{formatCents(totals.pendingOutCents)}</span>
+            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.pendingOutCents} format={formatCents} /></span>
           </div>
           {!summaryPendingOutBreakdownCollapsed ? (
             <>
@@ -1051,7 +1052,7 @@ export function SnapshotPage({
           <div className={finalNetCashDisplayClass} >
             <span className="k">Final Net Cash<HelpTip text="Your total bank balance plus expected inbound deposits, minus credit card debt and expected outbound payments. This is your projected available cash." /></span>
             <span className="v" style={{ color: displayedFinalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {formatCents(displayedFinalNetCashCents)}
+              <AnimatedNumber value={displayedFinalNetCashCents} format={formatCents} bounce />
             </span>
           </div>
         </div>

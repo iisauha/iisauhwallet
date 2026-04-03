@@ -1332,7 +1332,7 @@ export function LoansPage() {
           <div className="summary-kv" style={{ marginTop: 0 }}>
             <span className="k">Total balance</span>
             <span className="v" style={{ color: 'var(--red)' }}>
-              <AnimatedNumber value={summary.totalBalance} format={formatCents} />
+              <AnimatedNumber value={summary.totalBalance} format={formatCents} bounce />
             </span>
           </div>
           <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
