@@ -37,21 +37,26 @@ export function categoryColorMap(): Record<string, string> {
 }
 
 const CATEGORY_COLOR_PALETTE = [
-  '#FF8C42',
-  '#3B82F6',
-  '#10B981',
-  '#6366F1',
-  '#F59E0B',
-  '#EF4444',
-  '#8B5CF6',
-  '#14B8A6',
-  '#0EA5E9',
-  '#EC4899',
-  '#22C55E',
-  '#F97316',
-  '#A855F7',
-  '#06B6D4',
-  '#EAB308'
+  '#FF6B35',  // orange
+  '#2D7DD2',  // blue
+  '#10B981',  // emerald
+  '#8338EC',  // purple
+  '#F7B32B',  // gold
+  '#EF4444',  // red
+  '#E056A0',  // pink
+  '#06B6D4',  // cyan
+  '#97CC04',  // lime
+  '#FF4365',  // coral
+  '#845EC2',  // deep violet
+  '#00C9A7',  // mint
+  '#F77F00',  // tangerine
+  '#4895EF',  // periwinkle
+  '#D62828',  // crimson
+  '#2EC4B6',  // teal
+  '#BC4749',  // brick
+  '#44AF69',  // forest
+  '#9B5DE5',  // lavender
+  '#F15BB5',  // magenta
 ];
 
 function hashStringToInt(str: string) {

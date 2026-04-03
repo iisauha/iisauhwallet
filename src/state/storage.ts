@@ -133,14 +133,14 @@ export const CATEGORIES = [
 ] as const;
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  food: '#FF8C42',
-  travel: '#3B82F6',
+  food: '#FF6B35',
+  travel: '#2D7DD2',
   utilities: '#10B981',
-  rent: '#6366F1',
-  fun_money: '#F59E0B',
+  rent: '#8338EC',
+  fun_money: '#F7B32B',
   loan_payment: '#EF4444',
-  subscriptions: '#8B5CF6',
-  necessities: '#14B8A6'
+  subscriptions: '#E056A0',
+  necessities: '#06B6D4'
 };
 
 export function defaultData(): LedgerData {
