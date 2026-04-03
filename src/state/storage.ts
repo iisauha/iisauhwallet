@@ -755,19 +755,37 @@ export async function importJSONDecrypted(jsonText: string, passcode: string): P
 }
 
 export function loadCategoryConfig(): CategoryConfig {
+  // Build defaults from the hardcoded CATEGORIES list
+  const defaults: CategoryConfig = {};
+  CATEGORIES.forEach((c) => {
+    defaults[c.id] = { name: c.name, sub: Array.isArray(c.sub) ? c.sub.slice() : [] };
+  });
+
   const raw = loadEncryptedKey(CATEGORY_STORAGE_KEY);
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as unknown;
-      if (parsed && typeof parsed === 'object') return parsed as CategoryConfig;
+      if (parsed && typeof parsed === 'object') {
+        // Merge: defaults as base, user config on top (preserves user additions + renames)
+        const merged: CategoryConfig = { ...defaults };
+        for (const [id, entry] of Object.entries(parsed as CategoryConfig)) {
+          if (entry && typeof entry === 'object' && entry.name) {
+            merged[id] = {
+              name: entry.name,
+              sub: Array.isArray(entry.sub)
+                ? Array.from(new Set([...(defaults[id]?.sub || []), ...entry.sub]))
+                : defaults[id]?.sub || []
+            };
+          }
+        }
+        return merged;
+      }
     } catch (_) {}
   }
-  const initial: CategoryConfig = {};
-  CATEGORIES.forEach((c) => {
-    initial[c.id] = { name: c.name, sub: Array.isArray(c.sub) ? c.sub.slice() : [] };
-  });
-  try { saveEncryptedKey(CATEGORY_STORAGE_KEY, JSON.stringify(initial)); } catch (_) {}
-  return initial;
+
+  // Could not read saved config (doesn't exist OR is encrypted and crypto not ready).
+  // Return defaults but do NOT save — avoids overwriting encrypted user data with defaults.
+  return defaults;
 }
 
 export function saveCategoryConfig(cfg: CategoryConfig) {
