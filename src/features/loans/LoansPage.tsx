@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLedgerStore } from '../../state/store';
 import { formatCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
-import { HelpTip } from '../../ui/HelpTip';
 import {
   loadLoans,
   saveLoans,
@@ -1444,7 +1443,7 @@ export function LoansPage() {
             saveLoansSectionShowPrivate(false);
           }}
         >
-          Public<HelpTip text="Federal/public loans use standardized repayment plan estimates (e.g. SAVE, IBR). Balances and payments are entered as a lump sum." />
+          Public
         </button>
         <button
           type="button"
@@ -1472,7 +1471,7 @@ export function LoansPage() {
             saveLoansSectionShowPublic(false);
           }}
         >
-          Private<HelpTip text="Private loans with custom interest rates and payment schedules. Each loan tracks its own balance, accrual, and payment ranges." />
+          Private
         </button>
       </div>
 
