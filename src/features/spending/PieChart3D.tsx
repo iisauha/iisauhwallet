@@ -127,7 +127,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
     const cy = size / 2;
     const maxR = size / 2 - 40;
     const labelR = maxR + 22;
-    const visible = computed.filter(sl => sl.pct >= 3);
+    const visible = computed.filter(sl => (sl.value / total) * 100 > 3);
     const positions = visible.map(sl => {
       const pos = polarToXY(cx, cy, labelR, sl.midAngle);
       const edge = polarToXY(cx, cy, sl.radius, sl.midAngle);
