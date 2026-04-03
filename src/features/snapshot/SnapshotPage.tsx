@@ -586,7 +586,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'cards'}
         >
           <div className="stat-tile-icon"><IconCreditCard /></div>
-          <div className="stat-tile-value" style={{ color: totalCardDebtCents > 0 ? 'var(--red)' : 'var(--green)' }}><AnimatedNumber value={totalCardDebtCents} format={formatCents} bounce /></div>
+          <div className="stat-tile-value" style={{ color: totalCardDebtCents > 0 ? 'var(--red)' : 'var(--green)' }}><AnimatedNumber value={totalCardDebtCents} format={formatCents} bounce cacheKey="snap_cc" /></div>
           <div className="stat-tile-label">Credit Card Balance</div>
         </button>
         <button
@@ -596,7 +596,7 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'cash'}
         >
           <div className="stat-tile-icon"><IconArrowExchange /></div>
-          <div className="stat-tile-value" style={{ color: totalCashCents > 0 ? 'var(--green)' : totalCashCents < 0 ? 'var(--red)' : undefined }}><AnimatedNumber value={totalCashCents} format={formatCents} bounce /></div>
+          <div className="stat-tile-value" style={{ color: totalCashCents > 0 ? 'var(--green)' : totalCashCents < 0 ? 'var(--red)' : undefined }}><AnimatedNumber value={totalCashCents} format={formatCents} bounce cacheKey="snap_bank" /></div>
           <div className="stat-tile-label">Bank Balance</div>
         </button>
         <button
@@ -1009,7 +1009,7 @@ export function SnapshotPage({
         <div className="summary-compact">
           <div className="summary-kv">
             <span className="k">Current Bank Balance</span>
-            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.bankTotalCents} format={formatCents} /></span>
+            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.bankTotalCents} format={formatCents} cacheKey="snap_banksum" /></span>
           </div>
           {totalLinkedHysaCents > 0 ? (
             <div className="summary-kv">
@@ -1019,11 +1019,11 @@ export function SnapshotPage({
           ) : null}
           <div className="summary-kv">
             <span className="k">Total Credit Card Balance</span>
-            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.ccDebtCents} format={formatCents} /></span>
+            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.ccDebtCents} format={formatCents} cacheKey="snap_ccsum" /></span>
           </div>
           <div className="summary-kv">
             <span className="k">Total Pending Inbound</span>
-            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.pendingInCents} format={formatCents} /></span>
+            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.pendingInCents} format={formatCents} cacheKey="snap_pendin" /></span>
           </div>
           <div
             className="summary-kv"
@@ -1035,7 +1035,7 @@ export function SnapshotPage({
               Total Pending Outbound
               <span style={{ marginLeft: 6, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
             </span>
-            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.pendingOutCents} format={formatCents} /></span>
+            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.pendingOutCents} format={formatCents} cacheKey="snap_pendout" /></span>
           </div>
           {!summaryPendingOutBreakdownCollapsed ? (
             <>
@@ -1052,7 +1052,7 @@ export function SnapshotPage({
           <div className={finalNetCashDisplayClass} >
             <span className="k">Final Net Cash<HelpTip text="Your total bank balance plus expected inbound deposits, minus credit card debt and expected outbound payments. This is your projected available cash." /></span>
             <span className="v" style={{ color: displayedFinalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              <AnimatedNumber value={displayedFinalNetCashCents} format={formatCents} bounce />
+              <AnimatedNumber value={displayedFinalNetCashCents} format={formatCents} bounce cacheKey="snap_net" />
             </span>
           </div>
         </div>

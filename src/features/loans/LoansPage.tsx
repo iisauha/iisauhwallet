@@ -1332,19 +1332,19 @@ export function LoansPage() {
           <div className="summary-kv" style={{ marginTop: 0 }}>
             <span className="k">Total balance</span>
             <span className="v" style={{ color: 'var(--red)' }}>
-              <AnimatedNumber value={summary.totalBalance} format={formatCents} bounce />
+              <AnimatedNumber value={summary.totalBalance} format={formatCents} bounce cacheKey="loan_total" />
             </span>
           </div>
           <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
             <span className="k">Public</span>
             <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
-              <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} />
+              <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} cacheKey="loan_pub" />
             </span>
           </div>
           <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
             <span className="k">Private</span>
             <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
-              <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} />
+              <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} cacheKey="loan_priv" />
             </span>
           </div>
 
@@ -1382,7 +1382,7 @@ export function LoansPage() {
               />
             </span>
             <span className="v" style={{ color: paymentNowAmountColor }}>
-              {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} /> : '-'}
+              {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} cacheKey="loan_monthly" /> : '-'}
             </span>
           </div>
         </div>

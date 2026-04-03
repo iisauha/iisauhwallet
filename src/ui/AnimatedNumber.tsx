@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const DEFAULT_DURATION_MS = 280;
+const CACHE_PREFIX = 'animnum_';
 
 type Props = {
   /** Value in cents or raw number to display */
@@ -15,25 +16,48 @@ type Props = {
   style?: React.CSSProperties;
   /** Add a micro-bounce when the value changes (default: false) */
   bounce?: boolean;
+  /** Stable key for remembering the last-seen value across tab switches.
+   *  When provided, the component animates from the previous value on mount. */
+  cacheKey?: string;
 };
+
+function getCachedValue(key: string): number | null {
+  try {
+    const v = sessionStorage.getItem(CACHE_PREFIX + key);
+    return v != null ? Number(v) : null;
+  } catch { return null; }
+}
+
+function setCachedValue(key: string, value: number) {
+  try { sessionStorage.setItem(CACHE_PREFIX + key, String(value)); } catch {}
+}
 
 /**
  * Displays a numeric value with a smooth count-up/count-down animation when the value changes.
+ * When `cacheKey` is provided, remembers the last value in sessionStorage so the ticker
+ * animates from old→new even when the component remounts (e.g. switching tabs).
  * UI-only; does not affect underlying data or calculations.
  */
-export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS, className, style, bounce }: Props) {
-  const [displayValue, setDisplayValue] = useState(value);
+export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS, className, style, bounce, cacheKey }: Props) {
+  const [displayValue, setDisplayValue] = useState(() => {
+    if (cacheKey) {
+      const cached = getCachedValue(cacheKey);
+      if (cached != null && cached !== value) return cached;
+    }
+    return value;
+  });
   const rafRef = useRef<number | null>(null);
-  const startValueRef = useRef(value);
+  const startValueRef = useRef(displayValue);
   const startTimeRef = useRef(0);
   const spanRef = useRef<HTMLSpanElement>(null);
-  const firstRender = useRef(true);
 
   useEffect(() => {
-    // Skip bounce on first render (mount)
-    if (firstRender.current) { firstRender.current = false; return; }
     startValueRef.current = displayValue;
-    if (displayValue === value) return;
+    if (displayValue === value) {
+      // Already at target — cache and skip
+      if (cacheKey) setCachedValue(cacheKey, value);
+      return;
+    }
 
     const endVal = value;
     startTimeRef.current = performance.now();
@@ -41,7 +65,7 @@ export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS
     // Trigger micro-bounce
     if (bounce && spanRef.current) {
       spanRef.current.classList.remove('value-bounce');
-      void spanRef.current.offsetWidth; // force reflow to restart animation
+      void spanRef.current.offsetWidth;
       spanRef.current.classList.add('value-bounce');
     }
 
@@ -55,6 +79,7 @@ export function AnimatedNumber({ value, format, durationMs = DEFAULT_DURATION_MS
         rafRef.current = requestAnimationFrame(tick);
       } else {
         setDisplayValue(endVal);
+        if (cacheKey) setCachedValue(cacheKey, endVal);
       }
     };
 
