@@ -296,7 +296,9 @@ export function IconChevronDown() {
 
 export function IconPlus() {
   return (
-    <span aria-hidden="true" style={{ fontSize: '1.25em', fontWeight: 300, lineHeight: 1 }}>+</span>
+    <svg {...SVG_PROPS}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
   );
 }
 

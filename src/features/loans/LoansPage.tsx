@@ -1391,9 +1391,7 @@ export function LoansPage() {
                   e.stopPropagation();
                   setShowAfterGraceBreakdown(true);
                 }}
-              >
-                +
-              </button>
+              />
             </span>
             <span className="v" style={{ color: paymentNowAmountColor }}>
               {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} /> : '-'}
