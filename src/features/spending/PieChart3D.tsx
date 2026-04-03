@@ -153,55 +153,33 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
         width="100%"
         style={{ maxWidth: size, overflow: 'visible' }}
       >
-        {/* Shadow / depth layer */}
-        {computed.map((sl) => {
-          const dimmed = !!activeId && activeId !== sl.id;
-          return (
-            <path
-              key={`shadow-${sl.id}`}
-              d={sl.path}
-              fill="rgba(0,0,0,0.25)"
-              opacity={dimmed ? 0.45 : 1}
-              transform="translate(0, 4)"
-              style={{ transition: 'opacity 0.25s ease' }}
-            />
-          );
-        })}
-
-        {/* Main slices */}
+        {/* All slice layers grouped per-slice for synchronized transitions */}
         {computed.map((sl) => {
           const isActive = activeId === sl.id;
           const dimmed = !!activeId && !isActive;
           const offset = isActive ? 6 : 0;
           const pushDir = polarToXY(0, 0, offset, sl.midAngle);
           return (
-            <path
-              key={sl.id}
-              d={sl.path}
-              fill={sl.color}
-              opacity={dimmed ? 0.45 : 1}
-              transform={`translate(${pushDir.x}, ${pushDir.y})`}
-              onClick={() => onSliceClick?.(sl.id)}
-              style={{ cursor: 'pointer', transition: 'opacity 0.25s ease, transform 0.25s ease' }}
-            />
-          );
-        })}
-
-        {/* Gradient overlay for depth illusion */}
-        {computed.map((sl) => {
-          const isActive = activeId === sl.id;
-          const dimmed = !!activeId && !isActive;
-          const offset = isActive ? 6 : 0;
-          const pushDir = polarToXY(0, 0, offset, sl.midAngle);
-          return (
-            <path
-              key={`highlight-${sl.id}`}
-              d={sl.path}
-              fill="url(#pieHighlight)"
-              opacity={dimmed ? 0.15 : 0.35}
-              transform={`translate(${pushDir.x}, ${pushDir.y})`}
-              style={{ pointerEvents: 'none', transition: 'opacity 0.25s ease' }}
-            />
+            <g key={sl.id} opacity={dimmed ? 0.45 : 1} style={{ transition: 'opacity 0.25s ease' }}>
+              {/* Shadow */}
+              <path d={sl.path} fill="rgba(0,0,0,0.25)" transform="translate(0, 4)" />
+              {/* Main slice */}
+              <path
+                d={sl.path}
+                fill={sl.color}
+                transform={`translate(${pushDir.x}, ${pushDir.y})`}
+                onClick={() => onSliceClick?.(sl.id)}
+                style={{ cursor: 'pointer', transition: 'transform 0.25s ease' }}
+              />
+              {/* Gradient overlay */}
+              <path
+                d={sl.path}
+                fill="url(#pieHighlight)"
+                opacity={0.35}
+                transform={`translate(${pushDir.x}, ${pushDir.y})`}
+                style={{ pointerEvents: 'none' }}
+              />
+            </g>
           );
         })}
 
