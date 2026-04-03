@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
@@ -86,7 +86,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     cpp: number | undefined;
   } | null>(null);
   const [hideZeroRewards, setHideZeroRewards] = useState(() => loadBoolPref(SHOW_ZERO_REWARDS_KEY, true));
-  const [purchasesCarouselRef, setPurchasesCarouselRef] = useState<HTMLDivElement | null>(null);
+  const purchasesCarouselRef = useRef<HTMLDivElement | null>(null);
   const [purchasesCarouselHeight, setPurchasesCarouselHeight] = useState<number | null>(null);
   const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
 
@@ -310,12 +310,18 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     [visiblePurchases]
   );
 
-  // Reset carousel index only on actual filter/drilldown changes — NOT on "See More" expansion
+  // Reset carousel index on filter/drilldown changes
   const filterKey = `${drilldownCategoryId}|${filter}|${customStart}|${customEnd}|${searchQuery}`;
   useEffect(() => {
     setPurchasesCarouselIdx(0);
-    if (purchasesCarouselRef) purchasesCarouselRef.scrollLeft = 0;
+    if (purchasesCarouselRef.current) purchasesCarouselRef.current.scrollLeft = 0;
   }, [filterKey]);
+
+  // Clamp index when visible list changes (e.g. items deleted, "See more" toggled)
+  useEffect(() => {
+    const maxIdx = Math.max(0, visiblePurchases.length - 1);
+    setPurchasesCarouselIdx((prev) => Math.min(prev, maxIdx));
+  }, [visiblePurchases.length]);
 
   const editingPurchase = useMemo(() => {
     if (!editingPurchaseKey) return null;
@@ -323,11 +329,14 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     return list.find((p) => getPurchaseUiId(p) === editingPurchaseKey) || null;
   }, [editingPurchaseKey, data.purchases]);
 
+  // Update height whenever the visible list changes — read the current card's height
   useEffect(() => {
-    if (!purchasesCarouselRef) return;
-    const firstItem = purchasesCarouselRef.children[0] as HTMLElement | undefined;
-    if (firstItem) setPurchasesCarouselHeight(firstItem.offsetHeight);
-  }, [purchasesCarouselRef, visiblePurchasesKey]);
+    const el = purchasesCarouselRef.current;
+    if (!el) return;
+    const idx = Math.min(purchasesCarouselIdx, el.children.length - 1);
+    const item = el.children[Math.max(0, idx)] as HTMLElement | undefined;
+    if (item) setPurchasesCarouselHeight(item.offsetHeight);
+  }, [visiblePurchasesKey, purchasesCarouselIdx]);
 
 
   // Chart.js canvas removed — using PieChart3D SVG component instead
@@ -714,14 +723,19 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
           <div
             className="card-carousel"
             style={{ marginBottom: 0 }}
-            ref={(el) => setPurchasesCarouselRef(el)}
+            ref={purchasesCarouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
-              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
-              setPurchasesCarouselIdx(Math.round(rawIdx));
-              const leftIdx = Math.floor(rawIdx);
-              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-              const progress = rawIdx - leftIdx;
+              const w = el.clientWidth;
+              if (!w) return;
+              const count = el.children.length;
+              if (!count) return;
+              const rawIdx = el.scrollLeft / w;
+              const clampedIdx = Math.max(0, Math.min(Math.round(rawIdx), count - 1));
+              setPurchasesCarouselIdx(clampedIdx);
+              const leftIdx = Math.max(0, Math.min(Math.floor(rawIdx), count - 1));
+              const rightIdx = Math.min(leftIdx + 1, count - 1);
+              const progress = leftIdx === rightIdx ? 0 : rawIdx - leftIdx;
               const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
               const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
               setPurchasesCarouselHeight(Math.round(lh + (rh - lh) * progress));

@@ -7,9 +7,6 @@ const timers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
  * The browser's native CSS scroll-snap (scroll-snap-type: x mandatory)
  * handles most snapping. This is a safety net for edge cases where the
  * native snap fails (e.g. very short swipes, momentum overshoot on iOS).
- *
- * Important: uses behavior:'instant' to avoid fighting with CSS snap
- * animations, and a generous threshold to only intervene when truly stuck.
  */
 export function scheduleSnapCorrection(el: HTMLElement) {
   const prev = timers.get(el);
@@ -20,13 +17,21 @@ export function scheduleSnapCorrection(el: HTMLElement) {
       timers.delete(el);
       const w = el.clientWidth;
       if (!w) return;
+      const maxScroll = el.scrollWidth - w;
+      // If at the very end, snap to the last card exactly
+      if (maxScroll > 0 && el.scrollLeft >= maxScroll - 1) {
+        const lastSnap = Math.round(maxScroll / w) * w;
+        if (Math.abs(el.scrollLeft - lastSnap) > 2) {
+          el.scrollTo({ left: lastSnap, behavior: 'instant' });
+        }
+        return;
+      }
       const nearest = Math.round(el.scrollLeft / w) * w;
       const drift = Math.abs(el.scrollLeft - nearest);
-      // Only correct if significantly misaligned (>10% of card width).
-      // Small drifts (<10%) are either mid-animation or close enough.
-      if (drift > w * 0.1) {
+      // Correct if misaligned by more than 5% of card width
+      if (drift > w * 0.05) {
         el.scrollTo({ left: nearest, behavior: 'instant' });
       }
-    }, 350)
+    }, 200)
   );
 }
