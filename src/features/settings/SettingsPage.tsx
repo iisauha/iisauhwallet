@@ -72,36 +72,96 @@ function escapeCsvCell(s: string): string {
   return s;
 }
 
-function exportMonthlyPurchasesCsv() {
-  const data = useLedgerStore.getState().data;
-  const purchases = (data.purchases || []).filter((p: { dateISO?: string }) => {
-    const d = p.dateISO || '';
-    if (!d) return false;
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const monthStart = `${y}-${m}-01`;
-    const nextM = now.getMonth() + 2;
-    const nextY = nextM > 12 ? y + 1 : y;
-    const nextMonthStart = `${nextY}-${String(nextM > 12 ? 1 : nextM).padStart(2, '0')}-01`;
-    return d >= monthStart && d < nextMonthStart;
-  });
-  const cfg = loadCategoryConfig();
-  const rows = [
-    ['Title', 'Date', 'Amount', 'Category', 'Subcategory', 'Notes'],
-    ...purchases.map((p: { title?: string; dateISO?: string; amountCents?: number; category?: string; subcategory?: string; notes?: string }) => [
-      escapeCsvCell(String(p.title ?? '')),
-      escapeCsvCell(p.dateISO ?? ''),
-      String((p.amountCents ?? 0) / 100),
-      escapeCsvCell(getCategoryName(cfg, p.category ?? 'uncategorized')),
-      escapeCsvCell(String(p.subcategory ?? '')),
-      escapeCsvCell(String(p.notes ?? '')),
-    ]),
-  ];
-  const csv = rows.map((r) => r.join(',')).join('\r\n');
+type CsvExportRange = 'this_month' | 'last_3' | 'last_6' | 'last_12' | 'all_time' | string; // string = specific "YYYY-MM"
+
+function getMonthRange(range: CsvExportRange): { startKey: string; endKey: string; label: string } {
   const now = new Date();
-  const filename = `purchases_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.csv`;
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-indexed
+  const monthKey = (yr: number, mo: number) => `${yr}-${String(mo + 1).padStart(2, '0')}`;
+  const startOf = (yr: number, mo: number) => `${monthKey(yr, mo)}-01`;
+
+  if (range === 'all_time') return { startKey: '0000-01-01', endKey: '9999-12-31', label: 'All Time' };
+
+  let startMonth: Date;
+  if (range === 'this_month') startMonth = new Date(y, m, 1);
+  else if (range === 'last_3') startMonth = new Date(y, m - 2, 1);
+  else if (range === 'last_6') startMonth = new Date(y, m - 5, 1);
+  else if (range === 'last_12') startMonth = new Date(y, m - 11, 1);
+  else {
+    // specific month "YYYY-MM"
+    const [sy, sm] = range.split('-').map(Number);
+    startMonth = new Date(sy, sm - 1, 1);
+    const endMonth = new Date(sy, sm, 1);
+    return { startKey: startOf(startMonth.getFullYear(), startMonth.getMonth()), endKey: startOf(endMonth.getFullYear(), endMonth.getMonth()), label: startMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+  }
+  const endMonth = new Date(y, m + 1, 1);
+  const labels: Record<string, string> = { this_month: 'This Month', last_3: 'Last 3 Months', last_6: 'Last 6 Months', last_12: 'Last 12 Months' };
+  return { startKey: startOf(startMonth.getFullYear(), startMonth.getMonth()), endKey: startOf(endMonth.getFullYear(), endMonth.getMonth()), label: labels[range] || range };
+}
+
+function exportPurchasesSpreadsheet(range: CsvExportRange) {
+  const data = useLedgerStore.getState().data;
+  const { startKey, endKey, label } = getMonthRange(range);
+  const allPurchases = (data.purchases || [])
+    .filter((p: { dateISO?: string }) => {
+      const d = p.dateISO || '';
+      return d >= startKey && d < endKey;
+    })
+    .sort((a: { dateISO?: string }, b: { dateISO?: string }) => (a.dateISO || '').localeCompare(b.dateISO || ''));
+
+  const cfg = loadCategoryConfig();
+
+  // Group by month
+  const byMonth = new Map<string, typeof allPurchases>();
+  for (const p of allPurchases) {
+    const d = (p as { dateISO?: string }).dateISO || '';
+    const monthKey = d.slice(0, 7); // "YYYY-MM"
+    if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
+    byMonth.get(monthKey)!.push(p);
+  }
+
+  // Sort months chronologically
+  const sortedMonths = Array.from(byMonth.keys()).sort();
+
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Build multi-sheet Excel-compatible HTML workbook
+  let sheets = '';
+  for (const monthKey of sortedMonths) {
+    const purchases = byMonth.get(monthKey)!;
+    const [yr, mo] = monthKey.split('-').map(Number);
+    const sheetName = new Date(yr, mo - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    let rows = '';
+    rows += '<tr><th>Title</th><th>Date</th><th>Amount</th><th>Category</th><th>Subcategory</th><th>Notes</th></tr>\n';
+    for (const p of purchases) {
+      const pp = p as { title?: string; dateISO?: string; amountCents?: number; category?: string; subcategory?: string; notes?: string };
+      rows += `<tr><td>${esc(pp.title ?? '')}</td><td>${esc(pp.dateISO ?? '')}</td><td>${((pp.amountCents ?? 0) / 100).toFixed(2)}</td><td>${esc(getCategoryName(cfg, pp.category ?? 'uncategorized'))}</td><td>${esc(pp.subcategory ?? '')}</td><td>${esc(pp.notes ?? '')}</td></tr>\n`;
+    }
+    // Total row
+    const total = purchases.reduce((s: number, p: any) => s + ((p.amountCents ?? 0) / 100), 0);
+    rows += `<tr><td><b>Total</b></td><td></td><td><b>${total.toFixed(2)}</b></td><td></td><td></td><td></td></tr>\n`;
+
+    sheets += `<x:WorksheetOptions><x:Name>${esc(sheetName)}</x:Name></x:WorksheetOptions>\n`;
+    sheets += `<ss:Worksheet ss:Name="${esc(sheetName)}"><ss:Table>\n${rows}</ss:Table></ss:Worksheet>\n`;
+  }
+
+  if (!sortedMonths.length) {
+    sheets = '<ss:Worksheet ss:Name="No Data"><ss:Table><tr><td>No purchases found for the selected period.</td></tr></ss:Table></ss:Worksheet>';
+  }
+
+  const workbook = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<ss:Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:x="urn:schemas-microsoft-com:office:excel"
+  xmlns="urn:schemas-microsoft-com:office:spreadsheet">
+${sheets}
+</ss:Workbook>`;
+
+  const now = new Date();
+  const filename = `purchases_${label.toLowerCase().replace(/\s+/g, '_')}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.xls`;
+  const blob = new Blob([workbook], { type: 'application/vnd.ms-excel' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -110,6 +170,17 @@ function exportMonthlyPurchasesCsv() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Get list of months that have purchases for the dropdown */
+function getAvailablePurchaseMonths(): string[] {
+  const data = useLedgerStore.getState().data;
+  const months = new Set<string>();
+  for (const p of (data.purchases || [])) {
+    const d = (p as { dateISO?: string }).dateISO || '';
+    if (d.length >= 7) months.add(d.slice(0, 7));
+  }
+  return Array.from(months).sort().reverse();
 }
 
 
@@ -243,6 +314,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   // Unified passcode-challenge modal (export JSON, export CSV, encrypted import)
   const [challenge, setChallenge] = useState<{ mode: 'export' | 'csv' | 'import'; pendingJson?: string; fails: number; delayUntil: number; input: string; error: string } | null>(null);
   const [challengeCountdown, setChallengeCountdown] = useState(0);
+  const [csvRangePicker, setCsvRangePicker] = useState(false);
+  const [csvRange, setCsvRange] = useState<CsvExportRange>('this_month');
 
   useEffect(() => {
     if (!challenge || challenge.delayUntil === 0) { setChallengeCountdown(0); return; }
@@ -312,7 +385,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       const encrypted = await encryptWithPasscode(plainText, confirmedInput);
       doExportText(encrypted);
     } else if (mode === 'csv') {
-      exportMonthlyPurchasesCsv();
+      setCsvRange('this_month');
+      setCsvRangePicker(true);
     }
   };
 
@@ -577,8 +651,15 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           icon={<IconDatabase />}
           iconBg="var(--green)"
           label="Export Purchases Spreadsheet"
-          sublabel="This calendar month's purchases as a spreadsheet file"
-          onClick={() => hasPasscode ? openChallenge('csv') : exportMonthlyPurchasesCsv()}
+          sublabel="Export purchases as a multi-sheet spreadsheet"
+          onClick={() => {
+            if (hasPasscode) {
+              openChallenge('csv');
+            } else {
+              setCsvRange('this_month');
+              setCsvRangePicker(true);
+            }
+          }}
         />
         <SettingsRow
           icon={<IconDatabase />}
@@ -949,6 +1030,45 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               disabled={challengeCountdown > 0}
             >
               {challengeCountdown > 0 ? `Try again in ${challengeCountdown}s…` : 'Confirm'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {csvRangePicker && (
+        <Modal open={true} title="Export Purchases" onClose={() => setCsvRangePicker(false)}>
+          <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.4 }}>
+            Choose a time range. Each month will be its own sheet in the spreadsheet.
+          </p>
+          <Select
+            value={csvRange}
+            onChange={(e) => setCsvRange(e.target.value as CsvExportRange)}
+          >
+            <option value="this_month">This Month</option>
+            <option value="last_3">Last 3 Months</option>
+            <option value="last_6">Last 6 Months</option>
+            <option value="last_12">Last 12 Months</option>
+            <option value="all_time">All Time</option>
+            <optgroup label="Specific Month">
+              {getAvailablePurchaseMonths().map((m) => {
+                const [yr, mo] = m.split('-').map(Number);
+                const label = new Date(yr, mo - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                return <option key={m} value={m}>{label}</option>;
+              })}
+            </optgroup>
+          </Select>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setCsvRangePicker(false)}>Cancel</button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ flex: 1 }}
+              onClick={() => {
+                setCsvRangePicker(false);
+                exportPurchasesSpreadsheet(csvRange);
+              }}
+            >
+              Export
             </button>
           </div>
         </Modal>
