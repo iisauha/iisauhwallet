@@ -87,6 +87,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   } | null>(null);
   const [hideZeroRewards, setHideZeroRewards] = useState(() => loadBoolPref(SHOW_ZERO_REWARDS_KEY, true));
   const purchasesCarouselRef = useRef<HTMLDivElement | null>(null);
+  const purchasesIdxRef = useRef(0);
   const [purchasesCarouselHeight, setPurchasesCarouselHeight] = useState<number | null>(null);
   const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
 
@@ -313,6 +314,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   // Reset carousel index on filter/drilldown changes
   const filterKey = `${drilldownCategoryId}|${filter}|${customStart}|${customEnd}|${searchQuery}`;
   useEffect(() => {
+    purchasesIdxRef.current = 0;
     setPurchasesCarouselIdx(0);
     if (purchasesCarouselRef.current) purchasesCarouselRef.current.scrollLeft = 0;
   }, [filterKey]);
@@ -719,7 +721,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden' } : {}}>
+          <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : {}}>
           <div
             className="card-carousel"
             style={{ marginBottom: 0 }}
@@ -731,14 +733,12 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               const count = el.children.length;
               if (!count) return;
               const rawIdx = el.scrollLeft / w;
-              const clampedIdx = Math.max(0, Math.min(Math.round(rawIdx), count - 1));
-              setPurchasesCarouselIdx(clampedIdx);
-              const leftIdx = Math.max(0, Math.min(Math.floor(rawIdx), count - 1));
-              const rightIdx = Math.min(leftIdx + 1, count - 1);
-              const progress = leftIdx === rightIdx ? 0 : rawIdx - leftIdx;
-              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-              setPurchasesCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              const newIdx = Math.max(0, Math.min(Math.round(rawIdx), count - 1));
+              // Only update state when the snapped index actually changes (avoids re-render jank)
+              if (newIdx !== purchasesIdxRef.current) {
+                purchasesIdxRef.current = newIdx;
+                setPurchasesCarouselIdx(newIdx);
+              }
               scheduleSnapCorrection(el);
             }}
           >

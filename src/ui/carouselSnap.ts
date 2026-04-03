@@ -16,22 +16,14 @@ export function scheduleSnapCorrection(el: HTMLElement) {
     setTimeout(() => {
       timers.delete(el);
       const w = el.clientWidth;
-      if (!w) return;
+      if (!w || !el.children.length) return;
       const maxScroll = el.scrollWidth - w;
-      // If at the very end, snap to the last card exactly
-      if (maxScroll > 0 && el.scrollLeft >= maxScroll - 1) {
-        const lastSnap = Math.round(maxScroll / w) * w;
-        if (Math.abs(el.scrollLeft - lastSnap) > 2) {
-          el.scrollTo({ left: lastSnap, behavior: 'instant' });
-        }
-        return;
-      }
-      const nearest = Math.round(el.scrollLeft / w) * w;
+      const nearest = Math.min(Math.round(el.scrollLeft / w) * w, Math.max(0, maxScroll));
       const drift = Math.abs(el.scrollLeft - nearest);
-      // Correct if misaligned by more than 5% of card width
-      if (drift > w * 0.05) {
-        el.scrollTo({ left: nearest, behavior: 'instant' });
+      // Only correct if significantly misaligned — let CSS snap handle small drifts
+      if (drift > w * 0.12) {
+        el.scrollTo({ left: nearest, behavior: 'smooth' });
       }
-    }, 200)
+    }, 320)
   );
 }
