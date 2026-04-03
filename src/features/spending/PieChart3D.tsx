@@ -23,11 +23,19 @@ function polarToXY(cx: number, cy: number, r: number, angleDeg: number) {
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-  const start = polarToXY(cx, cy, r, endAngle);
-  const end = polarToXY(cx, cy, r, startAngle);
+function describeArc(cx: number, cy: number, outerR: number, startAngle: number, endAngle: number, innerR: number) {
+  const outerStart = polarToXY(cx, cy, outerR, startAngle);
+  const outerEnd = polarToXY(cx, cy, outerR, endAngle);
+  const innerStart = polarToXY(cx, cy, innerR, endAngle);
+  const innerEnd = polarToXY(cx, cy, innerR, startAngle);
   const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y} Z`;
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A ${outerR} ${outerR} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerStart.x} ${innerStart.y}`,
+    `A ${innerR} ${innerR} 0 ${largeArc} 0 ${innerEnd.x} ${innerEnd.y}`,
+    'Z'
+  ].join(' ');
 }
 
 /** Push label positions apart so they don't overlap vertically. */
@@ -69,6 +77,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
     const cx = size / 2;
     const cy = size / 2;
     const maxR = size / 2 - 40;
+    const holeR = maxR * 0.35;
 
     const items: {
       id: string;
@@ -92,7 +101,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
       const depth = i % 3;
       const radius = depth === 0 ? maxR : depth === 1 ? maxR * 0.85 : maxR * 0.7;
       const midAngle = startAngle + sweep / 2;
-      const path = describeArc(cx, cy, radius, startAngle, endAngle);
+      const path = describeArc(cx, cy, radius, startAngle, endAngle, holeR);
 
       items.push({
         id: sl.id,
