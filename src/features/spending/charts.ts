@@ -151,31 +151,17 @@ export function renderSpendingPieChart(
   const existing: Chart | undefined = (canvas as any).__chart;
   if (existing) existing.destroy();
 
-  // Create radial gradients for a richer look
-  const ctx = canvas.getContext('2d');
-  const cx = canvas.clientWidth / 2;
-  const cy = canvas.clientHeight / 2;
-  const r = Math.min(cx, cy);
-  const gradientColors = (ctx && r > 0) ? colors.map((hex) => {
-    const g = ctx.createRadialGradient(cx, cy, r * 0.25, cx, cy, r);
-    g.addColorStop(0, hex + 'DD');
-    g.addColorStop(1, hex);
-    return g;
-  }) : colors;
-
-  const bgColor = ctx ? getComputedStyle(canvas).getPropertyValue('--bg').trim() || '#1a1a2e' : '#1a1a2e';
-
   const chart = new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data, backgroundColor: gradientColors, borderWidth: 2, borderColor: bgColor }]
+      datasets: [{ data, backgroundColor: colors, borderWidth: 0 }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '55%',
-      animation: { duration: shouldAnimate ? 600 : 0, easing: 'easeOutQuart' },
+      animation: { duration: shouldAnimate ? 150 : 0 },
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
