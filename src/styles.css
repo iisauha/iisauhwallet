@@ -227,7 +227,12 @@ body:has(.modal-overlay) {
   padding: 18px;
   transition: background-color 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
-.summary-compact { display: grid; gap: 12px; }
+.summary-compact {
+  display: grid;
+  gap: 12px;
+  border-left: 3px solid var(--ui-add-btn, var(--accent));
+  padding-left: 14px;
+}
 .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .summary-kv .k { color: var(--ui-primary-text, var(--text)); font-size: 0.9rem; font-weight: 600; }
 .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; }

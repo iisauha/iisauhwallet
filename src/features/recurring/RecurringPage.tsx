@@ -1299,7 +1299,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
       />
       <ViewLastOptimizerModal open={viewLastOptimizerOpen} onClose={() => setViewLastOptimizerOpen(false)} />
 
-      <div className="card" style={{ marginTop: 16 }}>
+      <div className="card" style={{ marginTop: 16, borderLeft: '3px solid var(--ui-add-btn, var(--accent))', borderRadius: '0 12px 12px 0' }}>
         <div className="row" style={{ marginBottom: 8 }}>
           <span className="name" style={{ fontWeight: 700 }}>Total Recurring Income</span>
           <span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatCents(totalIncomeMonthly)}/mo</span>
