@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { useLedgerStore } from '../../state/store';
 import { formatCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
@@ -1136,7 +1135,6 @@ export function LoansPage() {
   const [paymentNowOverride, setPaymentNowOverride] = useState<number | null>(() => loadPaymentNowManualOverride());
   const [showEditPaymentNow, setShowEditPaymentNow] = useState(false);
   const [editPaymentInput, setEditPaymentInput] = useState('');
-  const privateCarousel = useCarouselHeight();
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
   const [showAllLoans, setShowAllLoans] = useState(false);
 
@@ -1185,11 +1183,6 @@ export function LoansPage() {
 
   const displayedLoans = showAllLoans ? loansWithDerived : loansWithDerived.slice(0, 5);
 
-  // Set initial height of private loans carousel to the first item's height
-  useEffect(() => {
-    if (!showPrivate) return;
-    requestAnimationFrame(() => privateCarousel.syncHeight());
-  }, [loansWithDerived.length, showPrivate]);
 
 
   const summary = useMemo(() => {
@@ -1506,16 +1499,13 @@ export function LoansPage() {
               <IconPlus /> Add
             </button>
           </div>
-          <div className="card-carousel-wrapper" ref={privateCarousel.wrapperRef}>
           <div
-            ref={privateCarousel.carouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
               setPrivateCarouselIdx(Math.round(rawIdx));
-              privateCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >
@@ -1535,7 +1525,6 @@ export function LoansPage() {
             />
             </div>
           ))}
-          </div>
           </div>
           {displayedLoans.length > 1 && (showAllLoans && loansWithDerived.length >= 5 ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>

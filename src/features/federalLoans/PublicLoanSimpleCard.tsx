@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import {
   type PublicLoanSummary,
@@ -56,11 +55,6 @@ export function PublicLoanSimpleCard(props: {
   const [rateInput, setRateInput] = useState('');
   const [showPaymentActionsModal, setShowPaymentActionsModal] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
-  const publicCarousel = useCarouselHeight();
-
-  useEffect(() => {
-    requestAnimationFrame(() => publicCarousel.syncHeight());
-  }, []);
 
 
   useEffect(() => {
@@ -147,16 +141,13 @@ export function PublicLoanSimpleCard(props: {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div className="card-carousel-wrapper" ref={publicCarousel.wrapperRef}>
       <div
-        ref={publicCarousel.carouselRef}
         className="card-carousel"
         style={{ marginBottom: 0 }}
         onScroll={(e) => {
           const el = e.currentTarget;
           const rawIdx = el.scrollLeft / (el.clientWidth || 1);
           setCarouselIdx(Math.round(rawIdx));
-          publicCarousel.handleScroll();
           scheduleSnapCorrection(el);
         }}
       >
@@ -278,7 +269,6 @@ export function PublicLoanSimpleCard(props: {
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Page dot indicators */}

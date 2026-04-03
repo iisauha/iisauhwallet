@@ -2,7 +2,6 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
-import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
 import { IconPlus } from '../../ui/icons';
@@ -598,13 +597,9 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
 
   // Per-section carousel state
   const [hysaCarouselIdx, setHysaCarouselIdx] = useState(0);
-  const hysaCarousel = useCarouselHeight();
   const [generalCarouselIdx, setGeneralCarouselIdx] = useState(0);
-  const generalCarousel = useCarouselHeight();
   const [rothCarouselIdx, setRothCarouselIdx] = useState(0);
-  const rothCarousel = useCarouselHeight();
   const [k401CarouselIdx, setK401CarouselIdx] = useState(0);
-  const k401Carousel = useCarouselHeight();
   const [showAllInvesting, setShowAllInvesting] = useState<Record<string, boolean>>({});
 
 
@@ -736,11 +731,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     [generalAccounts]
   );
 
-  // Sync carousel heights when sections expand or account lists change
-  useEffect(() => { if (!liquidCollapsed) hysaCarousel.syncHeight(); }, [liquidCollapsed, hysaAccounts.length]);
-  useEffect(() => { if (!liquidCollapsed) generalCarousel.syncHeight(); }, [liquidCollapsed, generalAccounts.length]);
-  useEffect(() => { if (!longtermCollapsed) rothCarousel.syncHeight(); }, [longtermCollapsed, rothAccounts.length]);
-  useEffect(() => { if (!longtermCollapsed) k401Carousel.syncHeight(); }, [longtermCollapsed, k401Accounts.length]);
 
   const contribution = useMemo(() => {
     const recurring: any[] = (data as any).recurring || [];
@@ -1345,7 +1335,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     label: string,
     type: 'hysa' | 'roth' | 'k401' | 'general',
     accounts: InvestingAccount[],
-    carousel: ReturnType<typeof useCarouselHeight>,
     carouselIdx: number,
     setCarouselIdx: (i: number) => void
   ) {
@@ -1379,16 +1368,13 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             <IconPlus /> Add
           </button>
         </div>
-        <div className="card-carousel-wrapper" ref={carousel.wrapperRef}>
         <div
-          ref={carousel.carouselRef}
           className="card-carousel"
           style={{ marginBottom: 0 }}
           onScroll={(e) => {
             const el = e.currentTarget;
             const rawIdx = el.scrollLeft / (el.clientWidth || 1);
             setCarouselIdx(Math.round(rawIdx));
-            carousel.handleScroll();
             scheduleSnapCorrection(el);
           }}
         >
@@ -1489,7 +1475,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
               </div></div>
             );
           })}
-          </div>
           </div>
           {visibleAccounts.length > 1 && (sectionShowAll && allVisibleAccounts.length >= 5 ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
@@ -1756,11 +1741,11 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>HYSA<HelpTip text="High-Yield Savings Account. Split into 'Bills fund' (liquid, available for spending) and 'Savings reserve' (earmarked for savings goals). Adjust the split via the allocation modal." /></span>
           </div>
-          {renderSection('HYSA', 'hysa', hysaAccounts, hysaCarousel, hysaCarouselIdx, setHysaCarouselIdx)}
+          {renderSection('HYSA', 'hysa', hysaAccounts, hysaCarouselIdx, setHysaCarouselIdx)}
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>General Investing</span>
           </div>
-          {renderSection('General Investing', 'general', generalAccounts, generalCarousel, generalCarouselIdx, setGeneralCarouselIdx)}
+          {renderSection('General Investing', 'general', generalAccounts, generalCarouselIdx, setGeneralCarouselIdx)}
         </>
       ) : null}
 
@@ -1778,11 +1763,11 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Roth IRA</span>
           </div>
-          {renderSection('Roth IRA', 'roth', rothAccounts, rothCarousel, rothCarouselIdx, setRothCarouselIdx)}
+          {renderSection('Roth IRA', 'roth', rothAccounts, rothCarouselIdx, setRothCarouselIdx)}
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Employer-Based Retirement Accounts</span>
           </div>
-          {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, k401Carousel, k401CarouselIdx, setK401CarouselIdx)}
+          {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, k401CarouselIdx, setK401CarouselIdx)}
         </>
       ) : null}
 

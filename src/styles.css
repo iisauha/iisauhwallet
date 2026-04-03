@@ -1405,7 +1405,7 @@ textarea.ll-control {
 /* ─── Account Card Carousel ──────────────────────────────────────── */
 .card-carousel {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   overflow-x: auto;
   gap: 0;
   scroll-snap-type: x mandatory;
@@ -1421,11 +1421,6 @@ textarea.ll-control {
   min-width: 0;
 }
 .card-carousel-item .card { margin-bottom: 0; }
-.card-carousel-wrapper {
-  overflow: hidden;
-  transition: height 0.15s ease-out;
-  will-change: height;
-}
 .carousel-dots {
   display: flex;
   justify-content: center;

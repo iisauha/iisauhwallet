@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
-import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { useContentGuard } from '../../state/useContentGuard';
 import { useLedgerStore } from '../../state/store';
 import {
@@ -403,10 +402,8 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
 
-  const completedCarousel = useCarouselHeight();
   const [completedCarouselIdx, setCompletedCarouselIdx] = useState(0);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
-  const entriesCarousel = useCarouselHeight();
   const [entriesCarouselIdx, setEntriesCarouselIdx] = useState(0);
   const [showAllEntries, setShowAllEntries] = useState(false);
 
@@ -457,15 +454,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
     // so we can show a rewards-addition confirmation prompt.
   }, []);
 
-  useEffect(() => {
-    if (!completedBonusesCollapsed) {
-      requestAnimationFrame(() => completedCarousel.syncHeight());
-    }
-  }, [completedBonuses.length, completedBonusesCollapsed, completedCarousel]);
-
-  useEffect(() => {
-    requestAnimationFrame(() => entriesCarousel.syncHeight());
-  }, [entries.length, entriesCarousel]);
 
   function entryDisplayName(e: SubTrackerEntry) {
     return e.cardRef.type === 'card' ? cardNameById.get(e.cardRef.cardId) || 'Card' : e.cardRef.name || 'Card';
@@ -497,16 +485,13 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           </div>
           {!completedBonusesCollapsed ? (
           <>
-          <div className="card-carousel-wrapper" ref={completedCarousel.wrapperRef}>
           <div
-            ref={completedCarousel.carouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
               setCompletedCarouselIdx(Math.round(rawIdx));
-              completedCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >
@@ -555,7 +540,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               </div></div>
             );
           })}
-          </div>
           </div>
           {displayedCompleted.length > 1 && (showAllCompleted && completedBonuses.length >= 5 ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
@@ -624,16 +608,13 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         </>
       ) : (
         <>
-      <div className="card-carousel-wrapper" ref={entriesCarousel.wrapperRef}>
       <div
-        ref={entriesCarousel.carouselRef}
         className="card-carousel"
         style={{ marginBottom: 0 }}
         onScroll={(e) => {
           const el = e.currentTarget;
           const rawIdx = el.scrollLeft / (el.clientWidth || 1);
           setEntriesCarouselIdx(Math.round(rawIdx));
-          entriesCarousel.handleScroll();
           scheduleSnapCorrection(el);
         }}
       >
@@ -1034,7 +1015,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           </div>
         );
       })}
-      </div>
       </div>
       {displayedEntries.length > 1 && (showAllEntries && entries.length >= 5 ? (
         <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>

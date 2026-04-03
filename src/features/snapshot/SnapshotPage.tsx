@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
-import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
@@ -386,8 +385,6 @@ export function SnapshotPage({
   const [cardsIdx, setCardsIdx] = useState(0);
   const [showAllBanks, setShowAllBanks] = useState(false);
   const [showAllCards, setShowAllCards] = useState(false);
-  const banksCarousel = useCarouselHeight();
-  const cardsCarousel = useCarouselHeight();
 
   function toggleSection(s: 'cash' | 'cards' | 'pending') {
     setActiveSection((prev) => (prev === s ? null : s));
@@ -484,8 +481,6 @@ export function SnapshotPage({
   const displayedBanks = showAllBanks ? visibleBanks : visibleBanks.slice(0, 5);
   const displayedCards = showAllCards ? visibleCards : visibleCards.slice(0, 5);
 
-  useEffect(() => { if (activeSection === 'cash') banksCarousel.syncHeight(); }, [activeSection, visibleBanks.length]);
-  useEffect(() => { if (activeSection === 'cards') cardsCarousel.syncHeight(); }, [activeSection, visibleCards.length]);
 
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
@@ -637,14 +632,11 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div className="card-carousel-wrapper" ref={banksCarousel.wrapperRef}>
           <div
             className="card-carousel"
-            ref={banksCarousel.carouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
               setBanksIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
-              banksCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >
@@ -725,7 +717,6 @@ export function SnapshotPage({
               );
             })}
           </div>
-          </div>
           {displayedBanks.length > 1 && (showAllBanks && visibleBanks.length >= 5 ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
               {banksIdx + 1} of {displayedBanks.length}
@@ -774,14 +765,11 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div className="card-carousel-wrapper" ref={cardsCarousel.wrapperRef}>
           <div
             className="card-carousel"
-            ref={cardsCarousel.carouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
               setCardsIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
-              cardsCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >
@@ -885,7 +873,6 @@ export function SnapshotPage({
                 </div>
               );
             })}
-          </div>
           </div>
           {displayedCards.length > 1 && (showAllCards && visibleCards.length >= 5 ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
