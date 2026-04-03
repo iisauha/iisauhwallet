@@ -10,7 +10,7 @@ const SVG_PROPS = {
   strokeWidth: 1.5,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
-  style: { display: 'block' } as React.CSSProperties,
+  style: { verticalAlign: 'middle' } as React.CSSProperties,
 };
 
 // --- Tab Icons ---

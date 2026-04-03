@@ -312,6 +312,10 @@ body:has(.modal-overlay) {
   border: none;
   cursor: pointer;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   -webkit-tap-highlight-color: transparent;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
@@ -851,6 +855,7 @@ input[type="date"].ll-control:focus {
   background: var(--ui-add-btn, var(--accent));
   color: #ffffff;
   border: none;
+  padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
