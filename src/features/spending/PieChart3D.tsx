@@ -38,40 +38,40 @@ function describeArc(cx: number, cy: number, outerR: number, startAngle: number,
   ].join(' ');
 }
 
-/** Push label positions apart so they don't overlap vertically.
- *  Resolves in both directions from the center, keeping labels
- *  as close to their natural position as possible. */
-function resolveOverlaps(labels: { x: number; y: number; side: 'left' | 'right' }[], minGap: number, cy: number) {
+/** Resolve vertical overlaps while keeping labels close to their ideal radial position.
+ *  Uses relaxation: iteratively push apart overlapping labels then pull back toward ideal. */
+function resolveOverlaps(labels: { x: number; y: number; idealY: number; side: 'left' | 'right' }[], minGap: number, _cy: number) {
   for (const side of ['left', 'right'] as const) {
     const group = labels.filter(l => l.side === side);
     if (group.length < 2) continue;
+    group.sort((a, b) => a.idealY - b.idealY);
+
+    // Start from ideal positions
+    for (const lbl of group) lbl.y = lbl.idealY;
+
+    // Relaxation: 4 iterations of separate → pull back toward ideal
+    for (let iter = 0; iter < 4; iter++) {
+      // Push apart: enforce minGap downward
+      for (let i = 1; i < group.length; i++) {
+        if (group[i].y - group[i - 1].y < minGap) {
+          group[i].y = group[i - 1].y + minGap;
+        }
+      }
+      // Push apart: enforce minGap upward
+      for (let i = group.length - 2; i >= 0; i--) {
+        if (group[i + 1].y - group[i].y < minGap) {
+          group[i].y = group[i + 1].y - minGap;
+        }
+      }
+      // Pull back toward ideal (weaker each iteration so it converges)
+      const strength = 0.3 / (iter + 1);
+      for (const lbl of group) {
+        lbl.y += (lbl.idealY - lbl.y) * strength;
+      }
+    }
+
+    // Final hard enforce of minGap
     group.sort((a, b) => a.y - b.y);
-
-    // Pass 1: push downward — any label too close to the one above gets pushed down
-    for (let i = 1; i < group.length; i++) {
-      const gap = group[i].y - group[i - 1].y;
-      if (gap < minGap) {
-        group[i].y = group[i - 1].y + minGap;
-      }
-    }
-
-    // Pass 2: push upward — if bottom labels got shoved too far down, pull back up
-    for (let i = group.length - 2; i >= 0; i--) {
-      const gap = group[i + 1].y - group[i].y;
-      if (gap < minGap) {
-        group[i].y = group[i + 1].y - minGap;
-      }
-    }
-
-    // Pass 3: re-center the group around the chart center so labels don't all drift one way
-    const groupCenter = (group[0].y + group[group.length - 1].y) / 2;
-    const drift = groupCenter - cy;
-    if (Math.abs(drift) > minGap / 2) {
-      const correction = drift * 0.4; // partial correction to stay near natural positions
-      for (const lbl of group) lbl.y -= correction;
-    }
-
-    // Pass 4: final separation — ensure minGap after centering adjustment
     for (let i = 1; i < group.length; i++) {
       if (group[i].y - group[i - 1].y < minGap) {
         group[i].y = group[i - 1].y + minGap;
@@ -146,22 +146,25 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
     return items;
   }, [slices, total, size]);
 
-  // Compute label positions with overlap resolution
+  // Compute label positions: place each along its radial line, then resolve overlaps
   const labels = useMemo(() => {
     if (computed.length === 0) return [];
     const cx = size / 2;
     const cy = size / 2;
     const maxR = size / 2 - 40;
-    const labelR = maxR + 22;
+    const labelGap = 22; // distance from slice outer edge to label
+
     const visible = computed.filter(sl => sl.pct >= 3);
     const positions = visible.map(sl => {
+      const labelR = sl.radius + labelGap;
       const pos = polarToXY(cx, cy, labelR, sl.midAngle);
       const edge = polarToXY(cx, cy, sl.radius, sl.midAngle);
       return {
         id: sl.id,
         pct: sl.pct,
         value: sl.value,
-        rawX: pos.x,
+        midAngle: sl.midAngle,
+        idealY: pos.y,
         x: pos.x,
         y: pos.y,
         edgeX: edge.x,
