@@ -160,7 +160,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
           const offset = isActive ? 6 : 0;
           const pushDir = polarToXY(0, 0, offset, sl.midAngle);
           return (
-            <g key={sl.id} opacity={dimmed ? 0.45 : 1} style={{ transition: 'opacity 0.25s ease' }}>
+            <g key={sl.id} className={dimmed ? 'pie-dimmed' : 'pie-active'}>
               {/* Shadow */}
               <path d={sl.path} fill="rgba(0,0,0,0.25)" transform="translate(0, 4)" />
               {/* Main slice */}
@@ -221,7 +221,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
         {labels.map((lbl) => {
           const dimmed = !!activeId && activeId !== lbl.id;
           return (
-            <g key={`label-${lbl.id}`} style={{ transition: 'opacity 0.25s ease' }} opacity={dimmed ? 0.35 : 1}>
+            <g key={`label-${lbl.id}`} className={dimmed ? 'pie-dimmed' : 'pie-active'}>
               <line
                 x1={lbl.edgeX} y1={lbl.edgeY}
                 x2={lbl.x} y2={lbl.y}
@@ -268,6 +268,7 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
             <button
               key={`legend-${sl.id}`}
               type="button"
+              className={dimmed ? 'pie-dimmed' : 'pie-active'}
               onClick={() => onSliceClick?.(sl.id)}
               style={{
                 display: 'flex',
@@ -278,8 +279,6 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
                 padding: '3px 0',
                 cursor: 'pointer',
                 fontFamily: 'var(--app-font-family)',
-                opacity: dimmed ? 0.45 : 1,
-                transition: 'opacity 0.25s ease',
               }}
             >
               <span style={{

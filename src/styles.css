@@ -2232,6 +2232,14 @@ body:has(.quick-sheet) .fab {
    LUXURY POLISH — Single commit, revert with: git revert <hash>
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ─── Pie chart dimming: single CSS rule for SVG + HTML sync ────── */
+.pie-active,
+.pie-dimmed {
+  transition: opacity 0.25s ease !important;
+}
+.pie-active { opacity: 1; }
+.pie-dimmed { opacity: 0.45; }
+
 /* ─── #1 Animated gradient border on expanded/active sections ───── */
 @keyframes borderGlow {
   0%   { background-position: 0% 50%; }
