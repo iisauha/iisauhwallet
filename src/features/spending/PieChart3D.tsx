@@ -151,9 +151,9 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
       <svg
         viewBox={`0 0 ${size} ${size}`}
         width="100%"
-        style={{ maxWidth: size, overflow: 'visible' }}
+        style={{ maxWidth: size, overflow: 'visible', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
       >
-        {/* All slice layers grouped per-slice for synchronized transitions */}
+        {/* Slice layers grouped per-slice for synchronized transitions */}
         {computed.map((sl) => {
           const isActive = activeId === sl.id;
           const dimmed = !!activeId && !isActive;
@@ -161,9 +161,6 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
           const pushDir = polarToXY(0, 0, offset, sl.midAngle);
           return (
             <g key={sl.id} className={dimmed ? 'pie-dimmed' : 'pie-active'}>
-              {/* Shadow */}
-              <path d={sl.path} fill="rgba(0,0,0,0.25)" transform="translate(0, 4)" />
-              {/* Main slice */}
               <path
                 d={sl.path}
                 fill={sl.color}
@@ -171,7 +168,6 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
                 onClick={() => onSliceClick?.(sl.id)}
                 style={{ cursor: 'pointer', transition: 'transform 0.25s ease' }}
               />
-              {/* Gradient overlay */}
               <path
                 d={sl.path}
                 fill="url(#pieHighlight)"
