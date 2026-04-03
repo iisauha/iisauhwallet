@@ -179,8 +179,6 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
           );
         })}
 
-        {/* Center circle (donut hole) */}
-        <circle cx={cx} cy={cy} r={innerR} fill="var(--ui-card-bg, var(--surface))" />
 
         {/* Active slice info in center */}
         {activeSlice && (
