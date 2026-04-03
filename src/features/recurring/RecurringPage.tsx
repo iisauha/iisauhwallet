@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
-import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
 import type { RecurringItem } from '../../state/models';
@@ -131,9 +130,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
   const [expensesSectionCollapsed, setExpensesSectionCollapsed] = useDropdownCollapsed('recurring_expenses_main', false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string } | null>(null);
   const [expenseCatIdx, setExpenseCatIdx] = useState<Record<string, number>>({});
-  const [expenseCatHeight, setExpenseCatHeight] = useState<Record<string, number | undefined>>({});
   const [showAllExpenseCat, setShowAllExpenseCat] = useState<Record<string, boolean>>({});
-  const expenseCatRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   function toMonthlyCents(r: any): number {
     if (r.isActive === false) return 0;
@@ -393,21 +390,14 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
             }}>
               {headerLabel}
             </div>
-            <div style={expenseCatHeight[catId] != null ? { height: expenseCatHeight[catId], overflow: 'hidden' } : {}}>
             <div
               className="card-carousel"
-              ref={(el) => { expenseCatRefs.current[catId] = el; }}
               onScroll={(e) => {
                 const el = e.currentTarget;
-                const rawIdx = el.scrollLeft / (el.clientWidth || 1);
-                setExpenseCatIdx((prev) => ({ ...prev, [catId]: Math.round(rawIdx) }));
-                const leftIdx = Math.floor(rawIdx);
-                const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-                const progress = rawIdx - leftIdx;
-                const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-                const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-                setExpenseCatHeight((prev) => ({ ...prev, [catId]: Math.round(lh + (rh - lh) * progress) }));
-                scheduleSnapCorrection(el);
+                const w = el.clientWidth;
+                if (!w || !el.children.length) return;
+                const newIdx = Math.max(0, Math.min(Math.round(el.scrollLeft / w), el.children.length - 1));
+                setExpenseCatIdx((prev) => prev[catId] === newIdx ? prev : { ...prev, [catId]: newIdx });
               }}
             >
             {displayedItems.map((r: any) => (
@@ -487,7 +477,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                   </div>
                   </div>
                 ))}
-            </div>
             </div>
             {displayedItems.length > 1 && (catShowAll && items.length >= 5 ? (
               <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
