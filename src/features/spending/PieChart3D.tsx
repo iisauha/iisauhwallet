@@ -125,10 +125,11 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
     if (computed.length === 0) return [];
     const cx = size / 2;
     const cy = size / 2;
+    const maxR = size / 2 - 40;
+    const labelR = maxR + 22;
     const visible = computed.filter(sl => sl.pct >= 3);
     const positions = visible.map(sl => {
-      const sliceLabelR = sl.radius + 22;
-      const pos = polarToXY(cx, cy, sliceLabelR, sl.midAngle);
+      const pos = polarToXY(cx, cy, labelR, sl.midAngle);
       const edge = polarToXY(cx, cy, sl.radius, sl.midAngle);
       return {
         id: sl.id,
@@ -230,10 +231,10 @@ export function PieChart3D({ slices, size = 290, activeId, onSliceClick }: Props
                 opacity={0.3}
               />
               <text
-                x={lbl.x + (lbl.side === 'right' ? 4 : -4)}
+                x={lbl.x + (lbl.side === 'right' ? 3 : -3)}
                 y={lbl.y}
                 textAnchor={lbl.side === 'right' ? 'start' : 'end'}
-                dominantBaseline="central"
+                dominantBaseline="middle"
                 fill="var(--ui-primary-text, var(--text))"
                 fontSize={11}
                 fontWeight={600}
