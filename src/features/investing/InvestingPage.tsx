@@ -86,81 +86,6 @@ function HysaMoveRow({
   );
 }
 
-function CoastFireInfoIcon({
-  id,
-  content,
-  activeId,
-  onToggle
-}: {
-  id: string;
-  content: string;
-  activeId: string | null;
-  onToggle: (id: string) => void;
-}) {
-  const open = activeId === id;
-  return (
-    <span style={{ position: 'relative', display: 'inline-flex', verticalAlign: 'middle', marginLeft: 6 }}>
-      <button
-        type="button"
-        aria-label="Info"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle(open ? '' : id);
-        }}
-        className="icon-btn"
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: '50%',
-          padding: 0,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '0.75rem',
-          fontStyle: 'normal',
-          fontWeight: 600,
-        }}
-      >
-        i
-      </button>
-      {open && (
-        <div
-          onClick={() => onToggle('')}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0,0,0,0.35)',
-            animation: 'guideTagIn 0.15s ease-out',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 280,
-              maxWidth: 'calc(100vw - 48px)',
-              padding: '14px 16px',
-              background: 'var(--ui-modal-bg, var(--ui-card-bg, var(--surface)))',
-              border: '1px solid var(--ui-border, var(--border))',
-              borderRadius: 14,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-              fontSize: '0.82rem',
-              lineHeight: 1.5,
-              color: 'var(--ui-primary-text, var(--text))',
-              whiteSpace: 'pre-line',
-              animation: 'guidePillIn 0.2s ease-out',
-            }}
-          >
-            {content}
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
 
 function computeCoastFire(
   assumptions: CoastFireAssumptions,
@@ -338,16 +263,12 @@ function CoastFireResultView({
   a,
   totals,
   detectedMonthlyRetirementDollars,
-  coastFireTooltipId,
-  setCoastFireTooltipId,
   onClose,
   onEditAssumptions
 }: {
   a: CoastFireAssumptions;
   totals: { totalRoth: number; total401k: number; totalGeneral: number; totalHYSA: number };
   detectedMonthlyRetirementDollars: number;
-  coastFireTooltipId: string | null;
-  setCoastFireTooltipId: React.Dispatch<React.SetStateAction<string | null>>;
   onClose: () => void;
   onEditAssumptions: () => void;
 }) {
@@ -384,8 +305,6 @@ function CoastFireResultView({
   ]);
 
   const fmt = (x: number) => `$${Math.round(x).toLocaleString()}`;
-  const toggleTooltip = (id: string) =>
-    setCoastFireTooltipId((prev: string | null) => (id === '' ? null : prev === id ? null : id));
 
   return (
     <>
@@ -430,36 +349,21 @@ function CoastFireResultView({
         <div className="summary-kv" style={{ marginTop: 8 }}>
           <span className="k">
             Current Invested Assets
-            <CoastFireInfoIcon
-              id="currentAssets"
-              content="The total current value of the selected retirement accounts included in this calculation."
-              activeId={coastFireTooltipId}
-              onToggle={toggleTooltip}
-            />
+            <HelpTip text="The total current value of the selected retirement accounts included in this calculation." />
           </span>
           <span className="v amount-pos">{fmt(result.pv)}</span>
         </div>
         <div className="summary-kv" style={{ marginTop: 8 }}>
           <span className="k">
             FIRE Number
-            <CoastFireInfoIcon
-              id="fireNumber"
-              content="The total portfolio needed at retirement to support your annual spending using the selected withdrawal rate."
-              activeId={coastFireTooltipId}
-              onToggle={toggleTooltip}
-            />
+            <HelpTip text="The total portfolio needed at retirement to support your annual spending using the selected withdrawal rate." />
           </span>
           <span className="v amount-pos">{fmt(result.fireNumber)}</span>
         </div>
         <div className="summary-kv" style={{ marginTop: 8 }}>
           <span className="k">
             Gap to Coast FIRE
-            <CoastFireInfoIcon
-              id="gap"
-              content="Gap to Coast FIRE is the amount you would need invested today to reach your Coast FIRE number. Once your invested assets reach this level, you could stop contributing to retirement and your investments could still grow to your FIRE number by retirement age."
-              activeId={coastFireTooltipId}
-              onToggle={toggleTooltip}
-            />
+            <HelpTip text="Gap to Coast FIRE is the amount you would need invested today to reach your Coast FIRE number. Once your invested assets reach this level, you could stop contributing to retirement and your investments could still grow to your FIRE number by retirement age." />
           </span>
           <span className={`v ${result.gap > 0 && !result.realReturnWarning ? 'amount-neg' : ''}`}>
             {result.realReturnWarning || result.gap <= 0 ? 'None' : fmt(result.gap)}
@@ -468,12 +372,7 @@ function CoastFireResultView({
         <div className="summary-kv" style={{ marginTop: 8 }}>
           <span className="k">
             If you stop contributing today, projected at retirement
-            <CoastFireInfoIcon
-              id="fvIfStopNow"
-              content="The projected value of your selected retirement assets at retirement age if you make no additional contributions starting today."
-              activeId={coastFireTooltipId}
-              onToggle={toggleTooltip}
-            />
+            <HelpTip text="The projected value of your selected retirement assets at retirement age if you make no additional contributions starting today." />
           </span>
           <span className="v amount-pos">
             {result.realReturnWarning ? '-' : fmt(result.fvIfStopNow)}
@@ -488,34 +387,23 @@ function CoastFireResultView({
         <div className="summary-kv" style={{ marginTop: 8 }}>
           <span className="k">
             Current Monthly Contributions
-            <CoastFireInfoIcon
-              id="monthlyContrib"
-              content="The monthly retirement contribution amount currently used in this projection."
-              activeId={coastFireTooltipId}
-              onToggle={toggleTooltip}
-            />
+            <HelpTip text="The monthly retirement contribution amount currently used in this projection." />
           </span>
           <span className="v amount-pos">{fmt(monthlyContrib)}</span>
         </div>
         <div className="summary-kv" style={{ marginTop: 8 }}>
           <span className="k">
             Projected value at retirement if you continue contributing
-            <CoastFireInfoIcon
-              id="fvWithContrib"
-              content={(() => {
+            <HelpTip text={(() => {
                 const yearsToRetirement = a.retirementAge - a.currentAge;
                 const annualContrib = monthlyContrib * 12;
                 const rPct = result.realReturnPercent;
-                const rDec = rPct / 100;
                 const pvStr = fmt(result.pv);
                 const monthlyStr = fmt(monthlyContrib);
                 const annualStr = fmt(annualContrib);
                 const fvStr = result.realReturnWarning ? '-' : fmt(result.fvWithContrib);
                 return `This projection uses your current invested assets, your monthly contribution amount, and your inflation-adjusted return to estimate your portfolio value at retirement if you continue contributing at the same rate.\n\nFormula:\nFV = PV(1+r)^t + C × [((1+r)^t − 1) / r]\n\nWhere:\n• PV = current invested assets\n• r = inflation-adjusted annual return\n• t = years until retirement\n• C = annual contribution amount (monthly × 12)\n\nUsing your values:\n• PV = ${pvStr}\n• Monthly contribution = ${monthlyStr}\n• Annual contribution = ${annualStr}\n• r = ${rPct.toFixed(1)}%\n• t = ${yearsToRetirement} years\n\nProjected value = ${fvStr}`;
-              })()}
-              activeId={coastFireTooltipId}
-              onToggle={toggleTooltip}
-            />
+              })()} />
           </span>
           <span className="v amount-pos">
             {result.realReturnWarning ? '-' : fmt(result.fvWithContrib)}
@@ -830,7 +718,6 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
   const [coastFireFormStrings, setCoastFireFormStrings] = useState(() =>
     coastFireAssumptionsToFormStrings(loadCoastFire() || COASTFIRE_DEFAULTS)
   );
-  const [coastFireTooltipId, setCoastFireTooltipId] = useState<string | null>(null);
 
   const hysaAccounts = useMemo(
     () => investing.accounts.filter((a) => a.type === 'hysa'),
@@ -2036,11 +1923,11 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
       </div>
 
       {coastFireOpen ? (
-        <div className="modal-overlay modal-overlay--fullscreen" onClick={() => { setCoastFireTooltipId(null); setCoastFireOpen(false); }}>
+        <div className="modal-overlay modal-overlay--fullscreen" onClick={() => { setCoastFireOpen(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--sticky">
               <h3 style={{ margin: 0, flex: 1 }}>Coast FIRE</h3>
-              <button type="button" aria-label="Close" onClick={() => { setCoastFireTooltipId(null); setCoastFireOpen(false); }} className="modal-close-btn">
+              <button type="button" aria-label="Close" onClick={() => { setCoastFireOpen(false); }} className="modal-close-btn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             </div>
@@ -2195,7 +2082,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   </div>
                 ) : null}
                 <div className="btn-row" style={{ marginTop: 12 }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => { setCoastFireTooltipId(null); setCoastFireOpen(false); }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setCoastFireOpen(false); }}>
                     Cancel
                   </button>
                   <button
@@ -2258,10 +2145,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                 a={coastFireAssumptions}
                 totals={totals}
                 detectedMonthlyRetirementDollars={detectedMonthlyRetirementDollars}
-                coastFireTooltipId={coastFireTooltipId}
-                setCoastFireTooltipId={setCoastFireTooltipId}
                 onClose={() => {
-                  setCoastFireTooltipId(null);
                   setCoastFireOpen(false);
                 }}
                 onEditAssumptions={() => {
