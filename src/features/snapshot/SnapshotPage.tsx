@@ -148,18 +148,23 @@ function BackupReminderBanner() {
 
   const lastExportStr = localStorage.getItem(LAST_EXPORT_DATE_KEY);
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const reminderDays = parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1;
+  const reminderMs = reminderDays * 24 * 60 * 60 * 1000;
 
+  let lastDate: Date | null = null;
+  let nextReminderDate: Date | null = null;
   let daysSince: number | null = null;
   if (lastExportStr) {
-    const lastDate = new Date(lastExportStr);
-    if (!isNaN(lastDate.getTime())) {
-      daysSince = Math.floor((today.getTime() - new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()).getTime()) / (1000 * 60 * 60 * 24));
+    const parsed = new Date(lastExportStr);
+    if (!isNaN(parsed.getTime())) {
+      lastDate = parsed;
+      nextReminderDate = new Date(parsed.getTime() + reminderMs);
+      daysSince = Math.floor((now.getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
     }
   }
 
-  const reminderDays = parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1;
-  const shouldShow = !dismissed && (daysSince === null || daysSince >= reminderDays);
+  // Show when: never backed up, OR current time is past the next reminder date+time
+  const shouldShow = !dismissed && (lastDate === null || now >= nextReminderDate!);
 
   useEffect(() => {
     if (shouldShow) {
@@ -246,7 +251,9 @@ function BackupReminderBanner() {
         <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>
           {daysSince === null
             ? "You haven\u2019t backed up yet"
-            : `Last backup was ${daysSince} day${daysSince !== 1 ? 's' : ''} ago`}
+            : daysSince === 0
+              ? 'Last backup was earlier today'
+              : `Last backup was ${daysSince} day${daysSince !== 1 ? 's' : ''} ago`}
         </div>
         {backupLabel && (
           <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 4, fontStyle: 'italic' }}>
