@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import {
   type PublicLoanSummary,
@@ -55,14 +56,10 @@ export function PublicLoanSimpleCard(props: {
   const [rateInput, setRateInput] = useState('');
   const [showPaymentActionsModal, setShowPaymentActionsModal] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
-  const [publicCarouselHeight, setPublicCarouselHeight] = useState<number | undefined>(undefined);
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const publicCarousel = useCarouselHeight();
 
   useEffect(() => {
-    requestAnimationFrame(() => {
-      const firstItem = carouselRef.current?.children[0] as HTMLElement | undefined;
-      if (firstItem) setPublicCarouselHeight(firstItem.offsetHeight);
-    });
+    requestAnimationFrame(() => publicCarousel.syncHeight());
   }, []);
 
 
@@ -150,21 +147,16 @@ export function PublicLoanSimpleCard(props: {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={publicCarouselHeight != null ? { height: publicCarouselHeight, overflow: 'hidden' } : {}}>
+      <div className="card-carousel-wrapper" ref={publicCarousel.wrapperRef}>
       <div
-        ref={carouselRef}
+        ref={publicCarousel.carouselRef}
         className="card-carousel"
         style={{ marginBottom: 0 }}
         onScroll={(e) => {
           const el = e.currentTarget;
           const rawIdx = el.scrollLeft / (el.clientWidth || 1);
           setCarouselIdx(Math.round(rawIdx));
-          const leftIdx = Math.floor(rawIdx);
-          const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-          const progress = rawIdx - leftIdx;
-          const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-          const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-          setPublicCarouselHeight(Math.round(lh + (rh - lh) * progress));
+          publicCarousel.handleScroll();
           scheduleSnapCorrection(el);
         }}
       >

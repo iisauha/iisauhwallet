@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry, loadInvesting } from '../../state/storage';
 import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
@@ -86,7 +87,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     cpp: number | undefined;
   } | null>(null);
   const [hideZeroRewards, setHideZeroRewards] = useState(() => loadBoolPref(SHOW_ZERO_REWARDS_KEY, true));
-  const purchasesCarouselRef = useRef<HTMLDivElement | null>(null);
+  const purchasesCarousel = useCarouselHeight();
   const purchasesIdxRef = useRef(0);
   const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
 
@@ -309,13 +310,16 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   useEffect(() => {
     purchasesIdxRef.current = 0;
     setPurchasesCarouselIdx(0);
-    if (purchasesCarouselRef.current) purchasesCarouselRef.current.scrollLeft = 0;
+    const el = purchasesCarousel.carouselRef.current;
+    if (el) el.scrollLeft = 0;
+    purchasesCarousel.syncHeight();
   }, [filterKey]);
 
   // Clamp index when visible list changes (e.g. items deleted, "See more" toggled)
   useEffect(() => {
     const maxIdx = Math.max(0, visiblePurchases.length - 1);
     setPurchasesCarouselIdx((prev) => Math.min(prev, maxIdx));
+    purchasesCarousel.syncHeight();
   }, [visiblePurchases.length]);
 
   const editingPurchase = useMemo(() => {
@@ -706,10 +710,11 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
+          <div className="card-carousel-wrapper" ref={purchasesCarousel.wrapperRef}>
           <div
             className="card-carousel"
             style={{ marginBottom: 0 }}
-            ref={purchasesCarouselRef}
+            ref={purchasesCarousel.carouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
               const w = el.clientWidth;
@@ -718,11 +723,11 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               if (!count) return;
               const rawIdx = el.scrollLeft / w;
               const newIdx = Math.max(0, Math.min(Math.round(rawIdx), count - 1));
-              // Only update state when the snapped index actually changes (avoids re-render jank)
               if (newIdx !== purchasesIdxRef.current) {
                 purchasesIdxRef.current = newIdx;
                 setPurchasesCarouselIdx(newIdx);
               }
+              purchasesCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >
@@ -775,6 +780,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               </div>
             </div></div>
           )})}
+          </div>
           </div>
           {showAllPurchases ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { useContentGuard } from '../../state/useContentGuard';
 import { useLedgerStore } from '../../state/store';
 import {
@@ -402,12 +403,10 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorEntryId, setEditorEntryId] = useState<string | null>(null);
 
-  const [completedCarouselHeight, setCompletedCarouselHeight] = useState<number | undefined>(undefined);
-  const completedCarouselRef = useRef<HTMLDivElement>(null);
+  const completedCarousel = useCarouselHeight();
   const [completedCarouselIdx, setCompletedCarouselIdx] = useState(0);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
-  const [entriesCarouselHeight, setEntriesCarouselHeight] = useState<number | undefined>(undefined);
-  const entriesCarouselRef = useRef<HTMLDivElement>(null);
+  const entriesCarousel = useCarouselHeight();
   const [entriesCarouselIdx, setEntriesCarouselIdx] = useState(0);
   const [showAllEntries, setShowAllEntries] = useState(false);
 
@@ -459,26 +458,14 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
   }, []);
 
   useEffect(() => {
-    if (completedBonusesCollapsed) {
-      setCompletedCarouselHeight(undefined);
-      return;
+    if (!completedBonusesCollapsed) {
+      requestAnimationFrame(() => completedCarousel.syncHeight());
     }
-    const el = completedCarouselRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      const first = el.children[0] as HTMLElement | undefined;
-      if (first) setCompletedCarouselHeight(first.offsetHeight);
-    });
-  }, [completedBonuses.length, completedBonusesCollapsed]);
+  }, [completedBonuses.length, completedBonusesCollapsed, completedCarousel]);
 
   useEffect(() => {
-    const el = entriesCarouselRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      const first = el.children[0] as HTMLElement | undefined;
-      if (first) setEntriesCarouselHeight(first.offsetHeight);
-    });
-  }, [entries.length]);
+    requestAnimationFrame(() => entriesCarousel.syncHeight());
+  }, [entries.length, entriesCarousel]);
 
   function entryDisplayName(e: SubTrackerEntry) {
     return e.cardRef.type === 'card' ? cardNameById.get(e.cardRef.cardId) || 'Card' : e.cardRef.name || 'Card';
@@ -496,7 +483,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
             style={{ marginBottom: 16, width: '100%' }}
             onClick={() => {
               setSubview('main');
-              setEntriesCarouselHeight(undefined);
             }}
           >
             Go back to main page
@@ -511,23 +497,16 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           </div>
           {!completedBonusesCollapsed ? (
           <>
+          <div className="card-carousel-wrapper" ref={completedCarousel.wrapperRef}>
           <div
-            style={completedCarouselHeight != null ? { height: completedCarouselHeight, overflow: 'hidden' } : {}}
-          >
-          <div
-            ref={completedCarouselRef}
+            ref={completedCarousel.carouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
               setCompletedCarouselIdx(Math.round(rawIdx));
-              const leftIdx = Math.floor(rawIdx);
-              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-              const progress = rawIdx - leftIdx;
-              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-              setCompletedCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              completedCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >
@@ -645,23 +624,16 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         </>
       ) : (
         <>
+      <div className="card-carousel-wrapper" ref={entriesCarousel.wrapperRef}>
       <div
-        style={entriesCarouselHeight != null ? { height: entriesCarouselHeight, overflow: 'hidden' } : {}}
-      >
-      <div
-        ref={entriesCarouselRef}
+        ref={entriesCarousel.carouselRef}
         className="card-carousel"
         style={{ marginBottom: 0 }}
         onScroll={(e) => {
           const el = e.currentTarget;
           const rawIdx = el.scrollLeft / (el.clientWidth || 1);
           setEntriesCarouselIdx(Math.round(rawIdx));
-          const leftIdx = Math.floor(rawIdx);
-          const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-          const progress = rawIdx - leftIdx;
-          const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-          const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-          setEntriesCarouselHeight(Math.round(lh + (rh - lh) * progress));
+          entriesCarousel.handleScroll();
           scheduleSnapCorrection(el);
         }}
       >

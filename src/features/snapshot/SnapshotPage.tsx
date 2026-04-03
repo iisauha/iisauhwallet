@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { calcFinalNetCashCents, formatCents, parseCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
@@ -385,10 +386,8 @@ export function SnapshotPage({
   const [cardsIdx, setCardsIdx] = useState(0);
   const [showAllBanks, setShowAllBanks] = useState(false);
   const [showAllCards, setShowAllCards] = useState(false);
-  const banksCarouselRef = useRef<HTMLDivElement>(null);
-  const cardsCarouselRef = useRef<HTMLDivElement>(null);
-  const [banksCarouselHeight, setBanksCarouselHeight] = useState<number | undefined>(undefined);
-  const [cardsCarouselHeight, setCardsCarouselHeight] = useState<number | undefined>(undefined);
+  const banksCarousel = useCarouselHeight();
+  const cardsCarousel = useCarouselHeight();
 
   function toggleSection(s: 'cash' | 'cards' | 'pending') {
     setActiveSection((prev) => (prev === s ? null : s));
@@ -485,27 +484,8 @@ export function SnapshotPage({
   const displayedBanks = showAllBanks ? visibleBanks : visibleBanks.slice(0, 5);
   const displayedCards = showAllCards ? visibleCards : visibleCards.slice(0, 5);
 
-  // Set dynamic height of banks carousel to the currently visible item's height
-  useEffect(() => {
-    if (activeSection !== 'cash') return;
-    requestAnimationFrame(() => {
-      const carousel = banksCarouselRef.current;
-      if (!carousel) return;
-      const firstItem = carousel.children[0] as HTMLElement | undefined;
-      if (firstItem) setBanksCarouselHeight(firstItem.offsetHeight);
-    });
-  }, [activeSection, visibleBanks.length]);
-
-  // Set dynamic height of cards carousel to the currently visible item's height
-  useEffect(() => {
-    if (activeSection !== 'cards') return;
-    requestAnimationFrame(() => {
-      const carousel = cardsCarouselRef.current;
-      if (!carousel) return;
-      const firstItem = carousel.children[0] as HTMLElement | undefined;
-      if (firstItem) setCardsCarouselHeight(firstItem.offsetHeight);
-    });
-  }, [activeSection, visibleCards.length]);
+  useEffect(() => { if (activeSection === 'cash') banksCarousel.syncHeight(); }, [activeSection, visibleBanks.length]);
+  useEffect(() => { if (activeSection === 'cards') cardsCarousel.syncHeight(); }, [activeSection, visibleCards.length]);
 
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
@@ -657,20 +637,14 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={banksCarouselHeight != null ? { height: banksCarouselHeight, overflow: 'hidden' } : {}}>
+          <div className="card-carousel-wrapper" ref={banksCarousel.wrapperRef}>
           <div
             className="card-carousel"
-            ref={banksCarouselRef}
+            ref={banksCarousel.carouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
-              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
-              setBanksIdx(Math.round(rawIdx));
-              const leftIdx = Math.floor(rawIdx);
-              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-              const progress = rawIdx - leftIdx;
-              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-              setBanksCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              setBanksIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+              banksCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >
@@ -800,20 +774,14 @@ export function SnapshotPage({
         </div>
       </div>
       <>
-          <div style={cardsCarouselHeight != null ? { height: cardsCarouselHeight, overflow: 'hidden' } : {}}>
+          <div className="card-carousel-wrapper" ref={cardsCarousel.wrapperRef}>
           <div
             className="card-carousel"
-            ref={cardsCarouselRef}
+            ref={cardsCarousel.carouselRef}
             onScroll={(e) => {
               const el = e.currentTarget;
-              const rawIdx = el.scrollLeft / (el.clientWidth || 1);
-              setCardsIdx(Math.round(rawIdx));
-              const leftIdx = Math.floor(rawIdx);
-              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-              const progress = rawIdx - leftIdx;
-              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-              setCardsCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              setCardsIdx(Math.round(el.scrollLeft / (el.clientWidth || 1)));
+              cardsCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >

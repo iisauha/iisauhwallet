@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { useLedgerStore } from '../../state/store';
 import { formatCents } from '../../state/calc';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
@@ -1135,8 +1136,7 @@ export function LoansPage() {
   const [paymentNowOverride, setPaymentNowOverride] = useState<number | null>(() => loadPaymentNowManualOverride());
   const [showEditPaymentNow, setShowEditPaymentNow] = useState(false);
   const [editPaymentInput, setEditPaymentInput] = useState('');
-  const privateCarouselRef = useRef<HTMLDivElement>(null);
-  const [privateCarouselHeight, setPrivateCarouselHeight] = useState<number | undefined>(undefined);
+  const privateCarousel = useCarouselHeight();
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
   const [showAllLoans, setShowAllLoans] = useState(false);
 
@@ -1188,12 +1188,7 @@ export function LoansPage() {
   // Set initial height of private loans carousel to the first item's height
   useEffect(() => {
     if (!showPrivate) return;
-    requestAnimationFrame(() => {
-      const carousel = privateCarouselRef.current;
-      if (!carousel) return;
-      const firstItem = carousel.children[0] as HTMLElement | undefined;
-      if (firstItem) setPrivateCarouselHeight(firstItem.offsetHeight);
-    });
+    requestAnimationFrame(() => privateCarousel.syncHeight());
   }, [loansWithDerived.length, showPrivate]);
 
 
@@ -1511,23 +1506,16 @@ export function LoansPage() {
               <IconPlus /> Add
             </button>
           </div>
+          <div className="card-carousel-wrapper" ref={privateCarousel.wrapperRef}>
           <div
-            style={privateCarouselHeight != null ? { height: privateCarouselHeight, overflow: 'hidden' } : {}}
-          >
-          <div
-            ref={privateCarouselRef}
+            ref={privateCarousel.carouselRef}
             className="card-carousel"
             style={{ marginBottom: 0 }}
             onScroll={(e) => {
               const el = e.currentTarget;
               const rawIdx = el.scrollLeft / (el.clientWidth || 1);
               setPrivateCarouselIdx(Math.round(rawIdx));
-              const leftIdx = Math.floor(rawIdx);
-              const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-              const progress = rawIdx - leftIdx;
-              const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-              const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-              setPrivateCarouselHeight(Math.round(lh + (rh - lh) * progress));
+              privateCarousel.handleScroll();
               scheduleSnapCorrection(el);
             }}
           >

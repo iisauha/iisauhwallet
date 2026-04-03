@@ -1421,6 +1421,11 @@ textarea.ll-control {
   min-width: 0;
 }
 .card-carousel-item .card { margin-bottom: 0; }
+.card-carousel-wrapper {
+  overflow: hidden;
+  transition: height 0.15s ease-out;
+  will-change: height;
+}
 .carousel-dots {
   display: flex;
   justify-content: center;

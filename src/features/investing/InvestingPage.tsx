@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { formatCents, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { useCarouselHeight } from '../../ui/useCarouselHeight';
 import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
 import { IconPlus } from '../../ui/icons';
@@ -597,17 +598,13 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
 
   // Per-section carousel state
   const [hysaCarouselIdx, setHysaCarouselIdx] = useState(0);
-  const [hysaCarouselHeight, setHysaCarouselHeight] = useState<number | undefined>(undefined);
-  const hysaCarouselRef = useRef<HTMLDivElement>(null);
+  const hysaCarousel = useCarouselHeight();
   const [generalCarouselIdx, setGeneralCarouselIdx] = useState(0);
-  const [generalCarouselHeight, setGeneralCarouselHeight] = useState<number | undefined>(undefined);
-  const generalCarouselRef = useRef<HTMLDivElement>(null);
+  const generalCarousel = useCarouselHeight();
   const [rothCarouselIdx, setRothCarouselIdx] = useState(0);
-  const [rothCarouselHeight, setRothCarouselHeight] = useState<number | undefined>(undefined);
-  const rothCarouselRef = useRef<HTMLDivElement>(null);
+  const rothCarousel = useCarouselHeight();
   const [k401CarouselIdx, setK401CarouselIdx] = useState(0);
-  const [k401CarouselHeight, setK401CarouselHeight] = useState<number | undefined>(undefined);
-  const k401CarouselRef = useRef<HTMLDivElement>(null);
+  const k401Carousel = useCarouselHeight();
   const [showAllInvesting, setShowAllInvesting] = useState<Record<string, boolean>>({});
 
 
@@ -738,6 +735,12 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     () => [...generalAccounts].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0)),
     [generalAccounts]
   );
+
+  // Sync carousel heights when sections expand or account lists change
+  useEffect(() => { if (!liquidCollapsed) hysaCarousel.syncHeight(); }, [liquidCollapsed, hysaAccounts.length]);
+  useEffect(() => { if (!liquidCollapsed) generalCarousel.syncHeight(); }, [liquidCollapsed, generalAccounts.length]);
+  useEffect(() => { if (!longtermCollapsed) rothCarousel.syncHeight(); }, [longtermCollapsed, rothAccounts.length]);
+  useEffect(() => { if (!longtermCollapsed) k401Carousel.syncHeight(); }, [longtermCollapsed, k401Accounts.length]);
 
   const contribution = useMemo(() => {
     const recurring: any[] = (data as any).recurring || [];
@@ -1342,11 +1345,9 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
     label: string,
     type: 'hysa' | 'roth' | 'k401' | 'general',
     accounts: InvestingAccount[],
-    carouselRef: React.RefObject<HTMLDivElement>,
+    carousel: ReturnType<typeof useCarouselHeight>,
     carouselIdx: number,
-    setCarouselIdx: (i: number) => void,
-    carouselHeight: number | undefined,
-    setCarouselHeight: (h: number | undefined) => void
+    setCarouselIdx: (i: number) => void
   ) {
     const sortedAccounts = [...accounts].sort((a, b) => (b.balanceCents || 0) - (a.balanceCents || 0));
     const allVisibleAccounts =
@@ -1378,29 +1379,16 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             <IconPlus /> Add
           </button>
         </div>
-        <div style={carouselHeight != null ? { height: carouselHeight, overflow: 'hidden' } : {}}>
+        <div className="card-carousel-wrapper" ref={carousel.wrapperRef}>
         <div
-          ref={(el) => {
-            (carouselRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-            if (el && carouselHeight == null) {
-              requestAnimationFrame(() => {
-                const first = el.children[0] as HTMLElement | undefined;
-                if (first) setCarouselHeight(first.offsetHeight);
-              });
-            }
-          }}
+          ref={carousel.carouselRef}
           className="card-carousel"
           style={{ marginBottom: 0 }}
           onScroll={(e) => {
             const el = e.currentTarget;
             const rawIdx = el.scrollLeft / (el.clientWidth || 1);
             setCarouselIdx(Math.round(rawIdx));
-            const leftIdx = Math.floor(rawIdx);
-            const rightIdx = Math.min(leftIdx + 1, el.children.length - 1);
-            const progress = rawIdx - leftIdx;
-            const lh = (el.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-            const rh = (el.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-            setCarouselHeight(Math.round(lh + (rh - lh) * progress));
+            carousel.handleScroll();
             scheduleSnapCorrection(el);
           }}
         >
@@ -1768,11 +1756,11 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>HYSA<HelpTip text="High-Yield Savings Account. Split into 'Bills fund' (liquid, available for spending) and 'Savings reserve' (earmarked for savings goals). Adjust the split via the allocation modal." /></span>
           </div>
-          {renderSection('HYSA', 'hysa', hysaAccounts, hysaCarouselRef, hysaCarouselIdx, setHysaCarouselIdx, hysaCarouselHeight, setHysaCarouselHeight)}
+          {renderSection('HYSA', 'hysa', hysaAccounts, hysaCarousel, hysaCarouselIdx, setHysaCarouselIdx)}
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>General Investing</span>
           </div>
-          {renderSection('General Investing', 'general', generalAccounts, generalCarouselRef, generalCarouselIdx, setGeneralCarouselIdx, generalCarouselHeight, setGeneralCarouselHeight)}
+          {renderSection('General Investing', 'general', generalAccounts, generalCarousel, generalCarouselIdx, setGeneralCarouselIdx)}
         </>
       ) : null}
 
@@ -1790,11 +1778,11 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Roth IRA</span>
           </div>
-          {renderSection('Roth IRA', 'roth', rothAccounts, rothCarouselRef, rothCarouselIdx, setRothCarouselIdx, rothCarouselHeight, setRothCarouselHeight)}
+          {renderSection('Roth IRA', 'roth', rothAccounts, rothCarousel, rothCarouselIdx, setRothCarouselIdx)}
           <div style={{ borderBottom: '1px solid var(--ui-border, var(--border))', marginTop: 16, marginBottom: 12, paddingBottom: 4 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Employer-Based Retirement Accounts</span>
           </div>
-          {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, k401CarouselRef, k401CarouselIdx, setK401CarouselIdx, k401CarouselHeight, setK401CarouselHeight)}
+          {renderSection('Employer-Based Retirement Accounts', 'k401', k401Accounts, k401Carousel, k401CarouselIdx, setK401CarouselIdx)}
         </>
       ) : null}
 
