@@ -1,12 +1,10 @@
 const timers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
 /**
- * Call from a carousel's onScroll handler. After scrolling fully stops,
- * checks if the carousel is aligned to a snap point and corrects if not.
- *
- * The browser's native CSS scroll-snap (scroll-snap-type: x mandatory)
- * handles most snapping. This is a safety net for edge cases where the
- * native snap fails (e.g. very short swipes, momentum overshoot on iOS).
+ * Safety net for edge cases where CSS scroll-snap fails to settle
+ * (e.g. very short swipes, iOS momentum overshoot). Only intervenes
+ * when the carousel is clearly stuck between two cards after scrolling
+ * has fully stopped. Uses 'instant' to avoid fighting CSS snap animations.
  */
 export function scheduleSnapCorrection(el: HTMLElement) {
   const prev = timers.get(el);
@@ -20,10 +18,10 @@ export function scheduleSnapCorrection(el: HTMLElement) {
       const maxScroll = el.scrollWidth - w;
       const nearest = Math.min(Math.round(el.scrollLeft / w) * w, Math.max(0, maxScroll));
       const drift = Math.abs(el.scrollLeft - nearest);
-      // Only correct if significantly misaligned — let CSS snap handle small drifts
-      if (drift > w * 0.12) {
-        el.scrollTo({ left: nearest, behavior: 'smooth' });
+      // Only correct if truly stuck between cards (>20% off snap point)
+      if (drift > w * 0.2) {
+        el.scrollTo({ left: nearest, behavior: 'instant' });
       }
-    }, 320)
+    }, 400)
   );
 }

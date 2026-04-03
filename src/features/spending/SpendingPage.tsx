@@ -88,7 +88,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   const [hideZeroRewards, setHideZeroRewards] = useState(() => loadBoolPref(SHOW_ZERO_REWARDS_KEY, true));
   const purchasesCarouselRef = useRef<HTMLDivElement | null>(null);
   const purchasesIdxRef = useRef(0);
-  const [purchasesCarouselHeight, setPurchasesCarouselHeight] = useState<number | null>(null);
   const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
 
   const { startKey, endKey } = useMemo(() => {
@@ -305,12 +304,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     return parts.join('|');
   };
 
-  // Stable key that changes whenever the visible purchase list identity changes
-  const visiblePurchasesKey = useMemo(
-    () => visiblePurchases.map((p: any) => p.id || '').join(','),
-    [visiblePurchases]
-  );
-
   // Reset carousel index on filter/drilldown changes
   const filterKey = `${drilldownCategoryId}|${filter}|${customStart}|${customEnd}|${searchQuery}`;
   useEffect(() => {
@@ -331,14 +324,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     return list.find((p) => getPurchaseUiId(p) === editingPurchaseKey) || null;
   }, [editingPurchaseKey, data.purchases]);
 
-  // Update height whenever the visible list changes — read the current card's height
-  useEffect(() => {
-    const el = purchasesCarouselRef.current;
-    if (!el) return;
-    const idx = Math.min(purchasesCarouselIdx, el.children.length - 1);
-    const item = el.children[Math.max(0, idx)] as HTMLElement | undefined;
-    if (item) setPurchasesCarouselHeight(item.offsetHeight);
-  }, [visiblePurchasesKey, purchasesCarouselIdx]);
 
 
   // Chart.js canvas removed — using PieChart3D SVG component instead
@@ -721,7 +706,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       ) : null}
       {!purchasesCollapsed ? (
         <div>
-          <div style={purchasesCarouselHeight != null ? { height: purchasesCarouselHeight, overflow: 'hidden', transition: 'height 0.2s ease' } : {}}>
           <div
             className="card-carousel"
             style={{ marginBottom: 0 }}
@@ -791,7 +775,6 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               </div>
             </div></div>
           )})}
-          </div>
           </div>
           {showAllPurchases ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
