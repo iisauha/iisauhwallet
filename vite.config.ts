@@ -45,8 +45,8 @@ export default defineConfig({
       includeAssets: ['icon.png'],
       devOptions: { enabled: false },
       manifest: {
-        name: 'iisauhwallet',
-        short_name: 'iisauh',
+        name: 'alenjo',
+        short_name: 'alenjo',
         start_url: '.',
         display: 'standalone',
         background_color: '#0b0b0f',
