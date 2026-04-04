@@ -42,7 +42,7 @@ export default defineConfig({
     },
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.png'],
+      includeAssets: ['icon.png', 'icon-solid.png'],
       devOptions: { enabled: false },
       manifest: {
         name: 'alenjo',
@@ -51,7 +51,7 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#0b0b0f',
         theme_color: '#0b0b0f',
-        icons: [{ src: './icon.png', sizes: '512x512', type: 'image/png' }]
+        icons: [{ src: './icon-solid.png', sizes: '512x512', type: 'image/png' }]
       },
       workbox: {
         mode: 'development',
