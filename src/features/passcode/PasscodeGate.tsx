@@ -267,9 +267,16 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       biometricTriedRef.current = true;
       const passcode = await authenticateWithBiometric();
       if (!passcode) {
-        // Face ID was dismissed or failed — focus password field so keyboard pops up
+        // Face ID was dismissed or failed — make field tappable and auto-focus to pop keyboard
         setBiometricDismissed(true);
-        setTimeout(() => { passwordFieldRef.current?.focus(); }, 100);
+        setTimeout(() => {
+          const el = passwordFieldRef.current;
+          if (el) {
+            el.removeAttribute('readonly');
+            el.focus();
+            el.click();
+          }
+        }, 300);
         return;
       }
       // Biometric succeeded — unlock
@@ -1113,6 +1120,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             onChange={(e) => { setPasswordInput(e.target.value); setError(''); }}
             placeholder="Password"
             aria-label="Password"
+            disabled={isBiometricEnabled() && !biometricDismissed && !passwordInput}
             style={{
               width: '100%',
               padding: '14px 16px',
@@ -1123,10 +1131,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
               color: 'var(--ui-primary-text, var(--text))',
               marginBottom: 12,
               boxSizing: 'border-box',
+              opacity: isBiometricEnabled() && !biometricDismissed && !passwordInput ? 0.4 : 1,
             }}
-            readOnly={!passwordInput && isBiometricEnabled() && !biometricDismissed}
-            onFocus={(e) => { (e.target as HTMLInputElement).removeAttribute('readonly'); }}
-            onTouchStart={(e) => { (e.target as HTMLInputElement).removeAttribute('readonly'); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordUnlock(); }}
           />
           {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
