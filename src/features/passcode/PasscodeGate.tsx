@@ -253,7 +253,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (authenticated || biometricTriedRef.current) return;
     if (!storedHash || !isBiometricEnabled()) return;
-    // Small delay so the UI renders first
+    // Brief delay so the UI renders before Face ID prompt
     const t = setTimeout(async () => {
       biometricTriedRef.current = true;
       const passcode = await authenticateWithBiometric();
@@ -274,7 +274,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       saveSyncPassphrase(passcode);
       initSync(passcode);
       setAuthenticated(true);
-    }, 300);
+    }, 100);
     return () => clearTimeout(t);
   }, [storedHash, authenticated]);
 
@@ -1032,7 +1032,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         <>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Enter Passcode</h1>
           <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
-            Enter your {PASSCODE_LENGTH}-digit passcode to continue.
+            {isBiometricEnabled() ? 'Use Face ID or tap below to enter your passcode.' : `Enter your ${PASSCODE_LENGTH}-digit passcode to continue.`}
           </p>
           <input
             type="password"
@@ -1044,6 +1044,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             placeholder={'•'.repeat(PASSCODE_LENGTH)}
             aria-label="Passcode"
             style={inputStyle}
+            readOnly={!input && isBiometricEnabled()}
+            onFocus={(e) => { if (isBiometricEnabled() && !input) { (e.target as HTMLInputElement).removeAttribute('readonly'); }}}
+            onTouchStart={(e) => { (e.target as HTMLInputElement).removeAttribute('readonly'); }}
           />
           {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
           <button
