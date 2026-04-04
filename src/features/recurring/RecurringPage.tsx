@@ -589,7 +589,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                       </button>
                     </div>
                     {preTaxDeductions.length === 0 ? (
-                    <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', marginTop: 0 }}>
+                    <p className="empty-state-desc" style={{ marginTop: 0 }}>
                         No pre-tax deductions added yet.
                       </p>
                     ) : null}

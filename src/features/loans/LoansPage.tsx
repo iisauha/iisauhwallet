@@ -1474,7 +1474,7 @@ export function LoansPage() {
       {showPrivate ? (
         <>
           {loansWithDerived.length === 0 ? (
-            <p style={{ marginTop: 0, marginBottom: 12, color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem' }}>
+            <p className="empty-state-desc" style={{ marginTop: 0, marginBottom: 12 }}>
               No private loans. Track student and other private loans here. All values are manual and for estimates only.
             </p>
           ) : null}

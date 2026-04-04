@@ -108,7 +108,7 @@ function RecentActivityWidget() {
     <div className="recent-activity-widget">
       <p className="section-title" style={{ marginBottom: 10 }}>Recent Activity</p>
       {activities.length === 0 ? (
-        <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>No recent activity yet</p>
+        <p className="empty-state-desc" style={{ margin: 0 }}>No recent activity yet</p>
       ) : (
         activities.map((a, i) => {
           const d = new Date(a.ts);
@@ -572,8 +572,7 @@ export function SnapshotPage({
                     <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                       <button
                         type="button"
-                        className="btn btn-secondary"
-                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        className="btn btn-secondary btn-compact"
                         onClick={() =>
                           setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
                         }
@@ -583,8 +582,7 @@ export function SnapshotPage({
                       {linkedHysa && onAdjustHysaAllocForAccount ? (
                         <button
                           type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                          className="btn btn-secondary btn-compact"
                           onClick={() => onAdjustHysaAllocForAccount((linkedHysa as any).id)}
                         >
                           Adjust HYSA Split
@@ -592,8 +590,7 @@ export function SnapshotPage({
                       ) : null}
                       <button
                         type="button"
-                        className="btn clear-btn"
-                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        className="btn clear-btn btn-compact"
                         onClick={() =>
                           openConfirm(
                             'Set balance to $0?',
@@ -607,8 +604,7 @@ export function SnapshotPage({
                       {b.type !== 'physical_cash' ? (
                         <button
                           type="button"
-                          className="btn btn-danger"
-                          style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                          className="btn btn-danger btn-compact"
                           onClick={() =>
                             openConfirm(
                               `Delete ${b.name || 'this account'}?`,
@@ -639,7 +635,7 @@ export function SnapshotPage({
               </div>
               {visibleBanks.length >= 5 && banksIdx >= displayedBanks.length - 1 ? (
                 <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllBanks(true)}>See more</button>
+                  <button type="button" className="btn btn-secondary btn-compact" onClick={() => setShowAllBanks(true)}>See more</button>
                 </div>
               ) : null}
             </>
@@ -743,16 +739,14 @@ export function SnapshotPage({
                     <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                       <button
                         type="button"
-                        className="btn btn-secondary"
-                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        className="btn btn-secondary btn-compact"
                         onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
                       >
                         Update Balance
                       </button>
                       <button
                         type="button"
-                        className="btn clear-btn"
-                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        className="btn clear-btn btn-compact"
                         onClick={() =>
                           openConfirm(
                             'Set balance to $0?',
@@ -765,8 +759,7 @@ export function SnapshotPage({
                       </button>
                       <button
                         type="button"
-                        className="btn btn-danger"
-                        style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                        className="btn btn-danger btn-compact"
                         onClick={() =>
                           openConfirm(
                             `Delete ${c.name || 'this card'}?`,
@@ -796,7 +789,7 @@ export function SnapshotPage({
               </div>
               {visibleCards.length >= 5 && cardsIdx >= displayedCards.length - 1 ? (
                 <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllCards(true)}>See more</button>
+                  <button type="button" className="btn btn-secondary btn-compact" onClick={() => setShowAllCards(true)}>See more</button>
                 </div>
               ) : null}
             </>
@@ -1039,7 +1032,7 @@ export function SnapshotPage({
                 <div className="card" style={{ padding: 10, marginBottom: 10 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 6 }}>Private loans</div>
                   {modal.privateRows.length === 0 ? (
-                    <p style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.85rem', margin: 0 }}>No private loans detected.</p>
+                    <p className="empty-state-desc" style={{ margin: 0 }}>No private loans detected.</p>
                   ) : (
                     modal.privateRows.map((row, idx) => {
                       const current = row.currentBalanceCents || 0;

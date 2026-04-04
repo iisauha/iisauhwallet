@@ -22,8 +22,9 @@ html { touch-action: manipulation; }
   --green-light: rgba(22, 163, 74, 0.12);
   --red: var(--semantic-negative);
   --red-light: rgba(220, 38, 38, 0.12);
-  --shadow: 0 1px 6px rgba(0,0,0,0.18);
-  --shadow-strong: 0 2px 10px rgba(0,0,0,0.22);
+  --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-strong: 0 2px 8px rgba(0,0,0,0.16), 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-glow: 0 4px 20px color-mix(in srgb, var(--accent) 20%, transparent);
   --safe-bottom: env(safe-area-inset-bottom);
   --safe-top: env(safe-area-inset-top);
   --tabbar-h: 74px;
@@ -33,6 +34,48 @@ html { touch-action: manipulation; }
   /* Personalization: set from Settings; do not override semantic green/red. */
   --app-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --app-font-scale: 1;
+
+  /* ── Design Tokens ── */
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* Type scale */
+  --text-2xs: 0.68rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.82rem;
+  --text-base: 0.95rem;
+  --text-md: 1.05rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.3rem;
+  --text-2xl: 1.6rem;
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* Timing */
+  --dur-instant: 100ms;
+  --dur-fast: 180ms;
+  --dur-normal: 280ms;
+  --dur-slow: 400ms;
+  --dur-enter: 320ms;
+
+  /* Easing */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Accent strip */
+  --accent-strip: 4px;
 }
 html {
   -webkit-tap-highlight-color: transparent;
@@ -1071,8 +1114,8 @@ input[type="date"].ll-control:focus {
 }
 /* Universal accent-strip card style */
 .card-accent-strip {
-  border-left: 3px solid var(--ui-add-btn, var(--accent)) !important;
-  box-shadow: var(--shadow), -3px 0 10px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 20%, transparent) !important;
+  border-left: var(--accent-strip) solid var(--ui-add-btn, var(--accent)) !important;
+  box-shadow: var(--shadow), -4px 0 10px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 20%, transparent) !important;
 }
 .net-cash-value {
   font-size: 1.6rem;
@@ -1292,7 +1335,7 @@ input[type="date"].ll-control:focus {
 /* ─── UI Consistency — Card Accent Strip ─────────────────────────── */
 /* Apply to any card showing a balance, summary, or account value */
 .card-accent-strip {
-  border-left: 4px solid var(--ui-add-btn, var(--accent)) !important;
+  border-left: var(--accent-strip) solid var(--ui-add-btn, var(--accent)) !important;
   border-top: none !important;
   border-right: none !important;
   border-bottom: none !important;
@@ -1360,9 +1403,9 @@ textarea.ll-control {
 }
 
 /* ─── UI Consistency — Card press state ──────────────────────────── */
-.card:active { transform: scale(0.97); }
-.card.card-no-press:active { transform: none; }
-.card.card-no-press:hover { transform: none; background: var(--ui-card-bg, var(--surface)); box-shadow: var(--shadow); }
+.card:active { transform: scale(0.98); }
+.card.card-no-press:active, .card.card-static:active { transform: none; }
+.card.card-no-press:hover, .card.card-static:hover { transform: none; background: var(--ui-card-bg, var(--surface)); box-shadow: var(--shadow); }
 .stat-tile:active { transform: scale(0.97); }
 
 /* ─── Recent Activity Widget ──────────────────────────────────────── */
@@ -1538,12 +1581,12 @@ textarea.ll-control {
   align-items: center;
 }
 .hero-flipper-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--muted);
   opacity: 0.35;
-  transition: all 0.25s ease;
+  transition: all var(--dur-fast) ease;
 }
 .hero-flipper-dot.active {
   background: var(--accent);
@@ -2042,7 +2085,7 @@ input[type="checkbox"]:focus-visible {
 /* ─── Enhanced card padding & spacing ────────────────────────────── */
 .card {
   padding: 16px 18px;
-  margin-bottom: 14px;
+  margin-bottom: var(--space-md);
 }
 .ll-account-card { padding: 14px 16px; }
 
@@ -2054,8 +2097,8 @@ input[type="checkbox"]:focus-visible {
 
 /* ─── Section header vertical rhythm ─────────────────────────────── */
 .section-header {
-  margin-bottom: 14px;
-  padding: 14px 18px;
+  margin: var(--space-xl) 0 var(--space-md) 0;
+  padding: var(--space-md) 18px;
 }
 
 /* ─── Tighter modal inputs with better spacing ───────────────────── */
@@ -2121,6 +2164,57 @@ input[type="checkbox"]:focus-visible {
   padding: 20px 20px 18px;
 }
 
+/* ─── Empty State ──────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-lg);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.empty-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto var(--space-md);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 10%, transparent);
+  color: var(--ui-add-btn, var(--accent));
+}
+.empty-state-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ui-primary-text, var(--text));
+  margin: 0 0 var(--space-xs);
+}
+.empty-state-desc {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* ─── Compact Button ──────────────────────────────────────────────── */
+.btn-compact {
+  min-height: unset;
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+}
+
+/* ─── List Row Base ───────────────────────────────────────────────── */
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ui-border, var(--border-subtle));
+}
+.list-row:last-child {
+  border-bottom: none;
+}
+
 /* ─── Liquid Glass: frosted-glass effect, lava lamp bleeds through ── */
 /* Base: all glass surfaces get backdrop-filter blur */
 /* ══════════════════════════════════════════════════════════════════
@@ -2133,8 +2227,8 @@ input[type="checkbox"]:focus-visible {
 .stat-tile,
 .quick-sheet,
 .modal {
-  backdrop-filter: blur(22px) saturate(1.8) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
+  backdrop-filter: blur(22px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.6) !important;
 }
 .card,
 .stat-tile {
@@ -2148,11 +2242,11 @@ input[type="checkbox"]:focus-visible {
 .modal {
   background: color-mix(in srgb, var(--ui-modal-bg, var(--ui-card-bg, var(--surface))) 60%, transparent) !important;
 }
-/* overlay dims but stays glassy */
+/* overlay dims but stays glassy — vignette draws eye to center */
 .modal-overlay {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  background: rgba(0, 0, 0, 0.55) !important;
+  backdrop-filter: blur(6px) saturate(0.8);
+  -webkit-backdrop-filter: blur(6px) saturate(0.8);
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%) !important;
 }
 
 /* 2 ── BUTTONS — all variants, same blur intensity */
@@ -2208,8 +2302,8 @@ input[type="date"].ll-control {
 .hero-flipper-card,
 .ll-toggle,
 .segmented {
-  backdrop-filter: blur(22px) saturate(1.8) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
+  backdrop-filter: blur(22px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.6) !important;
   background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
 }
 
@@ -2363,5 +2457,80 @@ body:has(.quick-sheet) .fab {
 }
 .value-bounce {
   animation: valueBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─── Global focus-visible ring ────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent);
+  outline-offset: 2px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none; /* inputs use glow ring instead */
+}
+
+/* ─── Card static (non-interactive) ─────────────────────────────── */
+.card-static:active,
+.card-static:hover {
+  transform: none !important;
+  box-shadow: var(--shadow) !important;
+}
+
+/* ─── Tab bar pill pop animation ─────────────────────────────────── */
+@keyframes pillPop {
+  from { transform: scale(0.85); opacity: 0.6; }
+  to { transform: scale(1); opacity: 1; }
+}
+.tab-active-pill {
+  animation: pillPop var(--dur-normal) var(--ease-spring);
+}
+
+/* ─── Tab press feedback ──────────────────────────────────────────── */
+.tab {
+  transition: color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.tab:active {
+  transform: scale(0.92);
+}
+
+/* ─── Modal close button polish ──────────────────────────────────── */
+.modal-close-btn:hover {
+  background: var(--surface-hover);
+  opacity: 1;
+}
+.modal-close-btn:active {
+  transform: scale(0.9);
+}
+
+/* ─── Modal exit animation ───────────────────────────────────────── */
+@keyframes llModalOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.96) translateY(12px); }
+}
+@keyframes llFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.modal-overlay.closing {
+  animation: llFadeOut var(--dur-normal) ease forwards;
+  pointer-events: none;
+}
+.modal-overlay.closing .modal {
+  animation: llModalOut var(--dur-normal) ease forwards;
+}
+
+/* ─── Modal backdrop vignette ────────────────────────────────────── */
+.modal-overlay {
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%);
+}
+
+/* ─── Progress bar refinement ────────────────────────────────────── */
+.ll-progress {
+  height: 8px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+.ll-progress-bar {
+  box-shadow: 0 0 8px color-mix(in srgb, var(--green) 30%, transparent);
 }
 

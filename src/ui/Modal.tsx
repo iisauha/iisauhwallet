@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 function IconX() {
   return (
@@ -10,6 +10,7 @@ function IconX() {
 }
 
 const MODAL_TITLE_ID = 'modal-title';
+const EXIT_DURATION = 280;
 
 export function Modal(props: {
   open: boolean;
@@ -22,6 +23,28 @@ export function Modal(props: {
 }) {
   const { open, title, children, onClose, titleStyle, className, fullscreen } = props;
   const modalRef = useRef<HTMLDivElement>(null);
+  const [shouldRender, setShouldRender] = useState(open);
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Handle open/close transitions
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true);
+      setIsClosing(false);
+    } else if (shouldRender) {
+      // Fullscreen modals skip exit animation (they overlay in-place)
+      if (fullscreen) {
+        setShouldRender(false);
+        return;
+      }
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setIsClosing(false);
+        setShouldRender(false);
+      }, EXIT_DURATION);
+      return () => clearTimeout(timer);
+    }
+  }, [open, fullscreen]);
 
   // Esc to close
   useEffect(() => {
@@ -56,8 +79,12 @@ export function Modal(props: {
     }
   }, []);
 
-  if (!open) return null;
-  const overlayClass = fullscreen ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay';
+  if (!shouldRender) return null;
+  const overlayClass = [
+    'modal-overlay',
+    fullscreen ? 'modal-overlay--fullscreen' : '',
+    isClosing ? 'closing' : '',
+  ].filter(Boolean).join(' ');
   return (
     <div
       className={overlayClass}

@@ -484,9 +484,9 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 onSliceClick={(id) => setDrilldownCategoryId(prev => prev === id ? null : id)}
               />
             ) : (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: '1rem' }}>No purchases yet</p>
-                <p style={{ margin: '6px 0 0' }}>Add a purchase to visualize your spending.</p>
+              <div className="empty-state">
+                <p className="empty-state-title">No purchases yet</p>
+                <p className="empty-state-desc">Add a purchase to visualize your spending.</p>
               </div>
             )}
           </>
@@ -498,14 +498,14 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 <span className="amount">{formatCents(c.amountCents)}</span>
               </div>
             ))}
-            {!byCard.length ? <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>No purchases in this period.</div> : null}
+            {!byCard.length ? <div className="empty-state-desc">No purchases in this period.</div> : null}
           </div>
         ) : (
           <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
             </div>
             {(data.cards || []).length === 0 ? (
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.9rem' }}>No cards. Add a card in Snapshot.</div>
+              <div className="empty-state-desc">No cards. Add a card in Snapshot.</div>
             ) : (
               <>
                 {(data.cards || []).filter((c: any) => {
