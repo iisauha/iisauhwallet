@@ -24,11 +24,11 @@ html { touch-action: manipulation; }
   --red-light: rgba(220, 38, 38, 0.12);
   --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08);
   --shadow-strong: 0 2px 8px rgba(0,0,0,0.16), 0 8px 24px rgba(0,0,0,0.12);
-  --shadow-glow: 0 4px 20px color-mix(in srgb, var(--accent) 20%, transparent);
+  --shadow-glow: 0 4px 20px color-mix(in srgb, var(--accent) 14%, transparent);
   --safe-bottom: env(safe-area-inset-bottom);
   --safe-top: env(safe-area-inset-top);
-  --tabbar-h: 74px;
-  --header-h: 60px;
+  --tabbar-h: 78px;
+  --header-h: 66px;
   --radius-card: 16px;
   --radius-control: 12px;
   /* Personalization: set from Settings; do not override semantic green/red. */
@@ -39,20 +39,22 @@ html { touch-action: manipulation; }
   /* Spacing */
   --space-xs: 4px;
   --space-sm: 8px;
-  --space-md: 12px;
-  --space-lg: 16px;
-  --space-xl: 24px;
+  --space-md: 14px;
+  --space-lg: 20px;
+  --space-xl: 28px;
   --space-2xl: 32px;
 
   /* Type scale */
-  --text-2xs: 0.68rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.82rem;
+  --text-2xs: 0.72rem;
+  --text-xs: 0.78rem;
+  --text-sm: 0.85rem;
   --text-base: 0.95rem;
   --text-md: 1.05rem;
   --text-lg: 1.125rem;
   --text-xl: 1.3rem;
   --text-2xl: 1.6rem;
+  --text-hero: 2.2rem;
+  --text-hero-sub: 1.1rem;
 
   /* Radii */
   --radius-xs: 6px;
@@ -74,8 +76,7 @@ html { touch-action: manipulation; }
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Accent strip */
-  --accent-strip: 4px;
+  /* (accent-strip removed — see hero-dashboard) */
 }
 html {
   -webkit-tap-highlight-color: transparent;
@@ -154,7 +155,7 @@ body:has(.modal-overlay) {
   background: transparent;
   border: none;
   border-radius: 0;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 85%, var(--text));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.2s ease;
@@ -172,19 +173,19 @@ body:has(.modal-overlay) {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 8px 14px;
+  padding: 9px 16px;
   background: var(--ui-add-btn, var(--accent));
   border-radius: 999px;
   color: #ffffff;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   transition: box-shadow 0.22s ease, background-color 0.22s ease;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 40%, transparent);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 35%, transparent);
   white-space: nowrap;
 }
 .tab-label {
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -206,19 +207,20 @@ body:has(.modal-overlay) {
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--ui-title-text, var(--text));
-  margin: 24px 0 12px 0;
-  padding: 8px 8px;
+  margin: var(--space-xl) 0 var(--space-md) 0;
+  padding: 8px 4px;
   cursor: pointer;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 50%, transparent);
-  background: var(--ui-section-bg, var(--ui-card-bg, var(--surface)));
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 40%, transparent);
+  background: transparent;
   -webkit-tap-highlight-color: transparent;
 }
 .section-header:active {
-  background: var(--ui-section-bg, var(--ui-card-bg, var(--surface)));
+  background: transparent;
 }
 .section-header-left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .section-header .chevron {
@@ -272,7 +274,7 @@ body:has(.modal-overlay) {
 }
 .summary-compact { display: grid; gap: 12px; }
 .summary-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.summary-kv .k { color: var(--ui-primary-text, var(--text)); font-size: 0.9rem; font-weight: 600; }
+.summary-kv .k { color: var(--ui-primary-text, var(--text)); font-size: var(--text-base); font-weight: 600; }
 .summary-kv .v { font-variant-numeric: tabular-nums; font-size: 1rem; font-weight: 700; text-align: right; }
 .summary-kv .v.pos { color: var(--green); }
 .summary-kv .v.neg { color: var(--red); }
@@ -664,7 +666,7 @@ input[type="date"].ll-control:focus {
 
 @media (hover: hover) and (pointer: fine) {
   .card:hover { background: var(--surface-hover); box-shadow: var(--shadow-strong); transform: translateY(-1px); }
-  .section-header:hover { background: var(--surface-hover); }
+  .section-header:hover { background: transparent; }
   .btn-secondary:hover:not(:disabled):not(.btn-outline-neutral) {
     background: var(--surface-hover);
     color: var(--ui-outline-btn, var(--ui-primary-text, var(--text)));
@@ -694,8 +696,8 @@ input[type="date"].ll-control:focus {
 /* Touch devices: avoid sticky hover; keep section header background visible on tap */
 @media (hover: none) {
   .card:hover { background: var(--ui-card-bg, var(--surface)); box-shadow: var(--shadow); transform: none; }
-  .section-header:hover { background: var(--ui-section-bg, var(--ui-card-bg, var(--surface))); }
-  .section-header:active { background: var(--ui-section-bg, var(--ui-card-bg, var(--surface))); }
+  .section-header:hover { background: transparent; }
+  .section-header:active { background: transparent; }
   .icon-btn:hover { background: transparent; }
   .btn-secondary:hover:not(:disabled) { background: transparent; }
 }
@@ -847,7 +849,7 @@ input[type="date"].ll-control:focus {
   min-width: 0;
 }
 .app-header-greeting {
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   color: var(--muted);
   font-weight: 500;
   line-height: 1;
@@ -911,7 +913,7 @@ input[type="date"].ll-control:focus {
   align-items: center;
   justify-content: center;
   line-height: 0;
-  box-shadow: 0 4px 18px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 55%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 35%, transparent);
   z-index: 80;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -1001,49 +1003,48 @@ input[type="date"].ll-control:focus {
 .stat-tiles-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: var(--space-xl);
 }
 .stat-tile {
   background: var(--ui-card-bg, var(--surface));
   border: 1px solid var(--ui-border, var(--border));
-  border-radius: var(--radius-card);
-  padding: 18px 8px 14px;
+  border-left: 3px solid var(--muted);
+  border-radius: 4px var(--radius-card) var(--radius-card) 4px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 7px;
+  align-items: flex-start;
+  gap: 5px;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
   font-family: var(--app-font-family);
 }
 .stat-tile.active {
+  border-left-color: var(--ui-add-btn, var(--accent));
   border-color: var(--ui-add-btn, var(--accent));
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 10%, var(--ui-card-bg, var(--surface)));
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 8%, var(--ui-card-bg, var(--surface)));
 }
 .stat-tile:active { transform: scale(0.97); }
 .stat-tile-icon {
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: none;
 }
 .stat-tile.active .stat-tile-icon { color: var(--ui-add-btn, var(--accent)); }
 .stat-tile-value {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--ui-title-text, var(--text));
   line-height: 1;
-  text-align: center;
+  text-align: left;
   letter-spacing: -0.02em;
 }
 .stat-tile-label {
-  font-size: 0.67rem;
+  font-size: var(--text-2xs);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 1;
-  text-align: center;
+  text-align: left;
 }
 
 /* ─── Snapshot Collapsible Section Bodies ────────────────────────── */
@@ -1112,11 +1113,7 @@ input[type="date"].ll-control:focus {
   margin-bottom: 16px;
   box-shadow: var(--shadow), -4px 0 12px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent);
 }
-/* Universal accent-strip card style */
-.card-accent-strip {
-  border-left: var(--accent-strip) solid var(--ui-add-btn, var(--accent)) !important;
-  box-shadow: var(--shadow), -4px 0 10px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 20%, transparent) !important;
-}
+/* (Removed: card-accent-strip — replaced by hero-dashboard) */
 .net-cash-value {
   font-size: 1.6rem;
   font-weight: 800;
@@ -1180,7 +1177,7 @@ input[type="date"].ll-control:focus {
 
 /* ─── Settings List UI ───────────────────────────────────────────── */
 .settings-group-label {
-  font-size: 0.72rem;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1258,7 +1255,7 @@ input[type="date"].ll-control:focus {
   align-items: center;
   justify-content: space-between;
   padding: 16px 0 8px;
-  font-size: 0.72rem;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1332,16 +1329,7 @@ input[type="date"].ll-control:focus {
 .hero-cta-pill:active { transform: scale(0.97); }
 .settings-row:active { transform: scale(0.99); }
 
-/* ─── UI Consistency — Card Accent Strip ─────────────────────────── */
-/* Apply to any card showing a balance, summary, or account value */
-.card-accent-strip {
-  border-left: var(--accent-strip) solid var(--ui-add-btn, var(--accent)) !important;
-  border-top: none !important;
-  border-right: none !important;
-  border-bottom: none !important;
-  border-radius: 0 var(--radius-card) var(--radius-card) 0 !important;
-  box-shadow: -4px 0 12px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 22%, transparent) !important;
-}
+/* (Removed: card-accent-strip — replaced by hero-dashboard) */
 
 /* ─── UI Consistency — Chip / Badge ──────────────────────────────── */
 .chip {
@@ -1392,14 +1380,11 @@ textarea.ll-control {
   box-shadow: var(--shadow);
 }
 
-/* ─── UI Consistency — Summary card left accent ───────────────────── */
+/* ─── Summary card: clean border ───────────────────────────────── */
 .summary {
-  border-left: 4px solid var(--ui-add-btn, var(--accent));
-  border-top: none;
-  border-right: none;
-  border-bottom: none;
-  border-radius: 0 var(--radius-card) var(--radius-card) 0;
-  box-shadow: -4px 0 12px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 60%, transparent);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
 }
 
 /* ─── UI Consistency — Card press state ──────────────────────────── */
@@ -1419,20 +1404,21 @@ textarea.ll-control {
 }
 .recent-activity-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--ui-border, var(--border));
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 40%, transparent);
 }
 .recent-activity-item:last-child { border-bottom: none; }
 .recent-activity-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 4px;
   flex-shrink: 0;
+  margin-top: 5px;
 }
 .recent-activity-label {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--ui-primary-text, var(--text));
   white-space: nowrap;
@@ -1440,9 +1426,9 @@ textarea.ll-control {
   text-overflow: ellipsis;
 }
 .recent-activity-type {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--muted);
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 /* ─── Account Card Carousel ──────────────────────────────────────── */
@@ -1682,8 +1668,8 @@ input[type="checkbox"]:focus-visible {
 }
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
-    transform: translateY(-2px) scale(1.005);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.16);
   }
 }
 
@@ -1704,7 +1690,7 @@ input[type="checkbox"]:focus-visible {
 @media (hover: hover) and (pointer: fine) {
   .fab:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 28px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent);
+    box-shadow: 0 6px 22px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 50%, transparent);
   }
 }
 
@@ -1754,17 +1740,14 @@ input[type="checkbox"]:focus-visible {
   transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
 }
 
-/* ─── Net cash card glow on positive ─────────────────────────────── */
-.net-cash-value.positive {
-  text-shadow: 0 0 24px color-mix(in srgb, var(--green) 35%, transparent);
-}
+/* (Removed: net-cash text-shadow glow) */
 
 /* ─── Recent activity item slide-in ──────────────────────────────── */
 .recent-activity-item {
   animation: activitySlideIn 0.32s ease-out both;
 }
 @keyframes activitySlideIn {
-  from { opacity: 0; transform: translateX(-8px); }
+  from { opacity: 0; transform: translateX(-4px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 .recent-activity-item:nth-child(2) { animation-delay: 0.05s; }
@@ -1786,13 +1769,9 @@ input[type="checkbox"]:focus-visible {
   transition: box-shadow 0.3s ease;
 }
 
-/* ─── Summary card gradient ──────────────────────────────────────── */
+/* ─── Summary card background ────────────────────────────────────── */
 .summary {
-  background: linear-gradient(
-    135deg,
-    var(--ui-surface-secondary, var(--surface)) 0%,
-    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 4%, var(--ui-surface-secondary, var(--surface))) 100%
-  );
+  background: var(--ui-surface-secondary, var(--surface));
 }
 
 /* ─── Hero CTA card gradient overlay ─────────────────────────────── */
@@ -1831,7 +1810,7 @@ input[type="checkbox"]:focus-visible {
   animation: llTabIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 @keyframes llTabIn {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -2050,28 +2029,7 @@ input[type="checkbox"]:focus-visible {
 }
 
 /* ─── Luxury micro-shimmer on cards ─────────────────────────────── */
-@keyframes cardShimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-@media (hover: hover) and (pointer: fine) {
-  .card:hover::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(
-      105deg,
-      transparent 40%,
-      color-mix(in srgb, var(--accent) 6%, transparent) 50%,
-      transparent 60%
-    );
-    background-size: 200% 100%;
-    animation: cardShimmer 0.7s ease-out forwards;
-    pointer-events: none;
-  }
-  .card { position: relative; overflow: hidden; }
-}
+/* (Removed: cardShimmer hover pseudo-element) */
 
 /* ─── Refined scrollbar ──────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -2097,10 +2055,15 @@ input[type="checkbox"]:focus-visible {
   padding-bottom: 48px;
 }
 
-/* ─── Section header vertical rhythm ─────────────────────────────── */
+/* ─── Section header: lightweight divider ──────────────────────── */
 .section-header {
   margin: var(--space-xl) 0 var(--space-md) 0;
-  padding: var(--space-md) 18px;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 40%, transparent);
+  border-radius: 0;
+  font-size: 1.05rem;
 }
 
 /* ─── Tighter modal inputs with better spacing ───────────────────── */
@@ -2142,7 +2105,7 @@ input[type="checkbox"]:focus-visible {
 
 /* ─── Summary KV row spacing ──────────────────────────────────────── */
 .summary-kv {
-  padding: 5px 0;
+  padding: 7px 0;
 }
 
 /* ─── Upcoming window select polish ──────────────────────────────── */
@@ -2225,20 +2188,15 @@ input[type="checkbox"]:focus-visible {
 
 /* 1 ── LARGE SURFACES */
 .card,
-.section-header,
 .stat-tile,
 .quick-sheet,
 .modal {
-  backdrop-filter: blur(22px) saturate(1.6) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(1.6) !important;
+  backdrop-filter: blur(18px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4) !important;
 }
 .card,
 .stat-tile {
   background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
-}
-.section-header,
-.section-header:active {
-  background: color-mix(in srgb, var(--ui-section-bg, var(--ui-card-bg, var(--surface))) 55%, transparent) !important;
 }
 .quick-sheet,
 .modal {
@@ -2251,68 +2209,26 @@ input[type="checkbox"]:focus-visible {
   background: radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%) !important;
 }
 
-/* 2 ── BUTTONS — all variants, same blur intensity */
-.btn,
-.snapshot-add-btn,
-.tab-active-pill,
-.icon-btn {
-  backdrop-filter: blur(14px) saturate(1.7) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(1.7) !important;
-}
-.btn-secondary,
-.btn-complete-green {
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 50%, transparent) !important;
-}
-.btn-danger,
-.btn-private-loan-delete,
-.clear-btn {
-  background: color-mix(in srgb, var(--red-light) 55%, transparent) !important;
-}
-.btn-primary {
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 70%, transparent) !important;
-}
-.btn-add {
-  background: color-mix(in srgb, var(--ui-add-btn, #2563EB) 20%, transparent) !important;
-}
-.snapshot-add-btn {
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
-}
-.tab-active-pill {
-  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 92%, transparent) !important;
-  box-shadow: 0 4px 18px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 55%, transparent) !important;
-}
-.btn-posted {
-  background: color-mix(in srgb, var(--green-light) 55%, transparent) !important;
-}
+/* 2 ── BUTTONS — glass removed for solid, premium feel */
+/* 3 ── FORM CONTROLS — glass removed for solid backgrounds */
 
-/* 3 ── FORM CONTROLS */
-.ll-control,
-.ll-select,
-input[type="date"].ll-control {
-  background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 50%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(1.7) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(1.7) !important;
-}
-
-/* 4 ── SUMMARY / WIDGET SURFACES (missed in initial glass pass) */
+/* 4 ── SUMMARY / WIDGET SURFACES */
 .summary,
-.net-cash-card,
+.hero-dashboard,
 .recent-activity-widget,
 .pending-inbound-wrapper,
 .pending-outbound-wrapper,
 .settings-list,
-.hero-flipper-card,
-.ll-toggle,
-.segmented {
-  backdrop-filter: blur(22px) saturate(1.6) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(1.6) !important;
+.hero-flipper-card {
+  backdrop-filter: blur(18px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4) !important;
   background: color-mix(in srgb, var(--ui-card-bg, var(--surface)) 55%, transparent) !important;
 }
 
 /* 5 ── FAB */
 .fab {
-  backdrop-filter: blur(16px) saturate(1.7) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(1.7) !important;
+  backdrop-filter: blur(12px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.4) !important;
   background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 92%, transparent) !important;
   transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease, opacity 0.18s ease;
 }
@@ -2336,66 +2252,17 @@ body:has(.quick-sheet) .fab {
 .pie-active { opacity: 1; }
 .pie-dimmed { opacity: 0.45; }
 
-/* ─── #1 Animated gradient border on expanded/active sections ───── */
-@keyframes borderGlow {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.section-header[aria-expanded="true"] + * .card,
-.card-carousel-item .card:focus-within {
-  border-image: linear-gradient(
-    135deg,
-    var(--ui-add-btn, var(--accent)),
-    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 50%, var(--green)),
-    var(--ui-add-btn, var(--accent))
-  ) 1;
-  border-width: 1px;
-  border-style: solid;
-  transition: border-image 0.6s ease;
-}
-/* Rounded-corner version using pseudo-element (border-image breaks border-radius) */
-.card.luxury-glow-border {
-  position: relative;
-}
-.card.luxury-glow-border::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: calc(var(--radius-card, 16px) + 2px);
-  background: linear-gradient(
-    135deg,
-    var(--ui-add-btn, var(--accent)),
-    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 40%, var(--green)),
-    color-mix(in srgb, var(--accent) 60%, #ff6b35),
-    var(--ui-add-btn, var(--accent))
-  );
-  background-size: 300% 300%;
-  animation: borderGlow 4s ease infinite;
-  z-index: -1;
-  opacity: 0.6;
-}
-
-/* ─── #4 Parallax depth: section headers scroll slightly slower ─── */
-.section-header {
-  transform: translateZ(0);
-  will-change: transform;
-  position: sticky;
-  top: var(--header-h, 60px);
-  z-index: 8;
-  backdrop-filter: blur(16px) saturate(1.5);
-  -webkit-backdrop-filter: blur(16px) saturate(1.5);
-}
+/* (Removed: borderGlow animation, luxury-glow-border, section-header sticky) */
 
 /* ─── #5 Staggered card entry animation ─────────────────────────── */
 @keyframes cardSlideUp {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.97);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 .card-carousel-item {
@@ -2420,23 +2287,7 @@ body:has(.quick-sheet) .fab {
 .stat-tile:nth-child(2) { animation-delay: 0.05s; }
 .stat-tile:nth-child(3) { animation-delay: 0.10s; }
 
-/* ─── #6 Ambient accent glow on net cash card ───────────────────── */
-@keyframes netCashGlow {
-  0%, 100% {
-    box-shadow:
-      var(--shadow, 0 1px 6px rgba(0,0,0,0.18)),
-      -4px 0 16px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 20%, transparent);
-  }
-  50% {
-    box-shadow:
-      var(--shadow, 0 1px 6px rgba(0,0,0,0.18)),
-      -4px 0 28px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 35%, transparent),
-      0 0 40px color-mix(in srgb, var(--ui-add-btn, var(--accent)) 10%, transparent);
-  }
-}
-.net-cash-card {
-  animation: netCashGlow 4s ease-in-out infinite;
-}
+/* (Removed: netCashGlow pulsing animation) */
 
 /* ─── #7 Smooth color transitions on all monetary amounts ────────── */
 .amount,
@@ -2535,4 +2386,25 @@ textarea:focus-visible {
 .ll-progress-bar {
   box-shadow: 0 0 8px color-mix(in srgb, var(--green) 30%, transparent);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   HERO DASHBOARD — Prominent net cash display at top of Snapshot
+   ═══════════════════════════════════════════════════════════════════ */
+.hero-dashboard {
+  border-radius: var(--radius-xl);
+  padding: 28px 24px 22px;
+  margin-bottom: var(--space-xl);
+  border: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 60%, transparent);
+  background: linear-gradient(
+    145deg,
+    var(--ui-card-bg, var(--surface)) 0%,
+    color-mix(in srgb, var(--ui-add-btn, var(--accent)) 6%, var(--ui-card-bg, var(--surface))) 100%
+  );
+  box-shadow: var(--shadow-strong);
+}
+.hero-dashboard .summary-compact { display: grid; gap: 10px; }
+.hero-dashboard .summary-kv .k { font-size: var(--text-sm); }
+.hero-dashboard .summary-kv.final-net-cash { margin-top: 8px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 30%, transparent); }
+.hero-dashboard .summary-kv.final-net-cash .k { font-size: var(--text-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.hero-dashboard .summary-kv.final-net-cash .v { font-size: var(--text-hero); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 
