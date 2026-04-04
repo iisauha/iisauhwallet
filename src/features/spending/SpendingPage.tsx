@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry, loadInvesting } from '../../state/storage';
+import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
@@ -718,6 +719,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 purchasesIdxRef.current = newIdx;
                 setPurchasesCarouselIdx(newIdx);
               }
+              scheduleSnapCorrection(el);
             }}
           >
           {visiblePurchases.map((p: any) => {
