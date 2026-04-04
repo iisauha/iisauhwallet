@@ -586,6 +586,19 @@ export function exportJSON(): string {
     'iisauhwallet_backup_reminder_days_v1',
     'iisauhwallet_undo_duration_v1',
     'iisauhwallet_content_filter_warnings_v1',
+    // Passcode & security (hashed values — safe to export for cross-device sync)
+    PASSCODE_HASH_KEY,
+    PASSCODE_HINT_KEY,
+    PASSCODE_RECOVERY_KEY_HASH_KEY,
+    PASSCODE_SECURITY_QA_KEY,
+    PASSCODE_RECOVERY_SETUP_DONE_KEY,
+    PASSCODE_PAUSED_KEY,
+    PASSCODE_AUTO_LOCK_MINUTES_KEY,
+    PASSCODE_6DIGIT_KEY,
+    SHOW_WELCOME_SCREEN_KEY,
+    HIDDEN_TABS_KEY,
+    // Onboarding
+    'iisauhwallet_onboarding_done_v1',
   ]);
 
   // Main data key: always use in-memory cache (decrypted). Never export encrypted blob.
