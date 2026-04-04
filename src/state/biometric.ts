@@ -101,7 +101,7 @@ export async function enrollBiometric(passcode: string, displayName?: string): P
     const credential = await navigator.credentials.create({
       publicKey: {
         challenge,
-        rp: { name: 'iisauh Wallet', id: window.location.hostname },
+        rp: { name: 'alenjo', id: window.location.hostname },
         user: {
           id: userId,
           name: userName,

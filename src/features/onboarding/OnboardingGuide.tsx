@@ -41,7 +41,7 @@ const SECTIONS: Section[] = [
     tagline: 'Make it feel like a real app.',
     numbered: true,
     items: [
-      { label: 'Open in Safari', detail: 'Go to https://iisauha.github.io/iisauhwallet/ in Safari.' },
+      { label: 'Open in Safari', detail: 'Open the alenjo website in Safari.' },
       { label: 'Share menu', detail: 'Tap the share icon (square with an arrow) at the bottom of Safari.' },
       { label: 'Add to Home Screen', detail: 'Scroll down and tap Add to Home Screen. Name it whatever you like.' },
       { label: 'Done', detail: 'The app now lives on your home screen. Sign in with your email and passcode and your data syncs automatically.' },

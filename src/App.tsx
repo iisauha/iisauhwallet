@@ -143,7 +143,7 @@ function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
           </div>
         )}
         <span className="app-header-name" style={{ fontWeight: 600, color: 'var(--ui-title-text, var(--text))' }}>
-          {displayName || 'iisauh Wallet'}
+          {displayName || 'alenjo'}
         </span>
       </button>
     </header>

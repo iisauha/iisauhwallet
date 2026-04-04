@@ -7,7 +7,7 @@ export function PrivacyPage() {
     <div className="tab-panel active" style={{ maxWidth: 720, margin: '0 auto', paddingBottom: 80 }}>
       <div className="card" style={{ padding: 20, marginBottom: 24 }}>
         <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 700, color: 'var(--ui-title-text, var(--text))' }}>
-          Security &amp; Privacy Policy - iisauh wallet
+          Security &amp; Privacy Policy - alenjo
         </h1>
         <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))' }}>Last updated: March 2026</p>
       </div>
@@ -17,7 +17,7 @@ export function PrivacyPage() {
           Quick summary (what could worry you)
         </h2>
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          iisauh wallet keeps your information on <strong>your device, inside your browser</strong>. Nothing you type is
+          alenjo keeps your information on <strong>your device, inside your browser</strong>. Nothing you type is
           sent to our servers for storage. Think of it like a notebook that lives in your phone or computer’s browser. The
           main risk is <strong>someone else getting into that device or into those saved files</strong>, or you sharing a
           backup file you did not mean to share.
@@ -99,7 +99,7 @@ export function PrivacyPage() {
           Realistic risk (if someone “got your stuff”)
         </h2>
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          For someone to learn what you track in iisauh wallet, they would generally need several stars to line up:
+          For someone to learn what you track in alenjo, they would generally need several stars to line up:
         </p>
         <ol style={{ margin: '10px 0 0 0', paddingLeft: 20, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.7 }}>
           <li style={{ marginBottom: 8 }}>
@@ -148,7 +148,7 @@ export function PrivacyPage() {
           Creator access limitations
         </h2>
         <p style={{ margin: 0, color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.6 }}>
-          The person who built iisauh wallet does <strong>not</strong> have access to your information. Your balances,
+          The person who built alenjo does <strong>not</strong> have access to your information. Your balances,
           purchases, settings, passcode, recovery setup, and profile are <strong>not</strong> uploaded to the creator or
           stored on a central server they can open. They stay in <strong>your browser’s saved storage on your own
           device</strong> (the same kind of place a website keeps login preferences), until you export a file yourself or
