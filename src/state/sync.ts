@@ -92,6 +92,10 @@ async function pushToSupabase(): Promise<boolean> {
     _lastSyncedAt = new Date().toISOString();
     try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
     notifySyncListeners();
+
+    // Save a daily snapshot (one per calendar day)
+    saveDailySnapshot(userId, encrypted).catch(() => {});
+
     return true;
   } catch (e) {
     console.error('[sync] push error:', e);
@@ -190,4 +194,77 @@ export function stopSync() {
 export async function forceSyncToSupabase(passcode: string): Promise<boolean> {
   _passcode = passcode;
   return pushToSupabase();
+}
+
+// ── Snapshot (version history) ──────────────────────────────────────────
+
+const SNAPSHOT_DAY_KEY = '__lastSnapshotDay';
+
+/** Save a snapshot if we haven't already saved one today. */
+async function saveDailySnapshot(userId: string, encrypted: string): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  try {
+    const lastDay = localStorage.getItem(SNAPSHOT_DAY_KEY);
+    if (lastDay === today) return; // already saved today
+
+    await supabase.from('user_data_snapshots').insert({
+      user_id: userId,
+      encrypted_data: encrypted
+    });
+    localStorage.setItem(SNAPSHOT_DAY_KEY, today);
+  } catch {}
+}
+
+export type SnapshotEntry = { id: string; created_at: string };
+
+/** List all snapshots for the current user, newest first. */
+export async function listSnapshots(): Promise<SnapshotEntry[]> {
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return [];
+    const { data, error } = await supabase
+      .from('user_data_snapshots')
+      .select('id, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(90);
+    if (error || !data) return [];
+    return data;
+  } catch {
+    return [];
+  }
+}
+
+/** Restore a specific snapshot by ID. */
+export async function restoreSnapshot(snapshotId: string, passcode: string): Promise<boolean> {
+  try {
+    const userId = await getAuthUserId();
+    if (!userId) return false;
+    const { data, error } = await supabase
+      .from('user_data_snapshots')
+      .select('encrypted_data')
+      .eq('id', snapshotId)
+      .eq('user_id', userId)
+      .single();
+    if (error || !data?.encrypted_data) return false;
+    const plaintext = await decryptWithPasscode(data.encrypted_data, passcode);
+    importJSON(plaintext);
+    return true;
+  } catch (e) {
+    console.error('[sync] restore snapshot error:', e);
+    return false;
+  }
+}
+
+/** Delete a specific snapshot by ID. */
+export async function deleteSnapshot(snapshotId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('user_data_snapshots')
+      .delete()
+      .eq('id', snapshotId);
+    return !error;
+  } catch {
+    return false;
+  }
 }

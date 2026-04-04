@@ -48,7 +48,7 @@ import {
 } from '../../ui/icons';
 import { OnboardingGuide } from '../onboarding/OnboardingGuide';
 import { useAuth } from '../../state/AuthContext';
-import { stopSync, forceSyncToSupabase, pullFromSupabase, getLastSyncedAt, onSyncChange } from '../../state/sync';
+import { stopSync, forceSyncToSupabase, pullFromSupabase, getLastSyncedAt, onSyncChange, listSnapshots, restoreSnapshot, type SnapshotEntry } from '../../state/sync';
 
 /** Returns export filename: Month_Day_Year.json */
 function getExportFileName(): string {
@@ -272,6 +272,10 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const contentGuard = useContentGuard();
   const [lastSynced, setLastSynced] = useState(() => getLastSyncedAt());
   const [syncingNow, setSyncingNow] = useState(false);
+  const [cloudBackupsOpen, setCloudBackupsOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   useEffect(() => onSyncChange(() => setLastSynced(getLastSyncedAt())), []);
   const [manageOpen, setManageOpen] = useState(false);
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
@@ -673,38 +677,15 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         <SettingsRow
           icon={<IconDatabase />}
           iconBg="var(--accent)"
-          label="Restore from Cloud"
-          sublabel="Replace local data with the latest cloud backup"
+          label="Cloud Backups"
+          sublabel="Browse and restore from previous backups"
           onClick={async () => {
-            const ok = await showConfirm('This will replace all local data with your cloud backup. Continue?');
-            if (!ok) return;
-            const dk = localStorage.getItem('iisauhwallet_dk_v1');
-            const passcode = dk || '';
-            if (!passcode) {
-              showAlert('Unable to restore — passcode required for decryption.');
-              return;
-            }
-            const success = await pullFromSupabase(passcode);
-            if (success) {
-              showAlert('Data restored from cloud. The app will now reload.');
-              actions.reload();
-              window.location.reload();
-            } else {
-              showAlert('Could not restore from cloud. No backup found or decryption failed.');
-            }
+            setCloudBackupsOpen(true);
+            setSnapshotsLoading(true);
+            const list = await listSnapshots();
+            setSnapshots(list);
+            setSnapshotsLoading(false);
           }}
-        />
-      </div>
-
-      {/* Data Export */}
-      <p className="settings-group-label">Data Export</p>
-      <div className="settings-list">
-        <SettingsRow
-          icon={<IconExport />}
-          iconBg="var(--accent)"
-          label="Export Backup File"
-          sublabel="Download a local copy of all your data"
-          onClick={handleExportJSON}
         />
         <SettingsRow
           icon={<IconDatabase />}
@@ -719,13 +700,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               setCsvRangePicker(true);
             }
           }}
-        />
-        <SettingsRow
-          icon={<IconDatabase />}
-          iconBg="var(--muted)"
-          label="Import Backup File"
-          sublabel="Restore data from a local backup file"
-          onClick={() => fileRef.current?.click()}
         />
         <SettingsRow
           icon={<IconRefresh />}
@@ -1041,6 +1015,100 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               {challengeCountdown > 0 ? `Try again in ${challengeCountdown}s…` : 'Confirm'}
             </button>
           </div>
+        </Modal>
+      )}
+
+      {cloudBackupsOpen && (
+        <Modal open={true} title="Cloud Backups" onClose={() => setCloudBackupsOpen(false)}>
+          {snapshotsLoading ? (
+            <p style={{ textAlign: 'center', color: 'var(--ui-secondary-text, #999)', padding: 20 }}>Loading backups...</p>
+          ) : snapshots.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20 }}>
+              <p style={{ color: 'var(--ui-secondary-text, #999)', marginBottom: 16 }}>No saved backups yet. Backups are created automatically once per day when you use the app.</p>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={async () => {
+                  const dk = localStorage.getItem('iisauhwallet_dk_v1');
+                  const passcode = dk || '';
+                  if (!passcode) return;
+                  const success = await pullFromSupabase(passcode);
+                  if (success) {
+                    showAlert('Data restored from cloud. The app will now reload.');
+                    window.location.reload();
+                  } else {
+                    showAlert('No cloud data found.');
+                  }
+                }}
+              >
+                Restore Latest from Cloud
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: 'var(--ui-secondary-text, #999)' }}>
+                Tap a backup to restore it. This will replace your current data.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {snapshots.map((s) => {
+                  const d = new Date(s.created_at);
+                  const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                  const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                  const isRestoring = restoringId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        background: 'var(--ui-surface-secondary, var(--surface))',
+                        border: 'none',
+                        borderBottom: '1px solid var(--ui-border, var(--border-subtle))',
+                        color: 'var(--ui-primary-text, var(--text))',
+                        fontSize: '0.9rem',
+                        cursor: isRestoring ? 'default' : 'pointer',
+                        opacity: isRestoring ? 0.6 : 1,
+                        textAlign: 'left',
+                        width: '100%',
+                      }}
+                      disabled={isRestoring}
+                      onClick={async () => {
+                        const ok = await showConfirm(`Restore backup from ${dateStr} at ${timeStr}? This will replace all your current data.`);
+                        if (!ok) return;
+                        setRestoringId(s.id);
+                        const dk = localStorage.getItem('iisauhwallet_dk_v1');
+                        const passcode = dk || '';
+                        if (!passcode) {
+                          showAlert('Unable to restore — passcode required.');
+                          setRestoringId(null);
+                          return;
+                        }
+                        const success = await restoreSnapshot(s.id, passcode);
+                        setRestoringId(null);
+                        if (success) {
+                          showAlert('Backup restored. The app will now reload.');
+                          window.location.reload();
+                        } else {
+                          showAlert('Failed to restore this backup. It may have been created with a different passcode.');
+                        }
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{dateStr}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--ui-secondary-text, #999)', marginTop: 2 }}>{timeStr}</div>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--accent, #4a9eff)' }}>
+                        {isRestoring ? 'Restoring...' : 'Restore'}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </Modal>
       )}
 
