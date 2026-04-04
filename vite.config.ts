@@ -14,7 +14,7 @@ const devCspPermissive = [
 ].join('; ');
 
 export default defineConfig({
-  base: '/iisauhwallet/',
+  base: '/',
   server: {
     proxy: {
       '/api': {
@@ -55,7 +55,7 @@ export default defineConfig({
       },
       workbox: {
         mode: 'development',
-        navigateFallback: '/iisauhwallet/index.html'
+        navigateFallback: '/index.html'
       }
     })
   ]
