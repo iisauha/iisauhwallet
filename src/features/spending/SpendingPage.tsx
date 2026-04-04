@@ -770,20 +770,17 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                   ))}
                 </div>
               )}
-              {hasMorePurchases && (() => {
-                const atEnd = purchasesCarouselIdx >= visiblePurchases.length - 1;
-                return (
-                  <div style={{ textAlign: 'center', marginTop: atEnd ? 8 : 0, height: atEnd ? undefined : 0, visibility: atEnd ? 'visible' : 'hidden', overflow: 'hidden', transition: 'height 0.15s ease, margin-top 0.15s ease' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-compact"
-                      onClick={() => setShowAllPurchases(true)}
-                    >
-                      See more
-                    </button>
-                  </div>
-                );
-              })()}
+              {hasMorePurchases && (
+                <div style={{ textAlign: 'center', marginTop: 8, opacity: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 1 : 0, pointerEvents: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 'auto' : 'none', transition: 'opacity 0.15s ease' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-compact"
+                    onClick={() => setShowAllPurchases(true)}
+                  >
+                    See more
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
