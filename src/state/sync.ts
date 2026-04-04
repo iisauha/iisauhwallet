@@ -11,7 +11,7 @@
 
 import { supabase } from './supabase';
 import { exportJSON, importJSON } from './storage';
-import { encryptWithPasscode, decryptWithPasscode, encryptWithDeviceKey, decryptWithDeviceKey } from './crypto';
+import { encryptWithPasscode, decryptWithPasscode, encryptWithDeviceKey, decryptWithDeviceKey, isEncrypted } from './crypto';
 
 let _passcode: string | null = null;
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -416,7 +416,10 @@ export async function loadSyncPassphrase(): Promise<string | null> {
     const raw = localStorage.getItem(SYNC_PASS_KEY);
     if (!raw) return null;
     const decrypted = await decryptWithDeviceKey(raw);
-    return decrypted || null;
+    // If device key wasn't loaded, decryptWithDeviceKey returns the encrypted blob
+    // as-is — detect that and return null instead of the garbled string.
+    if (!decrypted || isEncrypted(decrypted)) return null;
+    return decrypted;
   } catch {
     return null;
   }
