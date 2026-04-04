@@ -160,8 +160,9 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
 export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const shouldShowWelcomeInit = loadPasscodePaused() && loadShowWelcomeScreen() && !!loadUserDisplayName();
+  const [showWelcome, setShowWelcome] = useState(shouldShowWelcomeInit);
+  const [welcomeVisible, setWelcomeVisible] = useState(shouldShowWelcomeInit);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSkipWarning, setShowSkipWarning] = useState(false);
   const justLoggedInRef = useRef(false);
@@ -695,18 +696,13 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     return () => { stopSync(); };
   }, []);
 
-  // Show welcome screen on app load when passcode is paused
+  // Dismiss welcome screen after animation (timers only — state is initialized synchronously above)
   useEffect(() => {
-    if (!loadPasscodePaused()) return;
-    if (!loadShowWelcomeScreen()) return;
-    const name = loadUserDisplayName();
-    if (!name) return;
-    setShowWelcome(true);
-    setWelcomeVisible(true);
+    if (!showWelcome) return;
     const t1 = setTimeout(() => setWelcomeVisible(false), 1600);
     const t2 = setTimeout(() => setShowWelcome(false), 1950);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
+  }, [showWelcome]);
 
   if (showOnboarding) {
     return (

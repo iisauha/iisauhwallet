@@ -18,6 +18,8 @@ let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let _listening = false;
 let _syncing = false;
 let _lastSyncedAt: string | null = null;
+let _lastPushId: string | null = null; // track our own pushes to ignore realtime echo
+let _realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 const _syncListeners: Set<() => void> = new Set();
 
 const DEBOUNCE_MS = 2000;
@@ -89,7 +91,9 @@ async function pushToSupabase(): Promise<boolean> {
       console.error('[sync] push failed:', error.message);
       return false;
     }
-    _lastSyncedAt = new Date().toISOString();
+    const now = new Date().toISOString();
+    _lastSyncedAt = now;
+    _lastPushId = now; // mark this push so realtime ignores it
     try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
     notifySyncListeners();
 
@@ -171,6 +175,8 @@ export function initSync(passcode: string) {
   }
   // Initial push to sync local → remote
   setTimeout(() => pushToSupabase(), 500);
+  // Start realtime subscription for cross-device sync
+  startRealtimeSubscription();
 }
 
 /**
@@ -186,6 +192,7 @@ export function stopSync() {
     window.removeEventListener('data-changed', onDataChanged);
     _listening = false;
   }
+  stopRealtimeSubscription();
 }
 
 /**
@@ -194,6 +201,53 @@ export function stopSync() {
 export async function forceSyncToSupabase(passcode: string): Promise<boolean> {
   _passcode = passcode;
   return pushToSupabase();
+}
+
+// ── Realtime cross-device sync ──────────────────────────────────────────
+
+let _realtimePullTimer: ReturnType<typeof setTimeout> | null = null;
+
+function startRealtimeSubscription() {
+  stopRealtimeSubscription();
+  _realtimeChannel = supabase
+    .channel('user_data_realtime')
+    .on(
+      'postgres_changes' as any,
+      { event: 'UPDATE', schema: 'public', table: 'user_data' },
+      (payload: any) => {
+        // Ignore our own pushes by comparing updated_at
+        const remoteUpdatedAt = payload?.new?.updated_at;
+        if (remoteUpdatedAt && remoteUpdatedAt === _lastPushId) return;
+
+        // Another device pushed an update — pull it
+        if (_passcode && !_syncing) {
+          // Debounce to avoid pulling while we're also pushing
+          if (_realtimePullTimer) clearTimeout(_realtimePullTimer);
+          _realtimePullTimer = setTimeout(async () => {
+            try {
+              const success = await pullFromSupabase(_passcode!);
+              if (success) {
+                // Dynamically import to avoid circular dependency
+                const { useLedgerStore } = await import('./store');
+                useLedgerStore.getState().actions.reload();
+                _lastSyncedAt = new Date().toISOString();
+                try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
+                notifySyncListeners();
+              }
+            } catch {}
+          }, 500);
+        }
+      }
+    )
+    .subscribe();
+}
+
+function stopRealtimeSubscription() {
+  if (_realtimePullTimer) { clearTimeout(_realtimePullTimer); _realtimePullTimer = null; }
+  if (_realtimeChannel) {
+    supabase.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
 }
 
 // ── Snapshot (version history) ──────────────────────────────────────────
