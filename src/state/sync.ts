@@ -152,12 +152,14 @@ export async function pullFromSupabase(passcode: string, preserveDeviceKeys = tr
     try {
       importJSON(plaintext);
 
-      // Restore device-specific keys
+      // Restore device-specific keys (including removing ones that didn't exist before)
       if (preserveDeviceKeys) {
         for (const k of DEVICE_LOCAL_KEYS) {
           const saved = savedDeviceKeys[k];
           if (saved !== null) {
             localStorage.setItem(k, saved);
+          } else {
+            localStorage.removeItem(k);
           }
         }
       }
@@ -250,7 +252,7 @@ export async function forceSyncToSupabase(passcode: string): Promise<boolean> {
 // Polls every 10 seconds to check if another device pushed an update.
 // Only fetches the timestamp (tiny query), pulls full data only when changed.
 
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 5_000;
 let _pollTimer: ReturnType<typeof setInterval> | null = null;
 let _lastKnownRemoteUpdatedAt: string | null = null;
 

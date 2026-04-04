@@ -262,6 +262,7 @@ export function loadAdvancedUIColors(): AdvancedUIColors {
 export function saveAdvancedUIColors(colors: AdvancedUIColors) {
   try {
     localStorage.setItem(UI_ADVANCED_COLORS_KEY, JSON.stringify(colors));
+    window.dispatchEvent(new Event('data-changed'));
   } catch (_) {}
 }
 
@@ -282,6 +283,7 @@ export function loadThemePresets(): SavedThemePreset[] {
 export function saveThemePresets(list: SavedThemePreset[]): void {
   try {
     localStorage.setItem('iisauhwallet_ui_theme_presets_v1', JSON.stringify(list));
+    window.dispatchEvent(new Event('data-changed'));
   } catch (_) {}
 }
 
@@ -1340,7 +1342,7 @@ export function loadAppThemeColor(): string {
 
 export function saveAppThemeColor(hex: string) {
   try {
-    if (isValidHex(hex)) localStorage.setItem(APP_THEME_COLOR_KEY, hex);
+    if (isValidHex(hex)) { localStorage.setItem(APP_THEME_COLOR_KEY, hex); window.dispatchEvent(new Event('data-changed')); }
   } catch (_) {}
 }
 
@@ -1354,7 +1356,7 @@ export function loadAppAccentColor(): string {
 
 export function saveAppAccentColor(hex: string) {
   try {
-    if (isValidHex(hex)) localStorage.setItem(APP_ACCENT_COLOR_KEY, hex);
+    if (isValidHex(hex)) { localStorage.setItem(APP_ACCENT_COLOR_KEY, hex); window.dispatchEvent(new Event('data-changed')); }
   } catch (_) {}
 }
 
@@ -1377,7 +1379,7 @@ export function loadAppFontFamily(): string {
 
 export function saveAppFontFamily(value: string) {
   try {
-    if (VALID_FONT_FAMILIES.has(value)) localStorage.setItem(APP_FONT_FAMILY_KEY, value);
+    if (VALID_FONT_FAMILIES.has(value)) { localStorage.setItem(APP_FONT_FAMILY_KEY, value); window.dispatchEvent(new Event('data-changed')); }
   } catch (_) {}
 }
 
@@ -1395,7 +1397,7 @@ export function loadAppFontScale(): number {
 
 export function saveAppFontScale(value: number) {
   try {
-    if (VALID_FONT_SCALES.has(value)) localStorage.setItem(APP_FONT_SCALE_KEY, String(value));
+    if (VALID_FONT_SCALES.has(value)) { localStorage.setItem(APP_FONT_SCALE_KEY, String(value)); window.dispatchEvent(new Event('data-changed')); }
   } catch (_) {}
 }
 

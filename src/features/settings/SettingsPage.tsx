@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY, UNDO_DURATION_KEY } from '../../state/keys';
+import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, UNDO_DURATION_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import {
   exportJSON,
@@ -26,9 +26,6 @@ import {
   verifyPasscode,
   clearDataCache,
   logActivityEntry,
-  estimateStorageUsage,
-  archiveOldPurchases,
-  saveData,
 } from '../../state/storage';
 import { useContentGuard } from '../../state/useContentGuard';
 import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
@@ -41,8 +38,8 @@ import { ResetPasscodeModal } from './ResetPasscodeModal';
 import { FAQModal } from './FAQModal';
 import { Modal } from '../../ui/Modal';
 import {
-  IconBox, IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
-  IconExport, IconChevronRight, IconTrash, IconRefresh,
+  IconPalette, IconLayout, IconLock, IconTag, IconDatabase, IconUser,
+  IconChevronRight, IconTrash, IconRefresh,
   IconHome, IconArrowExchange, IconCalendar, IconBankBuilding,
   IconBarChartTrend, IconRefreshCircle, IconStar, IconQuestionMark, IconInfoCircle,
 } from '../../ui/icons';
@@ -313,8 +310,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [tabOrder, setTabOrder] = useState<string[]>(() => loadTabOrderFromStorage());
   const [selectedTabKey, setSelectedTabKey] = useState<string | null>(null);
 
-  const [backupLocationLabel, setBackupLocationLabel] = useState<string>(() => localStorage.getItem(BACKUP_LOCATION_LABEL_KEY) || '');
-  const [backupReminderDays, setBackupReminderDays] = useState<number>(() => parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1);
   const [undoDuration, setUndoDuration] = useState<number>(() => parseInt(localStorage.getItem(UNDO_DURATION_KEY) || '5', 10) || 5);
 
   const hasPasscode = loadPasscodeHash() !== null;
@@ -426,7 +421,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     const markExported = () => {
       localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString());
       logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
-      window.dispatchEvent(new CustomEvent('backup-completed'));
     };
     try {
       const nav: any = navigator as any;
