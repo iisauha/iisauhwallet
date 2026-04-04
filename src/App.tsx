@@ -142,14 +142,9 @@ function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
             {displayName ? displayName.charAt(0).toUpperCase() : ''}
           </div>
         )}
-        <div className="app-header-text">
-          <span className="app-header-greeting">
-            {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}
-          </span>
-          <span className="app-header-name">
-            {displayName || 'alenjo'}
-          </span>
-        </div>
+        <span className="app-header-name" style={{ fontWeight: 600, color: 'var(--ui-title-text, var(--text))' }}>
+          {displayName || 'alenjo'}
+        </span>
       </button>
       <div style={{
         width: 28,
