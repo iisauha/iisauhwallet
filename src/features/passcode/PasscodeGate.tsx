@@ -585,6 +585,14 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [authenticated]);
 
+  // Start sync when passcode is paused (use device key as encryption passphrase)
+  useEffect(() => {
+    if (!loadPasscodePaused()) return;
+    const dk = localStorage.getItem('iisauhwallet_dk_v1');
+    if (dk) initSync(dk);
+    return () => { stopSync(); };
+  }, []);
+
   // Show welcome screen on app load when passcode is paused
   useEffect(() => {
     if (!loadPasscodePaused()) return;
