@@ -731,57 +731,9 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         }}
       />
 
-      {/* Storage */}
-      <p className="settings-group-label">Storage</p>
+      {/* Preferences */}
+      <p className="settings-group-label">Preferences</p>
       <div className="settings-list">
-        <SettingsRow
-          icon={<IconBox />}
-          iconBg="var(--accent)"
-          label="Storage Usage"
-          sublabel={(() => {
-            void data;
-            const { totalBytes, purchaseCount } = estimateStorageUsage();
-            const capBytes = 5 * 1024 * 1024;
-            const kb = (totalBytes / 1024).toFixed(0);
-            const mb = (totalBytes / (1024 * 1024)).toFixed(2);
-            const pct = ((totalBytes / capBytes) * 100).toFixed(1);
-            const usageLine = `${Number(kb) > 1024 ? mb + ' MB' : kb + ' KB'} used (~${pct}% of 5 MB) \u2022 ${purchaseCount} purchases`;
-            if (purchaseCount < 2) return usageLine;
-            // Estimate when storage will fill based on purchase rate
-            const purchases = (data.purchases || []) as any[];
-            const dates = purchases.map((p: any) => p.dateISO).filter(Boolean).sort();
-            if (dates.length < 2) return usageLine;
-            const firstDate = new Date(dates[0] + 'T00:00:00');
-            const lastDate = new Date(dates[dates.length - 1] + 'T00:00:00');
-            const spanDays = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
-            const bytesPerDay = totalBytes / spanDays;
-            if (bytesPerDay <= 0) return usageLine;
-            const daysLeft = Math.floor((capBytes - totalBytes) / bytesPerDay);
-            if (daysLeft <= 0) return usageLine + '\nStorage is nearly full.';
-            const estDate = new Date(Date.now() + daysLeft * 24 * 60 * 60 * 1000);
-            const estLabel = estDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-            return `${usageLine}\nEstimated full ~${estLabel} (rough estimate, varies by usage)`;
-          })()}
-        />
-        <SettingsRow
-          icon={<IconTrash />}
-          iconBg="#f59e0b"
-          label="Remove Old Purchases"
-          sublabel="Deletes individual purchase records older than 6 months. Your total spending per category per month is still saved so your spending breakdown and charts stay accurate."
-          onClick={async () => {
-            const ok = await showConfirm('Remove all purchases older than 6 months? Individual records will be deleted, but your total spending per category per month is preserved so charts and category breakdowns remain accurate. This cannot be undone. Consider exporting a backup first.');
-            if (!ok) return;
-            const current = useLedgerStore.getState().data;
-            const result = archiveOldPurchases(current, 6);
-            if (result.archivedCount === 0) {
-              await showAlert('No purchases older than 6 months found.');
-              return;
-            }
-            saveData(result.data);
-            actions.reload();
-            await showAlert(`Archived ${result.archivedCount} old purchase${result.archivedCount === 1 ? '' : 's'}.`);
-          }}
-        />
         <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Undo popup duration</span>
           <Select
