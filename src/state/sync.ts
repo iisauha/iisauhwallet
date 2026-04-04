@@ -211,6 +211,22 @@ function onDataChanged() {
   schedulePush();
 }
 
+/** Flush any pending debounced push immediately (e.g. before app goes to background). */
+function flushPendingPush() {
+  if (_debounceTimer) {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = null;
+    pushToSupabase();
+  }
+}
+
+// When the app goes to the background (user switches to Safari, locks phone, etc.),
+// flush any pending push immediately. iOS suspends PWA JS contexts in the background,
+// so debounced timeouts would never fire.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && _passcode) flushPendingPush();
+});
+
 /**
  * Start syncing. Call after passcode unlock.
  * - Stores passcode in memory for encryption
