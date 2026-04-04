@@ -217,8 +217,13 @@ function onDataChanged() {
  * - Listens for data-changed events to auto-push
  * - If localStorage has data, does initial push to ensure remote is current
  */
+const SESSION_PASS_KEY = '__sync_pass_session';
+
 export function initSync(passcode: string) {
   _passcode = passcode;
+  // Save in sessionStorage so password unlock works after auto-lock
+  // (device key is cleared by lockCrypto, but sessionStorage survives)
+  try { sessionStorage.setItem(SESSION_PASS_KEY, passcode); } catch {}
   if (!_listening) {
     window.addEventListener('data-changed', onDataChanged);
     _listening = true;
@@ -398,8 +403,15 @@ export async function saveSyncPassphrase(passcode: string): Promise<void> {
   } catch {}
 }
 
-/** Load the saved passcode for cloud sync (when passcode gate is paused). */
+/** Load the saved passcode for cloud sync. Tries sessionStorage first (survives
+ *  auto-lock), falls back to localStorage (needs device key). */
 export async function loadSyncPassphrase(): Promise<string | null> {
+  // sessionStorage copy survives auto-lock (device key cleared but session persists)
+  try {
+    const session = sessionStorage.getItem(SESSION_PASS_KEY);
+    if (session) return session;
+  } catch {}
+  // Fall back to localStorage (encrypted with device key, needs key loaded)
   try {
     const raw = localStorage.getItem(SYNC_PASS_KEY);
     if (!raw) return null;

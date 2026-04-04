@@ -283,6 +283,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       const matches = await verifyPasscode(passcode, storedHash);
       if (!matches) return;
       await unlockWithPasscode(passcode);
+      // Reload store from freshly decrypted cache BEFORE checking local data,
+      // so the hasLocalData check sees real data instead of stale defaultData().
+      useLedgerStore.getState().actions.reload();
       const localData = useLedgerStore.getState().data;
       const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
       if (!hasLocalData) {
@@ -290,8 +293,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           const remote = await hasRemoteData();
           if (remote) await pullFromSupabase(passcode);
         } catch {}
+        useLedgerStore.getState().actions.reload();
       }
-      useLedgerStore.getState().actions.reload();
       saveSyncPassphrase(passcode);
       initSync(passcode);
       setAuthenticated(true);
@@ -483,6 +486,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
     // Unlock device key (migrates plaintext→wrapped on first login, or unwraps on subsequent).
     await unlockWithPasscode(input);
+    // Reload store from freshly decrypted cache BEFORE checking local data,
+    // so the hasLocalData check sees real data instead of stale defaultData().
+    useLedgerStore.getState().actions.reload();
     // If this device has no local data but Supabase has data, pull it down first.
     const localData = useLedgerStore.getState().data;
     const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
@@ -493,8 +499,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           await pullFromSupabase(input);
         }
       } catch {}
+      useLedgerStore.getState().actions.reload();
     }
-    useLedgerStore.getState().actions.reload();
     saveSyncPassphrase(input);
     initSync(input);
     resetFailedAttempts();
