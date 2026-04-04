@@ -48,7 +48,7 @@ import {
 } from '../../ui/icons';
 import { OnboardingGuide } from '../onboarding/OnboardingGuide';
 import { useAuth } from '../../state/AuthContext';
-import { stopSync } from '../../state/sync';
+import { stopSync, forceSyncToSupabase, pullFromSupabase, getLastSyncedAt, onSyncChange } from '../../state/sync';
 
 /** Returns export filename: Month_Day_Year.json */
 function getExportFileName(): string {
@@ -268,8 +268,11 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const { showAlert, showConfirm } = useDialog();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const contentGuard = useContentGuard();
+  const [lastSynced, setLastSynced] = useState(() => getLastSyncedAt());
+  const [syncingNow, setSyncingNow] = useState(false);
+  useEffect(() => onSyncChange(() => setLastSynced(getLastSyncedAt())), []);
   const [manageOpen, setManageOpen] = useState(false);
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
   const [editAccountNamesOpen, setEditAccountNamesOpen] = useState(false);
@@ -637,14 +640,70 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         </>
       )}
 
-      {/* Backup */}
-      <p className="settings-group-label">Backup</p>
+      {/* Cloud Sync */}
+      <p className="settings-group-label">Cloud Sync</p>
+      <div className="settings-list">
+        <div style={{ padding: '13px 16px', borderBottom: '1px solid var(--ui-border, var(--border-subtle))' }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>
+            {user?.email ? `Signed in as ${user.email}` : 'Signed in'}
+          </div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--ui-secondary-text, #999)', marginTop: 2 }}>
+            {lastSynced
+              ? `Last synced ${new Date(lastSynced).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${new Date(lastSynced).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+              : 'Not synced yet'}
+          </div>
+        </div>
+        <SettingsRow
+          icon={<IconRefresh />}
+          iconBg="var(--green)"
+          label={syncingNow ? 'Syncing...' : 'Sync Now'}
+          sublabel="Push your latest data to the cloud"
+          onClick={async () => {
+            if (syncingNow) return;
+            setSyncingNow(true);
+            // Use device key if passcode is paused, otherwise need passcode from sync module
+            const dk = localStorage.getItem('iisauhwallet_dk_v1');
+            const passcode = dk || '';
+            if (passcode) {
+              await forceSyncToSupabase(passcode);
+            }
+            setSyncingNow(false);
+          }}
+        />
+        <SettingsRow
+          icon={<IconDatabase />}
+          iconBg="var(--accent)"
+          label="Restore from Cloud"
+          sublabel="Replace local data with the latest cloud backup"
+          onClick={async () => {
+            const ok = await showConfirm('This will replace all local data with your cloud backup. Continue?');
+            if (!ok) return;
+            const dk = localStorage.getItem('iisauhwallet_dk_v1');
+            const passcode = dk || '';
+            if (!passcode) {
+              showAlert('Unable to restore — passcode required for decryption.');
+              return;
+            }
+            const success = await pullFromSupabase(passcode);
+            if (success) {
+              showAlert('Data restored from cloud. The app will now reload.');
+              actions.reload();
+              window.location.reload();
+            } else {
+              showAlert('Could not restore from cloud. No backup found or decryption failed.');
+            }
+          }}
+        />
+      </div>
+
+      {/* Data Export */}
+      <p className="settings-group-label">Data Export</p>
       <div className="settings-list">
         <SettingsRow
           icon={<IconExport />}
           iconBg="var(--accent)"
-          label="Export Backup"
-          sublabel="Download a full backup of all your data"
+          label="Export Backup File"
+          sublabel="Download a local copy of all your data"
           onClick={handleExportJSON}
         />
         <SettingsRow
@@ -664,8 +723,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
         <SettingsRow
           icon={<IconDatabase />}
           iconBg="var(--muted)"
-          label="Import Backup"
-          sublabel="Restore all data from a backup file (replaces current data)"
+          label="Import Backup File"
+          sublabel="Restore data from a local backup file"
           onClick={() => fileRef.current?.click()}
         />
         <SettingsRow
@@ -685,76 +744,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             window.location.reload();
           }}
         />
-        {/* Default save location — inside settings-list for consistent border styling */}
-        <div style={{ padding: '13px 14px', borderTop: '1px solid var(--ui-border, var(--border-subtle))' }}>
-          <label className="settings-row-label" style={{ display: 'block', marginBottom: 4 }}>
-            Default save location
-          </label>
-          <div className="settings-row-sublabel" style={{ marginBottom: 10 }}>
-            A personal reminder for yourself. When your backup reminder pops up, it'll show this so you remember where you usually save your backups.
-          </div>
-          <input
-            type="text"
-            value={backupLocationLabel}
-            onChange={(e) => setBackupLocationLabel(e.target.value)}
-            onBlur={() => {
-              const trimmed = backupLocationLabel.trim();
-              if (trimmed) {
-                localStorage.setItem(BACKUP_LOCATION_LABEL_KEY, trimmed);
-              } else {
-                localStorage.removeItem(BACKUP_LOCATION_LABEL_KEY);
-              }
-              setBackupLocationLabel(trimmed);
-            }}
-            placeholder="e.g. iCloud Drive / iisauh Wallet Backups"
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              fontSize: '0.82rem',
-              borderRadius: 8,
-              border: '1px solid var(--ui-border, var(--border))',
-              background: 'var(--ui-surface-secondary, var(--surface))',
-              color: 'var(--ui-primary-text, var(--text))',
-              fontFamily: 'var(--app-font-family)',
-            }}
-          />
-        </div>
-        <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 12 }}>
-          <div>
-            <div className="settings-row-label">Backup reminder</div>
-            <div className="settings-row-sublabel">
-              {(() => {
-                const lastStr = localStorage.getItem(LAST_EXPORT_DATE_KEY);
-                if (!lastStr) return 'You haven\'t backed up yet. Reminder will show next time you open the app.';
-                const lastDate = new Date(lastStr);
-                if (isNaN(lastDate.getTime())) return 'You haven\'t backed up yet.';
-                const nextDate = new Date(lastDate.getTime() + backupReminderDays * 24 * 60 * 60 * 1000);
-                const now = new Date();
-                if (nextDate <= now) return 'Reminder is due now. Back up soon!';
-                const fmt = nextDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                const time = nextDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                return `Next reminder on ${fmt} at ${time}`;
-              })()}
-            </div>
-          </div>
-          <Select
-            className="ll-select-compact"
-            value={backupReminderDays}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              setBackupReminderDays(v);
-              localStorage.setItem(BACKUP_REMINDER_DAYS_KEY, String(v));
-            }}
-          >
-            <option value={1}>Every day</option>
-            <option value={2}>Every 2 days</option>
-            <option value={3}>Every 3 days</option>
-            <option value={4}>Every 4 days</option>
-            <option value={5}>Every 5 days</option>
-            <option value={6}>Every 6 days</option>
-            <option value={7}>Every 7 days</option>
-          </Select>
-        </div>
       </div>
       <input
         ref={fileRef}

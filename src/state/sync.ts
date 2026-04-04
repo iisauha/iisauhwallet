@@ -17,8 +17,27 @@ let _passcode: string | null = null;
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let _listening = false;
 let _syncing = false;
+let _lastSyncedAt: string | null = null;
+const _syncListeners: Set<() => void> = new Set();
 
 const DEBOUNCE_MS = 2000;
+const LAST_SYNCED_KEY = '__lastSyncedAt';
+
+// Persist and restore last synced time
+try { _lastSyncedAt = localStorage.getItem(LAST_SYNCED_KEY); } catch {}
+
+/** Get the last successful sync timestamp (ISO string or null). */
+export function getLastSyncedAt(): string | null { return _lastSyncedAt; }
+
+/** Subscribe to sync status changes. Returns unsubscribe function. */
+export function onSyncChange(fn: () => void): () => void {
+  _syncListeners.add(fn);
+  return () => { _syncListeners.delete(fn); };
+}
+
+function notifySyncListeners() {
+  _syncListeners.forEach(fn => { try { fn(); } catch {} });
+}
 
 /** Get the current Supabase user ID, or null if not signed in. */
 function getUserId(): string | null {
@@ -70,6 +89,9 @@ async function pushToSupabase(): Promise<boolean> {
       console.error('[sync] push failed:', error.message);
       return false;
     }
+    _lastSyncedAt = new Date().toISOString();
+    try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
+    notifySyncListeners();
     return true;
   } catch (e) {
     console.error('[sync] push error:', e);
