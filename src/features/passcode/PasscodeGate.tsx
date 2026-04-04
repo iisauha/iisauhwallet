@@ -174,6 +174,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const confirmedPasscodeRef = useRef('');
   const [biometricPrompt, setBiometricPrompt] = useState(false);
   const biometricTriedRef = useRef(false);
+  const [biometricDismissed, setBiometricDismissed] = useState(false);
+  const passwordFieldRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-unlock after cloud restore (CloudRestoreGate saved passcode in sessionStorage)
   useEffect(() => {
@@ -264,7 +266,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     const t = setTimeout(async () => {
       biometricTriedRef.current = true;
       const passcode = await authenticateWithBiometric();
-      if (!passcode) return;
+      if (!passcode) {
+        // Face ID was dismissed or failed — focus password field so keyboard pops up
+        setBiometricDismissed(true);
+        setTimeout(() => { passwordFieldRef.current?.focus(); }, 100);
+        return;
+      }
       // Biometric succeeded — unlock
       const matches = await verifyPasscode(passcode, storedHash);
       if (!matches) return;
@@ -1099,6 +1106,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             </div>
           ) : null}
           <input
+            ref={passwordFieldRef}
             type="password"
             autoComplete="current-password"
             value={passwordInput}
@@ -1116,8 +1124,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
               marginBottom: 12,
               boxSizing: 'border-box',
             }}
-            readOnly={!passwordInput && isBiometricEnabled()}
-            onFocus={(e) => { if (isBiometricEnabled() && !passwordInput) { (e.target as HTMLInputElement).removeAttribute('readonly'); }}}
+            readOnly={!passwordInput && isBiometricEnabled() && !biometricDismissed}
+            onFocus={(e) => { (e.target as HTMLInputElement).removeAttribute('readonly'); }}
             onTouchStart={(e) => { (e.target as HTMLInputElement).removeAttribute('readonly'); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordUnlock(); }}
           />
