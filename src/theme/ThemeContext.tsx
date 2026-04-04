@@ -68,6 +68,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyAccentColor(accentColor);
   }, [accentColor]);
 
+  // Listen for remote theme sync — re-read from localStorage and update React state + CSS
+  useEffect(() => {
+    const handler = () => {
+      const newTheme = loadAppThemeColor();
+      const newAccent = loadAppAccentColor();
+      if (newTheme !== themeColor) {
+        setThemeColorState(newTheme);
+        applyThemeColor(newTheme);
+      }
+      if (newAccent !== accentColor) {
+        setAccentColorState(newAccent);
+        applyAccentColor(newAccent);
+      }
+    };
+    window.addEventListener('theme-sync', handler);
+    return () => window.removeEventListener('theme-sync', handler);
+  }, [themeColor, accentColor]);
+
   const setThemeColor = useCallback((hex: string) => {
     if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
     saveAppThemeColor(hex);

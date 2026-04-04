@@ -82,6 +82,17 @@ export function AdvancedUIColorsProvider({ children }: { children: ReactNode }) 
     });
   }, []);
 
+  // Listen for remote theme sync — re-read advanced UI colors from localStorage
+  useEffect(() => {
+    const handler = () => {
+      const newColors = loadAdvancedUIColors();
+      setColorsState(newColors);
+      applyAdvancedUIColors(newColors);
+    };
+    window.addEventListener('theme-sync', handler);
+    return () => window.removeEventListener('theme-sync', handler);
+  }, []);
+
   const value = useMemo(
     () => ({ colors, setColor, clearColor }),
     [colors, setColor, clearColor]

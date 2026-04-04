@@ -37,6 +37,24 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
     document.documentElement.style.setProperty('--app-font-scale', String(value));
   }, []);
 
+  // Listen for remote theme sync — re-read font settings from localStorage
+  useEffect(() => {
+    const handler = () => {
+      const newFamily = loadAppFontFamily();
+      const newScale = loadAppFontScale();
+      if (newFamily !== fontFamily) {
+        setFontFamilyState(newFamily);
+        document.documentElement.style.setProperty('--app-font-family', getFontFamilyStack(newFamily));
+      }
+      if (newScale !== fontScale) {
+        setFontScaleState(newScale);
+        document.documentElement.style.setProperty('--app-font-scale', String(newScale));
+      }
+    };
+    window.addEventListener('theme-sync', handler);
+    return () => window.removeEventListener('theme-sync', handler);
+  }, [fontFamily, fontScale]);
+
   const value = useMemo(
     () => ({ fontFamily, fontScale, setFontFamily, setFontScale }),
     [fontFamily, fontScale, setFontFamily, setFontScale]
