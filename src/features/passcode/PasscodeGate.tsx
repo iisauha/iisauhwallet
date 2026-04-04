@@ -912,8 +912,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
             maxLength={PASSCODE_LENGTH}
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={input}
             onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder={'•'.repeat(PASSCODE_LENGTH)}
@@ -932,8 +935,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
             maxLength={PASSCODE_LENGTH}
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={confirmInput}
             onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder={'•'.repeat(PASSCODE_LENGTH)}
@@ -953,7 +959,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           </p>
           <input
             type="text"
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={hintInput}
             onChange={(e) => setHintInput(e.target.value)}
             placeholder="e.g. Last 4 of my phone"
@@ -982,7 +988,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           </Select>
           {securityQ1 && (
             <>
-              <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={textInputStyle} />
+              <input type="text" autoComplete="one-time-code" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={textInputStyle} />
               <label style={{ fontSize: '0.9rem', marginBottom: 4 }}>Question 2</label>
               <Select value={securityQ2} onChange={(e) => setSecurityQ2(e.target.value)} style={selectStyle}>
                 <option value="">Select...</option>
@@ -991,7 +997,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
                 ))}
               </Select>
               {securityQ2 && (
-                <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={textInputStyle} />
+                <input type="text" autoComplete="one-time-code" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={textInputStyle} />
               )}
             </>
           )}
@@ -1037,8 +1043,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
             maxLength={PASSCODE_LENGTH}
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={input}
             onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder={'•'.repeat(PASSCODE_LENGTH)}
@@ -1073,7 +1082,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
-            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
+            autoComplete="one-time-code"
             value={input}
             onChange={(e) => { setInput(e.target.value.replace(/\D/g, '')); setError(''); }}
             placeholder={'•'.repeat(PASSCODE_LENGTH)}
@@ -1092,8 +1104,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
             maxLength={PASSCODE_LENGTH}
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={input}
             onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder={'•'.repeat(PASSCODE_LENGTH)}
@@ -1103,8 +1118,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
             maxLength={PASSCODE_LENGTH}
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={confirmInput}
             onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder={'•'.repeat(PASSCODE_LENGTH)}
@@ -1149,7 +1167,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           </p>
           <input
             type="text"
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={recoveryKeyInput}
             onChange={(e) => { setRecoveryKeyInput(e.target.value.trim()); setError(''); }}
             placeholder="Recovery key"
@@ -1168,9 +1186,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <>
             <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Security questions</h1>
             <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5 }}>{qa.q1}</p>
-            <input type="text" autoComplete="off" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={textInputStyle} />
+            <input type="text" autoComplete="one-time-code" value={securityA1} onChange={(e) => setSecurityA1(e.target.value)} placeholder="Answer 1" style={textInputStyle} />
             <p style={{ margin: '12px 0 4px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', lineHeight: 1.5 }}>{qa.q2}</p>
-            <input type="text" autoComplete="off" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={textInputStyle} />
+            <input type="text" autoComplete="one-time-code" value={securityA2} onChange={(e) => setSecurityA2(e.target.value)} placeholder="Answer 2" style={textInputStyle} />
             {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
             <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={handleSecurityAnswersSubmit}>Verify and reset passcode</button>
             <button type="button" className="btn btn-secondary" onClick={() => setStep('forgot-options')}>Back</button>
@@ -1198,8 +1216,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
             maxLength={PASSCODE_LENGTH}
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={input}
             onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder="New passcode"
@@ -1208,8 +1229,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <input
             type="tel"
             inputMode="numeric"
+            autoCorrect="off"
+            spellCheck={false}
+            data-lpignore="true"
             maxLength={PASSCODE_LENGTH}
-            autoComplete="off"
+            autoComplete="one-time-code"
             value={confirmInput}
             onChange={(e) => { setConfirmInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
             placeholder="Confirm new passcode"
