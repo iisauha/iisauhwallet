@@ -109,8 +109,21 @@ async function pushToSupabase(): Promise<boolean> {
   }
 }
 
+// Keys that are device-specific and should NOT be overwritten by cross-device sync.
+// These are preserved during poll-based pulls so each device keeps its own settings.
+const DEVICE_LOCAL_KEYS = [
+  'iisauhwallet_passcode_paused_v1',
+  'iisauhwallet_passcode_auto_lock_minutes_v1',
+  'iisauhwallet_show_welcome_screen_v1',
+  'iisauhwallet_biometric_enabled_v1',
+  'iisauhwallet_biometric_cred_id_v1',
+  'iisauhwallet_biometric_enc_pass_v1',
+  'iisauhwallet_biometric_salt_v1',
+  'iisauhwallet_onboarding_done_v1',
+];
+
 /** Pull app state from Supabase, decrypt, and import into localStorage. */
-export async function pullFromSupabase(passcode: string): Promise<boolean> {
+export async function pullFromSupabase(passcode: string, preserveDeviceKeys = true): Promise<boolean> {
   try {
     const userId = await getAuthUserId();
     if (!userId) return false;
@@ -124,11 +137,30 @@ export async function pullFromSupabase(passcode: string): Promise<boolean> {
     if (error || !data?.encrypted_data) return false;
 
     const plaintext = await decryptWithPasscode(data.encrypted_data, passcode);
+
+    // Save device-specific keys before import so they don't get overwritten
+    const savedDeviceKeys: Record<string, string | null> = {};
+    if (preserveDeviceKeys) {
+      for (const k of DEVICE_LOCAL_KEYS) {
+        savedDeviceKeys[k] = localStorage.getItem(k);
+      }
+    }
+
     // Cancel any pending push and suppress data-changed events during import
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     _isPulling = true;
     try {
       importJSON(plaintext);
+
+      // Restore device-specific keys
+      if (preserveDeviceKeys) {
+        for (const k of DEVICE_LOCAL_KEYS) {
+          const saved = savedDeviceKeys[k];
+          if (saved !== null) {
+            localStorage.setItem(k, saved);
+          }
+        }
+      }
     } finally {
       // Delay before re-enabling push so all async saveData/saveEncryptedKey settle
       setTimeout(() => { _isPulling = false; }, 2000);

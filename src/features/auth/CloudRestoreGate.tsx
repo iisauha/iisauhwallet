@@ -60,7 +60,7 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const pass = passcode.trim();
-      const success = await pullFromSupabase(pass);
+      const success = await pullFromSupabase(pass, false); // don't preserve device keys on fresh restore
       if (!success) {
         setError('Could not restore. Wrong passcode or decryption failed.');
         setLoading(false);
