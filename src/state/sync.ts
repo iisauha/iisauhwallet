@@ -25,9 +25,6 @@ const _syncListeners: Set<() => void> = new Set();
 
 const DEBOUNCE_MS = 2000;
 const LAST_SYNCED_KEY = '__lastSyncedAt';
-// Shared via localStorage so all contexts on this device (PWA + Safari) know
-// what the most recent push was and skip pulling their own device's data.
-const LAST_PUSH_AT_KEY = '__sync_last_push_at';
 
 // Persist and restore last synced time
 try { _lastSyncedAt = localStorage.getItem(LAST_SYNCED_KEY); } catch {}
@@ -100,9 +97,6 @@ async function pushToSupabase(): Promise<boolean> {
     _lastPushId = now; // mark this push so poll ignores it
     _pushCooldownUntil = Date.now() + 5000; // skip polls for 5s after push
     try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
-    // Share push ID so other contexts on this device (PWA ↔ Safari) also
-    // skip pulling data that originated from the same device.
-    try { localStorage.setItem(LAST_PUSH_AT_KEY, now); } catch {}
     notifySyncListeners();
 
     // Save a daily snapshot (one per calendar day)
@@ -288,8 +282,6 @@ async function pollForRemoteChanges() {
     const remoteAt = data.updated_at;
     // Skip if this is our own push
     if (remoteAt === _lastPushId) return;
-    // Skip if another context on this device pushed it (PWA ↔ Safari share localStorage)
-    try { if (remoteAt === localStorage.getItem(LAST_PUSH_AT_KEY)) return; } catch {}
     // Skip if we already know about this version
     if (remoteAt === _lastKnownRemoteUpdatedAt) return;
     _lastKnownRemoteUpdatedAt = remoteAt;

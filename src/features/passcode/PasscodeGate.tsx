@@ -284,6 +284,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       const matches = await verifyPasscode(passcode, storedHash);
       if (!matches) return;
       await unlockWithPasscode(passcode);
+      // Reload from freshly decrypted cache so hasLocalData sees real data.
+      // On same-device (PWA ↔ Safari), localStorage already has the latest
+      // data — pulling from Supabase would overwrite it with stale data.
+      useLedgerStore.getState().actions.reload();
       const localData = useLedgerStore.getState().data;
       const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
       if (!hasLocalData) {
@@ -291,8 +295,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           const remote = await hasRemoteData();
           if (remote) await pullFromSupabase(passcode);
         } catch {}
+        useLedgerStore.getState().actions.reload();
       }
-      useLedgerStore.getState().actions.reload();
       saveSyncPassphrase(passcode);
       initSync(passcode);
       setAuthenticated(true);
@@ -484,6 +488,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
     // Unlock device key (migrates plaintext→wrapped on first login, or unwraps on subsequent).
     await unlockWithPasscode(input);
+    // Reload from freshly decrypted cache so hasLocalData sees real data.
+    // On same-device (PWA ↔ Safari), localStorage already has the latest
+    // data — pulling from Supabase would overwrite it with stale data.
+    useLedgerStore.getState().actions.reload();
     // If this device has no local data but Supabase has data, pull it down first.
     const localData = useLedgerStore.getState().data;
     const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
@@ -494,8 +502,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           await pullFromSupabase(input);
         }
       } catch {}
+      useLedgerStore.getState().actions.reload();
     }
-    useLedgerStore.getState().actions.reload();
     saveSyncPassphrase(input);
     initSync(input);
     resetFailedAttempts();
@@ -533,6 +541,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       const syncPass = await loadSyncPassphrase();
       if (syncPass) {
         await unlockWithPasscode(syncPass);
+        useLedgerStore.getState().actions.reload();
         const localData = useLedgerStore.getState().data;
         const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
         if (!hasLocalData) {
@@ -540,8 +549,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             const remote = await hasRemoteData();
             if (remote) await pullFromSupabase(syncPass);
           } catch {}
+          useLedgerStore.getState().actions.reload();
         }
-        useLedgerStore.getState().actions.reload();
         saveSyncPassphrase(syncPass);
         initSync(syncPass);
         if (!isBiometricEnabled()) {
