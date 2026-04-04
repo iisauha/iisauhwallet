@@ -2536,3 +2536,91 @@ textarea:focus-visible {
   box-shadow: 0 0 8px color-mix(in srgb, var(--green) 30%, transparent);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   NET CASH CHART — Robinhood-style interactive line chart
+   ═══════════════════════════════════════════════════════════════════ */
+.net-cash-chart-wrap {
+  margin-bottom: 16px;
+}
+.net-cash-chart-header {
+  text-align: center;
+  padding: 4px 0 8px;
+}
+.net-cash-chart-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.net-cash-chart-value {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.net-cash-chart-change {
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.net-cash-chart-time {
+  color: var(--muted);
+  font-weight: 500;
+}
+.net-cash-chart-area {
+  position: relative;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  margin: 0 -18px;
+  padding: 0 18px;
+}
+.net-cash-chart-area svg {
+  overflow: visible;
+}
+.net-cash-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  border: 1px dashed color-mix(in srgb, var(--ui-border, var(--border)) 40%, transparent);
+  border-radius: var(--radius-card);
+}
+.net-cash-chart-ranges {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 10px;
+}
+.net-cash-chart-range {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--app-font-family);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.net-cash-chart-range.active {
+  background: color-mix(in srgb, var(--ui-add-btn, var(--accent)) 15%, transparent);
+  color: var(--ui-add-btn, var(--accent));
+}
+.net-cash-chart-range:active {
+  transform: scale(0.95);
+}
+@media (hover: hover) and (pointer: fine) {
+  .net-cash-chart-range:hover:not(.active) {
+    background: var(--surface-hover);
+    color: var(--ui-primary-text, var(--text));
+  }
+}

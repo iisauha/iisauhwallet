@@ -19,6 +19,8 @@ import { PendingInboundList, PendingOutboundList } from './PendingList';
 import {
   IconCreditCard, IconClock, IconPlus, IconArrowExchange,
 } from '../../ui/icons';
+import { NetCashChart } from './NetCashChart';
+import { recordNetCashSnapshot, ensureCurrentSnapshot } from '../../state/netCashHistory';
 
 // --- Recent Activity Widget ---
 
@@ -375,6 +377,16 @@ export function SnapshotPage({
   const finalNetCashDisplayClass =
     displayedFinalNetCashCents >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
 
+  // Record net cash history for chart
+  useEffect(() => {
+    ensureCurrentSnapshot(data);
+    const handler = () => recordNetCashSnapshot(data);
+    window.addEventListener('data-changed', handler);
+    return () => window.removeEventListener('data-changed', handler);
+  }, [data]);
+
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+
   const visibleBanks = useMemo(() => {
     return showZeroCashItems
       ? banksSortedByBalance
@@ -479,6 +491,61 @@ export function SnapshotPage({
 
       {/* Recent Activity */}
       <RecentActivityWidget />
+
+      {/* Net Cash Chart — Robinhood-style interactive line */}
+      <NetCashChart
+        currentCents={displayedFinalNetCashCents}
+        onExpandSummary={() => setSummaryExpanded(prev => !prev)}
+      />
+
+      {/* Expandable Summary Breakdown */}
+      {summaryExpanded && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="summary-compact">
+            <div className="summary-kv">
+              <span className="k">Current Bank Balance</span>
+              <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.bankTotalCents} format={formatCents} cacheKey="snap_banksum" /></span>
+            </div>
+            {totalLinkedHysaCents > 0 ? (
+              <div className="summary-kv">
+                <span className="k">Bills fund</span>
+                <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totalLinkedHysaCents)}</span>
+              </div>
+            ) : null}
+            <div className="summary-kv">
+              <span className="k">Total Credit Card Balance</span>
+              <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.ccDebtCents} format={formatCents} cacheKey="snap_ccsum" /></span>
+            </div>
+            <div className="summary-kv">
+              <span className="k">Total Pending Inbound</span>
+              <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.pendingInCents} format={formatCents} cacheKey="snap_pendin" /></span>
+            </div>
+            <div
+              className="summary-kv"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setSummaryPendingOutBreakdownCollapsed(!summaryPendingOutBreakdownCollapsed)}
+            >
+              <span className="k">
+                Total Pending Outbound
+                <span style={{ marginLeft: 6, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
+              </span>
+              <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.pendingOutCents} format={formatCents} cacheKey="snap_pendout" /></span>
+            </div>
+            {!summaryPendingOutBreakdownCollapsed ? (
+              <>
+                <div className="summary-kv" style={{ fontSize: '0.9rem', paddingLeft: 20, marginTop: 0 }}>
+                  <span className="k">↳ Credit card payments</span>
+                  <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingCcPaymentCents)}</span>
+                </div>
+                <div className="summary-kv" style={{ fontSize: '0.9rem', marginTop: 0 }}>
+                  <span className="k" style={{ paddingLeft: 20 }}>↳ Other pending outbound</span>
+                  <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingOutNonCcCents)}</span>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       {/* Summary Stat Tiles */}
       <div className="stat-tiles-row">
@@ -901,58 +968,7 @@ export function SnapshotPage({
       ) : null}
       </div>
 
-      <div className="summary net-cash-card" id="snapshotSummary">
-        <div className="summary-compact">
-          <div className="summary-kv">
-            <span className="k">Current Bank Balance</span>
-            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.bankTotalCents} format={formatCents} cacheKey="snap_banksum" /></span>
-          </div>
-          {totalLinkedHysaCents > 0 ? (
-            <div className="summary-kv">
-              <span className="k">Bills fund</span>
-              <span className="v" style={{ color: 'var(--green)' }}>{formatCents(totalLinkedHysaCents)}</span>
-            </div>
-          ) : null}
-          <div className="summary-kv">
-            <span className="k">Total Credit Card Balance</span>
-            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.ccDebtCents} format={formatCents} cacheKey="snap_ccsum" /></span>
-          </div>
-          <div className="summary-kv">
-            <span className="k">Total Pending Inbound</span>
-            <span className="v" style={{ color: 'var(--green)' }}><AnimatedNumber value={totals.pendingInCents} format={formatCents} cacheKey="snap_pendin" /></span>
-          </div>
-          <div
-            className="summary-kv"
-            style={{ cursor: 'pointer' }}
-            onClick={() => setSummaryPendingOutBreakdownCollapsed(!summaryPendingOutBreakdownCollapsed)}
-            title={summaryPendingOutBreakdownCollapsed ? 'Show breakdown' : 'Hide breakdown'}
-          >
-            <span className="k">
-              Total Pending Outbound
-              <span style={{ marginLeft: 6, fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7 }}>{summaryPendingOutBreakdownCollapsed ? '▸' : '▾'}</span>
-            </span>
-            <span className="v" style={{ color: 'var(--red)' }}><AnimatedNumber value={totals.pendingOutCents} format={formatCents} cacheKey="snap_pendout" /></span>
-          </div>
-          {!summaryPendingOutBreakdownCollapsed ? (
-            <>
-              <div className="summary-kv" style={{ fontSize: '0.9rem', paddingLeft: 20, marginTop: 0 }}>
-                <span className="k">↳ Credit card payments</span>
-                <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingCcPaymentCents)}</span>
-              </div>
-              <div className="summary-kv" style={{ fontSize: '0.9rem', marginTop: 0 }}>
-                <span className="k" style={{ paddingLeft: 20 }}>↳ Other pending outbound</span>
-                <span className="v" style={{ color: 'var(--red)' }}>{formatCents(pendingOutNonCcCents)}</span>
-              </div>
-            </>
-          ) : null}
-          <div className={finalNetCashDisplayClass} >
-            <span className="k">Final Net Cash<HelpTip text="Your total bank balance plus expected inbound deposits, minus credit card debt and expected outbound payments. This is your projected available cash." /></span>
-            <span className="v" style={{ color: displayedFinalNetCashCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              <AnimatedNumber value={displayedFinalNetCashCents} format={formatCents} bounce cacheKey="snap_net" />
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* Summary moved above stat tiles — accessible via chart tap */}
 
       {modal.type !== 'none' ? (
         <div className={modal.type === 'card-reward-config' || modal.type === 'loan-payment-preview' ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay'}>
