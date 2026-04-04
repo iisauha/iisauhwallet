@@ -60,6 +60,7 @@ export function AddPurchaseModal(props: {
   const [paymentTargetId, setPaymentTargetId] = useState('');
   const [hysaSubBucket, setHysaSubBucket] = useState<'liquid' | 'reserved'>('liquid');
   const [reimbursementBankId, setReimbursementBankId] = useState('');
+  const [splitBankId, setSplitBankId] = useState('');
   const hysaAccounts = useMemo(() => {
     const inv = loadInvesting();
     return (inv.accounts || []).filter((a: any) => a.type === 'hysa');
@@ -204,6 +205,7 @@ export function AddPurchaseModal(props: {
     setShowSubTrackerPopup(false);
     setSuggestedSubTrackerCardId(null);
     setReimbursementBankId('');
+    setSplitBankId('');
     setAcOpen(false);
     acSuppressRef.current = false;
   }
@@ -292,6 +294,7 @@ export function AddPurchaseModal(props: {
     setPaymentSource((p.paymentSource as any) || '');
     setPaymentTargetId(p.paymentTargetId || '');
     setHysaSubBucket((p as any).hysaSubBucket || 'liquid');
+    setSplitBankId(p.splitTargetBankId || '');
   }
 
   const totalCents = parseCents(amount);
@@ -912,6 +915,7 @@ export function AddPurchaseModal(props: {
               <label htmlFor="split">Split with someone else</label>
             </div>
             {isSplit ? (
+              <>
               <div className="field">
                 <label>My Portion ($)</label>
                 <input value={myPortion} onChange={(e) => setMyPortion(e.target.value)} inputMode="decimal" placeholder="0.00" />
@@ -920,6 +924,20 @@ export function AddPurchaseModal(props: {
                 </div>
                 {splitError ? <div style={{ color: 'var(--danger)', marginTop: 6 }}>{splitError}</div> : null}
               </div>
+              {inboundCents > 0 ? (
+                <div className="field">
+                  <label>Reimbursement deposits to</label>
+                  <Select value={splitBankId} onChange={(e) => setSplitBankId(e.target.value)}>
+                    <option value="">Default (first bank)</option>
+                    {(data.banks || []).map((b) => (
+                      <option key={b.id} value={b.id}>
+                        Bank - {b.name} ({formatCents(b.balanceCents || 0)})
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
+              </>
             ) : null}
           </>
         ) : null}
@@ -1048,6 +1066,7 @@ export function AddPurchaseModal(props: {
                 purchase.splitMyPortionCents = myPortionCents;
                 purchase.splitInboundCents = inboundCents;
                 purchase.originalTotal = totalCents;
+                if (splitBankId) purchase.splitTargetBankId = splitBankId;
               }
               if (applyToSnapshot) {
                 const appliedAmount = isSplit ? totalCents : myPortionCents;

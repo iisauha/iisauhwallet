@@ -142,6 +142,7 @@ export interface Purchase {
   splitTotalCents?: number;
   splitMyPortionCents?: number;
   splitInboundCents?: number;
+  splitTargetBankId?: string;
   splitPendingId?: string;
   splitSnapshot?: PurchaseSplitSnapshot;
   originalTotal?: number;

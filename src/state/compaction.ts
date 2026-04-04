@@ -8,7 +8,7 @@ import type { LedgerData } from './models';
 const PURCHASE_KEY_MAP: Record<string, string> = {
   id: '_i', title: '_t', amountCents: '_a', dateISO: '_d', category: '_c',
   subcategory: '_sc', notes: '_n', isSplit: '_sp', splitTotalCents: '_st',
-  splitMyPortionCents: '_sm', splitInboundCents: '_si', splitPendingId: '_pid',
+  splitMyPortionCents: '_sm', splitInboundCents: '_si', splitTargetBankId: '_stb', splitPendingId: '_pid',
   originalTotal: '_ot', applyToSnapshot: '_as', paymentSource: '_ps',
   paymentTargetId: '_pt', hysaSubBucket: '_hb', fullReimbursementExpected: '_fr',
   estimatedRewardCashbackCents: '_rc', estimatedRewardPoints: '_rp',

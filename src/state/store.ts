@@ -475,14 +475,19 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       if (p.isSplit && typeof p.splitInboundCents === 'number' && p.splitInboundCents > 0) {
         const pendingId = uid();
         const label = 'Venmo - "' + (p.title || 'Purchase') + '"';
-        next.pendingIn.push({
+        const inboundItem: any = {
           id: pendingId,
           label,
           amountCents: p.splitInboundCents,
           createdAt: nowIso(),
           linkedPurchaseId: id,
-          fromSplit: true
-        });
+          fromSplit: true,
+          depositTo: 'bank' as const
+        };
+        if (p.splitTargetBankId) {
+          inboundItem.targetBankId = p.splitTargetBankId;
+        }
+        next.pendingIn.push(inboundItem);
         p.splitPendingId = pendingId;
       }
 
@@ -508,7 +513,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
             bank.updatedAt = nowIso();
           }
         } else if (src === 'hysa' && targetId) {
-          const inv = loadInvesting();
+          let inv = accrueHysaAccounts(loadInvesting());
           const idx = inv.accounts.findIndex((a: any) => a.id === targetId && a.type === 'hysa');
           if (idx !== -1) {
             const acc = inv.accounts[idx] as any;

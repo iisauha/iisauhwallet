@@ -1411,6 +1411,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                       return (
                         <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 4 }}>
                           <div>APY {h.interestRate.toFixed(2)}%</div>
+                          <div>Interest earned so far: {formatCents(interestAccruedThisMonthCents)}</div>
                           <div>Projected month end interest: {formatCents(projectedInterestThisMonthCents)}</div>
                           <div style={{ marginTop: 4 }}>
                             <div>Savings reserve: {formatCents(reservedCents)}</div>

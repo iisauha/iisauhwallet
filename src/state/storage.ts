@@ -1579,82 +1579,86 @@ export function computeHysaMonthlyInterest(
   const baselineSetAt = typeof a.manualInterestBaselineSetAt === 'number' ? a.manualInterestBaselineSetAt : null;
 
   if (baselineCents !== null && baselineMonthKey === currentMonthKey && baselineSetAt !== null) {
-    const daysSinceBaseline = Math.max(
-      0,
-      Math.floor((now - baselineSetAt) / MS_PER_DAY)
-    );
-    const r = rate / 100;
-    const dailyRate = r / 365;
-    const newAccrualCents =
-      rate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysSinceBaseline);
+    const dailyRate = rate <= 0 ? 0 : (rate / 100) / 365;
+    // Use balance events for daily-balance accuracy since baseline was set
+    const events = ensureMonthlyBalanceEventsForCurrentMonth(a, now);
+    const sortedEvents = [...events].sort((x, y) => x.timestamp - y.timestamp);
+    const getBalAt = (ts: number): number => {
+      let result = sortedEvents.length > 0 ? sortedEvents[0].balanceAfterCents : balanceCents;
+      for (const e of sortedEvents) {
+        if (e.timestamp <= ts) result = e.balanceAfterCents;
+        else break;
+      }
+      return result;
+    };
+    const daysSinceBaseline = Math.max(0, Math.floor((now - baselineSetAt) / MS_PER_DAY));
+    let newAccrualCents = 0;
+    if (dailyRate > 0 && sortedEvents.length > 0) {
+      for (let i = 0; i < daysSinceBaseline; i++) {
+        const dayStart = baselineSetAt + i * MS_PER_DAY;
+        newAccrualCents += getBalAt(dayStart) * dailyRate;
+      }
+      newAccrualCents = Math.round(newAccrualCents);
+    } else if (dailyRate > 0) {
+      newAccrualCents = Math.round(balanceCents * dailyRate * daysSinceBaseline);
+    }
     const interestAccruedThisMonthCents = baselineCents + newAccrualCents;
     const useManualProjected =
       typeof a.manualProjectedInterestThisMonthCents === 'number' &&
       a.manualProjectedInterestMonthKey === currentMonthKey;
+    const dNow = new Date(now);
+    const daysInMonth = new Date(dNow.getFullYear(), dNow.getMonth() + 1, 0).getDate();
+    const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
+    const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
+    const projectedRemaining = dailyRate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysRemaining);
     const projectedInterestThisMonthCents = useManualProjected
       ? a.manualProjectedInterestThisMonthCents!
-      : (() => {
-          const d = new Date(now);
-          const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-          const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
-          const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
-          const projectedRemaining =
-            rate <= 0 ? 0 : Math.round(balanceCents * dailyRate * daysRemaining);
-          return interestAccruedThisMonthCents + projectedRemaining;
-        })();
+      : interestAccruedThisMonthCents + projectedRemaining;
     return { interestAccruedThisMonthCents, projectedInterestThisMonthCents };
   }
 
   if (rate <= 0) {
     return { interestAccruedThisMonthCents: 0, projectedInterestThisMonthCents: 0 };
   }
-  const r = rate / 100;
-  const dailyRate = r / 365;
+  const dailyRate = (rate / 100) / 365;
   const events = ensureMonthlyBalanceEventsForCurrentMonth(a, now);
+
+  // Helper: find the effective balance at a given timestamp from sorted events.
+  // Uses the most recent event at or before the timestamp (the balance in effect at that point).
+  const getBalanceAt = (sortedEvts: HysaBalanceEvent[], ts: number): number => {
+    let result = sortedEvts.length > 0 ? sortedEvts[0].balanceAfterCents : balanceCents;
+    for (const e of sortedEvts) {
+      if (e.timestamp <= ts) result = e.balanceAfterCents;
+      else break;
+    }
+    return result;
+  };
 
   let interestAccruedThisMonthCents: number;
 
   if (events.length === 0) {
-    const daysElapsed = Math.max(
-      0,
-      Math.floor((now - monthStartMs) / MS_PER_DAY)
-    );
+    // No events at all — use current balance as best approximation
+    const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
     interestAccruedThisMonthCents = Math.round(balanceCents * dailyRate * daysElapsed);
   } else {
+    // Daily-balance method: walk day-by-day using balance events to determine
+    // which balance was in effect each day, then sum daily interest.
     const sortedEvents = [...events].sort((x, y) => x.timestamp - y.timestamp);
-    const boundaries: number[] = [monthStartMs];
-    for (const e of sortedEvents) {
-      if (e.timestamp > boundaries[boundaries.length - 1] && e.timestamp <= now) {
-        boundaries.push(e.timestamp);
-      }
-    }
-    boundaries.push(now);
-
+    const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
     let totalCents = 0;
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      const segmentStart = boundaries[i];
-      const segmentEnd = boundaries[i + 1];
-      const daysInSegment = Math.max(
-        0,
-        Math.floor((segmentEnd - segmentStart) / MS_PER_DAY)
-      );
-      if (daysInSegment <= 0) continue;
-      const balanceForSegment =
-        sortedEvents.find((e) => e.timestamp === segmentStart)?.balanceAfterCents ??
-        (segmentStart === monthStartMs ? sortedEvents[0].balanceAfterCents : balanceCents);
-      const segmentInterest = Math.round(balanceForSegment * dailyRate * daysInSegment);
-      totalCents += segmentInterest;
+    for (let d = 0; d < daysElapsed; d++) {
+      const dayStart = monthStartMs + d * MS_PER_DAY;
+      const dayBalance = getBalanceAt(sortedEvents, dayStart);
+      totalCents += dayBalance * dailyRate;
     }
-    interestAccruedThisMonthCents = totalCents;
+    interestAccruedThisMonthCents = Math.round(totalCents);
   }
 
   const d = new Date(now);
   const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  const daysElapsed = Math.max(
-    0,
-    Math.floor((now - monthStartMs) / MS_PER_DAY)
-  );
+  const daysElapsed = Math.max(0, Math.floor((now - monthStartMs) / MS_PER_DAY));
   const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
+  // Project remaining days at current balance (best we can do — we don't know future movements)
   const projectedRemaining = Math.round(balanceCents * dailyRate * daysRemaining);
   const useManualProjected =
     typeof a.manualProjectedInterestThisMonthCents === 'number' &&
@@ -1693,6 +1697,14 @@ export function recordHysaBalanceEvent(
   };
 }
 
+function ensureEventsForMonth(a: HysaAccount, monthKey: string, ts: number): HysaBalanceEvent[] {
+  const events = Array.isArray(a.monthlyBalanceEvents) ? a.monthlyBalanceEvents : [];
+  const eventsMonthKey = events.length > 0 ? getMonthKeyFromTimestamp(events[0].timestamp) : null;
+  if (events.length > 0 && eventsMonthKey === monthKey) return events;
+  const balanceCents = typeof a.balanceCents === 'number' ? a.balanceCents : 0;
+  return [{ timestamp: getStartOfMonthMs(ts), balanceAfterCents: balanceCents }];
+}
+
 function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
   const balanceStart = typeof a.balanceCents === 'number' ? a.balanceCents : 0;
   const rate = typeof a.interestRate === 'number' ? a.interestRate : 0;
@@ -1704,7 +1716,8 @@ function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
       balanceCents: balanceStart,
       lastAccruedAt: baseTs,
       monthKey: mk,
-      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0
+      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0,
+      monthlyBalanceEvents: ensureEventsForMonth(a, mk, now)
     };
   }
 
@@ -1716,7 +1729,8 @@ function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
       balanceCents: balanceStart,
       lastAccruedAt: startTs,
       monthKey: mk,
-      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0
+      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0,
+      monthlyBalanceEvents: ensureEventsForMonth(a, mk, now)
     };
   }
 
@@ -1728,7 +1742,8 @@ function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
       balanceCents: balanceStart,
       lastAccruedAt: startTs,
       monthKey: mk,
-      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0
+      interestThisMonth: typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0,
+      monthlyBalanceEvents: ensureEventsForMonth(a, mk, now)
     };
   }
 
@@ -1736,6 +1751,7 @@ function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
   let ts = startTs;
   let monthKey = a.monthKey || getMonthKeyFromTimestamp(startTs);
   let interestThisMonth = typeof a.interestThisMonth === 'number' ? a.interestThisMonth : 0;
+  let events: HysaBalanceEvent[] = Array.isArray(a.monthlyBalanceEvents) ? [...a.monthlyBalanceEvents] : [];
 
   const r = rate / 100;
   const dailyRate = r / 365;
@@ -1747,12 +1763,21 @@ function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
     if (dayMonthKey !== monthKey) {
       monthKey = dayMonthKey;
       interestThisMonth = 0;
+      // New month: seed balance events with the balance at month start
+      const monthStartMs = getStartOfMonthMs(ts);
+      events = [{ timestamp: monthStartMs, balanceAfterCents: balance }];
     }
     if (dailyInterest !== 0) {
       balance += dailyInterest;
-      // Only track interest for the active monthKey (current month for this account).
       interestThisMonth += dailyInterest;
     }
+  }
+
+  // Ensure events exist for current month (e.g. first open of the month with no transactions yet)
+  const eventsMonthKey = events.length > 0 ? getMonthKeyFromTimestamp(events[0].timestamp) : null;
+  if (events.length === 0 || eventsMonthKey !== monthKey) {
+    const monthStartMs = getStartOfMonthMs(ts);
+    events = [{ timestamp: monthStartMs, balanceAfterCents: balanceStart }];
   }
 
   return {
@@ -1760,7 +1785,8 @@ function accrueSingleHysaAccount(a: HysaAccount, now: number): HysaAccount {
     balanceCents: balance,
     lastAccruedAt: ts,
     monthKey,
-    interestThisMonth
+    interestThisMonth,
+    monthlyBalanceEvents: events
   };
 }
 
