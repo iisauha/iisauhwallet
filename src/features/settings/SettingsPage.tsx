@@ -49,6 +49,7 @@ import {
 import { OnboardingGuide } from '../onboarding/OnboardingGuide';
 import { useAuth } from '../../state/AuthContext';
 import { stopSync, forceSyncToSupabase, pullFromSupabase, getLastSyncedAt, onSyncChange, listSnapshots, restoreSnapshot, loadSyncPassphrase, type SnapshotEntry } from '../../state/sync';
+import { isBiometricAvailable, isBiometricEnabled, disableBiometric, enrollBiometric } from '../../state/biometric';
 
 /** Returns export filename: Month_Day_Year.json */
 function getExportFileName(): string {
@@ -276,6 +277,9 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
   const [snapshotsLoading, setSnapshotsLoading] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [biometricOn, setBiometricOn] = useState(() => isBiometricEnabled());
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  useEffect(() => { isBiometricAvailable().then(setBiometricSupported); }, []);
   useEffect(() => onSyncChange(() => setLastSynced(getLastSyncedAt())), []);
   const [manageOpen, setManageOpen] = useState(false);
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
@@ -633,6 +637,28 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                 <option value={0}>Never</option>
               </Select>
             </div>
+            {biometricSupported && !passcodePaused ? (
+              <SettingsRow
+                icon={<IconLock />}
+                iconBg="var(--green)"
+                label={biometricOn ? 'Disable Face ID / Touch ID' : 'Enable Face ID / Touch ID'}
+                sublabel={biometricOn ? 'Biometric unlock is on' : 'Use biometrics instead of typing your passcode'}
+                onClick={async () => {
+                  if (biometricOn) {
+                    disableBiometric();
+                    setBiometricOn(false);
+                  } else {
+                    const pass = await loadSyncPassphrase();
+                    if (pass) {
+                      const ok = await enrollBiometric(pass);
+                      setBiometricOn(ok);
+                    } else {
+                      showAlert('Enter your passcode first to enable biometrics.');
+                    }
+                  }
+                }}
+              />
+            ) : null}
             <SettingsRow
               icon={<IconQuestionMark />}
               iconBg="var(--green)"

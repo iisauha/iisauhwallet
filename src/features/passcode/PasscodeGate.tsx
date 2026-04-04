@@ -40,6 +40,7 @@ import {
 } from '../../state/crypto';
 import { initSync, stopSync, pullFromSupabase, hasRemoteData, saveSyncPassphrase, loadSyncPassphrase } from '../../state/sync';
 import { RESTORE_PASSCODE_KEY } from '../auth/CloudRestoreGate';
+import { isBiometricAvailable, isBiometricEnabled, enrollBiometric, authenticateWithBiometric } from '../../state/biometric';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import { WelcomeIntro } from './WelcomeIntro';
@@ -165,6 +166,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [showSkipWarning, setShowSkipWarning] = useState(false);
   const justLoggedInRef = useRef(false);
   const confirmedPasscodeRef = useRef('');
+  const [biometricPrompt, setBiometricPrompt] = useState(false);
+  const biometricTriedRef = useRef(false);
 
   // Auto-unlock after cloud restore (CloudRestoreGate saved passcode in sessionStorage)
   useEffect(() => {
@@ -245,6 +248,36 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       clearTimer();
     };
   }, [storedHash]);
+
+  // Auto-trigger Face ID / Touch ID when entering passcode screen
+  useEffect(() => {
+    if (authenticated || biometricTriedRef.current) return;
+    if (!storedHash || !isBiometricEnabled()) return;
+    // Small delay so the UI renders first
+    const t = setTimeout(async () => {
+      biometricTriedRef.current = true;
+      const passcode = await authenticateWithBiometric();
+      if (!passcode) return;
+      // Biometric succeeded — unlock
+      const matches = await verifyPasscode(passcode, storedHash);
+      if (!matches) return;
+      await unlockWithPasscode(passcode);
+      const localData = useLedgerStore.getState().data;
+      const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
+      if (!hasLocalData) {
+        try {
+          const remote = await hasRemoteData();
+          if (remote) await pullFromSupabase(passcode);
+        } catch {}
+      }
+      useLedgerStore.getState().actions.reload();
+      saveSyncPassphrase(passcode);
+      initSync(passcode);
+      setAuthenticated(true);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [storedHash, authenticated]);
+
   const [step, setStep] = useState<Step>(() => {
     const hash = loadPasscodeHash();
     if (hash !== null) {
@@ -445,6 +478,14 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     initSync(input);
     resetFailedAttempts();
     justLoggedInRef.current = true;
+    // Check if we should offer biometric enrollment
+    if (!isBiometricEnabled()) {
+      const available = await isBiometricAvailable();
+      if (available) {
+        confirmedPasscodeRef.current = input;
+        setBiometricPrompt(true);
+      }
+    }
     setAuthenticated(true);
     setInput('');
   }, [input, storedHash, failedAttempts, delayUntil, recordFailedAttempt, resetFailedAttempts]);
@@ -690,7 +731,65 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   }
 
   if (loadPasscodePaused() || authenticated) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        {biometricPrompt && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 99999, padding: 20,
+          }}>
+            <div style={{
+              background: 'var(--surface, #1a1a1a)', borderRadius: 16, padding: 24,
+              maxWidth: 340, width: '100%', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent, #4a9eff)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="3" width="14" height="18" rx="3" />
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 15v2" />
+                </svg>
+              </div>
+              <h3 style={{ margin: '0 0 8px', color: 'var(--ui-primary-text, var(--text, #fff))' }}>Enable Face ID?</h3>
+              <p style={{ margin: '0 0 20px', fontSize: '0.88rem', color: 'var(--ui-secondary-text, #999)', lineHeight: 1.45 }}>
+                Unlock the app with Face ID or Touch ID instead of typing your passcode every time.
+              </p>
+              <button
+                type="button"
+                style={{
+                  width: '100%', padding: '12px 0', borderRadius: 10, border: 'none',
+                  background: 'var(--accent, #4a9eff)', color: '#fff', fontSize: '1rem',
+                  fontWeight: 600, cursor: 'pointer', marginBottom: 10,
+                }}
+                onClick={async () => {
+                  const pass = confirmedPasscodeRef.current;
+                  if (pass) await enrollBiometric(pass);
+                  confirmedPasscodeRef.current = '';
+                  setBiometricPrompt(false);
+                }}
+              >
+                Enable
+              </button>
+              <button
+                type="button"
+                style={{
+                  width: '100%', padding: '10px 0', borderRadius: 10, border: 'none',
+                  background: 'transparent', color: 'var(--ui-secondary-text, #999)',
+                  fontSize: '0.88rem', cursor: 'pointer',
+                }}
+                onClick={() => {
+                  confirmedPasscodeRef.current = '';
+                  setBiometricPrompt(false);
+                }}
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   if (step === 'welcome-intro') {
