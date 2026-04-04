@@ -1455,6 +1455,8 @@ textarea.ll-control {
   scrollbar-width: none;
   padding-bottom: 4px;
   margin-bottom: 12px;
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
 }
 .card-carousel::-webkit-scrollbar { display: none; }
 .card-carousel-item {

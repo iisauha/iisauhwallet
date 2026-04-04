@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCents, formatLongLocalDate, parseCents } from '../../state/calc';
 import { useLedgerStore } from '../../state/store';
 import { getCategoryName, loadCategoryConfig, loadBoolPref, saveBoolPref, logActivityEntry, loadInvesting } from '../../state/storage';
-import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { useCarouselScroll } from '../../ui/useCarouselScroll';
 import { SHOW_ZERO_REWARDS_KEY } from '../../state/keys';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
@@ -86,9 +86,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
     cpp: number | undefined;
   } | null>(null);
   const [hideZeroRewards, setHideZeroRewards] = useState(() => loadBoolPref(SHOW_ZERO_REWARDS_KEY, true));
-  const purchasesCarouselRef = useRef<HTMLDivElement>(null);
-  const purchasesIdxRef = useRef(0);
-  const [purchasesCarouselIdx, setPurchasesCarouselIdx] = useState(0);
+  const { ref: purchasesCarouselRef, idx: purchasesCarouselIdx, onScroll: purchasesOnScroll, resetIdx: resetPurchasesIdx } = useCarouselScroll();
 
   const { startKey, endKey } = useMemo(() => {
     const now = new Date();
@@ -307,15 +305,14 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
   // Reset carousel index on filter/drilldown changes
   const filterKey = `${drilldownCategoryId}|${filter}|${customStart}|${customEnd}|${searchQuery}`;
   useEffect(() => {
-    purchasesIdxRef.current = 0;
-    setPurchasesCarouselIdx(0);
+    resetPurchasesIdx(0);
     if (purchasesCarouselRef.current) purchasesCarouselRef.current.scrollLeft = 0;
   }, [filterKey]);
 
   // Clamp index when visible list changes (e.g. items deleted, "See more" toggled)
   useEffect(() => {
     const maxIdx = Math.max(0, visiblePurchases.length - 1);
-    setPurchasesCarouselIdx((prev) => Math.min(prev, maxIdx));
+    if (purchasesCarouselIdx > maxIdx) resetPurchasesIdx(maxIdx);
   }, [visiblePurchases.length]);
 
   const editingPurchase = useMemo(() => {
@@ -710,17 +707,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             className="card-carousel"
             style={{ marginBottom: 0 }}
             ref={purchasesCarouselRef}
-            onScroll={(e) => {
-              const el = e.currentTarget;
-              const w = el.clientWidth;
-              if (!w || !el.children.length) return;
-              const newIdx = Math.max(0, Math.min(Math.round(el.scrollLeft / w), el.children.length - 1));
-              if (newIdx !== purchasesIdxRef.current) {
-                purchasesIdxRef.current = newIdx;
-                setPurchasesCarouselIdx(newIdx);
-              }
-              scheduleSnapCorrection(el);
-            }}
+            onScroll={purchasesOnScroll}
           >
           {visiblePurchases.map((p: any) => {
             const uiId = getPurchaseUiId(p);
@@ -750,8 +737,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
               <div className="btn-row">
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                  className="btn btn-secondary btn-compact"
                   onClick={() => {
                     setEditingPurchaseKey(uiId);
                     setReimbursementMode(false);
@@ -762,8 +748,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 </button>
                 <button
                   type="button"
-                  className="btn btn-danger"
-                  style={{ fontSize: '0.82rem', padding: '6px 12px', minHeight: 'unset' }}
+                  className="btn btn-danger btn-compact"
                   onClick={() => setConfirmDelete({ id: p.id, label: p.title || 'Purchase' })}
                 >
                   Delete
@@ -789,8 +774,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                 <div style={{ textAlign: 'center', marginTop: 8 }}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }}
+                    className="btn btn-secondary btn-compact"
                     onClick={() => setShowAllPurchases(true)}
                   >
                     See more

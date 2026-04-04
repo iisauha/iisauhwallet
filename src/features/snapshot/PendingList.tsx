@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { LedgerData, PendingInboundItem, PendingOutboundItem } from '../../state/models';
 import { formatCents } from '../../state/calc';
-import { scheduleSnapCorrection } from '../../ui/carouselSnap';
+import { useCarouselScroll } from '../../ui/useCarouselScroll';
 
 function escapeText(s: string): string {
   return s;
@@ -34,50 +34,7 @@ function getInboundDestinationName(data: LedgerData, p: PendingInboundItem): str
 
 type JoinStep = 'idle' | { selectedIds: string[] };
 
-function useCarouselScroll() {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [idx, setIdx] = useState(0);
-  const [height, setHeight] = useState<number | undefined>(undefined);
-  const idxRef = useRef(0);
-  const heightRef = useRef<number | undefined>(undefined);
-  const rafRef = useRef<number | null>(null);
-
-  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    const rawIdx = el.scrollLeft / (el.clientWidth || 1);
-    const snappedIdx = Math.round(rawIdx);
-
-    // Update index only when it actually changes
-    if (snappedIdx !== idxRef.current) {
-      idxRef.current = snappedIdx;
-      setIdx(snappedIdx);
-    }
-
-    // Throttle height updates via rAF to avoid re-rendering every scroll pixel
-    if (rafRef.current == null) {
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null;
-        if (!ref.current) return;
-        const curEl = ref.current;
-        const curRaw = curEl.scrollLeft / (curEl.clientWidth || 1);
-        const leftIdx = Math.floor(curRaw);
-        const rightIdx = Math.min(leftIdx + 1, curEl.children.length - 1);
-        const progress = curRaw - leftIdx;
-        const lh = (curEl.children[leftIdx] as HTMLElement | undefined)?.offsetHeight ?? 0;
-        const rh = (curEl.children[rightIdx] as HTMLElement | undefined)?.offsetHeight ?? lh;
-        const newH = Math.round(lh + (rh - lh) * progress);
-        if (newH !== heightRef.current) {
-          heightRef.current = newH;
-          setHeight(newH);
-        }
-      });
-    }
-
-    scheduleSnapCorrection(el);
-  }, []);
-
-  return { ref, idx, height, onScroll };
-}
+// useCarouselScroll is now imported from ../../ui/useCarouselScroll
 
 function CarouselIndicator({ count, activeIdx, showAll, onSeeMore }: { count: number; activeIdx: number; showAll: boolean; onSeeMore: () => void }) {
   if (count <= 1) return null;
