@@ -45,9 +45,11 @@ export default defineConfig({
       includeAssets: ['icon.png', 'icon-solid.png'],
       devOptions: { enabled: false },
       manifest: {
+        id: '/',
         name: 'alenjo',
         short_name: 'alenjo',
-        start_url: '.',
+        start_url: '/',
+        scope: '/',
         display: 'standalone',
         background_color: '#0b0b0f',
         theme_color: '#0b0b0f',

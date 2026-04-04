@@ -1,7 +1,9 @@
 {
+  "id": "/",
   "name": "alenjo",
   "short_name": "alenjo",
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#252526",
   "theme_color": "#252526",

@@ -219,6 +219,12 @@ function onDataChanged() {
  */
 const SESSION_PASS_KEY = '__sync_pass_session';
 
+/** Check if running as an installed standalone PWA (not in a Safari tab). */
+function isStandalone(): boolean {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as any).standalone === true;
+}
+
 export function initSync(passcode: string) {
   _passcode = passcode;
   // Save in sessionStorage so password unlock works after auto-lock
@@ -230,8 +236,12 @@ export function initSync(passcode: string) {
   }
   // Initial push to sync local → remote
   setTimeout(() => pushToSupabase(), 500);
-  // Start polling for cross-device sync
-  startPolling();
+  // Only poll for remote changes in the standalone PWA. Safari tabs share
+  // the same localStorage, so running competing poll+pull cycles in both
+  // contexts causes preference overwrites and data conflicts.
+  if (isStandalone()) {
+    startPolling();
+  }
 }
 
 /**
