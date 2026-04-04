@@ -4,34 +4,26 @@
  * On a new device/context where there's no local passcode hash:
  * 1. Checks if the user has cloud data
  * 2. If yes → shows "Enter your passcode to restore" screen
- * 3. On success → imports everything, applies theme, skips onboarding/passcode creation
- * 4. User lands directly in the app
+ * 3. On success → imports everything, reloads page to apply theme/passcode
+ * 4. User lands directly in the app with their data and theme
  *
  * If no cloud data exists → passes through to PasscodeGate (new user flow).
  * If local data already exists → passes through immediately (returning user).
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { loadPasscodeHash } from '../../state/storage';
-import { markOnboardingDone } from '../onboarding/OnboardingGuide';
 import { hasRemoteData, pullFromSupabase, saveSyncPassphrase, initSync } from '../../state/sync';
-import { initCrypto, unlockWithPasscode } from '../../state/crypto';
+import { initCrypto, unlockWithPasscode, wrapDeviceKeyWithPasscode } from '../../state/crypto';
+import { markOnboardingDone } from '../onboarding/OnboardingGuide';
 import { useLedgerStore } from '../../state/store';
 
-/** Apply any saved theme/appearance from localStorage after import. */
-function applyImportedTheme() {
-  try {
-    // Re-trigger CSS variable application by dispatching a storage event
-    // The ThemeProvider and AppearanceProvider read from localStorage on mount,
-    // so we force a re-render by reloading the page after restore.
-  } catch {}
-}
-
 export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<'checking' | 'has-local' | 'restore-prompt' | 'no-cloud' | 'restored'>('checking');
+  const [status, setStatus] = useState<'checking' | 'has-local' | 'restore-prompt' | 'no-cloud'>('checking');
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const reloadingRef = useRef(false);
 
   useEffect(() => {
     const hash = loadPasscodeHash();
@@ -58,18 +50,6 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (status === 'restored') {
-    // After successful restore, reload the page so ThemeProvider, AppearanceProvider,
-    // and PasscodeGate all re-read from the freshly imported localStorage.
-    // This ensures theme, fonts, and passcode state are all correct.
-    window.location.reload();
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', color: 'var(--ui-primary-text, #fff)' }}>
-        Restoring...
-      </div>
-    );
-  }
-
   const handleRestore = async () => {
     if (!passcode.trim()) {
       setError('Enter your passcode.');
@@ -78,30 +58,49 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
     setError('');
     setLoading(true);
     try {
-      const success = await pullFromSupabase(passcode.trim());
-      if (success) {
-        // Re-initialize crypto with the imported device key
-        await initCrypto();
-        // Unlock with the user's passcode so the device key is ready
-        await unlockWithPasscode(passcode.trim());
-        // Save passphrase for future cloud sync on this device
-        await saveSyncPassphrase(passcode.trim());
-        // Start syncing
-        initSync(passcode.trim());
-        // Mark onboarding as done so they skip the intro
-        markOnboardingDone();
-        // Reload store
-        useLedgerStore.getState().actions.reload();
-        applyImportedTheme();
-        // Reload page to apply theme and skip passcode creation
-        setStatus('restored');
-      } else {
-        setError('Could not restore. Wrong passcode or no data found.');
+      const pass = passcode.trim();
+      const success = await pullFromSupabase(pass);
+      if (!success) {
+        setError('Could not restore. Wrong passcode or decryption failed.');
+        setLoading(false);
+        return;
       }
-    } catch {
+
+      // Data is now in localStorage. Set up crypto for this device.
+      try {
+        await initCrypto();
+      } catch {}
+
+      // Wrap the device key with the user's passcode for this device
+      try {
+        await wrapDeviceKeyWithPasscode(pass);
+      } catch {
+        // If wrapping fails, try unlocking (key may already be wrapped from import)
+        try { await unlockWithPasscode(pass); } catch {}
+      }
+
+      // Save passphrase for cloud sync
+      try { await saveSyncPassphrase(pass); } catch {}
+
+      // Mark onboarding done
+      markOnboardingDone();
+
+      // Start sync
+      initSync(pass);
+
+      // Reload store
+      useLedgerStore.getState().actions.reload();
+
+      // Reload page to apply imported theme, appearance, and passcode state
+      if (!reloadingRef.current) {
+        reloadingRef.current = true;
+        window.location.reload();
+      }
+    } catch (e) {
+      console.error('[CloudRestoreGate] restore error:', e);
       setError('Restore failed. Check your connection and try again.');
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -120,7 +119,7 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
             value={passcode}
             onChange={(e) => setPasscode(e.target.value)}
             style={styles.input}
-            placeholder="Enter your passcode"
+            placeholder="Enter passcode"
             autoComplete="off"
             onKeyDown={(e) => e.key === 'Enter' && handleRestore()}
           />
@@ -135,14 +134,6 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
           disabled={loading}
         >
           {loading ? 'Restoring...' : 'Restore My Data'}
-        </button>
-
-        <button
-          type="button"
-          style={styles.link}
-          onClick={() => setStatus('no-cloud')}
-        >
-          Skip and start fresh
         </button>
       </div>
     </div>
@@ -215,17 +206,5 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     cursor: 'pointer',
     marginTop: 4,
-  },
-  link: {
-    display: 'block',
-    width: '100%',
-    marginTop: 14,
-    background: 'none',
-    border: 'none',
-    color: 'var(--ui-secondary-text, #999)',
-    fontSize: '0.82rem',
-    cursor: 'pointer',
-    textAlign: 'center' as const,
-    padding: 0,
   },
 };
