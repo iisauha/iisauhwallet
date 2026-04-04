@@ -18,13 +18,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    // Race getSession against a timeout so the app never hangs on a slow/offline network
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
+    Promise.race([
+      supabase.auth.getSession().then(({ data }) => data.session),
+      timeout
+    ])
+      .then((session) => setSession(session))
+      .catch(() => setSession(null))
+      .finally(() => setLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
