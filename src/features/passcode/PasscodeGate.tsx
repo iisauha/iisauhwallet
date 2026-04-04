@@ -254,7 +254,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   // Auto-trigger Face ID / Touch ID when entering passcode screen
   useEffect(() => {
     if (authenticated || biometricTriedRef.current) return;
-    if (!storedHash || !isBiometricEnabled()) return;
+    if (!storedHash || !isBiometricEnabled() || loadPasscodePaused()) return;
     // Brief delay so the UI renders before Face ID prompt
     const t = setTimeout(async () => {
       biometricTriedRef.current = true;

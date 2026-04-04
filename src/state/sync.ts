@@ -66,7 +66,7 @@ async function getAuthUserId(): Promise<string | null> {
 
 /** Push current app state to Supabase (encrypted). */
 async function pushToSupabase(): Promise<boolean> {
-  if (_syncing || !_passcode) return false;
+  if (_syncing || !_passcode || _isPulling) return false;
   _syncing = true;
   try {
     const userId = await getAuthUserId();
@@ -124,13 +124,14 @@ export async function pullFromSupabase(passcode: string): Promise<boolean> {
     if (error || !data?.encrypted_data) return false;
 
     const plaintext = await decryptWithPasscode(data.encrypted_data, passcode);
-    // Suppress data-changed events during import to prevent push-back ping-pong
+    // Cancel any pending push and suppress data-changed events during import
+    if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     _isPulling = true;
     try {
       importJSON(plaintext);
     } finally {
-      // Small delay before re-enabling push so all async saveData/saveEncryptedKey settle
-      setTimeout(() => { _isPulling = false; }, 500);
+      // Delay before re-enabling push so all async saveData/saveEncryptedKey settle
+      setTimeout(() => { _isPulling = false; }, 2000);
     }
     return true;
   } catch (e) {
