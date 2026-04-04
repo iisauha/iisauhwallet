@@ -146,6 +146,20 @@ function GlobalHeader({ onAvatarClick }: { onAvatarClick: () => void }) {
           {displayName || 'alenjo'}
         </span>
       </button>
+      <div style={{
+        width: 28,
+        height: 28,
+        backgroundColor: 'var(--accent, #f97316)',
+        WebkitMaskImage: 'url(/icon.png)',
+        WebkitMaskSize: 'contain',
+        WebkitMaskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskImage: 'url(/icon.png)',
+        maskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        flexShrink: 0,
+      } as React.CSSProperties} />
     </header>
   );
 }

@@ -74,6 +74,7 @@ export function AuthScreen() {
           maskRepeat: 'no-repeat',
           maskPosition: 'center',
           marginBottom: 16,
+          marginTop: 40,
         } as React.CSSProperties} />
 
         <h1 style={{
@@ -194,7 +195,7 @@ export function AuthScreen() {
           maskSize: 'contain',
           maskRepeat: 'no-repeat',
           maskPosition: 'center',
-          margin: '0 auto 20px',
+          margin: '20px auto 20px',
         } as React.CSSProperties} />
 
         <h2 style={{ margin: '0 0 24px', fontSize: '1.4rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text, #fff))', fontFamily: 'var(--app-font-family)' }}>

@@ -1116,7 +1116,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             maskSize: 'contain',
             maskRepeat: 'no-repeat',
             maskPosition: 'center',
-            margin: '0 auto 20px',
+            margin: '20px auto 20px',
           } as React.CSSProperties} />
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Welcome Back</h1>
           <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', color: 'var(--muted, #888)', textAlign: 'center', lineHeight: 1.5 }}>
