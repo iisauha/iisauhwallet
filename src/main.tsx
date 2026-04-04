@@ -6,7 +6,7 @@ import { initCrypto } from './state/crypto';
 import { useLedgerStore } from './state/store';
 import { loadAppThemeColor, loadAppAccentColor, loadAppFontFamily, loadAppFontScale, loadAdvancedUIColors } from './state/storage';
 import { getFontFamilyStack } from './theme/fontStacks';
-import { getThemeColorsFromHex, getAccentColorsFromHex } from './theme/themeUtils';
+import { getThemeColorsFromHex, getAccentColorsFromHex, isLightHex } from './theme/themeUtils';
 import './styles.css';
 import './theme/theme.css';
 
@@ -17,7 +17,7 @@ const accentHex = loadAppAccentColor();
 const themeColors = getThemeColorsFromHex(appBackgroundHex);
 const accentColors = getAccentColorsFromHex(accentHex);
 const root = document.documentElement.style;
-const isLightBg = (() => { try { const m = appBackgroundHex.slice(1).match(/.{2}/g); if (!m) return false; const [r,g,b] = m.map(x => parseInt(x,16)||0); return (0.299*r+0.587*g+0.114*b)/255 > 0.5; } catch { return false; } })();
+const isLightBg = isLightHex(appBackgroundHex);
 root.setProperty('--bg', appBackgroundHex);
 root.setProperty('--bg-secondary', themeColors.bgSecondary);
 root.setProperty('--surface', themeColors.surface);

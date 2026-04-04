@@ -5,7 +5,7 @@ import {
   loadAppAccentColor,
   saveAppAccentColor,
 } from '../state/storage';
-import { getThemeColorsFromHex, getAccentColorsFromHex } from './themeUtils';
+import { getThemeColorsFromHex, getAccentColorsFromHex, isLightHex } from './themeUtils';
 
 type ThemeContextValue = {
   themeColor: string;
@@ -15,16 +15,6 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-
-/** Returns true if the hex color is perceptually light (luminance > 0.5). */
-function isLightHex(hex: string): boolean {
-  try {
-    const m = hex.slice(1).match(/.{2}/g);
-    if (!m || m.length < 3) return false;
-    const [r, g, b] = m.map((x) => parseInt(x, 16) || 0);
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
-  } catch (_) { return false; }
-}
 
 /** Derive all theme CSS variables from the user's chosen background color. */
 function applyThemeColor(appBackgroundHex: string) {

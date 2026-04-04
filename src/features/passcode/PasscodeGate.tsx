@@ -159,6 +159,18 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
   );
 }
 
+/** Reload store from freshly decrypted cache; pull from Supabase only if local is empty. */
+async function reloadAndPullIfEmpty(passphrase: string) {
+  useLedgerStore.getState().actions.reload();
+  const d = useLedgerStore.getState().data;
+  if (d && (d.banks?.length > 0 || d.cards?.length > 0 || d.purchases?.length > 0)) return;
+  try {
+    const remote = await hasRemoteData();
+    if (remote) await pullFromSupabase(passphrase);
+  } catch {}
+  useLedgerStore.getState().actions.reload();
+}
+
 export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
@@ -284,19 +296,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       const matches = await verifyPasscode(passcode, storedHash);
       if (!matches) return;
       await unlockWithPasscode(passcode);
-      // Reload from freshly decrypted cache so hasLocalData sees real data.
-      // On same-device (PWA ↔ Safari), localStorage already has the latest
-      // data — pulling from Supabase would overwrite it with stale data.
-      useLedgerStore.getState().actions.reload();
-      const localData = useLedgerStore.getState().data;
-      const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
-      if (!hasLocalData) {
-        try {
-          const remote = await hasRemoteData();
-          if (remote) await pullFromSupabase(passcode);
-        } catch {}
-        useLedgerStore.getState().actions.reload();
-      }
+      await reloadAndPullIfEmpty(passcode);
       saveSyncPassphrase(passcode);
       initSync(passcode);
       setAuthenticated(true);
@@ -488,22 +488,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
     // Unlock device key (migrates plaintext→wrapped on first login, or unwraps on subsequent).
     await unlockWithPasscode(input);
-    // Reload from freshly decrypted cache so hasLocalData sees real data.
-    // On same-device (PWA ↔ Safari), localStorage already has the latest
-    // data — pulling from Supabase would overwrite it with stale data.
-    useLedgerStore.getState().actions.reload();
-    // If this device has no local data but Supabase has data, pull it down first.
-    const localData = useLedgerStore.getState().data;
-    const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
-    if (!hasLocalData) {
-      try {
-        const remote = await hasRemoteData();
-        if (remote) {
-          await pullFromSupabase(input);
-        }
-      } catch {}
-      useLedgerStore.getState().actions.reload();
-    }
+    await reloadAndPullIfEmpty(input);
     saveSyncPassphrase(input);
     initSync(input);
     resetFailedAttempts();
@@ -516,6 +501,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         setBiometricPrompt(true);
       }
     }
+    setNeedsPasscode(false);
     setAuthenticated(true);
     setInput('');
   }, [input, storedHash, failedAttempts, delayUntil, recordFailedAttempt, resetFailedAttempts]);
@@ -541,16 +527,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       const syncPass = await loadSyncPassphrase();
       if (syncPass) {
         await unlockWithPasscode(syncPass);
-        useLedgerStore.getState().actions.reload();
-        const localData = useLedgerStore.getState().data;
-        const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
-        if (!hasLocalData) {
-          try {
-            const remote = await hasRemoteData();
-            if (remote) await pullFromSupabase(syncPass);
-          } catch {}
-          useLedgerStore.getState().actions.reload();
-        }
+        await reloadAndPullIfEmpty(syncPass);
         saveSyncPassphrase(syncPass);
         initSync(syncPass);
         if (!isBiometricEnabled()) {

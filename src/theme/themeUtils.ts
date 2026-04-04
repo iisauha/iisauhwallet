@@ -85,6 +85,14 @@ export function getAccentColorsFromHex(hex: string): { accent: string; accentHov
   };
 }
 
+/** Check if a hex color is perceptually light (luminance > 0.5). */
+export function isLightHex(hex: string): boolean {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return false;
+  const [r, g, b] = rgb;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
+}
+
 /** Normalize hex to #rrggbb lowercase. */
 export function normalizeHex(input: string): string | null {
   let s = input.trim();
