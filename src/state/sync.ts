@@ -20,6 +20,7 @@ let _syncing = false;
 let _lastSyncedAt: string | null = null;
 let _lastPushId: string | null = null; // track our own pushes to ignore poll echo
 let _isPulling = false; // suppress push during remote pull to prevent ping-pong
+let _pushCooldownUntil = 0; // skip polls until this timestamp (ms) after a push
 const _syncListeners: Set<() => void> = new Set();
 
 const DEBOUNCE_MS = 2000;
@@ -93,7 +94,8 @@ async function pushToSupabase(): Promise<boolean> {
     }
     const now = new Date().toISOString();
     _lastSyncedAt = now;
-    _lastPushId = now; // mark this push so realtime ignores it
+    _lastPushId = now; // mark this push so poll ignores it
+    _pushCooldownUntil = Date.now() + 5000; // skip polls for 5s after push
     try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
     notifySyncListeners();
 
@@ -120,6 +122,9 @@ const DEVICE_LOCAL_KEYS = [
   'iisauhwallet_biometric_enc_pass_v1',
   'iisauhwallet_biometric_salt_v1',
   'iisauhwallet_onboarding_done_v1',
+  'iisauhwallet_security_quiz_completed_v1',
+  'iisauhwallet_passcode_failed_attempts_v1',
+  'iisauhwallet_passcode_lockout_until_v1',
 ];
 
 /** Pull app state from Supabase, decrypt, and import into localStorage. */
@@ -257,7 +262,9 @@ let _pollTimer: ReturnType<typeof setInterval> | null = null;
 let _lastKnownRemoteUpdatedAt: string | null = null;
 
 async function pollForRemoteChanges() {
-  if (_syncing || !_passcode) return;
+  if (_syncing || !_passcode || _isPulling) return;
+  // Skip polls during cooldown after our own push (prevents ping-pong)
+  if (Date.now() < _pushCooldownUntil) return;
   try {
     const userId = await getAuthUserId();
     if (!userId) return;
@@ -279,6 +286,7 @@ async function pollForRemoteChanges() {
       const { useLedgerStore } = await import('./store');
       useLedgerStore.getState().actions.reload();
       _lastSyncedAt = new Date().toISOString();
+      _pushCooldownUntil = Date.now() + 5000; // don't push back after pulling
       try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
       notifySyncListeners();
       // Re-apply theme from imported localStorage values

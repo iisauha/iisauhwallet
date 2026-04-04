@@ -56,6 +56,12 @@ import {
   PUBLIC_LOAN_ESTIMATOR_KEY,
   PUBLIC_LOAN_SUMMARY_KEY,
   FEDERAL_LOAN_PARAMETERS_KEY,
+  SHOW_ZERO_REWARDS_KEY,
+  OPTIMIZER_ASSUMPTIONS_KEY,
+  OPTIMIZER_LAST_RESULT_KEY,
+  RECENT_ACTIVITY_LOG_KEY,
+  INVESTING_SHOW_ZERO_HYSA_KEY,
+  TAB_ORDER_KEY,
 } from './keys';
 import type { CategoryConfig, CreditCard, LedgerData } from './models';
 import { getCachedData, setCachedData, encryptWithDeviceKey, encryptBytesWithDeviceKey, isEncrypted, decryptWithPasscode, getAuxCached, setAuxCached, b64Enc, b64Dec, compressString, decompressString, compressToBytes } from './crypto';
@@ -601,6 +607,14 @@ export function exportJSON(): string {
     HIDDEN_TABS_KEY,
     // Onboarding
     'iisauhwallet_onboarding_done_v1',
+    // UI preferences & data that should sync
+    SHOW_ZERO_REWARDS_KEY,
+    INVESTING_SHOW_ZERO_HYSA_KEY,
+    OPTIMIZER_ASSUMPTIONS_KEY,
+    OPTIMIZER_LAST_RESULT_KEY,
+    RECENT_ACTIVITY_LOG_KEY,
+    SECURITY_QUIZ_COMPLETED_KEY,
+    TAB_ORDER_KEY,
   ]);
 
   // Main data key: always use in-memory cache (decrypted). Never export encrypted blob.
