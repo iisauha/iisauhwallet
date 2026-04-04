@@ -85,6 +85,7 @@ export function loadEncryptedKey(key: string): string | null {
 
 export function saveEncryptedKey(key: string, rawValue: string): void {
   setAuxCached(key, rawValue);
+  window.dispatchEvent(new Event('data-changed'));
   const seq = (_auxSeqs[key] = (_auxSeqs[key] ?? 0) + 1);
   encryptWithDeviceKey(rawValue)
     .then((ct) => { if (_auxSeqs[key] === seq) localStorage.setItem(key, ct); })
@@ -444,6 +445,7 @@ export function loadData(): LedgerData {
 
 export function saveData(data: LedgerData) {
   setCachedData(data); // update in-memory cache synchronously for instant reads
+  window.dispatchEvent(new Event('data-changed'));
   const seq = ++_writeSeq;
   const json = JSON.stringify(compactForStorage(data));
   // Compress → encrypt → persist (binary pipeline: no intermediate base64 bloat).

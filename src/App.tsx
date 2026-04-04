@@ -18,6 +18,8 @@ import { ReminderProvider } from './state/ReminderContext';
 import { DialogProvider, useDialog } from './ui/DialogProvider';
 import { UndoToast } from './ui/UndoToast';
 import { ErrorBoundary } from './ui/ErrorBoundary';
+import { AuthProvider, useAuth } from './state/AuthContext';
+import { AuthScreen } from './features/auth/AuthScreen';
 import { TAB_ORDER_KEY } from './state/keys';
 import { useLedgerStore } from './state/store';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
@@ -531,6 +533,13 @@ function MainApp() {
   );
 }
 
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', color: 'var(--ui-primary-text, #fff)' }}>Loading...</div>;
+  if (!user) return <AuthScreen />;
+  return <>{children}</>;
+}
+
 export function App() {
   return (
     <ErrorBoundary>
@@ -539,14 +548,18 @@ export function App() {
         <AdvancedUIColorsProvider>
           <ReminderProvider>
             <DialogProvider>
+            <AuthProvider>
             <DropdownStateProvider>
+              <AuthGate>
               <PasscodeGate>
                 <Routes>
                   <Route path="/" element={<MainApp />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
                 </Routes>
               </PasscodeGate>
+              </AuthGate>
             </DropdownStateProvider>
+            </AuthProvider>
             </DialogProvider>
           </ReminderProvider>
         </AdvancedUIColorsProvider>

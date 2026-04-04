@@ -38,6 +38,7 @@ import {
   wrapDeviceKeyWithRecoveryKey,
   resetDeviceKey,
 } from '../../state/crypto';
+import { initSync, stopSync, pullFromSupabase, hasRemoteData } from '../../state/sync';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import { WelcomeIntro } from './WelcomeIntro';
@@ -162,6 +163,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSkipWarning, setShowSkipWarning] = useState(false);
   const justLoggedInRef = useRef(false);
+  const confirmedPasscodeRef = useRef('');
 
   // Auto-lock on inactivity (skip when passcode is paused — no auth gate to show)
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -173,6 +175,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     function resetTimer() {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = setTimeout(() => {
+        stopSync();
         lockCrypto();
         setAuthenticated(false);
       }, ms);
@@ -302,6 +305,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     savePasscode6Digit(true);
     setStoredHash(hash);
     await wrapDeviceKeyWithPasscode(input);
+    confirmedPasscodeRef.current = input;
     setStep('hint');
     setHintInput('');
   }, [input, confirmInput]);
@@ -335,6 +339,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const handleRecoveryKeyShowDone = useCallback(() => {
     saveRecoverySetupDone(true);
     setGeneratedRecoveryKey('');
+    if (confirmedPasscodeRef.current) {
+      initSync(confirmedPasscodeRef.current);
+      confirmedPasscodeRef.current = '';
+    }
     if (!isOnboardingDone()) {
       setShowOnboarding(true);
     } else {
@@ -364,7 +372,19 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
     // Unlock device key (migrates plaintext→wrapped on first login, or unwraps on subsequent).
     await unlockWithPasscode(input);
+    // If this device has no local data but Supabase has data, pull it down first.
+    const localData = useLedgerStore.getState().data;
+    const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
+    if (!hasLocalData) {
+      try {
+        const remote = await hasRemoteData();
+        if (remote) {
+          await pullFromSupabase(input);
+        }
+      } catch {}
+    }
     useLedgerStore.getState().actions.reload();
+    initSync(input);
     resetFailedAttempts();
     justLoggedInRef.current = true;
     setAuthenticated(true);
@@ -467,6 +487,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     setStoredHash(hash);
     await rewrapDeviceKeyWithPasscode(input);
     useLedgerStore.getState().actions.reload();
+    initSync(input);
     setAuthenticated(true);
     setInput('');
     setConfirmInput('');
@@ -489,6 +510,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     setStoredHash(hash);
     await rewrapDeviceKeyWithPasscode(input);
     useLedgerStore.getState().actions.reload();
+    initSync(input);
     setAuthenticated(true);
     setInput('');
     setConfirmInput('');

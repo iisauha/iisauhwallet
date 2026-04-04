@@ -47,6 +47,8 @@ import {
   IconBarChartTrend, IconRefreshCircle, IconStar, IconQuestionMark, IconInfoCircle,
 } from '../../ui/icons';
 import { OnboardingGuide } from '../onboarding/OnboardingGuide';
+import { useAuth } from '../../state/AuthContext';
+import { stopSync } from '../../state/sync';
 
 /** Returns export filename: Month_Day_Year.json */
 function getExportFileName(): string {
@@ -266,6 +268,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const { showAlert, showConfirm } = useDialog();
+  const { signOut } = useAuth();
   const contentGuard = useContentGuard();
   const [manageOpen, setManageOpen] = useState(false);
   const [appCustomizationOpen, setAppCustomizationOpen] = useState(false);
@@ -864,6 +867,26 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           label="About the Creator"
           onClick={() => setAboutCreatorOpen(true)}
         />
+      </div>
+
+      {/* Account */}
+      <p className="settings-group-label">Account</p>
+      <div className="settings-list">
+        <button
+          type="button"
+          className="settings-row"
+          onClick={async () => {
+            const ok = await showConfirm('Sign out? Your data is saved in the cloud and will sync back when you sign in again.');
+            if (!ok) return;
+            stopSync();
+            signOut();
+          }}
+        >
+          <span className="settings-row-icon" style={{ background: 'var(--accent, #4a9eff)' }}>
+            <IconArrowExchange />
+          </span>
+          <span className="settings-row-label">Sign Out</span>
+        </button>
       </div>
 
       {/* Danger zone */}
