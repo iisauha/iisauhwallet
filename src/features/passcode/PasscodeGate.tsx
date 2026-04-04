@@ -39,6 +39,7 @@ import {
   resetDeviceKey,
 } from '../../state/crypto';
 import { initSync, stopSync, pullFromSupabase, hasRemoteData, saveSyncPassphrase, loadSyncPassphrase } from '../../state/sync';
+import { RESTORE_PASSCODE_KEY } from '../auth/CloudRestoreGate';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import { WelcomeIntro } from './WelcomeIntro';
@@ -164,6 +165,26 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [showSkipWarning, setShowSkipWarning] = useState(false);
   const justLoggedInRef = useRef(false);
   const confirmedPasscodeRef = useRef('');
+
+  // Auto-unlock after cloud restore (CloudRestoreGate saved passcode in sessionStorage)
+  useEffect(() => {
+    const savedPass = sessionStorage.getItem(RESTORE_PASSCODE_KEY);
+    if (!savedPass || !storedHash || authenticated) return;
+    sessionStorage.removeItem(RESTORE_PASSCODE_KEY);
+    (async () => {
+      try {
+        const matches = await verifyPasscode(savedPass, storedHash);
+        if (!matches) return;
+        await unlockWithPasscode(savedPass);
+        useLedgerStore.getState().actions.reload();
+        await saveSyncPassphrase(savedPass);
+        initSync(savedPass);
+        setAuthenticated(true);
+      } catch (e) {
+        console.error('[PasscodeGate] auto-unlock after restore failed:', e);
+      }
+    })();
+  }, [storedHash, authenticated]);
 
   // Auto-lock on inactivity (skip when passcode is paused — no auth gate to show)
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

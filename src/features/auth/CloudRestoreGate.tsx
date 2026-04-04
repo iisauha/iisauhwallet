@@ -4,8 +4,8 @@
  * On a new device/context where there's no local passcode hash:
  * 1. Checks if the user has cloud data
  * 2. If yes → shows "Enter your passcode to restore" screen
- * 3. On success → imports everything, reloads page to apply theme/passcode
- * 4. User lands directly in the app with their data and theme
+ * 3. On success → imports everything, saves passcode in sessionStorage for
+ *    PasscodeGate to auto-unlock, then reloads to apply theme
  *
  * If no cloud data exists → passes through to PasscodeGate (new user flow).
  * If local data already exists → passes through immediately (returning user).
@@ -13,10 +13,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { loadPasscodeHash } from '../../state/storage';
-import { hasRemoteData, pullFromSupabase, saveSyncPassphrase, initSync } from '../../state/sync';
-import { initCrypto, unlockWithPasscode, wrapDeviceKeyWithPasscode } from '../../state/crypto';
+import { hasRemoteData, pullFromSupabase, saveSyncPassphrase } from '../../state/sync';
 import { markOnboardingDone } from '../onboarding/OnboardingGuide';
-import { useLedgerStore } from '../../state/store';
+
+/** Key used to pass passcode from CloudRestoreGate → PasscodeGate after reload. */
+export const RESTORE_PASSCODE_KEY = '__cloud_restore_passcode';
 
 export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<'checking' | 'has-local' | 'restore-prompt' | 'no-cloud'>('checking');
@@ -66,32 +67,19 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Data is now in localStorage. Set up crypto for this device.
-      try {
-        await initCrypto();
-      } catch {}
-
-      // Wrap the device key with the user's passcode for this device
-      try {
-        await wrapDeviceKeyWithPasscode(pass);
-      } catch {
-        // If wrapping fails, try unlocking (key may already be wrapped from import)
-        try { await unlockWithPasscode(pass); } catch {}
-      }
-
-      // Save passphrase for cloud sync
-      try { await saveSyncPassphrase(pass); } catch {}
-
-      // Mark onboarding done
+      // Data is now in localStorage (decrypted and re-encrypted with this device's key).
+      // Mark onboarding done so the user skips intro.
       markOnboardingDone();
 
-      // Start sync
-      initSync(pass);
+      // Save passcode in sessionStorage so PasscodeGate can auto-unlock after reload.
+      // sessionStorage is cleared when the tab closes — safe for temporary use.
+      try { sessionStorage.setItem(RESTORE_PASSCODE_KEY, pass); } catch {}
 
-      // Reload store
-      useLedgerStore.getState().actions.reload();
+      // Save sync passphrase for future cloud syncs on this device.
+      try { await saveSyncPassphrase(pass); } catch {}
 
-      // Reload page to apply imported theme, appearance, and passcode state
+      // Reload page to apply imported theme, appearance, and let PasscodeGate
+      // handle device key wrapping properly with the auto-unlock flow.
       if (!reloadingRef.current) {
         reloadingRef.current = true;
         window.location.reload();
