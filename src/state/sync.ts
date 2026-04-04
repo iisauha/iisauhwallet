@@ -18,8 +18,7 @@ let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let _listening = false;
 let _syncing = false;
 let _lastSyncedAt: string | null = null;
-let _lastPushId: string | null = null; // track our own pushes to ignore realtime echo
-let _realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+let _lastPushId: string | null = null; // track our own pushes to ignore poll echo
 const _syncListeners: Set<() => void> = new Set();
 
 const DEBOUNCE_MS = 2000;
@@ -175,8 +174,8 @@ export function initSync(passcode: string) {
   }
   // Initial push to sync local → remote
   setTimeout(() => pushToSupabase(), 500);
-  // Start realtime subscription for cross-device sync
-  startRealtimeSubscription();
+  // Start polling for cross-device sync
+  startPolling();
 }
 
 /**
@@ -192,7 +191,7 @@ export function stopSync() {
     window.removeEventListener('data-changed', onDataChanged);
     _listening = false;
   }
-  stopRealtimeSubscription();
+  stopPolling();
 }
 
 /**
@@ -203,64 +202,57 @@ export async function forceSyncToSupabase(passcode: string): Promise<boolean> {
   return pushToSupabase();
 }
 
-// ── Realtime cross-device sync ──────────────────────────────────────────
+// ── Cross-device sync polling ───────────────────────────────────────────
+// Polls every 10 seconds to check if another device pushed an update.
+// Only fetches the timestamp (tiny query), pulls full data only when changed.
 
-let _realtimePullTimer: ReturnType<typeof setTimeout> | null = null;
+const POLL_INTERVAL_MS = 10_000;
+let _pollTimer: ReturnType<typeof setInterval> | null = null;
+let _lastKnownRemoteUpdatedAt: string | null = null;
 
-function startRealtimeSubscription() {
-  stopRealtimeSubscription();
-
-  getAuthUserId().then((userId) => {
+async function pollForRemoteChanges() {
+  if (_syncing || !_passcode) return;
+  try {
+    const userId = await getAuthUserId();
     if (!userId) return;
-
-    _realtimeChannel = supabase
-      .channel('user_data_realtime')
-      .on(
-        'postgres_changes' as any,
-        { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${userId}` },
-        (payload: any) => {
-          console.log('[sync] realtime event received:', payload?.eventType);
-          // Ignore our own pushes by comparing updated_at
-          const remoteUpdatedAt = payload?.new?.updated_at;
-          if (remoteUpdatedAt && remoteUpdatedAt === _lastPushId) {
-            console.log('[sync] ignoring own push');
-            return;
-          }
-
-          // Another device pushed an update — pull it
-          if (_passcode && !_syncing) {
-            if (_realtimePullTimer) clearTimeout(_realtimePullTimer);
-            _realtimePullTimer = setTimeout(async () => {
-              console.log('[sync] pulling remote update...');
-              try {
-                const success = await pullFromSupabase(_passcode!);
-                if (success) {
-                  const { useLedgerStore } = await import('./store');
-                  useLedgerStore.getState().actions.reload();
-                  _lastSyncedAt = new Date().toISOString();
-                  try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
-                  notifySyncListeners();
-                  console.log('[sync] remote update applied');
-                }
-              } catch (e) {
-                console.error('[sync] realtime pull error:', e);
-              }
-            }, 500);
-          }
-        }
-      )
-      .subscribe((status: string) => {
-        console.log('[sync] realtime subscription status:', status);
-      });
-  });
+    const { data, error } = await supabase
+      .from('user_data')
+      .select('updated_at')
+      .eq('user_id', userId)
+      .single();
+    if (error || !data) return;
+    const remoteAt = data.updated_at;
+    // Skip if this is our own push
+    if (remoteAt === _lastPushId) return;
+    // Skip if we already know about this version
+    if (remoteAt === _lastKnownRemoteUpdatedAt) return;
+    _lastKnownRemoteUpdatedAt = remoteAt;
+    // Remote is different — pull the update
+    const success = await pullFromSupabase(_passcode!);
+    if (success) {
+      const { useLedgerStore } = await import('./store');
+      useLedgerStore.getState().actions.reload();
+      _lastSyncedAt = new Date().toISOString();
+      try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
+      notifySyncListeners();
+      // Re-apply theme from imported localStorage values
+      try {
+        const { applyThemeFromStorage } = await import('./themeSync');
+        applyThemeFromStorage();
+      } catch {}
+    }
+  } catch {}
 }
 
-function stopRealtimeSubscription() {
-  if (_realtimePullTimer) { clearTimeout(_realtimePullTimer); _realtimePullTimer = null; }
-  if (_realtimeChannel) {
-    supabase.removeChannel(_realtimeChannel);
-    _realtimeChannel = null;
-  }
+function startPolling() {
+  stopPolling();
+  // Set initial known state to avoid pulling our own data on first poll
+  _lastKnownRemoteUpdatedAt = _lastPushId || _lastSyncedAt;
+  _pollTimer = setInterval(pollForRemoteChanges, POLL_INTERVAL_MS);
+}
+
+function stopPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
 }
 
 // ── Snapshot (version history) ──────────────────────────────────────────
