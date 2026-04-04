@@ -42,7 +42,7 @@ export function NetCashChart({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<Range>('1W');
-  const [scrubIdx, setScrubIdx] = useState<number | null>(null);
+  const [scrubData, setScrubData] = useState<{ cents: number; ts: number; px: number; py: number } | null>(null);
   const [width, setWidth] = useState(340);
 
   // Load history
@@ -100,32 +100,45 @@ export function NetCashChart({
     return { points: pts, minCents: minC, maxCents: maxC };
   }, [dataPoints, width]);
 
-  // Scrub handling
-  const getIdxFromX = useCallback((clientX: number) => {
+  // Scrub handling — interpolate between data points for smooth dragging
+  const getScrubFromX = useCallback((clientX: number): { idx: number; cents: number; ts: number; px: number; py: number } | null => {
     const el = containerRef.current;
-    if (!el || points.length === 0) return null;
+    if (!el || points.length === 0 || dataPoints.length === 0) return null;
     const rect = el.getBoundingClientRect();
-    const x = clientX - rect.left;
-    // Find nearest point
-    let closest = 0;
-    let closestDist = Infinity;
-    for (let i = 0; i < points.length; i++) {
-      const dist = Math.abs(points[i].x - x);
-      if (dist < closestDist) { closestDist = dist; closest = i; }
+    const x = Math.max(0, Math.min(clientX - rect.left, width));
+
+    if (points.length === 1) {
+      return { idx: 0, cents: dataPoints[0].cents, ts: dataPoints[0].ts, px: points[0].x, py: points[0].y };
     }
-    return closest;
-  }, [points]);
+
+    // Find the two surrounding points and interpolate
+    for (let i = 0; i < points.length - 1; i++) {
+      if (x >= points[i].x && x <= points[i + 1].x) {
+        const segWidth = points[i + 1].x - points[i].x;
+        const t = segWidth > 0 ? (x - points[i].x) / segWidth : 0;
+        const cents = Math.round(dataPoints[i].cents + (dataPoints[i + 1].cents - dataPoints[i].cents) * t);
+        const ts = Math.round(dataPoints[i].ts + (dataPoints[i + 1].ts - dataPoints[i].ts) * t);
+        const py = points[i].y + (points[i + 1].y - points[i].y) * t;
+        return { idx: i, cents, ts, px: x, py };
+      }
+    }
+    // Past the last point
+    const last = points.length - 1;
+    return { idx: last, cents: dataPoints[last].cents, ts: dataPoints[last].ts, px: points[last].x, py: points[last].y };
+  }, [points, dataPoints, width]);
 
   const handleScrubStart = useCallback((clientX: number) => {
-    setScrubIdx(getIdxFromX(clientX));
-  }, [getIdxFromX]);
+    const s = getScrubFromX(clientX);
+    setScrubData(s ? { cents: s.cents, ts: s.ts, px: s.px, py: s.py } : null);
+  }, [getScrubFromX]);
 
   const handleScrubMove = useCallback((clientX: number) => {
-    setScrubIdx(getIdxFromX(clientX));
-  }, [getIdxFromX]);
+    const s = getScrubFromX(clientX);
+    setScrubData(s ? { cents: s.cents, ts: s.ts, px: s.px, py: s.py } : null);
+  }, [getScrubFromX]);
 
   const handleScrubEnd = useCallback(() => {
-    setScrubIdx(null);
+    setScrubData(null);
   }, []);
 
   // Touch handlers
@@ -144,8 +157,8 @@ export function NetCashChart({
   }, [handleScrubMove]);
 
   // Display values
-  const displayCents = scrubIdx !== null && dataPoints[scrubIdx] ? dataPoints[scrubIdx].cents : currentCents;
-  const displayTime = scrubIdx !== null && dataPoints[scrubIdx] ? formatTimeLabel(dataPoints[scrubIdx].ts, range) : null;
+  const displayCents = scrubData ? scrubData.cents : currentCents;
+  const displayTime = scrubData ? formatTimeLabel(scrubData.ts, range) : null;
 
   // Change from first to current
   const firstCents = dataPoints.length > 0 ? dataPoints[0].cents : currentCents;
@@ -162,11 +175,15 @@ export function NetCashChart({
 
   return (
     <div className="net-cash-chart-wrap">
-      {/* Hero Value */}
+      {/* Hero Value — tap to expand summary */}
       <div className="net-cash-chart-header">
         <div className="net-cash-chart-label">FINAL NET CASH</div>
-        <div className="net-cash-chart-value" style={{ color: displayCents >= 0 ? 'var(--green)' : 'var(--red)' }}>
-          {scrubIdx !== null ? formatCents(displayCents) : (
+        <div
+          className="net-cash-chart-value"
+          style={{ color: displayCents >= 0 ? 'var(--green)' : 'var(--red)', cursor: 'pointer' }}
+          onClick={onExpandSummary}
+        >
+          {scrubData ? formatCents(displayCents) : (
             <AnimatedNumber value={displayCents} format={formatCents} bounce cacheKey="snap_hero" />
           )}
         </div>
@@ -216,22 +233,22 @@ export function NetCashChart({
               strokeLinejoin="round"
               strokeLinecap="round"
             />
-            {/* Scrub indicator */}
-            {scrubIdx !== null && points[scrubIdx] && (
+            {/* Scrub indicator — follows finger/mouse smoothly between points */}
+            {scrubData && (
               <>
                 <line
-                  x1={points[scrubIdx].x} y1={0}
-                  x2={points[scrubIdx].x} y2={CHART_HEIGHT}
+                  x1={scrubData.px} y1={0}
+                  x2={scrubData.px} y2={CHART_HEIGHT}
                   stroke="var(--muted)" strokeWidth={1} strokeDasharray="3 3" opacity={0.5}
                 />
                 <circle
-                  cx={points[scrubIdx].x} cy={points[scrubIdx].y}
+                  cx={scrubData.px} cy={scrubData.py}
                   r={5} fill={lineColor} stroke="var(--text)" strokeWidth={2}
                 />
               </>
             )}
             {/* End dot when not scrubbing */}
-            {scrubIdx === null && points.length > 0 && (
+            {!scrubData && points.length > 0 && (
               <circle
                 cx={points[points.length - 1].x} cy={points[points.length - 1].y}
                 r={4} fill={lineColor}
@@ -254,7 +271,7 @@ export function NetCashChart({
             key={r}
             type="button"
             className={`net-cash-chart-range${range === r ? ' active' : ''}`}
-            onClick={() => { setRange(r); setScrubIdx(null); }}
+            onClick={() => { setRange(r); setScrubData(null); }}
           >
             {r}
           </button>
