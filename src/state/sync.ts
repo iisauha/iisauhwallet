@@ -209,37 +209,50 @@ let _realtimePullTimer: ReturnType<typeof setTimeout> | null = null;
 
 function startRealtimeSubscription() {
   stopRealtimeSubscription();
-  _realtimeChannel = supabase
-    .channel('user_data_realtime')
-    .on(
-      'postgres_changes' as any,
-      { event: 'UPDATE', schema: 'public', table: 'user_data' },
-      (payload: any) => {
-        // Ignore our own pushes by comparing updated_at
-        const remoteUpdatedAt = payload?.new?.updated_at;
-        if (remoteUpdatedAt && remoteUpdatedAt === _lastPushId) return;
 
-        // Another device pushed an update — pull it
-        if (_passcode && !_syncing) {
-          // Debounce to avoid pulling while we're also pushing
-          if (_realtimePullTimer) clearTimeout(_realtimePullTimer);
-          _realtimePullTimer = setTimeout(async () => {
-            try {
-              const success = await pullFromSupabase(_passcode!);
-              if (success) {
-                // Dynamically import to avoid circular dependency
-                const { useLedgerStore } = await import('./store');
-                useLedgerStore.getState().actions.reload();
-                _lastSyncedAt = new Date().toISOString();
-                try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
-                notifySyncListeners();
+  getAuthUserId().then((userId) => {
+    if (!userId) return;
+
+    _realtimeChannel = supabase
+      .channel('user_data_realtime')
+      .on(
+        'postgres_changes' as any,
+        { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${userId}` },
+        (payload: any) => {
+          console.log('[sync] realtime event received:', payload?.eventType);
+          // Ignore our own pushes by comparing updated_at
+          const remoteUpdatedAt = payload?.new?.updated_at;
+          if (remoteUpdatedAt && remoteUpdatedAt === _lastPushId) {
+            console.log('[sync] ignoring own push');
+            return;
+          }
+
+          // Another device pushed an update — pull it
+          if (_passcode && !_syncing) {
+            if (_realtimePullTimer) clearTimeout(_realtimePullTimer);
+            _realtimePullTimer = setTimeout(async () => {
+              console.log('[sync] pulling remote update...');
+              try {
+                const success = await pullFromSupabase(_passcode!);
+                if (success) {
+                  const { useLedgerStore } = await import('./store');
+                  useLedgerStore.getState().actions.reload();
+                  _lastSyncedAt = new Date().toISOString();
+                  try { localStorage.setItem(LAST_SYNCED_KEY, _lastSyncedAt); } catch {}
+                  notifySyncListeners();
+                  console.log('[sync] remote update applied');
+                }
+              } catch (e) {
+                console.error('[sync] realtime pull error:', e);
               }
-            } catch {}
-          }, 500);
+            }, 500);
+          }
         }
-      }
-    )
-    .subscribe();
+      )
+      .subscribe((status: string) => {
+        console.log('[sync] realtime subscription status:', status);
+      });
+  });
 }
 
 function stopRealtimeSubscription() {
