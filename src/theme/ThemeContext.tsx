@@ -4,7 +4,6 @@ import {
   saveAppThemeColor,
   loadAppAccentColor,
   saveAppAccentColor,
-  DEFAULT_THEME_COLOR,
 } from '../state/storage';
 import { getThemeColorsFromHex, getAccentColorsFromHex } from './themeUtils';
 
@@ -27,27 +26,27 @@ function isLightHex(hex: string): boolean {
   } catch (_) { return false; }
 }
 
-/** App background only: --bg from user choice. All other theme vars from fixed default so surface colors stay independent. */
+/** Derive all theme CSS variables from the user's chosen background color. */
 function applyThemeColor(appBackgroundHex: string) {
   const root = document.documentElement.style;
-  const defaults = getThemeColorsFromHex(DEFAULT_THEME_COLOR);
+  const derived = getThemeColorsFromHex(appBackgroundHex);
   root.setProperty('--bg', appBackgroundHex);
   // Sync browser chrome / status bar color so there's no dark strip on iOS Safari refresh
   try {
     const mt = document.querySelector('meta[name="theme-color"]');
     if (mt) mt.setAttribute('content', appBackgroundHex);
   } catch (_) {}
-  root.setProperty('--bg-secondary', defaults.bgSecondary);
-  root.setProperty('--surface', defaults.surface);
-  root.setProperty('--surface-hover', defaults.surfaceHover);
-  root.setProperty('--border', defaults.border);
-  root.setProperty('--border-subtle', defaults.borderSubtle);
+  root.setProperty('--bg-secondary', derived.bgSecondary);
+  root.setProperty('--surface', derived.surface);
+  root.setProperty('--surface-hover', derived.surfaceHover);
+  root.setProperty('--border', derived.border);
+  root.setProperty('--border-subtle', derived.borderSubtle);
   // For light backgrounds, use dark text/muted colors so inputs/text remain readable
   const isLight = isLightHex(appBackgroundHex);
-  root.setProperty('--text', isLight ? '#111111' : defaults.text);
-  root.setProperty('--muted', isLight ? '#555555' : defaults.muted);
-  root.setProperty('--shadow', defaults.shadow);
-  root.setProperty('--shadow-strong', defaults.shadowStrong);
+  root.setProperty('--text', isLight ? '#111111' : derived.text);
+  root.setProperty('--muted', isLight ? '#555555' : derived.muted);
+  root.setProperty('--shadow', derived.shadow);
+  root.setProperty('--shadow-strong', derived.shadowStrong);
 }
 
 function applyAccentColor(hex: string) {
