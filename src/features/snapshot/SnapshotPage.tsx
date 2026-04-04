@@ -4,11 +4,11 @@ import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
-import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY, LAST_EXPORT_DATE_KEY, BACKUP_LOCATION_LABEL_KEY, BACKUP_REMINDER_DAYS_KEY } from '../../state/keys';
+import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
-import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid, loadActivityLog, exportJSON, logActivityEntry } from '../../state/storage';
+import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid, loadActivityLog } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import type { PendingInboundItem, PendingOutboundItem, RewardRule, RewardUnitType } from '../../state/models';
 import { getEffectiveRules } from '../rewards/rewardMatching';
@@ -140,166 +140,6 @@ function RecentActivityWidget() {
   );
 }
 
-// --- Backup Reminder Banner ---
-
-function BackupReminderBanner() {
-  const [dismissed, setDismissed] = useState(false);
-  const [visible, setVisible] = useState(false);
-
-  const lastExportStr = localStorage.getItem(LAST_EXPORT_DATE_KEY);
-  const now = new Date();
-  const reminderDays = parseInt(localStorage.getItem(BACKUP_REMINDER_DAYS_KEY) || '1', 10) || 1;
-  const reminderMs = reminderDays * 24 * 60 * 60 * 1000;
-
-  let lastDate: Date | null = null;
-  let nextReminderDate: Date | null = null;
-  let daysSince: number | null = null;
-  if (lastExportStr) {
-    const parsed = new Date(lastExportStr);
-    if (!isNaN(parsed.getTime())) {
-      lastDate = parsed;
-      nextReminderDate = new Date(parsed.getTime() + reminderMs);
-      daysSince = Math.floor((now.getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
-    }
-  }
-
-  // Show when: never backed up, OR current time is past the next reminder date+time
-  const shouldShow = !dismissed && (lastDate === null || now >= nextReminderDate!);
-
-  useEffect(() => {
-    if (shouldShow) {
-      const t = setTimeout(() => setVisible(true), 30);
-      return () => clearTimeout(t);
-    }
-  }, [shouldShow]);
-
-  // Listen for backup-completed event to hide the banner
-  useEffect(() => {
-    const handler = () => setDismissed(true);
-    window.addEventListener('backup-completed', handler);
-    return () => window.removeEventListener('backup-completed', handler);
-  }, []);
-
-  if (!shouldShow) return null;
-
-  const backupLabel = localStorage.getItem(BACKUP_LOCATION_LABEL_KEY);
-
-  const handleExportNow = () => {
-    const text = exportJSON();
-    const fileName = (() => {
-      const d = new Date();
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      return `${months[d.getMonth()]}_${d.getDate()}_${d.getFullYear()}.json`;
-    })();
-
-    const doExport = async () => {
-      try {
-        const nav: any = navigator as any;
-        if (nav.share) {
-          const file = new File([text], fileName, { type: 'application/json' });
-          await nav.share({ files: [file] });
-          localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString());
-          logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
-          window.dispatchEvent(new CustomEvent('backup-completed'));
-          return;
-        }
-      } catch (_) {}
-
-      const blob = new Blob([text], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString());
-      logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
-      window.dispatchEvent(new CustomEvent('backup-completed'));
-    };
-    doExport();
-  };
-
-  return (
-    <div
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(-8px)',
-        transition: 'opacity 200ms ease, transform 200ms ease',
-        background: 'var(--ui-card-bg, var(--surface))',
-        borderRadius: 12,
-        borderLeft: '4px solid var(--accent)',
-        padding: '14px 14px 14px 16px',
-        marginBottom: 10,
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-      }}
-    >
-      {/* Cloud upload icon */}
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
-        <path d="M12 16V8m0 0l-3 3m3-3l3 3" />
-        <path d="M4.06 14.526A4.5 4.5 0 0 1 8 7.5h.5A5.5 5.5 0 0 1 19 9a4 4 0 0 1 1 7.874" />
-      </svg>
-
-      {/* Text content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))' }}>
-          Back up your data
-        </div>
-        <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>
-          {daysSince === null
-            ? "You haven\u2019t backed up yet"
-            : daysSince === 0
-              ? 'Last backup was earlier today'
-              : `Last backup was ${daysSince} day${daysSince !== 1 ? 's' : ''} ago`}
-        </div>
-        {backupLabel && (
-          <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 4, fontStyle: 'italic' }}>
-            Save to: {backupLabel}
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 10, alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={handleExportNow}
-            style={{
-              background: 'var(--accent)',
-              color: 'var(--ui-primary-text, var(--text))',
-              border: 'none',
-              borderRadius: 20,
-              padding: '6px 16px',
-              fontSize: '0.76rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--app-font-family)',
-            }}
-          >
-            Export now
-          </button>
-          <button
-            type="button"
-            onClick={() => setDismissed(true)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--muted)',
-              fontSize: '0.74rem',
-              cursor: 'pointer',
-              padding: '6px 4px',
-              fontFamily: 'var(--app-font-family)',
-            }}
-          >
-            Remind me later
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function SnapshotPage({
   onSwitchTab,
@@ -573,7 +413,6 @@ export function SnapshotPage({
     <div className="tab-panel active" id="snapshotContent">
 
       {/* Backup Reminder */}
-      <BackupReminderBanner />
 
       {/* Recent Activity */}
       <RecentActivityWidget />

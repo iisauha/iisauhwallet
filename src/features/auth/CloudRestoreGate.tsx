@@ -4,8 +4,8 @@
  * On a new device/context where there's no local passcode hash:
  * 1. Checks if the user has cloud data
  * 2. If yes → shows "Enter your passcode to restore" screen
- * 3. On success → imports everything (including passcode hash, settings, data)
- * 4. PasscodeGate then sees the imported passcode hash and works normally
+ * 3. On success → imports everything, applies theme, skips onboarding/passcode creation
+ * 4. User lands directly in the app
  *
  * If no cloud data exists → passes through to PasscodeGate (new user flow).
  * If local data already exists → passes through immediately (returning user).
@@ -13,25 +13,32 @@
 
 import { useEffect, useState } from 'react';
 import { loadPasscodeHash } from '../../state/storage';
-import { hasRemoteData, pullFromSupabase } from '../../state/sync';
-import { initCrypto } from '../../state/crypto';
+import { markOnboardingDone } from '../onboarding/OnboardingGuide';
+import { hasRemoteData, pullFromSupabase, saveSyncPassphrase, initSync } from '../../state/sync';
+import { initCrypto, unlockWithPasscode } from '../../state/crypto';
 import { useLedgerStore } from '../../state/store';
 
+/** Apply any saved theme/appearance from localStorage after import. */
+function applyImportedTheme() {
+  try {
+    // Re-trigger CSS variable application by dispatching a storage event
+    // The ThemeProvider and AppearanceProvider read from localStorage on mount,
+    // so we force a re-render by reloading the page after restore.
+  } catch {}
+}
+
 export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<'checking' | 'has-local' | 'restore-prompt' | 'no-cloud' | 'done'>('checking');
+  const [status, setStatus] = useState<'checking' | 'has-local' | 'restore-prompt' | 'no-cloud' | 'restored'>('checking');
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If local passcode hash exists, this device already has data
     const hash = loadPasscodeHash();
     if (hash) {
       setStatus('has-local');
       return;
     }
-
-    // No local data — check cloud
     hasRemoteData().then((has) => {
       setStatus(has ? 'restore-prompt' : 'no-cloud');
     }).catch(() => {
@@ -39,7 +46,6 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Pass through immediately if local data exists or no cloud data
   if (status === 'checking') {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', color: 'var(--ui-primary-text, #fff)' }}>
@@ -48,11 +54,22 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (status === 'has-local' || status === 'no-cloud' || status === 'done') {
+  if (status === 'has-local' || status === 'no-cloud') {
     return <>{children}</>;
   }
 
-  // Cloud data exists but no local data — ask for passcode to restore
+  if (status === 'restored') {
+    // After successful restore, reload the page so ThemeProvider, AppearanceProvider,
+    // and PasscodeGate all re-read from the freshly imported localStorage.
+    // This ensures theme, fonts, and passcode state are all correct.
+    window.location.reload();
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', color: 'var(--ui-primary-text, #fff)' }}>
+        Restoring...
+      </div>
+    );
+  }
+
   const handleRestore = async () => {
     if (!passcode.trim()) {
       setError('Enter your passcode.');
@@ -63,10 +80,21 @@ export function CloudRestoreGate({ children }: { children: React.ReactNode }) {
     try {
       const success = await pullFromSupabase(passcode.trim());
       if (success) {
-        // Re-initialize crypto with the imported data (device key, etc.)
+        // Re-initialize crypto with the imported device key
         await initCrypto();
+        // Unlock with the user's passcode so the device key is ready
+        await unlockWithPasscode(passcode.trim());
+        // Save passphrase for future cloud sync on this device
+        await saveSyncPassphrase(passcode.trim());
+        // Start syncing
+        initSync(passcode.trim());
+        // Mark onboarding as done so they skip the intro
+        markOnboardingDone();
+        // Reload store
         useLedgerStore.getState().actions.reload();
-        setStatus('done');
+        applyImportedTheme();
+        // Reload page to apply theme and skip passcode creation
+        setStatus('restored');
       } else {
         setError('Could not restore. Wrong passcode or no data found.');
       }
@@ -166,9 +194,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--border, #333)',
     background: 'var(--input-bg, #222)',
     color: 'var(--ui-primary-text, var(--text, #fff))',
-    fontSize: '1.2rem',
-    letterSpacing: '0.3em',
-    textAlign: 'center' as const,
+    fontSize: '1rem',
     outline: 'none',
     boxSizing: 'border-box' as const,
   },
