@@ -41,6 +41,8 @@ import {
 import { initSync, stopSync, pullFromSupabase, hasRemoteData, saveSyncPassphrase, loadSyncPassphrase } from '../../state/sync';
 import { RESTORE_PASSCODE_KEY } from '../auth/CloudRestoreGate';
 import { isBiometricAvailable, isBiometricEnabled, enrollBiometric, authenticateWithBiometric } from '../../state/biometric';
+import { supabase } from '../../state/supabase';
+import { useAuth } from '../../state/AuthContext';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import { WelcomeIntro } from './WelcomeIntro';
@@ -158,8 +160,11 @@ function WelcomeScreen({ name, profileImage, visible }: { name: string; profileI
 }
 
 export function PasscodeGate({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [storedHash, setStoredHash] = useState<string | null>(() => loadPasscodeHash());
   const [authenticated, setAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const shouldShowWelcomeInit = loadPasscodePaused() && loadShowWelcomeScreen() && !!loadUserDisplayName();
   const [showWelcome, setShowWelcome] = useState(shouldShowWelcomeInit);
   const [welcomeVisible, setWelcomeVisible] = useState(shouldShowWelcomeInit);
@@ -491,6 +496,54 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     setAuthenticated(true);
     setInput('');
   }, [input, storedHash, failedAttempts, delayUntil, recordFailedAttempt, resetFailedAttempts]);
+
+  const handlePasswordUnlock = useCallback(async () => {
+    if (!passwordInput || passwordLoading) return;
+    if (!user?.email) { setError('No email found. Sign out and sign in again.'); return; }
+    setPasswordLoading(true);
+    setError('');
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordInput,
+      });
+      if (authError) {
+        setError('Incorrect password.');
+        setPasswordLoading(false);
+        return;
+      }
+      // Password verified. Use the saved sync passphrase to unlock crypto.
+      const syncPass = await loadSyncPassphrase();
+      if (syncPass) {
+        await unlockWithPasscode(syncPass);
+        const localData = useLedgerStore.getState().data;
+        const hasLocalData = localData && (localData.banks?.length > 0 || localData.cards?.length > 0 || localData.purchases?.length > 0);
+        if (!hasLocalData) {
+          try {
+            const remote = await hasRemoteData();
+            if (remote) await pullFromSupabase(syncPass);
+          } catch {}
+        }
+        useLedgerStore.getState().actions.reload();
+        saveSyncPassphrase(syncPass);
+        initSync(syncPass);
+        if (!isBiometricEnabled()) {
+          const available = await isBiometricAvailable();
+          if (available) {
+            confirmedPasscodeRef.current = syncPass;
+            setBiometricPrompt(true);
+          }
+        }
+        setAuthenticated(true);
+      } else {
+        setError('Could not unlock. Try your 6-digit passcode instead.');
+      }
+    } catch {
+      setError('Something went wrong. Try again.');
+    }
+    setPasswordLoading(false);
+    setPasswordInput('');
+  }, [passwordInput, passwordLoading, user]);
 
   const handleForgotOptions = useCallback(() => {
     setStep('forgot-options');
@@ -1036,39 +1089,50 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {/* Enter */}
       {step === 'enter' && (
         <>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Enter Passcode</h1>
-          <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
-            {isBiometricEnabled() ? 'Use Face ID or tap below to enter your passcode.' : `Enter your ${PASSCODE_LENGTH}-digit passcode to continue.`}
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Welcome Back</h1>
+          <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
+            {isBiometricEnabled() ? 'Use Face ID or enter your password to continue.' : 'Enter your password to unlock.'}
           </p>
+          {user?.email ? (
+            <div style={{ marginBottom: 12, padding: '10px 16px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center' }}>
+              {user.email}
+            </div>
+          ) : null}
           <input
-            type="tel"
-            inputMode="numeric"
-            autoCorrect="off"
-            spellCheck={false}
-            data-lpignore="true"
-            maxLength={PASSCODE_LENGTH}
-            autoComplete="one-time-code"
-            value={input}
-            onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
-            placeholder={'•'.repeat(PASSCODE_LENGTH)}
-            aria-label="Passcode"
-            style={inputStyle}
-            readOnly={!input && isBiometricEnabled()}
-            onFocus={(e) => { if (isBiometricEnabled() && !input) { (e.target as HTMLInputElement).removeAttribute('readonly'); }}}
+            type="password"
+            autoComplete="current-password"
+            value={passwordInput}
+            onChange={(e) => { setPasswordInput(e.target.value); setError(''); }}
+            placeholder="Password"
+            aria-label="Password"
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              fontSize: '1rem',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: 'var(--bg)',
+              color: 'var(--ui-primary-text, var(--text))',
+              marginBottom: 12,
+              boxSizing: 'border-box',
+            }}
+            readOnly={!passwordInput && isBiometricEnabled()}
+            onFocus={(e) => { if (isBiometricEnabled() && !passwordInput) { (e.target as HTMLInputElement).removeAttribute('readonly'); }}}
             onTouchStart={(e) => { (e.target as HTMLInputElement).removeAttribute('readonly'); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordUnlock(); }}
           />
           {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
           <button
             type="button"
             className="btn btn-primary"
-            style={{ width: '100%' }}
-            onClick={handleEnter}
-            disabled={countdown > 0}
+            style={{ width: '100%', opacity: passwordLoading ? 0.6 : 1 }}
+            onClick={handlePasswordUnlock}
+            disabled={passwordLoading}
           >
-            {countdown > 0 ? `Try again in ${countdown}s…` : 'Continue'}
+            {passwordLoading ? 'Unlocking...' : 'Unlock'}
           </button>
           <button type="button" className="btn clear-btn" style={{ width: '100%', padding: '10px 16px', fontSize: '0.9rem', marginTop: 18 }} onClick={handleForgotOptions}>
-            Forgot passcode?
+            Forgot password?
           </button>
         </>
       )}
