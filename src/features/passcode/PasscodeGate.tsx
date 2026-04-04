@@ -186,28 +186,63 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     })();
   }, [storedHash, authenticated]);
 
-  // Auto-lock on inactivity (skip when passcode is paused — no auth gate to show)
+  // Auto-lock on inactivity (skip when passcode is paused — no auth gate to show).
+  // CRITICAL: pause timer when app is backgrounded (iOS PWAs fire timers while hidden,
+  // which would clear crypto caches and corrupt the UI when the user returns).
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityRef = useRef(Date.now());
   useEffect(() => {
     const minutes = loadAutoLockMinutes();
     if (!storedHash || minutes === 0 || loadPasscodePaused()) return;
     const ms = minutes * 60 * 1000;
 
-    function resetTimer() {
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = setTimeout(() => {
-        stopSync();
-        lockCrypto();
-        setAuthenticated(false);
-      }, ms);
+    function clearTimer() {
+      if (inactivityTimerRef.current) { clearTimeout(inactivityTimerRef.current); inactivityTimerRef.current = null; }
+    }
+
+    function doLock() {
+      clearTimer();
+      stopSync();
+      lockCrypto();
+      setAuthenticated(false);
+    }
+
+    function startTimer() {
+      clearTimer();
+      const elapsed = Date.now() - lastActivityRef.current;
+      const remaining = Math.max(0, ms - elapsed);
+      inactivityTimerRef.current = setTimeout(doLock, remaining);
+    }
+
+    function onActivity() {
+      lastActivityRef.current = Date.now();
+      // Only restart timer if app is visible (don't start timers while backgrounded)
+      if (!document.hidden) startTimer();
+    }
+
+    function onVisibilityChange() {
+      if (document.hidden) {
+        // App going to background — pause the timer entirely
+        clearTimer();
+      } else {
+        // App coming back — check if lock period elapsed while hidden
+        const elapsed = Date.now() - lastActivityRef.current;
+        if (elapsed >= ms) {
+          doLock();
+        } else {
+          startTimer();
+        }
+      }
     }
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
-    events.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
-    resetTimer();
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    startTimer();
     return () => {
-      events.forEach((e) => window.removeEventListener(e, resetTimer));
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      events.forEach((e) => window.removeEventListener(e, onActivity));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      clearTimer();
     };
   }, [storedHash]);
   const [step, setStep] = useState<Step>(() => {
