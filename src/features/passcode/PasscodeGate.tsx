@@ -175,6 +175,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [biometricPrompt, setBiometricPrompt] = useState(false);
   const biometricTriedRef = useRef(false);
   const [biometricDismissed, setBiometricDismissed] = useState(false);
+  const [needsPasscode, setNeedsPasscode] = useState(false);
   const passwordFieldRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-unlock after cloud restore (CloudRestoreGate saved passcode in sessionStorage)
@@ -527,12 +528,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         return;
       }
       // Password verified. Use the saved sync passphrase to unlock crypto.
-      // On cold start the device key isn't loaded so the localStorage copy can't
-      // be decrypted — fall back to biometric retrieval of the passcode.
-      let syncPass = await loadSyncPassphrase();
-      if (!syncPass && isBiometricEnabled()) {
-        syncPass = await authenticateWithBiometric();
-      }
+      // On cold start the device key isn't loaded, so the localStorage copy
+      // can't be decrypted — fall back to asking for the 6-digit passcode.
+      const syncPass = await loadSyncPassphrase();
       if (syncPass) {
         await unlockWithPasscode(syncPass);
         const localData = useLedgerStore.getState().data;
@@ -555,7 +553,13 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         }
         setAuthenticated(true);
       } else {
-        setError('Could not unlock. Try your 6-digit passcode instead.');
+        // Cold start: device key not loaded, can't decrypt saved passcode.
+        // Show the 6-digit passcode input so the user can unlock encryption.
+        setNeedsPasscode(true);
+        setError('');
+        setPasswordLoading(false);
+        setPasswordInput('');
+        return;
       }
     } catch {
       setError('Something went wrong. Try again.');
@@ -1124,50 +1128,99 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             margin: '20px auto 20px',
           } as React.CSSProperties} />
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Welcome Back</h1>
-          <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', color: 'var(--muted, #888)', textAlign: 'center', lineHeight: 1.5 }}>
-            {isBiometricEnabled() ? 'Use Face ID or enter your password to continue.' : 'Enter your password to unlock.'}
-          </p>
-          {user?.email ? (
-            <div style={{ marginBottom: 12, padding: '10px 16px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center' }}>
-              {user.email}
-            </div>
-          ) : null}
-          <input
-            ref={passwordFieldRef}
-            type="password"
-            autoComplete="current-password"
-            value={passwordInput}
-            onChange={(e) => { setPasswordInput(e.target.value); setError(''); }}
-            placeholder="Password"
-            aria-label="Password"
-            disabled={isBiometricEnabled() && !biometricDismissed && !passwordInput}
-            style={{
-              width: '100%',
-              padding: '14px 16px',
-              fontSize: '1rem',
-              borderRadius: 10,
-              border: '1px solid var(--border)',
-              background: 'var(--bg)',
-              color: 'var(--ui-primary-text, var(--text))',
-              marginBottom: 12,
-              boxSizing: 'border-box',
-              opacity: isBiometricEnabled() && !biometricDismissed && !passwordInput ? 0.4 : 1,
-            }}
-            onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordUnlock(); }}
-          />
-          {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ width: '100%', opacity: passwordLoading ? 0.6 : 1 }}
-            onClick={handlePasswordUnlock}
-            disabled={passwordLoading}
-          >
-            {passwordLoading ? 'Unlocking...' : 'Unlock'}
-          </button>
-          <button type="button" className="btn clear-btn" style={{ width: '100%', padding: '10px 16px', fontSize: '0.9rem', marginTop: 18 }} onClick={handleForgotOptions}>
-            Forgot password?
-          </button>
+          {needsPasscode ? (
+            <>
+              <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', color: 'var(--muted, #888)', textAlign: 'center', lineHeight: 1.5 }}>
+                Enter your {PASSCODE_LENGTH}-digit passcode to unlock your data.
+              </p>
+              <input
+                type="tel"
+                inputMode="numeric"
+                autoCorrect="off"
+                spellCheck={false}
+                data-lpignore="true"
+                maxLength={PASSCODE_LENGTH}
+                autoComplete="one-time-code"
+                value={input}
+                onChange={(e) => { setInput(e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH)); setError(''); }}
+                placeholder={'•'.repeat(PASSCODE_LENGTH)}
+                aria-label="Passcode"
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  fontSize: '1.5rem',
+                  fontFamily: 'monospace',
+                  letterSpacing: 8,
+                  textAlign: 'center',
+                  borderRadius: 10,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--ui-primary-text, var(--text))',
+                  marginBottom: 12,
+                  boxSizing: 'border-box',
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleEnter(); }}
+              />
+              {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                onClick={handleEnter}
+                disabled={countdown > 0}
+              >
+                {countdown > 0 ? `Try again in ${countdown}s…` : 'Continue'}
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', color: 'var(--muted, #888)', textAlign: 'center', lineHeight: 1.5 }}>
+                {isBiometricEnabled() ? 'Use Face ID or enter your password to continue.' : 'Enter your password to unlock.'}
+              </p>
+              {user?.email ? (
+                <div style={{ marginBottom: 12, padding: '10px 16px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: '0.9rem', color: 'var(--muted)', textAlign: 'center' }}>
+                  {user.email}
+                </div>
+              ) : null}
+              <input
+                ref={passwordFieldRef}
+                type="password"
+                autoComplete="current-password"
+                value={passwordInput}
+                onChange={(e) => { setPasswordInput(e.target.value); setError(''); }}
+                placeholder="Password"
+                aria-label="Password"
+                disabled={isBiometricEnabled() && !biometricDismissed && !passwordInput}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  fontSize: '1rem',
+                  borderRadius: 10,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--ui-primary-text, var(--text))',
+                  marginBottom: 12,
+                  boxSizing: 'border-box',
+                  opacity: isBiometricEnabled() && !biometricDismissed && !passwordInput ? 0.4 : 1,
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordUnlock(); }}
+              />
+              {error ? <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--red)' }}>{error}</p> : null}
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%', opacity: passwordLoading ? 0.6 : 1 }}
+                onClick={handlePasswordUnlock}
+                disabled={passwordLoading}
+              >
+                {passwordLoading ? 'Unlocking...' : 'Unlock'}
+              </button>
+              <button type="button" className="btn clear-btn" style={{ width: '100%', padding: '10px 16px', fontSize: '0.9rem', marginTop: 18 }} onClick={handleForgotOptions}>
+                Forgot password?
+              </button>
+            </>
+          )}
         </>
       )}
 
