@@ -1124,7 +1124,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     <div
       className="passcode-gate"
       style={{
-        minHeight: '100dvh',
+        height: '100dvh',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -1134,6 +1134,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         background: 'var(--bg)',
         color: 'var(--ui-primary-text, var(--text))',
         boxSizing: 'border-box',
+        overflow: 'hidden',
+        position: 'fixed',
+        top: 0,
+        left: 0,
       }}
     >
       {content}
