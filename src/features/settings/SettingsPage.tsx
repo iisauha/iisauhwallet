@@ -701,23 +701,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
             }
           }}
         />
-        <SettingsRow
-          icon={<IconRefresh />}
-          iconBg="var(--accent)"
-          label="Check for Updates"
-          sublabel="Clears cached files and reloads. Your data is not affected."
-          onClick={async () => {
-            if ('serviceWorker' in navigator) {
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              for (const reg of registrations) await reg.unregister();
-            }
-            if ('caches' in window) {
-              const keys = await caches.keys();
-              for (const key of keys) await caches.delete(key);
-            }
-            window.location.reload();
-          }}
-        />
       </div>
       <input
         ref={fileRef}
@@ -1049,7 +1032,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
               <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: 'var(--ui-secondary-text, #999)' }}>
                 Tap a backup to restore it. This will replace your current data.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <div className="settings-list">
                 {snapshots.map((s) => {
                   const d = new Date(s.created_at);
                   const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
@@ -1059,20 +1042,15 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                     <button
                       key={s.id}
                       type="button"
+                      className="settings-row"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '14px 16px',
-                        background: 'var(--ui-surface-secondary, var(--surface))',
-                        border: 'none',
-                        borderBottom: '1px solid var(--ui-border, var(--border-subtle))',
-                        color: 'var(--ui-primary-text, var(--text))',
-                        fontSize: '0.9rem',
+                        width: '100%',
                         cursor: isRestoring ? 'default' : 'pointer',
                         opacity: isRestoring ? 0.6 : 1,
                         textAlign: 'left',
-                        width: '100%',
                       }}
                       disabled={isRestoring}
                       onClick={async () => {
@@ -1097,10 +1075,10 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 500 }}>{dateStr}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--ui-secondary-text, #999)', marginTop: 2 }}>{timeStr}</div>
+                        <div className="settings-row-label">{dateStr}</div>
+                        <div className="settings-row-sublabel">{timeStr}</div>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--accent, #4a9eff)' }}>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--accent, #4a9eff)' }}>
                         {isRestoring ? 'Restoring...' : 'Restore'}
                       </div>
                     </button>
