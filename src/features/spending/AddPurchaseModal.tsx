@@ -8,6 +8,7 @@ import type { SubTrackerEntry } from '../../state/storage';
 import { computeRewardDeltaForPurchase, suggestAllCardsForPurchase, type RewardDelta, type SuggestResult } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
 import { useContentGuard } from '../../state/useContentGuard';
+import { sortByRecent, recordSelections } from '../../state/recentSelections';
 
 function todayKey() {
   const d = new Date();
@@ -929,7 +930,7 @@ export function AddPurchaseModal(props: {
                   <label>Reimbursement deposits to</label>
                   <Select value={splitBankId} onChange={(e) => setSplitBankId(e.target.value)}>
                     <option value="">Default (first bank)</option>
-                    {(data.banks || []).map((b) => (
+                    {sortByRecent(data.banks || [], b => b.id).map((b) => (
                       <option key={b.id} value={b.id}>
                         Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                       </option>
@@ -971,7 +972,7 @@ export function AddPurchaseModal(props: {
                 <label>Select Card</label>
                 <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
                   <option value="">Select</option>
-                  {(data.cards || []).map((c) => (
+                  {sortByRecent(data.cards || [], c => c.id).map((c) => (
                     <option key={c.id} value={c.id}>
                       Card - {c.name} ({formatCents(c.balanceCents || 0)})
                     </option>
@@ -1016,7 +1017,7 @@ export function AddPurchaseModal(props: {
                   <label>HYSA Account</label>
                   <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
                     <option value="">Select</option>
-                    {hysaAccounts.map((a: any) => (
+                    {sortByRecent(hysaAccounts, (a: any) => a.id).map((a: any) => (
                       <option key={a.id} value={a.id}>
                         HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                       </option>
@@ -1153,6 +1154,7 @@ export function AddPurchaseModal(props: {
                 const oldLeg = computeLeg(oldPurchase);
                 const newLeg = computeLeg(purchase);
 
+                recordSelections(paymentSource, paymentTargetId, reimbursementBankId, splitBankId);
                 actions.updatePurchase(currentPurchase.id, purchase);
 
                 // Only prompt when rewards would actually need to change.
@@ -1194,6 +1196,7 @@ export function AddPurchaseModal(props: {
               }
 
               // Add purchase first (required), then optionally adjust rewards via popup.
+              recordSelections(paymentSource, paymentTargetId, reimbursementBankId, splitBankId);
               actions.addPurchase(purchase);
               if (props.reimbursementExpected && applyToSnapshot && paymentSource === 'card' && paymentTargetId) {
                 const reimbursementCents = isSplit && purchase.splitSnapshot && typeof purchase.splitSnapshot.amountCents === 'number'

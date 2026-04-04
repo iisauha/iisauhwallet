@@ -13,6 +13,7 @@ import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import type { PendingInboundItem, PendingOutboundItem, RewardRule, RewardUnitType } from '../../state/models';
 import { getEffectiveRules } from '../rewards/rewardMatching';
 import { Select } from '../../ui/Select';
+import { sortByRecent, recordSelections } from '../../state/recentSelections';
 import { BankAccountCard } from './AccountCard';
 import { PendingInboundList, PendingOutboundList } from './PendingList';
 import {
@@ -1547,7 +1548,7 @@ export function SnapshotPage({
                         <label>Card</label>
                         <Select value={modal.targetCardId} onChange={(e) => setModal({ ...modal, targetCardId: e.target.value })}>
                           <option value="">Select...</option>
-                          {cardsSortedByBalance.map((c) => (
+                          {sortByRecent(cardsSortedByBalance, c => c.id).map((c) => (
                             <option key={c.id} value={c.id}>
                               Card - {c.name} ({formatCents(c.balanceCents || 0)})
                             </option>
@@ -1560,7 +1561,7 @@ export function SnapshotPage({
                           <label>HYSA Account</label>
                           <Select value={modal.targetInvestingAccountId} onChange={(e) => setModal({ ...modal, targetInvestingAccountId: e.target.value })}>
                             <option value="">Select...</option>
-                            {hysaAccountsSorted.map((a: any) => (
+                            {sortByRecent(hysaAccountsSorted, (a: any) => a.id).map((a: any) => (
                               <option key={a.id} value={a.id}>
                                 HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                               </option>
@@ -1581,7 +1582,7 @@ export function SnapshotPage({
                         <label>Bank</label>
                         <Select value={modal.targetBankId || ''} onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}>
                           <option value="">Select...</option>
-                          {banksSortedByBalance.map((b) => (
+                          {sortByRecent(banksSortedByBalance, b => b.id).map((b) => (
                             <option key={b.id} value={b.id}>
                               Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                             </option>
@@ -1623,7 +1624,7 @@ export function SnapshotPage({
                             <label>From Bank</label>
                             <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
                               <option value="">Select...</option>
-                              {banksSortedByBalance.map((b) => (
+                              {sortByRecent(banksSortedByBalance, b => b.id).map((b) => (
                                 <option key={b.id} value={b.id}>
                                   Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                                 </option>
@@ -1639,7 +1640,7 @@ export function SnapshotPage({
                                 onChange={(e) => setModal({ ...modal, outboundSourceHysaAccountId: e.target.value })}
                               >
                                 <option value="">Select...</option>
-                                {hysaAccountsSorted.map((a: any) => (
+                                {sortByRecent(hysaAccountsSorted, (a: any) => a.id).map((a: any) => (
                                   <option key={a.id} value={a.id}>
                                     HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                                   </option>
@@ -1663,7 +1664,7 @@ export function SnapshotPage({
                           <label>To Credit Card</label>
                           <Select value={modal.targetCardIdOut} onChange={(e) => setModal({ ...modal, targetCardIdOut: e.target.value })}>
                             <option value="">Select...</option>
-                            {cardsSortedByBalance.map((c) => (
+                            {sortByRecent(cardsSortedByBalance, c => c.id).map((c) => (
                               <option key={c.id} value={c.id}>
                                 Card - {c.name} ({formatCents(c.balanceCents || 0)})
                               </option>
@@ -1688,7 +1689,7 @@ export function SnapshotPage({
                             <label>Bank</label>
                             <Select value={modal.sourceBankId} onChange={(e) => setModal({ ...modal, sourceBankId: e.target.value })}>
                               <option value="">Select...</option>
-                              {banksSortedByBalance.map((b) => (
+                              {sortByRecent(banksSortedByBalance, b => b.id).map((b) => (
                                 <option key={b.id} value={b.id}>
                                   Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                                 </option>
@@ -1701,7 +1702,7 @@ export function SnapshotPage({
                               <label>HYSA Account</label>
                               <Select value={modal.outboundSourceHysaAccountId} onChange={(e) => setModal({ ...modal, outboundSourceHysaAccountId: e.target.value })}>
                                 <option value="">Select...</option>
-                                {hysaAccountsSorted.map((a: any) => (
+                                {sortByRecent(hysaAccountsSorted, (a: any) => a.id).map((a: any) => (
                                   <option key={a.id} value={a.id}>
                                     HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                                   </option>
@@ -1812,6 +1813,12 @@ export function SnapshotPage({
                           }
                         }
                       }
+                      recordSelections(
+                        modal.depositTo, modal.targetBankId, modal.targetCardId,
+                        modal.targetInvestingAccountId, modal.sourceBankId,
+                        modal.targetCardIdOut, modal.outboundSourceHysaAccountId,
+                        modal.outboundSourceKind
+                      );
                       setModal({ type: 'none' });
                     }}
                   >
@@ -1852,7 +1859,7 @@ export function SnapshotPage({
                       setModal({ ...modal, dest: v });
                     }}
                   >
-                    {banksSortedByBalance.map((b) => (
+                    {sortByRecent(banksSortedByBalance, b => b.id).map((b) => (
                       <option key={b.id} value={`bank:${b.id}`}>
                         Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                       </option>
@@ -1862,7 +1869,7 @@ export function SnapshotPage({
                         <option value="" disabled>
                           ──────────
                         </option>
-                        {cardsSortedByBalance.map((c) => (
+                        {sortByRecent(cardsSortedByBalance, c => c.id).map((c) => (
                           <option key={c.id} value={`card:${c.id}`}>
                             {c.name} - {formatCents(c.balanceCents || 0)}
                           </option>
@@ -1887,6 +1894,7 @@ export function SnapshotPage({
                         if (!destId) return;
                         actions.markPendingPosted('in', modal.pendingId, { bankId: destId });
                       }
+                      recordSelections(destId);
                       setModal({ type: 'none' });
                     }}
                   >
@@ -1903,7 +1911,7 @@ export function SnapshotPage({
                 <div className="field">
                   <label>Account</label>
                   <Select value={modal.bankId} onChange={(e) => setModal({ ...modal, bankId: e.target.value })}>
-                    {banksSortedByBalance.map((b) => (
+                    {sortByRecent(banksSortedByBalance, b => b.id).map((b) => (
                       <option key={b.id} value={`bank:${b.id}`}>
                         Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                       </option>
@@ -1913,7 +1921,7 @@ export function SnapshotPage({
                         <option value="" disabled>
                           ──────────
                         </option>
-                        {cardsSortedByBalance.map((c) => (
+                        {sortByRecent(cardsSortedByBalance, c => c.id).map((c) => (
                           <option key={c.id} value={`card:${c.id}`}>
                             {c.name} - {formatCents(c.balanceCents || 0)}
                           </option>
@@ -1944,6 +1952,7 @@ export function SnapshotPage({
                           loanAdjustments: modal.loanAdjustments,
                         });
                       }
+                      recordSelections(destId);
                       setModal({ type: 'none' });
                     }}
                   >

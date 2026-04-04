@@ -16,6 +16,7 @@ import {
 } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
+import { sortByRecent, recordSelections } from '../../state/recentSelections';
 import { Modal } from '../../ui/Modal';
 import { useDialog } from '../../ui/DialogProvider';
 
@@ -264,6 +265,7 @@ function CompletedBonusEditorModal({
       completedAt,
       notes: notes.trim() || undefined
     };
+    if (cardId) recordSelections(cardId);
     onSave(bonus);
   }
 
@@ -279,14 +281,14 @@ function CompletedBonusEditorModal({
           }}
         >
           <optgroup label="Credit Cards">
-            {(cards || []).map((c) => (
+            {sortByRecent(cards || [], c => c.id).map((c) => (
               <option key={c.id} value={`card:${c.id}`}>
                 {c.name}
               </option>
             ))}
           </optgroup>
           <optgroup label="Bank / Cash Accounts">
-            {(banks || []).map((b) => (
+            {sortByRecent(banks || [], b => b.id).map((b) => (
               <option key={b.id} value={`bank:${b.id}`}>
                 {b.name}
               </option>

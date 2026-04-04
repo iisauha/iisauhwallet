@@ -26,6 +26,7 @@ import {
 import { INVESTING_SHOW_ZERO_HYSA_KEY } from '../../state/keys';
 import { useDropdownState } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
+import { sortByRecent, recordSelections } from '../../state/recentSelections';
 import { Modal } from '../../ui/Modal';
 import { loadCategoryConfig, getCategoryName } from '../../state/storage';
 import Chart from 'chart.js/auto';
@@ -1083,6 +1084,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
       setTransferError('Invalid selection.');
       return;
     }
+    recordSelections(fromId, toId);
 
     const fromInvest = getInvestingByKey(from);
     const toInvest = getInvestingByKey(to);
@@ -1456,9 +1458,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                           }}
                         >
                           <option value="">Link Checking</option>
-                          {(data.banks || [])
-                            .filter((b) => b.type === 'bank')
-                            .map((b) => (
+                          {sortByRecent((data.banks || []).filter((b) => b.type === 'bank'), b => b.id).map((b) => (
                               <option key={b.id} value={b.id}>Bank - {b.name} ({formatCents(b.balanceCents || 0)})</option>
                             ))}
                         </Select>
@@ -2174,17 +2174,17 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <label>From</label>
                 <Select value={transferFrom} onChange={(e) => setTransferFrom(e.target.value)}>
                 <option value="">Select...</option>
-                {banksSortedByBalance.map((b) => (
+                {sortByRecent(banksSortedByBalance, b => b.id).map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
                     Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                   </option>
                 ))}
-                {hysaAccountsSorted.map((a) => (
+                {sortByRecent(hysaAccountsSorted, a => a.id).map((a) => (
                   <option key={a.id} value={`hysa:${a.id}`}>
                     HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>
                 ))}
-                {generalAccountsSorted.map((a) => (
+                {sortByRecent(generalAccountsSorted, a => a.id).map((a) => (
                   <option key={a.id} value={`general:${a.id}`}>
                     Investing - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>
@@ -2195,17 +2195,17 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                   <label>To</label>
                 <Select value={transferTo} onChange={(e) => setTransferTo(e.target.value)}>
                 <option value="">Select...</option>
-                {banksSortedByBalance.map((b) => (
+                {sortByRecent(banksSortedByBalance, b => b.id).map((b) => (
                   <option key={b.id} value={`bank:${b.id}`}>
                     Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                   </option>
                 ))}
-                {hysaAccountsSorted.map((a) => (
+                {sortByRecent(hysaAccountsSorted, a => a.id).map((a) => (
                   <option key={a.id} value={`hysa:${a.id}`}>
                     HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>
                 ))}
-                {generalAccountsSorted.map((a) => (
+                {sortByRecent(generalAccountsSorted, a => a.id).map((a) => (
                   <option key={a.id} value={`general:${a.id}`}>
                     Investing - {a.name} ({formatCents(a.balanceCents || 0)})
                   </option>

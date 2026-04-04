@@ -4,6 +4,7 @@ import { calcFinalNetCashCents, formatCents, parseCents, toLocalDateKey } from '
 import { useContentGuard } from '../../state/useContentGuard';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
+import { sortByRecent, recordSelections } from '../../state/recentSelections';
 import {
   loadExpectedCosts,
   loadExpectedIncome,
@@ -925,7 +926,7 @@ export function UpcomingPage() {
                     onChange={(e) => setModal({ ...modal, targetBankId: e.target.value })}
                   >
                     <option value="">Select bank...</option>
-                    {(data.banks || []).map((b: any) => (
+                    {sortByRecent(data.banks || [], (b: any) => b.id).map((b: any) => (
                       <option key={b.id} value={b.id}>Bank - {b.name} ({formatCents(b.balanceCents || 0)})</option>
                     ))}
                   </Select>
@@ -938,7 +939,7 @@ export function UpcomingPage() {
                       onChange={(e) => setModal({ ...modal, targetHysaId: e.target.value })}
                     >
                       <option value="">None</option>
-                      {hysaAccounts.map((a: any) => (
+                      {sortByRecent(hysaAccounts, (a: any) => a.id).map((a: any) => (
                         <option key={a.id} value={a.id}>HYSA - {a.name} ({formatCents(a.balanceCents || 0)})</option>
                       ))}
                     </Select>
@@ -981,7 +982,7 @@ export function UpcomingPage() {
                   onChange={(e) => setModal({ ...modal, paymentTargetId: e.target.value })}
                 >
                   <option value="">Select bank...</option>
-                  {(data.banks || []).map((b: any) => (
+                  {sortByRecent(data.banks || [], (b: any) => b.id).map((b: any) => (
                     <option key={b.id} value={b.id}>Bank - {b.name} ({formatCents(b.balanceCents || 0)})</option>
                   ))}
                 </Select>
@@ -996,7 +997,7 @@ export function UpcomingPage() {
                   onChange={(e) => setModal({ ...modal, paymentTargetId: e.target.value })}
                 >
                   <option value="">Select card...</option>
-                  {(data.cards || []).map((c: any) => (
+                  {sortByRecent(data.cards || [], (c: any) => c.id).map((c: any) => (
                     <option key={c.id} value={c.id}>Card - {c.name} ({formatCents(c.balanceCents || 0)})</option>
                   ))}
                 </Select>
@@ -1058,6 +1059,7 @@ export function UpcomingPage() {
                         setExpectedCosts(next);
                         saveExpectedCosts(next);
                       }
+                      recordSelections(modal.targetBankId, modal.targetHysaId, modal.paymentSource, modal.paymentTargetId);
                       setModal({ type: 'none' });
                     }}
                   >
@@ -1428,7 +1430,7 @@ export function UpcomingPage() {
                   value={splitInboundPopup.targetBankId}
                   onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, targetBankId: e.target.value })}
                 >
-                  {(data.banks || []).map((b: any) => (
+                  {sortByRecent(data.banks || [], (b: any) => b.id).map((b: any) => (
                     <option key={b.id} value={b.id}>Bank - {b.name || 'Bank'} ({formatCents(b.balanceCents || 0)})</option>
                   ))}
                 </Select>
@@ -1444,7 +1446,7 @@ export function UpcomingPage() {
                     onChange={(e) => setSplitInboundPopup({ ...splitInboundPopup, targetHysaId: e.target.value })}
                   >
                     <option value="">Select...</option>
-                    {loadInvesting().accounts.filter((a: any) => a.type === 'hysa').map((a: any) => (
+                    {sortByRecent(loadInvesting().accounts.filter((a: any) => a.type === 'hysa'), (a: any) => a.id).map((a: any) => (
                       <option key={a.id} value={a.id}>HYSA - {a.name || 'HYSA'} ({formatCents(a.balanceCents || 0)})</option>
                     ))}
                   </Select>
@@ -1487,6 +1489,7 @@ export function UpcomingPage() {
                       meta: p.hysaSubBucket ? { hysaSubBucket: p.hysaSubBucket } : undefined,
                     } as any);
                   }
+                  recordSelections(p.targetBankId, p.targetHysaId, p.depositTo);
                   setSplitInboundPopup(null);
                 }}
               >

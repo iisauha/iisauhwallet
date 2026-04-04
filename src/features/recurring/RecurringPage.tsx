@@ -8,6 +8,7 @@ import { loadCategoryConfig, getCategoryName, getCategorySubcategories, loadInve
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring, getPrivatePaymentNowTotal } from '../loans/loanDerivation';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
 import { Select } from '../../ui/Select';
+import { sortByRecent, recordSelections } from '../../state/recentSelections';
 import { OptimizerModal } from '../optimizer/OptimizerModal';
 import { ViewLastOptimizerModal } from '../optimizer/ViewLastOptimizerModal';
 import { IconPlus } from '../../ui/icons';
@@ -973,7 +974,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 <label>Default deposit bank (for posting)</label>
                 <Select value={paymentTargetId} onChange={(e) => setPaymentTargetId(e.target.value)}>
                   <option value="">- Select bank -</option>
-                  {(data.banks || []).map((b) => (
+                  {sortByRecent(data.banks || [], b => b.id).map((b) => (
                     <option key={b.id} value={b.id}>
                       Bank - {b.name} ({formatCents(b.balanceCents || 0)})
                     </option>
@@ -1019,20 +1020,18 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                   >
                     <option value="">Select</option>
                     {paymentSource === 'card'
-                      ? (data.cards || []).map((x: any) => (
+                      ? sortByRecent(data.cards || [], (x: any) => x.id).map((x: any) => (
                           <option key={x.id} value={x.id}>
                             Card - {x.name} ({formatCents(x.balanceCents || 0)})
                           </option>
                         ))
                       : paymentSource === 'hysa'
-                        ? (investingState.accounts || [])
-                            .filter((a: any) => a.type === 'hysa')
-                            .map((a: any) => (
+                        ? sortByRecent((investingState.accounts || []).filter((a: any) => a.type === 'hysa'), (a: any) => a.id).map((a: any) => (
                               <option key={a.id} value={`hysa:${a.id}`}>
                                 HYSA - {a.name} ({formatCents(a.balanceCents || 0)})
                               </option>
                             ))
-                        : (data.banks || []).map((x: any) => (
+                        : sortByRecent(data.banks || [], (x: any) => x.id).map((x: any) => (
                             <option key={x.id} value={x.id}>
                               Bank - {x.name} ({formatCents(x.balanceCents || 0)})
                             </option>
@@ -1074,7 +1073,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                             onChange={(e) => setInvestingFromBankId(e.target.value)}
                           >
                       <option value="">Select</option>
-                            {(data.banks || []).map((b: any) => (
+                            {sortByRecent(data.banks || [], (b: any) => b.id).map((b: any) => (
                               <option key={b.id} value={b.id}>
                           {b.name}: {formatCents(b.balanceCents || 0)}
                               </option>
@@ -1102,9 +1101,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                             }}
                           >
                             <option value="">Select...</option>
-                            {investingState.accounts
-                              .filter((a) => a.type === 'hysa' || a.type === 'general')
-                              .map((a) => (
+                            {sortByRecent(investingState.accounts.filter((a) => a.type === 'hysa' || a.type === 'general'), a => a.id).map((a) => (
                                 <option key={a.id} value={`${a.type}:${a.id}`}>
                                   {a.type === 'hysa' ? 'HYSA' : 'Investing'} - {a.name} ({formatCents(a.balanceCents || 0)})
                                 </option>
@@ -1241,6 +1238,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                       type !== 'income' && useLoanEstimatedPayment ? true : undefined,
                     linkedLoanId: undefined
                   };
+                  recordSelections(paymentSource, paymentTargetId, investingFromBankId, investingTargetAccountId);
                   if (editingId) {
                     actions.updateRecurringItem(editingId, payload);
                   } else {
