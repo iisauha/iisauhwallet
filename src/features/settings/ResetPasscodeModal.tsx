@@ -90,7 +90,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
               textAlign: 'center',
               borderRadius: 10,
               border: '1px solid var(--border)',
-              background: 'var(--bg)',
+              background: 'var(--ui-card-bg, var(--surface))',
               color: 'var(--ui-primary-text, var(--text))',
               marginBottom: 12,
             }}
@@ -123,7 +123,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
               textAlign: 'center',
               borderRadius: 10,
               border: '1px solid var(--border)',
-              background: 'var(--bg)',
+              background: 'var(--ui-card-bg, var(--surface))',
               color: 'var(--ui-primary-text, var(--text))',
               marginBottom: 12,
             }}
@@ -144,7 +144,7 @@ export function ResetPasscodeModal({ open, onClose }: { open: boolean; onClose: 
               textAlign: 'center',
               borderRadius: 10,
               border: '1px solid var(--border)',
-              background: 'var(--bg)',
+              background: 'var(--ui-card-bg, var(--surface))',
               color: 'var(--ui-primary-text, var(--text))',
               marginBottom: 12,
             }}

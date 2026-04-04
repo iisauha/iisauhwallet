@@ -1893,8 +1893,8 @@ function LoanEditorForm(props: {
                 padding: '6px 8px',
                 borderRadius: 4,
                 border: '1px solid var(--border)',
-                background: 'var(--bg)',
-                color: 'var(--text)',
+                background: 'var(--ui-card-bg, var(--surface))',
+                color: 'var(--ui-primary-text, var(--text))',
                 fontSize: '0.9rem',
                 width: '100%'
               }}
