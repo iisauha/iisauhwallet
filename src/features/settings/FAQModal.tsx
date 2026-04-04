@@ -4,23 +4,23 @@ import { Modal } from '../../ui/Modal';
 const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Does the passcode encrypt my data?',
-    a: 'Yes. All financial data is encrypted with AES-256-GCM. The encryption key is itself protected by your passcode using PBKDF2 (100,000 iterations). It is never stored in plaintext alongside your data. Exported backup files are also encrypted with your passcode (PBKDF2 + AES-256-GCM). Neither your data nor the key that decrypts it can be read without your passcode.',
+    a: 'Yes. All financial data is encrypted with AES-256-GCM. The encryption key is protected by your passcode using PBKDF2 (100,000 iterations). Data synced to the cloud is also encrypted with your passcode before it ever leaves your device. Nobody — not even the server — can read your data without your passcode.',
+  },
+  {
+    q: 'How does cloud sync work?',
+    a: 'When you sign in with your email, the app encrypts all your data with your passcode and stores it in the cloud. Every change you make syncs automatically within a few seconds. On a new device, sign in with the same email and enter your passcode to restore everything — data, theme, settings, all of it.',
   },
   {
     q: 'If someone gets my device, what can they see?',
-    a: 'They need your device unlock code and your app passcode. The financial data in storage is encrypted and the decryption key is passcode-protected, so possessing the device alone is not enough. "Pause protection" only when you are the sole user and want faster access. Pausing stores the key in plaintext while disabled.',
+    a: 'They need your device unlock code and your app passcode. The financial data in storage is encrypted and the decryption key is passcode-protected, so possessing the device alone is not enough. "Pause protection" only when you are the sole user and want faster access.',
   },
   {
-    q: 'Does the app upload my data to the internet?',
-    a: 'No. Everything stays in your browser on this device. Nothing is sent anywhere unless you manually export a backup file.',
+    q: 'Can the server or developer read my data?',
+    a: 'No. Your data is encrypted on your device before it is sent to the cloud. The server only stores an encrypted blob that is unreadable without your passcode. Your passcode and recovery key are never transmitted.',
   },
   {
-    q: 'Are my backup files safe to store in the cloud?',
-    a: 'Yes, if you have a passcode set. Backups are encrypted so they are unreadable without your passcode. Without a passcode the export is plain text, so treat it like any sensitive document.',
-  },
-  {
-    q: 'Does the developer have access to my passcode or data?',
-    a: 'No. Your passcode, recovery key, and financial data never leave your device and are not sent to the developer.',
+    q: 'What if I forget my passcode?',
+    a: 'Use the recovery key you saved during setup. If you also set up security questions, those work too. Without either, your cloud data cannot be decrypted — this is by design for your security.',
   },
 ];
 

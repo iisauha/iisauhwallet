@@ -141,6 +141,70 @@ function RecentActivityWidget() {
 }
 
 
+const PWA_DISMISS_KEY = '__pwa_install_dismissed';
+
+function PwaInstallBanner() {
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(PWA_DISMISS_KEY) === '1'; } catch { return false; }
+  });
+
+  // Detect if already running as PWA (standalone or display-mode)
+  const isStandalone = typeof window !== 'undefined' && (
+    (window.navigator as any).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+  );
+
+  // Only show on iOS Safari when not already a PWA
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (dismissed || isStandalone || !isIOS) return null;
+
+  return (
+    <div style={{
+      background: 'var(--ui-card-bg, var(--surface))',
+      borderRadius: 12,
+      borderLeft: '4px solid var(--accent)',
+      padding: '14px 14px 14px 16px',
+      marginBottom: 10,
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 12,
+    }}>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+        <path d="M12 5v14m0-14l-4 4m4-4l4 4" />
+        <rect x="4" y="17" width="16" height="2" rx="1" />
+      </svg>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: '0.84rem', color: 'var(--ui-primary-text, var(--text))' }}>
+          Add to Home Screen
+        </div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2, lineHeight: 1.45 }}>
+          Tap the <strong>share icon</strong> (square with arrow) at the bottom of Safari, then tap <strong>Add to Home Screen</strong>.
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setDismissed(true);
+              try { localStorage.setItem(PWA_DISMISS_KEY, '1'); } catch {}
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--muted)',
+              fontSize: '0.74rem',
+              cursor: 'pointer',
+              padding: '6px 4px',
+              fontFamily: 'var(--app-font-family)',
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SnapshotPage({
   onSwitchTab,
   onLogTransaction,
@@ -412,7 +476,8 @@ export function SnapshotPage({
   return (
     <div className="tab-panel active" id="snapshotContent">
 
-      {/* Backup Reminder */}
+      {/* PWA Install Prompt */}
+      <PwaInstallBanner />
 
       {/* Recent Activity */}
       <RecentActivityWidget />

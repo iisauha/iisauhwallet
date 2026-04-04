@@ -82,7 +82,7 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
         <div style={{ marginBottom: 4 }}>
           <B>
             <Li>
-              You enter your own numbers. Everything is saved in this browser on this device.
+              You enter your own numbers. Your data is encrypted and synced to the cloud automatically. Sign in on any device with the same email and passcode to access it.
             </Li>
             <Li>
               Three ideas work together: balances you update (Snapshot and Investing), money that is on the way but not
@@ -96,21 +96,25 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
           </B>
         </div>
 
-        <GuideDropdown title="First launch and the lock screen">
+        <GuideDropdown title="First launch and signing in">
           <B>
+            <Li>
+              Create an account with your email and password. This is used to sync your encrypted data to the cloud.
+            </Li>
             <Li>
               On first setup you create a six digit passcode, confirm it, and can add recovery options: a hint, two security
               questions, and a recovery key (save the key when shown).
             </Li>
             <Li>
+              Your passcode is your encryption key. It encrypts all your data before it leaves your device. The cloud only
+              stores an encrypted blob that nobody can read without your passcode.
+            </Li>
+            <Li>
+              On a new device, sign in with the same email and enter your passcode. Your data, theme, and settings are
+              restored automatically.
+            </Li>
+            <Li>
               Too many wrong passcode attempts can trigger a timed lockout before you can try again.
-            </Li>
-            <Li>
-              If you cannot get back in, there is an option to erase all app data on this device. That removes your local
-              wallet data permanently unless you have a backup.
-            </Li>
-            <Li>
-              The app may prompt you to update an older passcode setup to the current format; follow the on-screen steps.
             </Li>
             <Li>
               In Settings you can pause passcode protection so the app opens without a code until you turn protection back
@@ -406,8 +410,9 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
               screen).
             </Li>
             <Li>
-              Backup: export monthly purchases as a spreadsheet; export a full backup of all your data; import a backup to restore
-              (works across any device or browser, just enter the export passcode). Only import files you trust.
+              Cloud sync: your data syncs to the cloud automatically after every change. Tap Sync Now to force a push.
+              Cloud Backups lets you browse daily snapshots and restore any previous version. Export Purchases Spreadsheet
+              exports your spending as a spreadsheet file.
             </Li>
             <Li>
               Manage categories: categories and subcategories used in Spending and Recurring.
@@ -454,6 +459,10 @@ export function AppGuideModal({ open, onClose }: { open: boolean; onClose: () =>
             </Li>
             <Li>
               Use Sign Up Bonus Tracker for promotional spend goals separately from day-to-day card balances.
+            </Li>
+            <Li>
+              Everything syncs to the cloud automatically. Sign in on any device with the same email and passcode to pick up
+              where you left off. Daily cloud backups let you restore any previous state from Settings.
             </Li>
           </B>
         </GuideDropdown>

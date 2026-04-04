@@ -16,8 +16,8 @@ const QUIZ: QuizItem[] = [
     correctIndex: 1,
   },
   {
-    question: 'Where is wallet data stored by default?',
-    options: ['On a central server', 'Locally in your browser', "The creator's computer"],
+    question: 'Can the server or developer read your financial data?',
+    options: ['Yes', 'No — data is encrypted with your passcode before syncing'],
     correctIndex: 1,
   },
   {
@@ -27,7 +27,7 @@ const QUIZ: QuizItem[] = [
   },
   {
     question: 'What should you save to recover access?',
-    options: ['Email the creator', 'Recovery key and JSON backup', 'Nothing; the creator can reset it'],
+    options: ['Email the creator', 'Your recovery key', 'Nothing; the creator can reset it'],
     correctIndex: 1,
   },
   {
@@ -84,7 +84,7 @@ export function SecurityOnboarding({ onPass }: { onPass: () => void }) {
       <div className="modal" style={{ width: '100%', maxWidth: 560, animation: 'passcodeFadeIn 0.3s ease-out' }}>
         <h3 style={{ marginBottom: 10, fontSize: '1.15rem', fontWeight: 700 }}>Important Security Information</h3>
         <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', lineHeight: 1.55 }}>
-          This app stores your data locally in your browser. The creator cannot access your data. There is no automatic connection to your bank. Only use the official site link. Save your recovery key and export backups regularly.
+          Your data is encrypted with your passcode before syncing to the cloud. The creator cannot access your data. There is no automatic connection to your bank. Only use the official site link. Save your recovery key — it is your lifeline if you forget your passcode.
         </p>
 
         <p style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 600 }}>
