@@ -91,11 +91,14 @@ export function loadEncryptedKey(key: string): string | null {
 
 export function saveEncryptedKey(key: string, rawValue: string): void {
   setAuxCached(key, rawValue);
+  // Write plaintext synchronously so other contexts sharing localStorage
+  // (Safari ↔ PWA) see the update immediately before async encryption.
+  try { localStorage.setItem(key, rawValue); } catch {}
   window.dispatchEvent(new Event('data-changed'));
   const seq = (_auxSeqs[key] = (_auxSeqs[key] ?? 0) + 1);
   encryptWithDeviceKey(rawValue)
     .then((ct) => { if (_auxSeqs[key] === seq) localStorage.setItem(key, ct); })
-    .catch(() => { if (_auxSeqs[key] === seq) localStorage.setItem(key, rawValue); });
+    .catch(() => {});
 }
 
 export function removeEncryptedKey(key: string): void {
@@ -456,8 +459,11 @@ export function saveData(data: LedgerData) {
   window.dispatchEvent(new Event('data-changed'));
   const seq = ++_writeSeq;
   const json = JSON.stringify(compactForStorage(data));
-  // Compress → encrypt → persist (binary pipeline: no intermediate base64 bloat).
-  // JSON → gzip raw bytes → AES-GCM encrypt bytes → base64 → localStorage.
+  // Write plaintext to localStorage SYNCHRONOUSLY so other contexts sharing
+  // localStorage (Safari ↔ PWA on the same device) see the update immediately,
+  // even before async compression + encryption completes.
+  try { localStorage.setItem(STORAGE_KEY, json); } catch {}
+  // Then compress → encrypt → overwrite with encrypted version.
   compressToBytes(json)
     .then((gzBytes) => {
       const encPromise = gzBytes
