@@ -20,6 +20,7 @@ import { UndoToast } from './ui/UndoToast';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { AuthProvider, useAuth } from './state/AuthContext';
 import { AuthScreen } from './features/auth/AuthScreen';
+import { CloudRestoreGate } from './features/auth/CloudRestoreGate';
 import { TAB_ORDER_KEY } from './state/keys';
 import { useLedgerStore } from './state/store';
 import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './state/storage';
@@ -551,12 +552,14 @@ export function App() {
             <AuthProvider>
             <DropdownStateProvider>
               <AuthGate>
+              <CloudRestoreGate>
               <PasscodeGate>
                 <Routes>
                   <Route path="/" element={<MainApp />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
                 </Routes>
               </PasscodeGate>
+              </CloudRestoreGate>
               </AuthGate>
             </DropdownStateProvider>
             </AuthProvider>
