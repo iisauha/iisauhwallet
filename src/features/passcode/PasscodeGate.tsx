@@ -1103,8 +1103,23 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       {/* Enter */}
       {step === 'enter' && (
         <>
+          {/* Logo */}
+          <div style={{
+            width: 56,
+            height: 56,
+            backgroundColor: 'var(--accent, #f97316)',
+            WebkitMaskImage: 'url(/icon.png)',
+            WebkitMaskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskImage: 'url(/icon.png)',
+            maskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            margin: '0 auto 20px',
+          } as React.CSSProperties} />
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Welcome Back</h1>
-          <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 20px 0', fontSize: '0.95rem', color: 'var(--muted, #888)', textAlign: 'center', lineHeight: 1.5 }}>
             {isBiometricEnabled() ? 'Use Face ID or enter your password to continue.' : 'Enter your password to unlock.'}
           </p>
           {user?.email ? (
