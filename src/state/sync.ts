@@ -11,7 +11,7 @@
 
 import { supabase } from './supabase';
 import { exportJSON, importJSON } from './storage';
-import { encryptWithPasscode, decryptWithPasscode } from './crypto';
+import { encryptWithPasscode, decryptWithPasscode, encryptWithDeviceKey, decryptWithDeviceKey } from './crypto';
 
 let _passcode: string | null = null;
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -266,5 +266,33 @@ export async function deleteSnapshot(snapshotId: string): Promise<boolean> {
     return !error;
   } catch {
     return false;
+  }
+}
+
+// ── Sync passphrase persistence ─────────────────────────────────────────
+// The user's passcode is the cloud encryption key. We save it (encrypted with
+// the device key) so cloud sync works even when the passcode gate is paused.
+// On a new device, the user enters their passcode during unlock → we save it
+// for that device too.
+
+const SYNC_PASS_KEY = 'iisauhwallet_sync_pass_v1';
+
+/** Save the passcode (encrypted with device key) for cloud sync. */
+export async function saveSyncPassphrase(passcode: string): Promise<void> {
+  try {
+    const encrypted = await encryptWithDeviceKey(passcode);
+    localStorage.setItem(SYNC_PASS_KEY, encrypted);
+  } catch {}
+}
+
+/** Load the saved passcode for cloud sync (when passcode gate is paused). */
+export async function loadSyncPassphrase(): Promise<string | null> {
+  try {
+    const raw = localStorage.getItem(SYNC_PASS_KEY);
+    if (!raw) return null;
+    const decrypted = await decryptWithDeviceKey(raw);
+    return decrypted || null;
+  } catch {
+    return null;
   }
 }

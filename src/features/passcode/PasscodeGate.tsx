@@ -38,7 +38,7 @@ import {
   wrapDeviceKeyWithRecoveryKey,
   resetDeviceKey,
 } from '../../state/crypto';
-import { initSync, stopSync, pullFromSupabase, hasRemoteData } from '../../state/sync';
+import { initSync, stopSync, pullFromSupabase, hasRemoteData, saveSyncPassphrase, loadSyncPassphrase } from '../../state/sync';
 import { useLedgerStore } from '../../state/store';
 import { Select } from '../../ui/Select';
 import { WelcomeIntro } from './WelcomeIntro';
@@ -305,6 +305,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     savePasscode6Digit(true);
     setStoredHash(hash);
     await wrapDeviceKeyWithPasscode(input);
+    saveSyncPassphrase(input);
     confirmedPasscodeRef.current = input;
     setStep('hint');
     setHintInput('');
@@ -384,6 +385,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       } catch {}
     }
     useLedgerStore.getState().actions.reload();
+    saveSyncPassphrase(input);
     initSync(input);
     resetFailedAttempts();
     justLoggedInRef.current = true;
@@ -487,6 +489,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     setStoredHash(hash);
     await rewrapDeviceKeyWithPasscode(input);
     useLedgerStore.getState().actions.reload();
+    saveSyncPassphrase(input);
     initSync(input);
     setAuthenticated(true);
     setInput('');
@@ -510,6 +513,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     setStoredHash(hash);
     await rewrapDeviceKeyWithPasscode(input);
     useLedgerStore.getState().actions.reload();
+    saveSyncPassphrase(input);
     initSync(input);
     setAuthenticated(true);
     setInput('');
@@ -585,11 +589,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [authenticated]);
 
-  // Start sync when passcode is paused (use device key as encryption passphrase)
+  // Start sync when passcode is paused (use saved passphrase)
   useEffect(() => {
     if (!loadPasscodePaused()) return;
-    const dk = localStorage.getItem('iisauhwallet_dk_v1');
-    if (dk) initSync(dk);
+    loadSyncPassphrase().then((pass) => {
+      if (pass) initSync(pass);
+    });
     return () => { stopSync(); };
   }, []);
 

@@ -48,7 +48,7 @@ import {
 } from '../../ui/icons';
 import { OnboardingGuide } from '../onboarding/OnboardingGuide';
 import { useAuth } from '../../state/AuthContext';
-import { stopSync, forceSyncToSupabase, pullFromSupabase, getLastSyncedAt, onSyncChange, listSnapshots, restoreSnapshot, type SnapshotEntry } from '../../state/sync';
+import { stopSync, forceSyncToSupabase, pullFromSupabase, getLastSyncedAt, onSyncChange, listSnapshots, restoreSnapshot, loadSyncPassphrase, type SnapshotEntry } from '../../state/sync';
 
 /** Returns export filename: Month_Day_Year.json */
 function getExportFileName(): string {
@@ -665,11 +665,11 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           onClick={async () => {
             if (syncingNow) return;
             setSyncingNow(true);
-            // Use device key if passcode is paused, otherwise need passcode from sync module
-            const dk = localStorage.getItem('iisauhwallet_dk_v1');
-            const passcode = dk || '';
+            const passcode = await loadSyncPassphrase();
             if (passcode) {
               await forceSyncToSupabase(passcode);
+            } else {
+              showAlert('No sync passphrase found. Enter your passcode to enable cloud sync.');
             }
             setSyncingNow(false);
           }}
@@ -964,9 +964,11 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                 type="button"
                 className="btn btn-secondary"
                 onClick={async () => {
-                  const dk = localStorage.getItem('iisauhwallet_dk_v1');
-                  const passcode = dk || '';
-                  if (!passcode) return;
+                  const passcode = await loadSyncPassphrase();
+                  if (!passcode) {
+                    showAlert('No sync passphrase found. Enter your passcode to enable cloud sync.');
+                    return;
+                  }
                   const success = await pullFromSupabase(passcode);
                   if (success) {
                     showAlert('Data restored from cloud. The app will now reload.');
@@ -1009,10 +1011,9 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                         const ok = await showConfirm(`Restore backup from ${dateStr} at ${timeStr}? This will replace all your current data.`);
                         if (!ok) return;
                         setRestoringId(s.id);
-                        const dk = localStorage.getItem('iisauhwallet_dk_v1');
-                        const passcode = dk || '';
+                        const passcode = await loadSyncPassphrase();
                         if (!passcode) {
-                          showAlert('Unable to restore — passcode required.');
+                          showAlert('Unable to restore — enter your passcode first to enable cloud sync.');
                           setRestoringId(null);
                           return;
                         }
