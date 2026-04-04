@@ -88,7 +88,7 @@ async function decryptPasscode(encrypted: string): Promise<string> {
  * Register biometric authentication for a given passcode.
  * Triggers Face ID / Touch ID enrollment.
  */
-export async function enrollBiometric(passcode: string): Promise<boolean> {
+export async function enrollBiometric(passcode: string, displayName?: string): Promise<boolean> {
   try {
     const available = await isBiometricAvailable();
     if (!available) return false;
@@ -96,15 +96,16 @@ export async function enrollBiometric(passcode: string): Promise<boolean> {
     // Create a WebAuthn credential (triggers Face ID/Touch ID)
     const userId = crypto.getRandomValues(new Uint8Array(16));
     const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userName = displayName || 'My Wallet';
 
     const credential = await navigator.credentials.create({
       publicKey: {
         challenge,
-        rp: { name: 'iisauh wallet', id: window.location.hostname },
+        rp: { name: 'iisauh Wallet', id: window.location.hostname },
         user: {
           id: userId,
-          name: 'wallet-user',
-          displayName: 'Wallet User',
+          name: userName,
+          displayName: userName,
         },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 },   // ES256

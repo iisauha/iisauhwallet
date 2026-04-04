@@ -650,7 +650,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
                   } else {
                     const pass = await loadSyncPassphrase();
                     if (pass) {
-                      const ok = await enrollBiometric(pass);
+                      const ok = await enrollBiometric(pass, loadUserDisplayName() || undefined);
                       setBiometricOn(ok);
                     } else {
                       showAlert('Enter your passcode first to enable biometrics.');

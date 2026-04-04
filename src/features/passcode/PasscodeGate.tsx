@@ -764,7 +764,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
                 }}
                 onClick={async () => {
                   const pass = confirmedPasscodeRef.current;
-                  if (pass) await enrollBiometric(pass);
+                  if (pass) await enrollBiometric(pass, loadUserDisplayName() || undefined);
                   confirmedPasscodeRef.current = '';
                   setBiometricPrompt(false);
                 }}
