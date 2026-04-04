@@ -660,9 +660,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     borderRadius: 10,
     border: '1px solid var(--border)',
     background: 'var(--bg)',
-    color: 'var(--ui-primary-text, var(--text))',
+    color: 'transparent',
+    textShadow: '0 0 0 var(--ui-primary-text, var(--text))',
+    caretColor: 'var(--ui-primary-text, var(--text))',
     marginBottom: 12,
-  };
+    WebkitTextSecurity: 'disc',
+  } as React.CSSProperties;
   const textInputStyle: React.CSSProperties = {
     ...inputStyle,
     fontSize: '1rem',
@@ -907,7 +910,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             Choose a {PASSCODE_LENGTH}-digit passcode to protect access on this device.
           </p>
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             maxLength={PASSCODE_LENGTH}
             autoComplete="off"
@@ -927,7 +930,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Confirm passcode</h1>
           <p style={{ margin: '0 0 24px 0', fontSize: '0.95rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>Re-enter your {PASSCODE_LENGTH}-digit passcode.</p>
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             maxLength={PASSCODE_LENGTH}
             autoComplete="off"
@@ -1032,7 +1035,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             {isBiometricEnabled() ? 'Use Face ID or tap below to enter your passcode.' : `Enter your ${PASSCODE_LENGTH}-digit passcode to continue.`}
           </p>
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             maxLength={PASSCODE_LENGTH}
             autoComplete="off"
@@ -1068,7 +1071,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             This app now requires a 6-digit passcode. Enter your current passcode to continue, then set a new 6-digit one.
           </p>
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             autoComplete="off"
             value={input}
@@ -1087,7 +1090,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Set new 6-digit passcode</h1>
           <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new 6-digit passcode.</p>
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             maxLength={PASSCODE_LENGTH}
             autoComplete="off"
@@ -1098,7 +1101,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             style={inputStyle}
           />
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             maxLength={PASSCODE_LENGTH}
             autoComplete="off"
@@ -1193,7 +1196,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text))' }}>Set new passcode</h1>
           <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', textAlign: 'center', lineHeight: 1.5 }}>Enter and confirm your new {PASSCODE_LENGTH}-digit passcode.</p>
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             maxLength={PASSCODE_LENGTH}
             autoComplete="off"
@@ -1203,7 +1206,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             style={inputStyle}
           />
           <input
-            type="password"
+            type="tel"
             inputMode="numeric"
             maxLength={PASSCODE_LENGTH}
             autoComplete="off"
