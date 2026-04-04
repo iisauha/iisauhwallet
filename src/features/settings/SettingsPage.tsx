@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { TAB_ORDER_KEY, LAST_EXPORT_DATE_KEY, UNDO_DURATION_KEY } from '../../state/keys';
+import { TAB_ORDER_KEY, UNDO_DURATION_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
 import {
-  exportJSON,
-  importJSON,
-  importJSONDecrypted,
-  ENCRYPTED_IMPORT,
   loadCategoryConfig,
   saveCategoryConfig,
   getCategoryName,
@@ -25,10 +21,9 @@ import {
   hashPasscode,
   verifyPasscode,
   clearDataCache,
-  logActivityEntry,
 } from '../../state/storage';
 import { useContentGuard } from '../../state/useContentGuard';
-import { encryptWithPasscode, exportDeviceKeyToStorage } from '../../state/crypto';
+import { exportDeviceKeyToStorage } from '../../state/crypto';
 import { useDialog } from '../../ui/DialogProvider';
 import { Select } from '../../ui/Select';
 import { ManageCategoriesModal } from './ManageCategoriesModal';
@@ -49,24 +44,6 @@ import { stopSync, forceSyncToSupabase, pullFromSupabase, getLastSyncedAt, onSyn
 import { isBiometricAvailable, isBiometricEnabled, disableBiometric, enrollBiometric } from '../../state/biometric';
 
 /** Returns export filename: Month_Day_Year.json */
-function getExportFileName(): string {
-  const d = new Date();
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${months[d.getMonth()]}_${d.getDate()}_${d.getFullYear()}.json`;
-}
-
-function downloadJsonFile(filename: string, text: string) {
-  const blob = new Blob([text], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 function escapeCsvCell(s: string): string {
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
@@ -261,8 +238,7 @@ function loadTabOrderFromStorage(): string[] {
 }
 
 
-export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrderChange?: (order: string[]) => void; exportTrigger?: number } = {}) {
-  const fileRef = useRef<HTMLInputElement | null>(null);
+export function SettingsPage({ onTabOrderChange }: { onTabOrderChange?: (order: string[]) => void } = {}) {
   const profileImageRef = useRef<HTMLInputElement | null>(null);
   const actions = useLedgerStore((s) => s.actions);
   const { showAlert, showConfirm } = useDialog();
@@ -317,8 +293,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
   const [autoLockMinutes, setAutoLockMinutes] = useState(() => loadAutoLockMinutes());
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(() => loadShowWelcomeScreen());
 
-  // Unified passcode-challenge modal (export JSON, export CSV, encrypted import)
-  const [challenge, setChallenge] = useState<{ mode: 'export' | 'csv' | 'import'; pendingJson?: string; fails: number; delayUntil: number; input: string; error: string } | null>(null);
+  // Passcode challenge modal for CSV export
+  const [challenge, setChallenge] = useState<{ mode: 'csv'; fails: number; delayUntil: number; input: string; error: string } | null>(null);
   const [challengeCountdown, setChallengeCountdown] = useState(0);
   const [csvRangePicker, setCsvRangePicker] = useState(false);
   const [csvRange, setCsvRange] = useState<CsvExportRange>('this_month');
@@ -335,8 +311,8 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     return () => clearInterval(id);
   }, [challenge?.delayUntil]);
 
-  const openChallenge = (mode: 'export' | 'csv' | 'import', pendingJson?: string) => {
-    setChallenge({ mode, pendingJson, fails: 0, delayUntil: 0, input: '', error: '' });
+  const openCsvChallenge = () => {
+    setChallenge({ mode: 'csv', fails: 0, delayUntil: 0, input: '', error: '' });
     setChallengeCountdown(0);
   };
 
@@ -348,55 +324,23 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       return;
     }
 
-    const onFail = () => {
+    const storedHash = loadPasscodeHash();
+    if (!storedHash) return;
+    const valid = await verifyPasscode(challenge.input, storedHash);
+    if (!valid) {
       const nextFails = challenge.fails + 1;
       let delaySec = 0;
       if (nextFails >= 5) delaySec = 300;
       else if (nextFails >= 3) delaySec = 5;
       else if (nextFails >= 2) delaySec = 2;
       setChallenge((c) => c ? { ...c, fails: nextFails, error: `Incorrect passcode.${nextFails >= 5 ? ' Locked for 5 min.' : ''}`, input: '', delayUntil: delaySec > 0 ? Date.now() + delaySec * 1000 : 0 } : null);
-    };
-
-    const mode = challenge.mode;
-    const pendingJson = challenge.pendingJson;
-    const confirmedInput = challenge.input;
-
-    // Import mode: skip local hash check, try decrypting the file directly
-    if (mode === 'import' && pendingJson) {
-      try {
-        await importJSONDecrypted(pendingJson, confirmedInput);
-        logActivityEntry({ type: 'backup_import', label: 'Data imported', ts: new Date().toISOString() });
-        setChallenge(null);
-        setChallengeCountdown(0);
-        showAlert('Your data has been successfully restored. The app will now reload.');
-        window.location.reload();
-      } catch (_) {
-        onFail();
-      }
-      return;
-    }
-
-    // Export/CSV mode: verify against local passcode hash
-    const storedHash = loadPasscodeHash();
-    if (!storedHash) return;
-    const valid = await verifyPasscode(confirmedInput, storedHash);
-    if (!valid) {
-      onFail();
       return;
     }
     setChallenge(null);
     setChallengeCountdown(0);
-    if (mode === 'export') {
-      const plainText = exportJSON();
-      const encrypted = await encryptWithPasscode(plainText, confirmedInput);
-      doExportText(encrypted);
-    } else if (mode === 'csv') {
-      setCsvRange('this_month');
-      setCsvRangePicker(true);
-    }
+    setCsvRange('this_month');
+    setCsvRangePicker(true);
   };
-
-  const lastExportTriggerRef = useRef(0);
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -415,52 +359,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
     setHiddenTabs(next);
     saveHiddenTabs(next);
   };
-
-  const doExportText = async (text: string) => {
-    const fileName = getExportFileName();
-    const markExported = () => {
-      localStorage.setItem(LAST_EXPORT_DATE_KEY, new Date().toISOString());
-      logActivityEntry({ type: 'backup_export', label: 'Data exported', ts: new Date().toISOString() });
-    };
-    try {
-      const nav: any = navigator as any;
-      if (nav.share) {
-        const file = new File([text], fileName, { type: 'application/json' });
-        await nav.share({ files: [file] });
-        markExported();
-        return;
-      }
-    } catch (_) {}
-    try {
-      const w = window.open('', '_blank');
-      if (w) {
-        w.document.open();
-        w.document.write('<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,monospace;padding:16px;">' + text.replace(/</g, '&lt;') + '</pre>');
-        w.document.close();
-        markExported();
-        return;
-      }
-    } catch (_) {}
-    downloadJsonFile(fileName, text);
-    markExported();
-  };
-
-  const handleExportJSON = async () => {
-    if (hasPasscode) {
-      openChallenge('export');
-    } else {
-      await doExportText(exportJSON());
-    }
-  };
-
-  // Export trigger from quick-action sheet — must come after handleExportJSON
-  useEffect(() => {
-    if (exportTrigger !== lastExportTriggerRef.current) {
-      lastExportTriggerRef.current = exportTrigger;
-      if (exportTrigger > 0) handleExportJSON();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exportTrigger]);
 
   return (
     <div className="tab-panel active" id="settingsContent">
@@ -714,7 +612,7 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           sublabel="Export purchases as a multi-sheet spreadsheet"
           onClick={() => {
             if (hasPasscode) {
-              openChallenge('csv');
+              openCsvChallenge();
             } else {
               setCsvRange('this_month');
               setCsvRangePicker(true);
@@ -722,35 +620,6 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
           }}
         />
       </div>
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".json,application/json"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const f = e.target.files && e.target.files[0];
-          if (!f) return;
-          const r = new FileReader();
-          r.onload = () => {
-            const text = String(r.result || '');
-            try {
-              importJSON(text);
-              logActivityEntry({ type: 'backup_import', label: 'Data imported', ts: new Date().toISOString() });
-              showAlert('Your data has been successfully restored. The app will now reload.');
-              window.location.reload();
-            } catch (err: any) {
-              if (err?.message === ENCRYPTED_IMPORT) {
-                openChallenge('import', text);
-              } else {
-                showAlert('This file doesn\'t appear to be a valid backup. Make sure you selected a backup file exported from this app.');
-              }
-            }
-            e.target.value = '';
-          };
-          r.readAsText(f);
-        }}
-      />
-
       {/* Preferences */}
       <p className="settings-group-label">Preferences</p>
       <div className="settings-list">
@@ -937,13 +806,11 @@ export function SettingsPage({ onTabOrderChange, exportTrigger = 0 }: { onTabOrd
       {challenge && (
         <Modal
           open={true}
-          title={challenge.mode === 'export' ? 'Confirm export' : challenge.mode === 'csv' ? 'Confirm CSV export' : 'Encrypted backup'}
+          title="Confirm CSV export"
           onClose={() => { setChallenge(null); setChallengeCountdown(0); }}
         >
           <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.4 }}>
-            {challenge.mode === 'import'
-              ? 'This backup is encrypted. Enter the passcode that was used when this backup was exported.'
-              : 'Enter your passcode to continue.'}
+            Enter your passcode to continue.
           </p>
           <input
             type="password"

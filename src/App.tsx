@@ -27,7 +27,6 @@ import { loadHiddenTabs, loadUserDisplayName, loadUserProfileImage } from './sta
 import {
   IconSnapshot, IconArrowExchange, IconCalendar, IconRefreshCircle,
   IconBankBuilding, IconBarChartTrend, IconStar,
-  IconExport,
   IconChevronRight, IconPlus,
 } from './ui/icons';
 
@@ -165,7 +164,6 @@ export type QuickAction =
   | 'add-recurring-income'
   | 'update-balance'
   | 'add-bonus'
-  | 'export'
   | 'transfer-investing'
   | 'adjust-hysa-alloc';
 
@@ -205,7 +203,6 @@ function QuickActionSheet({ onClose, onAction }: QuickSheetProps) {
     { icon: <IconBarChartTrend />, label: 'Transfer to Investing', action: 'transfer-investing' },
     { icon: <IconBarChartTrend />, label: 'Adjust HYSA Split', action: 'adjust-hysa-alloc' },
     { icon: <IconStar />, label: 'Add a bonus card', action: 'add-bonus' },
-    { icon: <IconExport />, label: 'Export Backup', action: 'export' },
   ];
 
   const [showAll, setShowAll] = useState(false);
@@ -276,7 +273,6 @@ function MainApp() {
   const [recurringAddExpenseTrigger, setRecurringAddExpenseTrigger] = useState(0);
   const [recurringAddIncomeTrigger, setRecurringAddIncomeTrigger] = useState(0);
   const [subtrackerAddTrigger, setSubtrackerAddTrigger] = useState(0);
-  const [exportTrigger, setExportTrigger] = useState(0);
   const [investingTransferTrigger, setInvestingTransferTrigger] = useState(0);
   const [investingHysaAllocTrigger, setInvestingHysaAllocTrigger] = useState(0);
   const [investingHysaAllocAccountId, setInvestingHysaAllocAccountId] = useState<string | null>(null);
@@ -368,10 +364,6 @@ function MainApp() {
           setTab('subtracker');
           afterMount(() => setSubtrackerAddTrigger((n) => n + 1));
           break;
-        case 'export':
-          setTab('settings');
-          afterMount(() => setExportTrigger((n) => n + 1));
-          break;
         case 'transfer-investing':
           setTab('investing');
           afterMount(() => setInvestingTransferTrigger((n) => n + 1));
@@ -407,8 +399,8 @@ function MainApp() {
     if (tab === 'investing') return <InvestingPage openTransferTrigger={investingTransferTrigger} openHysaAllocTrigger={investingHysaAllocTrigger} openHysaAllocAccountId={investingHysaAllocAccountId} />;
     if (tab === 'recurring') return <RecurringPage addExpenseTrigger={recurringAddExpenseTrigger} addIncomeTrigger={recurringAddIncomeTrigger} />;
     if (tab === 'subtracker') return <SubTrackerPage addTrigger={subtrackerAddTrigger} />;
-    return <SettingsPage exportTrigger={exportTrigger} onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
-  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, exportTrigger, investingTransferTrigger, investingHysaAllocTrigger, investingHysaAllocAccountId]);
+    return <SettingsPage onTabOrderChange={(order) => { setTabOrder(order as TabKey[]); saveTabOrder(order as TabKey[]); }} />;
+  }, [tab, snapshotPendingInTrigger, snapshotPendingOutTrigger, recurringAddExpenseTrigger, recurringAddIncomeTrigger, subtrackerAddTrigger, investingTransferTrigger, investingHysaAllocTrigger, investingHysaAllocAccountId]);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', String(index));

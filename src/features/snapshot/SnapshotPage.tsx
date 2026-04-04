@@ -97,8 +97,6 @@ function RecentActivityWidget() {
         ts: new Date(entry.ts).getTime(),
         amount: entry.amountCents ?? null,
         descriptor: entry.type === 'delete_purchase' ? 'Deleted purchase'
-          : entry.type === 'backup_export' ? 'Backup exported'
-          : entry.type === 'backup_import' ? 'Backup imported'
           : entry.type,
       });
     });
