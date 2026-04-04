@@ -19,6 +19,7 @@ let _listening = false;
 let _syncing = false;
 let _lastSyncedAt: string | null = null;
 let _lastPushId: string | null = null; // track our own pushes to ignore poll echo
+let _isPulling = false; // suppress push during remote pull to prevent ping-pong
 const _syncListeners: Set<() => void> = new Set();
 
 const DEBOUNCE_MS = 2000;
@@ -123,10 +124,18 @@ export async function pullFromSupabase(passcode: string): Promise<boolean> {
     if (error || !data?.encrypted_data) return false;
 
     const plaintext = await decryptWithPasscode(data.encrypted_data, passcode);
-    importJSON(plaintext);
+    // Suppress data-changed events during import to prevent push-back ping-pong
+    _isPulling = true;
+    try {
+      importJSON(plaintext);
+    } finally {
+      // Small delay before re-enabling push so all async saveData/saveEncryptedKey settle
+      setTimeout(() => { _isPulling = false; }, 500);
+    }
     return true;
   } catch (e) {
     console.error('[sync] pull error:', e);
+    _isPulling = false;
     return false;
   }
 }
@@ -157,6 +166,8 @@ function schedulePush() {
 }
 
 function onDataChanged() {
+  // Don't push when we're importing from a remote pull (prevents ping-pong)
+  if (_isPulling) return;
   schedulePush();
 }
 

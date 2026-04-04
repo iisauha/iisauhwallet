@@ -208,6 +208,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       clearTimer();
       stopSync();
       lockCrypto();
+      biometricTriedRef.current = false; // reset so Face ID triggers again on next unlock
       setAuthenticated(false);
     }
 
