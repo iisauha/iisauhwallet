@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useAuth } from '../../state/AuthContext';
 
+type View = 'landing' | 'signin' | 'signup' | 'success';
+
 export function AuthScreen() {
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [view, setView] = useState<View>('landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
   const handleSubmit = async () => {
     setError(null);
@@ -17,7 +18,7 @@ export function AuthScreen() {
       setError('Email and password are required.');
       return;
     }
-    if (mode === 'signup') {
+    if (view === 'signup') {
       if (password.length < 6) {
         setError('Password must be at least 6 characters.');
         return;
@@ -28,204 +29,301 @@ export function AuthScreen() {
       }
     }
     setLoading(true);
-    const result = mode === 'signin'
+    const result = view === 'signin'
       ? await signIn(email.trim(), password)
       : await signUp(email.trim(), password);
     setLoading(false);
     if (result.error) {
       setError(result.error);
-    } else if (mode === 'signup') {
-      setSignUpSuccess(true);
+    } else if (view === 'signup') {
+      setView('success');
     }
   };
 
-  if (signUpSuccess) {
+  const container: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100dvh',
+    padding: 24,
+    background: 'var(--bg, #0b0b0f)',
+    overflow: 'hidden',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+
+  // Landing page (like Atmos)
+  if (view === 'landing') {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h2 style={styles.title}>Check your email</h2>
-          <p style={styles.subtitle}>
-            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then come back and sign in.
+      <div style={container}>
+        {/* Logo - uses CSS mask to recolor PNG to accent color */}
+        <div style={{
+          width: 140,
+          height: 140,
+          backgroundColor: 'var(--accent, #f97316)',
+          WebkitMaskImage: 'url(/icon.png)',
+          WebkitMaskSize: 'contain',
+          WebkitMaskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'center',
+          maskImage: 'url(/icon.png)',
+          maskSize: 'contain',
+          maskRepeat: 'no-repeat',
+          maskPosition: 'center',
+          marginBottom: 16,
+        } as React.CSSProperties} />
+
+        <h1 style={{
+          margin: '0 0 6px',
+          fontSize: '2rem',
+          fontWeight: 700,
+          color: 'var(--ui-primary-text, var(--text, #fff))',
+          fontFamily: 'var(--app-font-family)',
+          letterSpacing: '0.02em',
+        }}>
+          alenjo
+        </h1>
+
+        <p style={{
+          margin: '0 0 48px',
+          fontSize: '0.95rem',
+          color: 'var(--muted, #888)',
+          fontFamily: 'var(--app-font-family)',
+        }}>
+          Your finances, simplified.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => setView('signin')}
+          style={{
+            width: '100%',
+            maxWidth: 340,
+            padding: '16px 0',
+            borderRadius: 50,
+            border: 'none',
+            background: 'var(--accent, #f97316)',
+            color: '#fff',
+            fontSize: '1.05rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'var(--app-font-family)',
+            marginBottom: 14,
+          }}
+        >
+          Login
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setView('signup')}
+          style={{
+            width: '100%',
+            maxWidth: 340,
+            padding: '16px 0',
+            borderRadius: 50,
+            border: '1.5px solid var(--muted, #555)',
+            background: 'transparent',
+            color: 'var(--ui-primary-text, var(--text, #fff))',
+            fontSize: '1.05rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'var(--app-font-family)',
+          }}
+        >
+          Sign Up
+        </button>
+      </div>
+    );
+  }
+
+  // Success after sign up
+  if (view === 'success') {
+    return (
+      <div style={container}>
+        <div style={{ width: '100%', maxWidth: 380, textAlign: 'center' }}>
+          <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', color: 'var(--ui-primary-text, var(--text, #fff))', fontFamily: 'var(--app-font-family)' }}>
+            Check your email
+          </h2>
+          <p style={{ margin: '0 0 28px', fontSize: '0.9rem', color: 'var(--muted, #888)', lineHeight: 1.5, fontFamily: 'var(--app-font-family)' }}>
+            We sent a confirmation link to <strong style={{ color: 'var(--ui-primary-text, var(--text, #fff))' }}>{email}</strong>. Click it to activate your account, then come back and sign in.
           </p>
           <button
             type="button"
-            style={styles.button}
-            onClick={() => {
-              setSignUpSuccess(false);
-              setMode('signin');
-              setPassword('');
-              setConfirmPassword('');
+            onClick={() => { setView('signin'); setPassword(''); setConfirmPassword(''); }}
+            style={{
+              width: '100%',
+              maxWidth: 340,
+              padding: '16px 0',
+              borderRadius: 50,
+              border: 'none',
+              background: 'var(--accent, #f97316)',
+              color: '#fff',
+              fontSize: '1.05rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--app-font-family)',
             }}
           >
-            Back to Sign In
+            Back to Login
           </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>{mode === 'signin' ? 'Sign In' : 'Create Account'}</h2>
-        <p style={styles.subtitle}>
-          {mode === 'signin'
-            ? 'Sign in to sync your data across devices.'
-            : 'Create an account to securely back up your data.'}
-        </p>
+  // Login / Sign Up form
+  const isSignUp = view === 'signup';
 
-        <div style={styles.field}>
-          <label style={styles.label}>Email</label>
+  return (
+    <div style={container}>
+      <div style={{ width: '100%', maxWidth: 380 }}>
+        {/* Small logo */}
+        <div style={{
+          width: 56,
+          height: 56,
+          backgroundColor: 'var(--accent, #f97316)',
+          WebkitMaskImage: 'url(/icon.png)',
+          WebkitMaskSize: 'contain',
+          WebkitMaskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'center',
+          maskImage: 'url(/icon.png)',
+          maskSize: 'contain',
+          maskRepeat: 'no-repeat',
+          maskPosition: 'center',
+          margin: '0 auto 20px',
+        } as React.CSSProperties} />
+
+        <h2 style={{ margin: '0 0 24px', fontSize: '1.4rem', fontWeight: 600, textAlign: 'center', color: 'var(--ui-primary-text, var(--text, #fff))', fontFamily: 'var(--app-font-family)' }}>
+          {isSignUp ? 'Create Account' : 'Welcome Back'}
+        </h2>
+
+        <div style={{ marginBottom: 14 }}>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={styles.input}
-            placeholder="you@example.com"
+            placeholder="Email"
             autoComplete="email"
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            style={fieldStyle}
           />
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label}>Password</label>
+        <div style={{ marginBottom: 14 }}>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            placeholder="Enter password"
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+            placeholder="Password"
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            style={fieldStyle}
           />
         </div>
 
-        {mode === 'signup' && (
-          <div style={styles.field}>
-            <label style={styles.label}>Confirm Password</label>
+        {isSignUp && (
+          <div style={{ marginBottom: 14 }}>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              style={styles.input}
-              placeholder="Confirm password"
+              placeholder="Confirm Password"
               autoComplete="new-password"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+              style={fieldStyle}
             />
           </div>
         )}
 
-        {error && <div style={styles.error}>{error}</div>}
+        {error && (
+          <div style={{ color: 'var(--danger, #e74c3c)', fontSize: '0.85rem', marginBottom: 14, textAlign: 'center', fontFamily: 'var(--app-font-family)' }}>
+            {error}
+          </div>
+        )}
 
         <button
           type="button"
-          style={{ ...styles.button, opacity: loading ? 0.6 : 1 }}
           onClick={handleSubmit}
           disabled={loading}
+          style={{
+            width: '100%',
+            padding: '16px 0',
+            borderRadius: 50,
+            border: 'none',
+            background: 'var(--accent, #f97316)',
+            color: '#fff',
+            fontSize: '1.05rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'var(--app-font-family)',
+            opacity: loading ? 0.6 : 1,
+            marginBottom: 16,
+          }}
         >
-          {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+          {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Login'}
         </button>
 
         <button
           type="button"
-          style={styles.link}
           onClick={() => {
-            setMode(mode === 'signin' ? 'signup' : 'signin');
+            setView(isSignUp ? 'signin' : 'signup');
             setError(null);
             setPassword('');
             setConfirmPassword('');
           }}
+          style={{
+            display: 'block',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            color: 'var(--accent, #f97316)',
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            textAlign: 'center',
+            padding: 0,
+            fontFamily: 'var(--app-font-family)',
+          }}
         >
-          {mode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+          {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setView('landing'); setError(null); setPassword(''); setConfirmPassword(''); }}
+          style={{
+            display: 'block',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            color: 'var(--muted, #888)',
+            fontSize: '0.82rem',
+            cursor: 'pointer',
+            textAlign: 'center',
+            padding: 0,
+            marginTop: 14,
+            fontFamily: 'var(--app-font-family)',
+          }}
+        >
+          Back
         </button>
       </div>
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100dvh',
-    padding: 20,
-    background: 'var(--bg, #111)',
-    overflow: 'hidden',
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    width: '100%',
-    boxSizing: 'border-box' as const,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 380,
-    padding: 28,
-    borderRadius: 16,
-    background: 'var(--surface, #1a1a1a)',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-  },
-  title: {
-    margin: '0 0 4px',
-    fontSize: '1.4rem',
-    color: 'var(--ui-primary-text, var(--text, #fff))',
-    textAlign: 'center' as const,
-  },
-  subtitle: {
-    margin: '0 0 20px',
-    fontSize: '0.9rem',
-    color: 'var(--ui-secondary-text, #999)',
-    textAlign: 'center' as const,
-  },
-  field: {
-    marginBottom: 14,
-  },
-  label: {
-    display: 'block',
-    marginBottom: 4,
-    fontSize: '0.85rem',
-    color: 'var(--ui-primary-text, var(--text, #fff))',
-  },
-  input: {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: 8,
-    border: '1px solid var(--border, #333)',
-    background: 'var(--input-bg, #222)',
-    color: 'var(--ui-primary-text, var(--text, #fff))',
-    fontSize: '1rem',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-  },
-  error: {
-    color: 'var(--danger, #e74c3c)',
-    fontSize: '0.85rem',
-    marginBottom: 12,
-    textAlign: 'center' as const,
-  },
-  button: {
-    width: '100%',
-    padding: '12px 0',
-    borderRadius: 10,
-    border: 'none',
-    background: 'var(--accent, #4a9eff)',
-    color: '#fff',
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    marginTop: 4,
-  },
-  link: {
-    display: 'block',
-    width: '100%',
-    marginTop: 14,
-    background: 'none',
-    border: 'none',
-    color: 'var(--accent, #4a9eff)',
-    fontSize: '0.85rem',
-    cursor: 'pointer',
-    textAlign: 'center' as const,
-    padding: 0,
-  },
+const fieldStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '14px 16px',
+  borderRadius: 12,
+  border: '1px solid var(--border, #333)',
+  background: 'var(--surface, #1a1a1a)',
+  color: 'var(--ui-primary-text, var(--text, #fff))',
+  fontSize: '1rem',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: 'var(--app-font-family)',
 };
