@@ -494,10 +494,21 @@ function deriveForLoan(
     // Private monthly interest uses (balance × rate/365) × days in cycle for display and breakdown.
     monthlyInterestCents = computeMonthlyInterestCents(balanceCents, interestRatePercent);
 
+    // Projected balance: if a future full_repayment range exists, account for deferred interest
+    // that will capitalize before repayment starts. Computed once, reused for display and payoff.
+    const firstFullRange = getFirstFullRepaymentRange(effectiveRanges);
+    const hasFutureFullRepayment = !!(firstFullRange && todayISO < firstFullRange.startDate);
+    const capitalizedInterest = hasFutureFullRepayment
+      ? computeDeferredRangeInterestCents(balanceCents, interestRatePercent, todayISO, firstFullRange!.startDate)
+      : 0;
+    const projectedBalanceCents = balanceCents + capitalizedInterest;
+    // Use projected balance for breakdown when repayment hasn't started yet
+    const repaymentBalanceCents = hasFutureFullRepayment ? projectedBalanceCents : balanceCents;
+
     // Future/grace value: first future range (custom → full_repayment → interest_only). Custom overrides calculated.
     const fullRepaymentBreakdown =
       derivedTermMonths > 0
-        ? computeFullRepaymentBreakdown(balanceCents, interestRatePercent, derivedTermMonths)
+        ? computeFullRepaymentBreakdown(repaymentBalanceCents, interestRatePercent, derivedTermMonths)
         : null;
     const futureFullPayment = fullRepaymentBreakdown?.fullRepaymentCents ?? 0;
 
@@ -535,18 +546,11 @@ function deriveForLoan(
       monthlyLaterCents = futureFullPayment;
     }
 
-    const firstFullRange = getFirstFullRepaymentRange(effectiveRanges);
+    // Payoff estimate: futureFullPayment already uses projected balance, so reuse directly
     if (firstFullRange && futureFullPayment > 0) {
-      if (todayISO < firstFullRange.startDate) {
+      if (hasFutureFullRepayment) {
         const monthsUntilStart = monthsBetween(todayISO, firstFullRange.startDate);
-        // Issue 4: project the capitalized balance at repayment start — deferred interest will be added to principal
-        const capitalizedInterest = computeDeferredRangeInterestCents(balanceCents, interestRatePercent, todayISO, firstFullRange.startDate);
-        const projectedBalanceCents = balanceCents + capitalizedInterest;
-        // Recompute amortized payment from projected balance so payment and balance are consistent
-        const projectedPayment = derivedTermMonths > 0
-          ? computeFullRepaymentBreakdown(projectedBalanceCents, interestRatePercent, derivedTermMonths).fullRepaymentCents
-          : futureFullPayment;
-        const payoffFromStart = computeMonthsToPayoff(projectedBalanceCents, interestRatePercent, projectedPayment);
+        const payoffFromStart = computeMonthsToPayoff(projectedBalanceCents, interestRatePercent, futureFullPayment);
         payoffMonths = payoffFromStart != null ? monthsUntilStart + payoffFromStart : null;
       } else {
         payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, futureFullPayment);
