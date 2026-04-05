@@ -2137,20 +2137,9 @@ function LoanEditorForm(props: {
       </div>
       <div className="field">
         <label>Category</label>
-        <Select
-          value={state.category}
-          onChange={(e) => {
-            const category = e.target.value === 'private' ? 'private' : 'public';
-            let repaymentStatus = state.repaymentStatus;
-            if (category === 'private' && repaymentStatus === 'idr') {
-              repaymentStatus = 'full_repayment';
-            }
-            onChange({ ...state, category, repaymentStatus });
-          }}
-        >
-          <option value="public">Public</option>
-          <option value="private">Private</option>
-        </Select>
+        <div style={{ padding: '8px 0', fontSize: '0.95rem', fontWeight: 500 }}>
+          {state.category === 'public' ? 'Public (Federal)' : 'Private'}
+        </div>
       </div>
       {state.category === 'public' ? (
         <>
