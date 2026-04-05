@@ -1425,9 +1425,17 @@ export function LoansPage() {
                     <span className="loans-legend-label">Public</span>
                     <span className="loans-legend-value"><AnimatedNumber value={publicCents} format={formatCents} cacheKey="loan_public" /></span>
                   </div>
-                  {publicInterestCents > 0 && (
-                    <div className="loans-legend-sub">Interest: {formatCents(publicInterestCents)}{publicDailyInterestCents > 0 ? ` · ${formatCents(publicDailyInterestCents)}/day` : ''}</div>
-                  )}
+                  <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
+                    {summary.avgPublicRate != null && (
+                      <span>Interest rate: {summary.avgPublicRate.toFixed(2)}%</span>
+                    )}
+                    {publicInterestCents > 0 && (
+                      <span>Interest: {formatCents(publicInterestCents)}</span>
+                    )}
+                    {publicDailyInterestCents > 0 && (
+                      <span>{formatCents(publicDailyInterestCents)}/day</span>
+                    )}
+                  </div>
                 </>
               )}
               {privateCents > 0 && (
@@ -1437,25 +1445,18 @@ export function LoansPage() {
                     <span className="loans-legend-label">Private</span>
                     <span className="loans-legend-value"><AnimatedNumber value={privateCents} format={formatCents} cacheKey="loan_private" /></span>
                   </div>
-                  {privateInterestCents > 0 && (
-                    <div className="loans-legend-sub">Interest: {formatCents(privateInterestCents)}{privateDailyInterestCents > 0 ? ` · ${formatCents(privateDailyInterestCents)}/day` : ''}</div>
-                  )}
+                  <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
+                    {summary.avgPrivateRate != null && (
+                      <span>Interest rate: {summary.avgPrivateRate.toFixed(2)}%</span>
+                    )}
+                    {privateInterestCents > 0 && (
+                      <span>Interest: {formatCents(privateInterestCents)}</span>
+                    )}
+                    {privateDailyInterestCents > 0 && (
+                      <span>{formatCents(privateDailyInterestCents)}/day</span>
+                    )}
+                  </div>
                 </>
-              )}
-              <div className="loans-legend-divider" />
-              {summary.avgPublicRate != null && (
-                <div className="loans-legend-row" style={{ opacity: 0.7 }}>
-                  <span className="loans-legend-dot" style={{ background: 'transparent' }} />
-                  <span className="loans-legend-label" style={{ fontSize: '0.8rem' }}>Avg public rate</span>
-                  <span className="loans-legend-value" style={{ fontSize: '0.85rem' }}>{summary.avgPublicRate.toFixed(2)}%</span>
-                </div>
-              )}
-              {summary.avgPrivateRate != null && (
-                <div className="loans-legend-row" style={{ opacity: 0.7 }}>
-                  <span className="loans-legend-dot" style={{ background: 'transparent' }} />
-                  <span className="loans-legend-label" style={{ fontSize: '0.8rem' }}>Avg private rate</span>
-                  <span className="loans-legend-value" style={{ fontSize: '0.85rem' }}>{summary.avgPrivateRate.toFixed(2)}%</span>
-                </div>
               )}
             </div>
             {/* Payment */}
