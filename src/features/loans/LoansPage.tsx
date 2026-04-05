@@ -326,24 +326,13 @@ function addMonthsToISO(startISO: string, months: number): string {
 }
 
 /**
- * Compute unpaid accumulated interest from payment ranges (AES convention).
- * Uses Math.round per day for accumulation (nightly convention).
- * Iterates each range and accumulates based on mode:
- *   deferred      → full daily accrual for elapsed days
- *   interest_only → only the partial current-month remainder (full months are paid)
- *   custom_monthly → monthly shortfall × full months + daily × remainder days
- *   full_repayment → 0 (amortized payment covers interest)
- */
-/**
  * Compute unpaid interest using user-input anchored system.
- * All modes use the same base formula: anchor + daily × daysSinceAnchor.
- * custom_monthly additionally adds monthly shortfall accumulation.
- * full_repayment = 0.
  *
- * The anchor (currentInterestBalanceCents) is the user-entered AES balance.
- * The nightly Supabase job updates it daily so the projection stays accurate.
- * billingDayOfMonth is stored for nightly job use (reset on payment) but not
- * used in the local calculation — the anchor captures the exact state.
+ * deferred:       anchor + daily × daysSinceAnchor (monotonic growth)
+ * interest_only:  daily × daysSinceLastBillingDay (self-correcting sawtooth;
+ *                 resets to 0 each billing cycle using billingDayOfMonth)
+ * custom_monthly: anchor + shortfall × months + daily × remainder
+ * full_repayment: 0
  */
 function computeAnchoredUnpaidInterest(loan: Loan, asOfISO: string): number {
   if (loan.category !== 'private') return 0;
@@ -364,12 +353,45 @@ function computeAnchoredUnpaidInterest(loan: Loan, asOfISO: string): number {
   let debugDetail = '';
 
   switch (mode) {
-    case 'deferred':
-    case 'interest_only': {
+    case 'deferred': {
       // Anchor + daily forward projection from anchor date
       const daysElapsed = daysBetween(anchorDate, asOfISO);
       unpaidCents = anchor + (dailyCents * daysElapsed);
-      debugDetail = `${mode}: anchor=${anchor}¢ anchorDate=${anchorDate} daily=${dailyCents} days=${daysElapsed} → ${anchor}+(${dailyCents}×${daysElapsed})=${unpaidCents}¢`;
+      debugDetail = `deferred: anchor=${anchor}¢ anchorDate=${anchorDate} daily=${dailyCents} days=${daysElapsed} → ${anchor}+(${dailyCents}×${daysElapsed})=${unpaidCents}¢`;
+      break;
+    }
+    case 'interest_only': {
+      // Hybrid: if a billing day has passed since the anchor date, the user paid and
+      // interest reset — use self-correcting billing-day sawtooth from that point.
+      // If no billing day has passed yet, the user hasn't paid — anchor+forward.
+      const billingDay = loan.billingDayOfMonth;
+      if (billingDay != null && billingDay >= 1 && billingDay <= 31) {
+        const today = new Date(asOfISO + 'T00:00:00');
+        const day = Math.min(billingDay, 28);
+        let lastPayment: string;
+        if (today.getDate() >= day) {
+          lastPayment = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        } else {
+          const prev = new Date(today.getFullYear(), today.getMonth() - 1, day);
+          lastPayment = toDateKey(prev);
+        }
+        if (lastPayment > anchorDate) {
+          // Billing day passed since anchor → user paid, sawtooth from billing day
+          const daysElapsed = daysBetween(lastPayment, asOfISO);
+          unpaidCents = dailyCents * daysElapsed;
+          debugDetail = `interest_only: billing(${lastPayment}) days=${daysElapsed} daily=${dailyCents} → ${unpaidCents}¢`;
+        } else {
+          // No billing day since anchor → user hasn't paid yet, anchor+forward
+          const daysElapsed = daysBetween(anchorDate, asOfISO);
+          unpaidCents = anchor + (dailyCents * daysElapsed);
+          debugDetail = `interest_only: anchor+fwd anchor=${anchor}¢ days=${daysElapsed} daily=${dailyCents} → ${unpaidCents}¢`;
+        }
+      } else {
+        // No billing day set — fall back to anchor + daily forward
+        const daysElapsed = daysBetween(anchorDate, asOfISO);
+        unpaidCents = anchor + (dailyCents * daysElapsed);
+        debugDetail = `interest_only (no billingDay): anchor=${anchor}¢ days=${daysElapsed} daily=${dailyCents} → ${unpaidCents}¢`;
+      }
       break;
     }
     case 'custom_monthly': {
