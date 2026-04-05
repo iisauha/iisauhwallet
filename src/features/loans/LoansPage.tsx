@@ -1333,7 +1333,7 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      {/* Loans Summary — elevated donut chart with public/private breakdown */}
+      {/* Loans Summary — single ring donut with all segments */}
       {(() => {
         const totalCents = summary.totalBalance;
         const interestCents = summary.totalUnpaidInterestCents;
@@ -1341,37 +1341,47 @@ export function LoansPage() {
         const publicCents = summary.publicBalanceCents ?? 0;
         const privateCents = summary.privateBalanceCents ?? 0;
 
-        // Outer ring: principal vs interest
+        // Single ring with 4 segments: public principal, public interest, private principal, private interest
+        // Approximate split: assume interest is distributed proportionally between public/private
+        const publicInterest = publicCents > 0 && totalCents > 0
+          ? Math.round(interestCents * (publicCents / (publicCents + privateCents || 1)))
+          : 0;
+        const privateInterest = interestCents - publicInterest;
+        const publicPrincipal = publicCents - publicInterest;
+        const privatePrincipal = privateCents - privateInterest;
+
         const size = 180;
         const cx = size / 2;
         const cy = size / 2;
-        const rOuter = 72;
-        const rInner = 56;
-        const strokeOuter = 14;
-        const strokeInner = 8;
-        const circumOuter = 2 * Math.PI * rOuter;
-        const circumInner = 2 * Math.PI * rInner;
+        const r = 68;
+        const stroke = 14;
+        const circum = 2 * Math.PI * r;
+        const gap = totalCents > 0 ? 3 : 0; // small gap between segments
+        const segments = [
+          { cents: publicPrincipal, color: 'var(--green)', label: 'Public Principal' },
+          { cents: publicInterest, color: 'var(--accent)', label: 'Public Interest' },
+          { cents: privatePrincipal, color: 'var(--blue, #4a90d9)', label: 'Private Principal' },
+          { cents: privateInterest, color: 'var(--yellow, #e6a817)', label: 'Private Interest' },
+        ].filter(s => s.cents > 0);
+        const totalGap = gap * segments.length;
+        const usable = circum - totalGap;
 
-        const principalFrac = totalCents > 0 ? principalCents / totalCents : 1;
-        const interestFrac = totalCents > 0 ? interestCents / totalCents : 0;
-        const principalLen = circumOuter * principalFrac;
-        const interestLen = circumOuter * interestFrac;
+        let offset = 0;
+        const arcs = segments.map(seg => {
+          const len = totalCents > 0 ? (seg.cents / totalCents) * usable : 0;
+          const arc = { ...seg, len, offset: -offset };
+          offset += len + gap;
+          return arc;
+        });
 
-        // Inner ring: public vs private
-        const publicFrac = totalCents > 0 ? publicCents / totalCents : 0;
-        const privateFrac = totalCents > 0 ? privateCents / totalCents : 0;
-        const publicLen = circumInner * publicFrac;
-        const privateLen = circumInner * privateFrac;
+        // Dynamic font size for center amount
+        const formatted = formatCents(totalCents);
+        const charCount = formatted.length;
+        const fontSize = charCount <= 7 ? '1.5rem' : charCount <= 9 ? '1.25rem' : charCount <= 11 ? '1.05rem' : '0.9rem';
 
-        const formatShort = (c: number) => {
-          const abs = Math.abs(c);
-          if (abs >= 100_000_00) return `$${(c / 100_000_00).toFixed(1)}k`;
-          return formatCents(c);
-        };
         return (
           <div className="loans-summary-card">
             <div className="loans-summary-title">Loans Summary</div>
-            {/* Dual-ring donut */}
             <div className="loans-donut-wrap">
               <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="loans-donut-svg">
                 <defs>
@@ -1380,61 +1390,25 @@ export function LoansPage() {
                     <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                   </filter>
                 </defs>
-                {/* Outer track */}
-                <circle cx={cx} cy={cy} r={rOuter} fill="none" stroke="var(--border)" strokeWidth={strokeOuter} opacity={0.12} />
-                {/* Outer: principal */}
-                <circle
-                  cx={cx} cy={cy} r={rOuter} fill="none"
-                  stroke="var(--green)" strokeWidth={strokeOuter}
-                  strokeDasharray={`${principalLen} ${circumOuter}`}
-                  strokeLinecap="round"
-                  transform={`rotate(-90 ${cx} ${cy})`}
-                  filter="url(#donutGlow)"
-                  style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
-                />
-                {/* Outer: interest */}
-                {interestCents > 0 && (
+                {/* Background track */}
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} opacity={0.1} />
+                {/* Segments */}
+                {arcs.map((arc, i) => (
                   <circle
-                    cx={cx} cy={cy} r={rOuter} fill="none"
-                    stroke="var(--accent)" strokeWidth={strokeOuter}
-                    strokeDasharray={`${interestLen} ${circumOuter}`}
-                    strokeDashoffset={-principalLen}
+                    key={i}
+                    cx={cx} cy={cy} r={r} fill="none"
+                    stroke={arc.color} strokeWidth={stroke}
+                    strokeDasharray={`${arc.len} ${circum - arc.len}`}
+                    strokeDashoffset={arc.offset}
                     strokeLinecap="round"
                     transform={`rotate(-90 ${cx} ${cy})`}
                     filter="url(#donutGlow)"
                     style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
                   />
-                )}
-                {/* Inner track */}
-                <circle cx={cx} cy={cy} r={rInner} fill="none" stroke="var(--border)" strokeWidth={strokeInner} opacity={0.08} />
-                {/* Inner: public */}
-                {publicCents > 0 && (
-                  <circle
-                    cx={cx} cy={cy} r={rInner} fill="none"
-                    stroke="var(--blue, #4a90d9)" strokeWidth={strokeInner}
-                    strokeDasharray={`${publicLen} ${circumInner}`}
-                    strokeLinecap="round"
-                    transform={`rotate(-90 ${cx} ${cy})`}
-                    opacity={0.85}
-                    style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
-                  />
-                )}
-                {/* Inner: private */}
-                {privateCents > 0 && (
-                  <circle
-                    cx={cx} cy={cy} r={rInner} fill="none"
-                    stroke="var(--yellow, #e6a817)" strokeWidth={strokeInner}
-                    strokeDasharray={`${privateLen} ${circumInner}`}
-                    strokeDashoffset={-publicLen}
-                    strokeLinecap="round"
-                    transform={`rotate(-90 ${cx} ${cy})`}
-                    opacity={0.85}
-                    style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
-                  />
-                )}
+                ))}
               </svg>
               <div className="loans-donut-center">
-                <div className="loans-donut-amount">{formatShort(totalCents)}</div>
+                <div className="loans-donut-amount" style={{ fontSize }}>{formatted}</div>
                 <div className="loans-donut-label">Est. Total</div>
               </div>
             </div>

@@ -2746,6 +2746,24 @@ textarea:focus-visible {
   gap: 4px;
   flex-wrap: wrap;
 }
+.net-cash-clear-btn {
+  display: block;
+  margin-top: 10px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--app-font-family);
+  color: var(--red);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.net-cash-clear-btn:active {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}
 
 @media (hover: hover) and (pointer: fine) {
   .net-cash-chart-range:hover:not(.active) {

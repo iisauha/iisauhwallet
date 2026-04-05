@@ -78,6 +78,12 @@ export function getNetCashHistoryForRange(rangeMs: number): NetCashSnapshot[] {
  * Ensure there's at least one data point for the current value.
  * Call on app load so the chart always has something to show.
  */
+/** Clear all recorded net cash history. */
+export function clearNetCashHistory() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  _lastRecordedAt = 0;
+}
+
 export function ensureCurrentSnapshot(data: LedgerData) {
   const history = loadNetCashHistory();
   const now = Date.now();

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { formatCents } from '../../state/calc';
-import { loadNetCashHistory, type NetCashSnapshot } from '../../state/netCashHistory';
+import { loadNetCashHistory, clearNetCashHistory, type NetCashSnapshot } from '../../state/netCashHistory';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
 
 type Range = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
@@ -81,14 +81,15 @@ export function NetCashChart({
   const [lineAnimating, setLineAnimating] = useState(false);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Live "creating" tick — force re-render at update interval to extend line
-  const [, setTick] = useState(0);
+  // Live "creating" tick — reload history at update interval
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), updateInterval);
     return () => clearInterval(id);
   }, [updateInterval]);
 
-  // Load history
+  // Load history (reloads on range change, tick, or clear)
+  const [clearCount, setClearCount] = useState(0);
   const history = useMemo(() => {
     const all = loadNetCashHistory();
     if (range === 'ALL') return all.sort((a, b) => a.ts - b.ts);
@@ -100,7 +101,7 @@ export function NetCashChart({
       cutoff = Date.now() - RANGE_MS[range];
     }
     return all.filter(s => s.ts >= cutoff).sort((a, b) => a.ts - b.ts);
-  }, [range]);
+  }, [range, tick, clearCount]);
 
   // Add current value as the last point, then dedupe consecutive same-value runs
   // (keep first and last of each run so the horizontal line spans the full time range)
@@ -483,6 +484,13 @@ export function NetCashChart({
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="net-cash-clear-btn"
+            onClick={() => { clearNetCashHistory(); setClearCount(c => c + 1); }}
+          >
+            Clear chart data
+          </button>
         </div>
       )}
     </div>
