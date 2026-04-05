@@ -6,9 +6,10 @@ CREATE TABLE IF NOT EXISTS private_loans (
   id         TEXT        NOT NULL,
   user_id    UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name       TEXT        NOT NULL DEFAULT '',
-  balance_cents         BIGINT  NOT NULL DEFAULT 0,
-  interest_rate_percent NUMERIC(7,4) NOT NULL DEFAULT 0,
-  is_active  BOOLEAN     NOT NULL DEFAULT true,
+  balance_cents                  BIGINT  NOT NULL DEFAULT 0,
+  interest_rate_percent          NUMERIC(7,4) NOT NULL DEFAULT 0,
+  is_active                      BOOLEAN NOT NULL DEFAULT true,
+  current_interest_balance_cents BIGINT  NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, id)
 );

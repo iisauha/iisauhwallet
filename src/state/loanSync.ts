@@ -36,6 +36,7 @@ export async function syncPrivateLoansToSupabase(loans: Loan[]): Promise<void> {
       balance_cents: l.balanceCents,
       interest_rate_percent: l.interestRatePercent,
       is_active: l.active !== false,
+      current_interest_balance_cents: l.currentInterestBalanceCents ?? 0,
       updated_at: new Date().toISOString(),
     }));
 

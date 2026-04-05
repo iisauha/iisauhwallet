@@ -28,7 +28,7 @@ Deno.serve(async (req: Request) => {
   // 1. Fetch all active private loans across all users
   const { data: loans, error: fetchErr } = await supabase
     .from('private_loans')
-    .select('id, user_id, balance_cents, interest_rate_percent')
+    .select('id, user_id, balance_cents, interest_rate_percent, current_interest_balance_cents')
     .eq('is_active', true)
     .gt('balance_cents', 0);
 
@@ -48,15 +48,18 @@ Deno.serve(async (req: Request) => {
     daily_interest_cents: number;
     closing_balance_cents: number;
   }> = [];
-  const balanceUpdates: Array<{ user_id: string; id: string; new_balance: number }> = [];
+  const balanceUpdates: Array<{ user_id: string; id: string; new_balance: number; new_interest: number }> = [];
 
   for (const loan of loans) {
     const openingBalance = loan.balance_cents;
     const rate = Number(loan.interest_rate_percent);
+    const currentInterest = loan.current_interest_balance_cents ?? 0;
 
-    // Match the client formula: Math.floor(balance × rate / 100 / 365)
-    const dailyInterest = Math.floor(openingBalance * (rate / 100) / 365);
+    // AES nightly accumulation convention: Math.round per day
+    const dailyInterest = Math.round(openingBalance * (rate / 100) / 365);
     const closingBalance = openingBalance + dailyInterest;
+    // Update the interest balance anchor so tomorrow's client calculation starts from correct base
+    const newInterest = currentInterest + dailyInterest;
 
     ledgerRows.push({
       loan_id: loan.id,
@@ -71,6 +74,7 @@ Deno.serve(async (req: Request) => {
       user_id: loan.user_id,
       id: loan.id,
       new_balance: closingBalance,
+      new_interest: newInterest,
     });
   }
 
@@ -88,7 +92,11 @@ Deno.serve(async (req: Request) => {
   for (const upd of balanceUpdates) {
     const { error } = await supabase
       .from('private_loans')
-      .update({ balance_cents: upd.new_balance, updated_at: new Date().toISOString() })
+      .update({
+        balance_cents: upd.new_balance,
+        current_interest_balance_cents: upd.new_interest,
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', upd.user_id)
       .eq('id', upd.id);
     if (error) updateErrors++;

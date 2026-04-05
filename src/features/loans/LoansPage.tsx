@@ -334,70 +334,71 @@ function addMonthsToISO(startISO: string, months: number): string {
  *   custom_monthly → monthly shortfall × full months + daily × remainder days
  *   full_repayment → 0 (amortized payment covers interest)
  */
-function computeRangeBasedUnpaidInterest(loan: Loan, asOfISO: string): number {
+/**
+ * Compute unpaid interest using user-input anchored system.
+ * All modes use the same base formula: anchor + daily × daysSinceAnchor.
+ * custom_monthly additionally adds monthly shortfall accumulation.
+ * full_repayment = 0.
+ *
+ * The anchor (currentInterestBalanceCents) is the user-entered AES balance.
+ * The nightly Supabase job updates it daily so the projection stays accurate.
+ * billingDayOfMonth is stored for nightly job use (reset on payment) but not
+ * used in the local calculation — the anchor captures the exact state.
+ */
+function computeAnchoredUnpaidInterest(loan: Loan, asOfISO: string): number {
   if (loan.category !== 'private') return 0;
   const { balanceCents, interestRatePercent } = loan;
   if (!(balanceCents > 0) || !(interestRatePercent > 0)) return 0;
 
-  const ranges = getEffectivePrivateRanges(loan);
+  const anchor = loan.currentInterestBalanceCents;
+  if (anchor == null) return 0; // user hasn't entered AES balance yet
+
   // AES nightly accumulation convention: Math.round per day
   const dailyCents = Math.round(balanceCents * (interestRatePercent / 100) / 365);
-  const monthlyInterestCents = Math.round(balanceCents * (interestRatePercent / 100) / 12);
+  const anchorDate = loan.interestBalanceAnchorDate ?? asOfISO;
+  const ranges = getEffectivePrivateRanges(loan);
+  const activeRange = getActivePrivateRange(ranges, asOfISO);
+  const mode = activeRange?.mode ?? 'deferred';
 
   let unpaidCents = 0;
+  let debugDetail = '';
 
-  // DEBUG: temporary logging — remove after confirming per-loan values
-  const debugRanges: string[] = [];
-
-  for (const range of ranges) {
-    if (range.startDate > asOfISO) continue; // future range, no accrual yet
-    const rangeEnd = range.endDate < asOfISO ? range.endDate : asOfISO;
-
-    switch (range.mode) {
-      case 'deferred': {
-        const daysElapsed = daysBetween(range.startDate, rangeEnd);
-        const contrib = dailyCents * daysElapsed;
-        unpaidCents += contrib;
-        debugRanges.push(`  deferred ${range.startDate}→${rangeEnd}: dailyCents=${dailyCents} × days=${daysElapsed} = ${contrib}¢ ($${(contrib/100).toFixed(2)})`);
-        break;
-      }
-      case 'interest_only': {
-        // User pays monthly interest; only partial period since last payment accrues
-        const months = fullMonthsElapsed(range.startDate, rangeEnd);
-        const monthStart = addMonthsToISO(range.startDate, months);
-        const remainderDays = daysBetween(monthStart, rangeEnd);
-        const contrib = dailyCents * remainderDays;
-        unpaidCents += contrib;
-        debugRanges.push(`  interest_only ${range.startDate}→${rangeEnd}: months=${months} monthStart=${monthStart} remainderDays=${remainderDays} dailyCents=${dailyCents} → ${contrib}¢ ($${(contrib/100).toFixed(2)})`);
-        break;
-      }
-      case 'custom_monthly': {
-        // Fixed payment may be less than interest → shortfall accumulates monthly
-        const customPayment = range.customPaymentCents ?? 0;
-        const shortfall = Math.max(0, monthlyInterestCents - customPayment);
-        const months = fullMonthsElapsed(range.startDate, rangeEnd);
-        const monthStart = addMonthsToISO(range.startDate, months);
-        const remainderDays = daysBetween(monthStart, rangeEnd);
-        const contrib = (shortfall * months) + (dailyCents * remainderDays);
-        unpaidCents += contrib;
-        debugRanges.push(`  custom_monthly ${range.startDate}→${rangeEnd}: monthlyInt=${monthlyInterestCents} custom=${customPayment} shortfall=${shortfall} months=${months} monthStart=${monthStart} remainderDays=${remainderDays} dailyCents=${dailyCents} → (${shortfall}×${months})+(${dailyCents}×${remainderDays})=${contrib}¢ ($${(contrib/100).toFixed(2)})`);
-        break;
-      }
-      case 'full_repayment':
-        debugRanges.push(`  full_repayment ${range.startDate}→${rangeEnd}: 0¢`);
-        break;
+  switch (mode) {
+    case 'deferred':
+    case 'interest_only': {
+      // Anchor + daily forward projection from anchor date
+      const daysElapsed = daysBetween(anchorDate, asOfISO);
+      unpaidCents = anchor + (dailyCents * daysElapsed);
+      debugDetail = `${mode}: anchor=${anchor}¢ anchorDate=${anchorDate} daily=${dailyCents} days=${daysElapsed} → ${anchor}+(${dailyCents}×${daysElapsed})=${unpaidCents}¢`;
+      break;
     }
+    case 'custom_monthly': {
+      // Anchor + monthly shortfall + daily remainder forward from anchor date
+      const customPayment = activeRange?.customPaymentCents ?? 0;
+      const monthlyInterestCents = Math.round(balanceCents * (interestRatePercent / 100) / 12);
+      const shortfall = Math.max(0, monthlyInterestCents - customPayment);
+      const months = fullMonthsElapsed(anchorDate, asOfISO);
+      const monthStart = addMonthsToISO(anchorDate, months);
+      const remainderDays = daysBetween(monthStart, asOfISO);
+      unpaidCents = anchor + (shortfall * months) + (dailyCents * remainderDays);
+      debugDetail = `custom_monthly: anchor=${anchor}¢ anchorDate=${anchorDate} shortfall=${shortfall} months=${months} remainderDays=${remainderDays} daily=${dailyCents} → ${anchor}+(${shortfall}×${months})+(${dailyCents}×${remainderDays})=${unpaidCents}¢`;
+      break;
+    }
+    case 'full_repayment':
+      unpaidCents = 0;
+      debugDetail = 'full_repayment: 0¢';
+      break;
   }
 
-  // DEBUG: log per-loan result
-  console.log(`[unpaidInterest] ${loan.name} | bal=${balanceCents}¢ ($${(balanceCents/100).toFixed(2)}) rate=${interestRatePercent}% | dailyCents=${dailyCents} monthlyInt=${monthlyInterestCents} | TOTAL=${unpaidCents}¢ ($${(unpaidCents/100).toFixed(2)})\n${debugRanges.join('\n')}`);
+  // DEBUG: log per-loan — remove after confirming targets
+  console.log(`[unpaidInterest] ${loan.name} | bal=${balanceCents}¢ ($${(balanceCents/100).toFixed(2)}) rate=${interestRatePercent}% daily=${dailyCents} | ${debugDetail} | TOTAL=$${(unpaidCents/100).toFixed(2)}`);
 
   return unpaidCents;
 }
 
 /**
  * Unpaid interest for private loan.
- * Priority: ledger (server-computed nightly) → range-based computation → 0.
+ * Priority: ledger (server-computed nightly) → anchored computation → 0.
  */
 function getUnpaidInterestForPrivate(
   loan: Loan,
@@ -412,8 +413,8 @@ function getUnpaidInterestForPrivate(
       return { cents: accruedCents, source: 'ledger' };
     }
   }
-  // 2. Range-based computation from payment ranges (not a flat accrual anchor)
-  const cents = computeRangeBasedUnpaidInterest(loan, asOfISO);
+  // 2. Anchored computation from user-entered AES interest balance
+  const cents = computeAnchoredUnpaidInterest(loan, asOfISO);
   if (cents > 0) return { cents, source: 'estimated' };
   return { cents: 0, source: 'fallback' };
 }
@@ -759,6 +760,10 @@ type LoanEditorState = {
   privatePaymentRanges: { id: string; startDate: string; endDate: string; mode: PrivatePaymentRangeMode; customPayment: string }[];
   /** Private: interest accrual anchor date (YYYY-MM-DD). */
   accrualAnchorDate: string;
+  /** Private: current interest balance from AES ($). */
+  currentInterestBalance: string;
+  /** Private interest_only: billing day of month (1-31). */
+  billingDayOfMonth: string;
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -791,7 +796,9 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       scheduleAccruedInterestStrings: {},
       privatePaymentMode: 'full_repayment',
       privatePaymentRanges: [],
-      accrualAnchorDate: ''
+      accrualAnchorDate: '',
+      currentInterestBalance: '',
+      billingDayOfMonth: ''
     };
   }
   const priv = l as Loan;
@@ -850,7 +857,9 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     })(),
     privatePaymentMode: priv.privatePaymentMode ?? 'custom_monthly',
     privatePaymentRanges: defaultRanges,
-    accrualAnchorDate: priv.accrualAnchorDate ?? ''
+    accrualAnchorDate: priv.accrualAnchorDate ?? '',
+    currentInterestBalance: priv.currentInterestBalanceCents != null ? (priv.currentInterestBalanceCents / 100).toFixed(2) : '',
+    billingDayOfMonth: priv.billingDayOfMonth != null ? String(priv.billingDayOfMonth) : ''
   };
 }
 
@@ -921,6 +930,26 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     accrualLastUpdatedAt: isPublic ? undefined : undefined,
     privatePaymentMode: isPublic ? undefined : e.privatePaymentMode,
     accrualAnchorDate: isPublic ? undefined : (e.accrualAnchorDate?.trim() || undefined),
+    currentInterestBalanceCents: isPublic ? undefined : (() => {
+      const s = e.currentInterestBalance?.replace(/,/g, '').trim();
+      if (!s) return undefined;
+      const n = Math.round(parseFloat(s) * 100);
+      return Number.isFinite(n) && n >= 0 ? n : undefined;
+    })(),
+    interestBalanceAnchorDate: isPublic ? undefined : (() => {
+      const s = e.currentInterestBalance?.replace(/,/g, '').trim();
+      if (!s) return prev?.interestBalanceAnchorDate;
+      const n = Math.round(parseFloat(s) * 100);
+      // If user changed the value, update the anchor date to today
+      if (Number.isFinite(n) && n >= 0 && n !== prev?.currentInterestBalanceCents) return todayISO();
+      return prev?.interestBalanceAnchorDate;
+    })(),
+    billingDayOfMonth: isPublic ? undefined : (() => {
+      const s = e.billingDayOfMonth?.trim();
+      if (!s) return undefined;
+      const n = parseInt(s, 10);
+      return Number.isFinite(n) && n >= 1 && n <= 31 ? n : undefined;
+    })(),
     privatePaymentRanges:
       isPublic
         ? undefined
@@ -2289,6 +2318,38 @@ function LoanEditorForm(props: {
               Add range
             </button>
           </div>
+        </>
+      ) : null}
+      {state.category === 'private' ? (
+        <>
+          <div className="field" style={{ marginTop: 8 }}>
+            <label>Current interest balance ($, from AES)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={state.currentInterestBalance}
+              onChange={(e) => onChange({ ...state, currentInterestBalance: e.target.value })}
+              placeholder="e.g. 87.87"
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              Check your AES account for the current unpaid interest on this loan.
+            </p>
+          </div>
+          {state.privatePaymentRanges.some(r => r.mode === 'interest_only') && (
+            <div className="field" style={{ marginTop: 4 }}>
+              <label>Billing day of month (1-31)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={state.billingDayOfMonth}
+                onChange={(e) => onChange({ ...state, billingDayOfMonth: e.target.value })}
+                placeholder="e.g. 10"
+              />
+              <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                What day of the month does AES bill you for this loan?
+              </p>
+            </div>
+          )}
         </>
       ) : null}
       {state.category === 'public' ? (

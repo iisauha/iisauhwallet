@@ -1196,6 +1196,12 @@ export type Loan = {
   unpaidInterestOverrideCents?: number | null;
   /** Private only: end dates (YYYY-MM-DD) of deferred ranges for which we already added accrued interest to balance. Prevents double-application. */
   deferredInterestAppliedForRangeEndDates?: string[];
+  /** Private only: user-entered current interest balance from AES (cents). Anchor for forward projection. */
+  currentInterestBalanceCents?: number | null;
+  /** Private only: date the currentInterestBalanceCents was entered/updated (YYYY-MM-DD). Used as anchor for custom_monthly forward projection. */
+  interestBalanceAnchorDate?: string | null;
+  /** Private interest_only only: day of month AES bills (1-31). Used to derive last payment date. */
+  billingDayOfMonth?: number | null;
 };
 
 export type LoansState = {
