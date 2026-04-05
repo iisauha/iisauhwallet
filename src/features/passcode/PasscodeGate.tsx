@@ -280,14 +280,13 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       biometricTriedRef.current = true;
       const passcode = await authenticateWithBiometric();
       if (!passcode) {
-        // Face ID was dismissed or failed — make field tappable and auto-focus to pop keyboard
+        // Face ID was dismissed or failed — show password field but don't auto-focus
+        // (auto-focusing causes the keyboard to pop over the Face ID prompt on iOS)
         setBiometricDismissed(true);
         setTimeout(() => {
           const el = passwordFieldRef.current;
           if (el) {
             el.removeAttribute('readonly');
-            el.focus();
-            el.click();
           }
         }, 300);
         return;

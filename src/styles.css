@@ -2782,7 +2782,7 @@ textarea:focus-visible {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 8px 0 16px;
+  padding: 12px 0 20px;
 }
 .loans-donut-svg {
   display: block;
@@ -2841,6 +2841,11 @@ textarea:focus-visible {
   color: var(--muted);
   text-align: right;
   padding-right: 2px;
+}
+.loans-legend-divider {
+  height: 1px;
+  background: color-mix(in srgb, var(--ui-border, var(--border)) 25%, transparent);
+  margin: 4px 0 2px;
 }
 /* Payment section */
 .loans-summary-payment {

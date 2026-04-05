@@ -102,14 +102,26 @@ export function NetCashChart({
     return all.filter(s => s.ts >= cutoff).sort((a, b) => a.ts - b.ts);
   }, [range]);
 
-  // Add current value as the last point
+  // Add current value as the last point, then dedupe consecutive same-value runs
+  // (keep first and last of each run so the horizontal line spans the full time range)
   const dataPoints: NetCashSnapshot[] = useMemo(() => {
     const pts = [...history];
     const now = Date.now();
     if (pts.length === 0 || now - pts[pts.length - 1].ts > 60_000) {
       pts.push({ ts: now, cents: currentCents });
     }
-    return pts;
+    if (pts.length <= 2) return pts;
+    const deduped: NetCashSnapshot[] = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const prev = pts[i - 1];
+      const next = pts[i + 1];
+      // Keep point if its value differs from previous or next (boundary of a step)
+      if (pts[i].cents !== prev.cents || pts[i].cents !== next.cents) {
+        deduped.push(pts[i]);
+      }
+    }
+    deduped.push(pts[pts.length - 1]);
+    return deduped;
   }, [history, currentCents]);
 
   // Measure container width
@@ -134,10 +146,17 @@ export function NetCashChart({
       if (p.cents < minC) minC = p.cents;
       if (p.cents > maxC) maxC = p.cents;
     }
-    const cRange = maxC - minC || 1;
-    const yPad = cRange * 0.05;
-    minC -= yPad;
-    maxC += yPad;
+    const cRange = maxC - minC;
+    // When all values are the same (flat line), center it vertically
+    if (cRange === 0) {
+      const pad = Math.max(Math.abs(maxC) * 0.1, 100); // at least $1
+      minC -= pad;
+      maxC += pad;
+    } else {
+      const yPad = cRange * 0.05;
+      minC -= yPad;
+      maxC += yPad;
+    }
     const drawH = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
     const drawW = width - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
 
@@ -160,24 +179,22 @@ export function NetCashChart({
       return { cents: dataPoints[0].cents, ts: dataPoints[0].ts, px: points[0].x, py: points[0].y };
     }
 
-    // Find which segment we're in for stepwise value, but allow smooth px movement
-    // In a step chart, between point[i].x and point[i+1].x, the value is dataPoints[i].cents
-    // until we reach point[i+1].x where it jumps to dataPoints[i+1].cents
-    for (let i = 0; i < points.length - 1; i++) {
-      if (x >= points[i].x && x <= points[i + 1].x) {
-        const segWidth = points[i + 1].x - points[i].x;
-        const t = segWidth > 0 ? (x - points[i].x) / segWidth : 0;
-        // Time interpolates smoothly
-        const ts = Math.round(dataPoints[i].ts + (dataPoints[i + 1].ts - dataPoints[i].ts) * t);
-        // Cents use the step value (current segment's start value)
-        const cents = dataPoints[i].cents;
-        // py stays at the current step's y (horizontal part of step)
-        const py = points[i].y;
-        return { cents, ts, px: x, py };
+    // Snap to nearest data point — both value AND timestamp are real recorded values
+    let closest = 0;
+    let closestDist = Math.abs(x - points[0].x);
+    for (let i = 1; i < points.length; i++) {
+      const dist = Math.abs(x - points[i].x);
+      if (dist < closestDist) {
+        closest = i;
+        closestDist = dist;
       }
     }
-    const last = points.length - 1;
-    return { cents: dataPoints[last].cents, ts: dataPoints[last].ts, px: points[last].x, py: points[last].y };
+    return {
+      cents: dataPoints[closest].cents,
+      ts: dataPoints[closest].ts,
+      px: points[closest].x,
+      py: points[closest].y,
+    };
   }, [points, dataPoints, width]);
 
   const handleScrubStart = useCallback((clientX: number) => {

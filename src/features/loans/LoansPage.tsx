@@ -1333,23 +1333,36 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      {/* Loans Summary — AES-style donut chart */}
+      {/* Loans Summary — elevated donut chart with public/private breakdown */}
       {(() => {
         const totalCents = summary.totalBalance;
         const interestCents = summary.totalUnpaidInterestCents;
         const principalCents = totalCents - interestCents;
-        const interestFrac = totalCents > 0 ? interestCents / totalCents : 0;
-        const principalFrac = totalCents > 0 ? principalCents / totalCents : 1;
-        // SVG donut math
-        const size = 160;
+        const publicCents = summary.publicBalanceCents ?? 0;
+        const privateCents = summary.privateBalanceCents ?? 0;
+
+        // Outer ring: principal vs interest
+        const size = 180;
         const cx = size / 2;
         const cy = size / 2;
-        const r = 62;
-        const stroke = 12;
-        const circumference = 2 * Math.PI * r;
-        const principalLen = circumference * principalFrac;
-        const interestLen = circumference * interestFrac;
-        // Format shorthand for center label
+        const rOuter = 72;
+        const rInner = 56;
+        const strokeOuter = 14;
+        const strokeInner = 8;
+        const circumOuter = 2 * Math.PI * rOuter;
+        const circumInner = 2 * Math.PI * rInner;
+
+        const principalFrac = totalCents > 0 ? principalCents / totalCents : 1;
+        const interestFrac = totalCents > 0 ? interestCents / totalCents : 0;
+        const principalLen = circumOuter * principalFrac;
+        const interestLen = circumOuter * interestFrac;
+
+        // Inner ring: public vs private
+        const publicFrac = totalCents > 0 ? publicCents / totalCents : 0;
+        const privateFrac = totalCents > 0 ? privateCents / totalCents : 0;
+        const publicLen = circumInner * publicFrac;
+        const privateLen = circumInner * privateFrac;
+
         const formatShort = (c: number) => {
           const abs = Math.abs(c);
           if (abs >= 100_000_00) return `$${(c / 100_000_00).toFixed(1)}k`;
@@ -1358,35 +1371,65 @@ export function LoansPage() {
         return (
           <div className="loans-summary-card">
             <div className="loans-summary-title">Loans Summary</div>
-            {/* Donut Chart */}
+            {/* Dual-ring donut */}
             <div className="loans-donut-wrap">
               <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="loans-donut-svg">
-                {/* Background track */}
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} opacity={0.2} />
-                {/* Principal arc */}
+                <defs>
+                  <filter id="donutGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2.5" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                {/* Outer track */}
+                <circle cx={cx} cy={cy} r={rOuter} fill="none" stroke="var(--border)" strokeWidth={strokeOuter} opacity={0.12} />
+                {/* Outer: principal */}
                 <circle
-                  cx={cx} cy={cy} r={r}
-                  fill="none"
-                  stroke="var(--green)"
-                  strokeWidth={stroke}
-                  strokeDasharray={`${principalLen} ${circumference}`}
-                  strokeDashoffset={0}
+                  cx={cx} cy={cy} r={rOuter} fill="none"
+                  stroke="var(--green)" strokeWidth={strokeOuter}
+                  strokeDasharray={`${principalLen} ${circumOuter}`}
                   strokeLinecap="round"
                   transform={`rotate(-90 ${cx} ${cy})`}
-                  style={{ transition: 'stroke-dasharray 0.6s ease' }}
+                  filter="url(#donutGlow)"
+                  style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
                 />
-                {/* Interest arc */}
+                {/* Outer: interest */}
                 {interestCents > 0 && (
                   <circle
-                    cx={cx} cy={cy} r={r}
-                    fill="none"
-                    stroke="var(--accent)"
-                    strokeWidth={stroke}
-                    strokeDasharray={`${interestLen} ${circumference}`}
+                    cx={cx} cy={cy} r={rOuter} fill="none"
+                    stroke="var(--accent)" strokeWidth={strokeOuter}
+                    strokeDasharray={`${interestLen} ${circumOuter}`}
                     strokeDashoffset={-principalLen}
                     strokeLinecap="round"
                     transform={`rotate(-90 ${cx} ${cy})`}
-                    style={{ transition: 'stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease' }}
+                    filter="url(#donutGlow)"
+                    style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
+                  />
+                )}
+                {/* Inner track */}
+                <circle cx={cx} cy={cy} r={rInner} fill="none" stroke="var(--border)" strokeWidth={strokeInner} opacity={0.08} />
+                {/* Inner: public */}
+                {publicCents > 0 && (
+                  <circle
+                    cx={cx} cy={cy} r={rInner} fill="none"
+                    stroke="var(--blue, #4a90d9)" strokeWidth={strokeInner}
+                    strokeDasharray={`${publicLen} ${circumInner}`}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${cx} ${cy})`}
+                    opacity={0.85}
+                    style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
+                  />
+                )}
+                {/* Inner: private */}
+                {privateCents > 0 && (
+                  <circle
+                    cx={cx} cy={cy} r={rInner} fill="none"
+                    stroke="var(--yellow, #e6a817)" strokeWidth={strokeInner}
+                    strokeDasharray={`${privateLen} ${circumInner}`}
+                    strokeDashoffset={-publicLen}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${cx} ${cy})`}
+                    opacity={0.85}
+                    style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
                   />
                 )}
               </svg>
@@ -1395,38 +1438,61 @@ export function LoansPage() {
                 <div className="loans-donut-label">Est. Total</div>
               </div>
             </div>
-            {/* Legend rows */}
+            {/* Legend */}
             <div className="loans-summary-rows">
               <div className="loans-legend-row">
                 <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
-                <span className="loans-legend-label">Principal Balance</span>
+                <span className="loans-legend-label">Principal</span>
                 <span className="loans-legend-value"><AnimatedNumber value={principalCents} format={formatCents} cacheKey="loan_principal" /></span>
               </div>
               <div className="loans-legend-row">
                 <span className="loans-legend-dot" style={{ background: 'var(--accent)' }} />
-                <span className="loans-legend-label">Interest Balance</span>
+                <span className="loans-legend-label">Interest</span>
                 <span className="loans-legend-value"><AnimatedNumber value={interestCents} format={formatCents} cacheKey="loan_interest" /></span>
               </div>
               {summary.totalDailyInterestCents > 0 && (
                 <div className="loans-legend-sub">{formatCents(summary.totalDailyInterestCents)} Added / Day</div>
               )}
+              <div className="loans-legend-divider" />
+              {publicCents > 0 && (
+                <div className="loans-legend-row">
+                  <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
+                  <span className="loans-legend-label">Public</span>
+                  <span className="loans-legend-value">{formatCents(publicCents)}</span>
+                </div>
+              )}
+              {privateCents > 0 && (
+                <div className="loans-legend-row">
+                  <span className="loans-legend-dot" style={{ background: 'var(--yellow, #e6a817)' }} />
+                  <span className="loans-legend-label">Private</span>
+                  <span className="loans-legend-value">{formatCents(privateCents)}</span>
+                </div>
+              )}
+              {summary.avgPublicRate != null && (
+                <div className="loans-legend-row" style={{ opacity: 0.7 }}>
+                  <span className="loans-legend-dot" style={{ background: 'transparent' }} />
+                  <span className="loans-legend-label" style={{ fontSize: '0.8rem' }}>Avg public rate</span>
+                  <span className="loans-legend-value" style={{ fontSize: '0.85rem' }}>{summary.avgPublicRate.toFixed(2)}%</span>
+                </div>
+              )}
+              {summary.avgPrivateRate != null && (
+                <div className="loans-legend-row" style={{ opacity: 0.7 }}>
+                  <span className="loans-legend-dot" style={{ background: 'transparent' }} />
+                  <span className="loans-legend-label" style={{ fontSize: '0.8rem' }}>Avg private rate</span>
+                  <span className="loans-legend-value" style={{ fontSize: '0.85rem' }}>{summary.avgPrivateRate.toFixed(2)}%</span>
+                </div>
+              )}
             </div>
-            {/* Payment row */}
+            {/* Payment */}
             <div className="loans-summary-payment">
               <div className={paymentNowDisplayClass} style={{ marginTop: 0, alignItems: 'center' }}>
-                <span
-                  className="k"
-                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                >
+                <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   Monthly Payment
                   <button
                     type="button"
                     className="info-icon"
                     aria-label="Future payment breakdown"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAfterGraceBreakdown(true);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); setShowAfterGraceBreakdown(true); }}
                   />
                 </span>
                 <span className="v" style={{ color: paymentNowAmountColor }}>
