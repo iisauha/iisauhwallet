@@ -254,16 +254,18 @@ function computeDeferredDailyInterestCents(balanceCents: number, ratePercent: nu
   return (balanceCents * (ratePercent / 100)) / 365;
 }
 
-/** Private deferred: total interest over full range (truncated to whole cents). */
+/** Private deferred: total interest over full range. AES convention: Math.round per day × days. */
 function computeDeferredRangeInterestCents(
   balanceCents: number,
   ratePercent: number,
   startISO: string,
   endISO: string
 ): number {
-  const daily = computeDeferredDailyInterestCents(balanceCents, ratePercent);
+  if (!(balanceCents > 0)) return 0;
+  // AES nightly accumulation convention: round per day, then multiply by days
+  const dailyCents = Math.round(balanceCents * (ratePercent / 100) / 365);
   const days = daysBetween(startISO, endISO);
-  return Math.floor(daily * days);
+  return dailyCents * days;
 }
 
 /**
@@ -487,6 +489,8 @@ type LoanWithDerived = Loan & {
   latestRangeEndISO?: string;
   /** Private only: true when hidden future/grace value came from a custom monthly range (manual override). */
   futureValueFromCustom?: boolean;
+  /** Private only: true when future value is a projection (no explicit range set), not from a configured range. */
+  futureIsProjected?: boolean;
   /** Private only: mode of the active range (for display). */
   activePrivateRangeMode?: PrivatePaymentRangeMode | null;
   /** Private only: unpaid interest cents and source (ledger / estimated / fallback). */
@@ -635,21 +639,21 @@ function deriveForLoan(
         : null;
     const futureFullPayment = fullRepaymentBreakdown?.fullRepaymentCents ?? 0;
 
+    let latestRangeEndISO = '';
+    for (const r of effectiveRanges) {
+      if (r.endDate > latestRangeEndISO) latestRangeEndISO = r.endDate;
+    }
+
     const firstFuture = getFirstFutureRepaymentRange(effectiveRanges, todayISO);
     const inFullRepaymentNow = activeRange?.mode === 'full_repayment';
     let futureFullRepaymentCents: number | null = null;
     let futureFullRepaymentInterestCents: number | null = null;
     let futureFullRepaymentPrincipalCents: number | null = null;
     let futureValueFromCustom = false;
-    // 1) If active range is Custom Monthly Payment, include it in hidden future/grace (manual override).
-    if (activeRange?.mode === 'custom_monthly') {
-      const customCents = activeRange.customPaymentCents ?? 0;
-      futureFullRepaymentCents = customCents;
-      futureValueFromCustom = true;
-      if (customCents > 0) monthlyLaterCents = customCents;
-    }
-    // 2) Else use first future range: custom overrides all calculations, then full_repayment, then interest_only.
-    if (futureFullRepaymentCents == null && firstFuture != null) {
+    let futureIsProjected = false;
+
+    // 1) Check first future range: full_repayment → interest_only → custom_monthly.
+    if (firstFuture != null) {
       let futureCents = 0;
       if (firstFuture.mode === 'custom_monthly') {
         futureCents = firstFuture.customPaymentCents ?? 0;
@@ -659,14 +663,41 @@ function deriveForLoan(
         futureFullRepaymentInterestCents = fullRepaymentBreakdown.monthlyInterestCents;
         futureFullRepaymentPrincipalCents = fullRepaymentBreakdown.principalPortionCents;
       } else if (firstFuture.mode === 'interest_only') {
-        // Projection context (future range): use rate/12 consistent with amortization
         futureCents = computeProjectionMonthlyInterestCents(balanceCents, interestRatePercent);
       }
-      futureFullRepaymentCents = futureCents;
-      if (futureCents > 0) monthlyLaterCents = futureCents;
+      if (futureCents > 0) {
+        futureFullRepaymentCents = futureCents;
+        monthlyLaterCents = futureCents;
+      }
     }
+
+    // 2) If currently in full_repayment with no future range override, use the amortized payment.
     if (futureFullRepaymentCents == null && inFullRepaymentNow && futureFullPayment > 0) {
+      futureFullRepaymentCents = futureFullPayment;
       monthlyLaterCents = futureFullPayment;
+    }
+
+    // 3) Fix 3: custom_monthly active with no future range → project full repayment as after-grace estimate.
+    if (futureFullRepaymentCents == null && activeRange?.mode === 'custom_monthly' && futureFullPayment > 0) {
+      futureFullRepaymentCents = futureFullPayment;
+      futureFullRepaymentInterestCents = fullRepaymentBreakdown?.monthlyInterestCents ?? undefined;
+      futureFullRepaymentPrincipalCents = fullRepaymentBreakdown?.principalPortionCents ?? undefined;
+      futureIsProjected = true;
+      monthlyLaterCents = futureFullPayment;
+    }
+
+    // 4) Fix 1: deferred with no future range → project payment from projected balance at deferment end.
+    if (futureFullRepaymentCents == null && (activeRange?.mode === 'deferred' || !activeRange) && derivedTermMonths > 0) {
+      // Use the deferred range's end date (or latest range end) as the grace end proxy
+      const graceEndISO = activeRange?.endDate ?? latestRangeEndISO || todayISO;
+      const graceEnd = graceEndISO > todayISO ? graceEndISO : todayISO;
+      const projBal = balanceCents + computeDeferredRangeInterestCents(balanceCents, interestRatePercent, todayISO, graceEnd);
+      const projBreakdown = computeFullRepaymentBreakdown(projBal, interestRatePercent, derivedTermMonths);
+      futureFullRepaymentCents = projBreakdown.fullRepaymentCents;
+      futureFullRepaymentInterestCents = projBreakdown.monthlyInterestCents;
+      futureFullRepaymentPrincipalCents = projBreakdown.principalPortionCents;
+      futureIsProjected = true;
+      monthlyLaterCents = projBreakdown.fullRepaymentCents;
     }
 
     // Payoff estimate: futureFullPayment already uses projected balance, so reuse directly
@@ -688,11 +719,6 @@ function deriveForLoan(
           ? computeMonthsToPayoff(balanceCents, interestRatePercent, paymentNow)
           : (futureFullPayment > 0 ? computeMonthsToPayoff(balanceCents, interestRatePercent, futureFullPayment) : null);
       }
-    }
-
-    let latestRangeEndISO = '';
-    for (const r of effectiveRanges) {
-      if (r.endDate > latestRangeEndISO) latestRangeEndISO = r.endDate;
     }
 
     const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForPrivate(loan, todayISO, ledgerMap);
@@ -726,6 +752,7 @@ function deriveForLoan(
       futureFullRepaymentInterestCents: futureFullRepaymentInterestCents ?? undefined,
       futureFullRepaymentPrincipalCents: futureFullRepaymentPrincipalCents ?? undefined,
       futureValueFromCustom: futureValueFromCustom || undefined,
+      futureIsProjected: futureIsProjected || undefined,
       activePrivateRangeMode: activeRange?.mode ?? null,
       latestRangeEndISO: latestRangeEndISO || undefined,
       unpaidInterestCents: unpaidInterestCents,
@@ -1450,12 +1477,14 @@ export function LoansPage() {
       interestCents?: number;
       principalCents?: number;
       fromCustom?: boolean;
+      isProjected?: boolean;
     }[] = [];
     let privateAfterGraceCents = 0;
     loansWithDerived.forEach((l) => {
       if (l.category !== 'private') return;
       const cents = l.futureFullRepaymentCents ?? 0;
       const fromCustom = l.futureValueFromCustom ?? false;
+      const isProjected = l.futureIsProjected ?? false;
       if (cents > 0 || fromCustom) {
         privateAfterGraceCents += cents;
         privateLoansBreakdown.push({
@@ -1463,7 +1492,8 @@ export function LoansPage() {
           afterGraceCents: cents,
           interestCents: l.futureFullRepaymentInterestCents ?? undefined,
           principalCents: l.futureFullRepaymentPrincipalCents ?? undefined,
-          fromCustom
+          fromCustom,
+          isProjected
         });
       }
     });
@@ -2027,7 +2057,11 @@ export function LoansPage() {
                     <span className="k">{row.name}</span>
                     <span className="v" style={{ color: 'var(--red)' }}>{formatCents(row.afterGraceCents)}</span>
                   </div>
-                  {row.fromCustom ? (
+                  {row.isProjected ? (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8, marginTop: 2 }}>
+                      Est. full repayment (projected){row.interestCents != null ? ` · Interest: ${formatCents(row.interestCents)}` : ''}
+                    </div>
+                  ) : row.fromCustom ? (
                     <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8, marginTop: 2 }}>
                       Manual input override: {formatCents(row.afterGraceCents)}
                     </div>
