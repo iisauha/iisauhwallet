@@ -1572,6 +1572,19 @@ export function saveFederalRepaymentConfig(config: FederalRepaymentConfig) {
   try { saveEncryptedKey(FEDERAL_REPAYMENT_CONFIG_KEY, JSON.stringify(config)); } catch (_) {}
 }
 
+// Public loan manual repayment override (group-level, not per loan)
+export function loadPublicManualRepaymentCents(): number | null {
+  const raw = loadEncryptedKey('iisauhwallet_public_manual_repayment_v1');
+  if (raw == null) return null;
+  try { const n = parseInt(raw, 10); return Number.isFinite(n) && n > 0 ? n : null; } catch { return null; }
+}
+export function savePublicManualRepaymentCents(cents: number | null) {
+  try {
+    if (cents == null) { removeEncryptedKey('iisauhwallet_public_manual_repayment_v1'); return; }
+    saveEncryptedKey('iisauhwallet_public_manual_repayment_v1', String(Math.round(cents)));
+  } catch {}
+}
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function getMonthKeyFromTimestamp(ts: number): string {

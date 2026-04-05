@@ -24,6 +24,8 @@ import {
   type LoanStateOfResidency,
   uid,
   loadBirthdateISO,
+  loadPublicManualRepaymentCents,
+  savePublicManualRepaymentCents,
 } from '../../state/storage';
 import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimatedPaymentNowMap, computeMonthlyInterestCents, computeProjectionMonthlyInterestCents } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
@@ -1348,8 +1350,12 @@ export function LoansPage() {
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
   const [publicCarouselIdx, setPublicCarouselIdx] = useState(0);
   const [showAllLoans, setShowAllLoans] = useState(false);
-  const [showExtraPayCalc, setShowExtraPayCalc] = useState(false);
+  const [showPaymentScenarios, setShowPaymentScenarios] = useState(false);
+  const [scenarioTab, setScenarioTab] = useState<'after-grace' | 'extra'>('after-grace');
   const [extraPayInput, setExtraPayInput] = useState('');
+  const [showPublicLoanTools, setShowPublicLoanTools] = useState(false);
+  const [publicManualRepayment, setPublicManualRepayment] = useState<number | null>(() => loadPublicManualRepaymentCents());
+  const [publicManualInput, setPublicManualInput] = useState('');
 
   // Ledger data from Supabase nightly interest accrual
   const [ledgerMap, setLedgerMap] = useState<Record<string, LedgerRow>>({});
@@ -1553,6 +1559,14 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
+      {/* Combined daily interest + blended rate bar */}
+      {(summary.totalDailyInterestCents + summary.publicDailyInterestCents > 0 || summary.blendedRate != null) && (
+        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7, textAlign: 'center', marginBottom: 6 }}>
+          {formatCents(summary.totalDailyInterestCents + summary.publicDailyInterestCents)}/day total interest
+          {summary.blendedRate != null ? ` · ${summary.blendedRate.toFixed(2)}% blended rate` : ''}
+        </div>
+      )}
+
       {/* Loans Summary — ring: 4 segments (public principal, public interest, private principal, private interest) */}
       {(() => {
         const publicCents = summary.publicBalanceCents;
@@ -1683,31 +1697,10 @@ export function LoansPage() {
                 </>
               )}
             </div>
-            {/* Combined debt summary */}
-            <div style={{ fontSize: '0.78rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 8, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                <span>Daily Interest</span>
-                <span style={{ fontWeight: 600 }}>{formatCents(privateDailyInterestCents + publicDailyInterestCents)}/day</span>
-              </div>
-              {summary.blendedRate != null && (
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Blended Rate</span>
-                  <span style={{ fontWeight: 600 }}>{summary.blendedRate.toFixed(2)}%</span>
-                </div>
-              )}
-            </div>
             {/* Payment */}
             <div className="loans-summary-payment">
               <div className={paymentNowDisplayClass} style={{ marginTop: 0, alignItems: 'center' }}>
-                <span className="k" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  Monthly Payment
-                  <button
-                    type="button"
-                    className="info-icon"
-                    aria-label="Future payment breakdown"
-                    onClick={(e) => { e.stopPropagation(); setShowAfterGraceBreakdown(true); }}
-                  />
-                </span>
+                <span className="k">Monthly Payment</span>
                 <span className="v" style={{ color: paymentNowAmountColor }}>
                   {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} cacheKey="loan_monthly" /> : '-'}
                 </span>
@@ -1716,9 +1709,9 @@ export function LoansPage() {
                 type="button"
                 className="btn btn-secondary"
                 style={{ fontSize: '0.78rem', padding: '4px 10px', marginTop: 6, width: '100%' }}
-                onClick={() => setShowExtraPayCalc(true)}
+                onClick={() => { setScenarioTab('after-grace'); setShowPaymentScenarios(true); }}
               >
-                What if I paid extra?
+                Explore payments
               </button>
             </div>
           </div>
@@ -1848,6 +1841,38 @@ export function LoansPage() {
                 </div>
               )}
             </>
+          )}
+          {/* Public Loan Tools */}
+          {publicLoansWithDerived.length > 0 && (
+            <div className="card" style={{ marginTop: 10, padding: '10px 14px' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 8 }}>Loan Tools</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 10px' }}
+                  onClick={() => { setPublicManualInput(publicManualRepayment != null ? (publicManualRepayment / 100).toFixed(2) : ''); setShowPublicLoanTools(true); }}>
+                  I know my repayment amount
+                </button>
+                <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 10px' }}
+                  onClick={() => window.open('https://studentaid.gov/loan-simulator/', '_blank', 'noopener')}>
+                  Calculate my repayment plan →
+                </button>
+                <p style={{ fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7, margin: '2px 0 0 0' }}>
+                  The federal loan simulator shows your estimated payment under every repayment plan including IBR, SAVE, PAYE, and Standard. Once you know your amount, come back and enter it above.
+                </p>
+              </div>
+              {publicManualRepayment != null && (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>
+                    Override: {formatCents(publicManualRepayment)}/mo
+                    {(() => { const earliest = publicLoansWithDerived.reduce((min, l) => l.nextPaymentDate && (!min || l.nextPaymentDate < min) ? l.nextPaymentDate : min, '' as string); return earliest ? ` after ${earliest}` : ''; })()}
+                    <span style={{ fontSize: '0.7rem', opacity: 0.7, marginLeft: 4 }}>Manual</span>
+                  </span>
+                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '2px 8px', minHeight: 'unset' }}
+                    onClick={() => { savePublicManualRepaymentCents(null); setPublicManualRepayment(null); }}>
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </>
       ) : null}
@@ -2126,81 +2151,89 @@ export function LoansPage() {
         </div>
       </Modal>
 
-      {/* Future Estimated Payments (after-grace) info popup */}
+      {/* Public Loan Tools — manual repayment input */}
       <Modal
-        open={showAfterGraceBreakdown}
-        fullscreen
-        title="Future Estimated Payments"
-        onClose={() => setShowAfterGraceBreakdown(false)}
+        open={showPublicLoanTools}
+        title="Repayment Amount"
+        onClose={() => setShowPublicLoanTools(false)}
       >
-        <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 12 }}>
-          If all private loans moved to full repayment, total monthly would be below. Public = estimated monthly payment.
+        <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 10 }}>
+          Enter your estimated monthly payment after your grace period ends.
         </p>
-        <div className="summary-compact" style={{ gap: 8 }}>
-          {afterGraceBreakdown.privateLoansBreakdown.length > 0 ? (
-            <>
-              <div style={{ marginBottom: 4, fontSize: '0.85rem', fontWeight: 600 }}>Private Loan After Grace Breakdown</div>
-              {afterGraceBreakdown.privateLoansBreakdown.map((row) => (
-                <div key={row.name} style={{ marginBottom: 8 }}>
-                  <div className="summary-kv">
-                    <span className="k">{row.name}</span>
-                    <span className="v" style={{ color: 'var(--red)' }}>{formatCents(row.afterGraceCents)}</span>
-                  </div>
-                  {row.isProjected ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8, marginTop: 2 }}>
-                      Est. full repayment (projected){row.interestCents != null ? ` · Interest: ${formatCents(row.interestCents)}` : ''}
-                    </div>
-                  ) : row.fromCustom ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8, marginTop: 2 }}>
-                      Manual input override: {formatCents(row.afterGraceCents)}
-                    </div>
-                  ) : row.interestCents != null && row.principalCents != null ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginLeft: 8, marginTop: 2 }}>
-                      Interest: {formatCents(row.interestCents)} · Principal: {formatCents(row.principalCents)} · Full: {formatCents(row.afterGraceCents)}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-              <div className="summary-kv" style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                <span className="k">Total Private After Grace</span>
-                <span className="v" style={{ color: 'var(--red)' }}>
-                  {formatCents(afterGraceBreakdown.privateAfterGraceCents)}
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="summary-kv">
-              <span className="k">Private Loans After Grace</span>
-              <span className="v" style={{ color: 'var(--red)' }}>-</span>
-            </div>
-          )}
-          <div className="summary-kv">
-            <span className="k">Public Loans After Grace</span>
-            <span className="v" style={{ color: 'var(--red)' }}>
-              {afterGraceBreakdown.publicAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.publicAfterGraceCents) : '-'}
-            </span>
-          </div>
-          <div className="summary-kv" style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-            <span className="k">Combined After Grace</span>
-            <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
-              {afterGraceBreakdown.combinedAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.combinedAfterGraceCents) : '-'}
-            </span>
-          </div>
+        <div className="field" style={{ marginBottom: 10 }}>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={publicManualInput}
+            onChange={(e) => setPublicManualInput(e.target.value)}
+            placeholder="0.00"
+            style={{ maxWidth: 160 }}
+          />
+          <p style={{ marginTop: 4, fontSize: '0.78rem', color: 'var(--ui-primary-text, var(--text))' }}>
+            This overrides all computed estimates and will be used as your monthly payment starting on your first payment date.
+          </p>
         </div>
-        <div style={{ marginTop: 16 }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowAfterGraceBreakdown(false)}>
-            Close
-          </button>
+        <div className="btn-row">
+          <button type="button" className="btn btn-secondary" onClick={() => setShowPublicLoanTools(false)}>Cancel</button>
+          <button type="button" className="btn btn-secondary" onClick={() => {
+            const n = parseFloat(publicManualInput.replace(/,/g, '') || '0');
+            const cents = Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null;
+            savePublicManualRepaymentCents(cents);
+            setPublicManualRepayment(cents);
+            setShowPublicLoanTools(false);
+          }}>Save</button>
         </div>
       </Modal>
 
-      {/* Extra Payment Calculator */}
+      {/* Payment Scenarios — combined after-grace + extra payment calculator */}
       <Modal
-        open={showExtraPayCalc}
+        open={showPaymentScenarios}
         fullscreen
-        title="What if I paid extra?"
-        onClose={() => setShowExtraPayCalc(false)}
+        title="Explore Payments"
+        onClose={() => setShowPaymentScenarios(false)}
       >
+        {/* Tab switcher */}
+        <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderRadius: 999, padding: 2, background: 'var(--ui-card-bg, var(--surface))', border: '1px solid var(--ui-border, var(--border))' }}>
+          <button type="button" style={{ flex: 1, padding: '6px 10px', fontSize: '0.82rem', fontWeight: scenarioTab === 'after-grace' ? 600 : 400, borderRadius: 999, background: scenarioTab === 'after-grace' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent', border: `1px solid ${scenarioTab === 'after-grace' ? 'var(--accent)' : 'transparent'}`, color: 'var(--text)', cursor: 'pointer' }} onClick={() => setScenarioTab('after-grace')}>After Grace</button>
+          <button type="button" style={{ flex: 1, padding: '6px 10px', fontSize: '0.82rem', fontWeight: scenarioTab === 'extra' ? 600 : 400, borderRadius: 999, background: scenarioTab === 'extra' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent', border: `1px solid ${scenarioTab === 'extra' ? 'var(--accent)' : 'transparent'}`, color: 'var(--text)', cursor: 'pointer' }} onClick={() => setScenarioTab('extra')}>Extra Payments</button>
+        </div>
+
+        {scenarioTab === 'after-grace' && (
+          <div className="summary-compact" style={{ gap: 8 }}>
+            {afterGraceBreakdown.privateLoansBreakdown.length > 0 && (
+              <>
+                <div style={{ marginBottom: 4, fontSize: '0.85rem', fontWeight: 600 }}>Private</div>
+                {afterGraceBreakdown.privateLoansBreakdown.map((row) => (
+                  <div key={row.name} style={{ marginBottom: 6 }}>
+                    <div className="summary-kv">
+                      <span className="k">{row.name}</span>
+                      <span className="v" style={{ color: 'var(--red)' }}>{row.isProjected ? 'Est. ' : ''}{formatCents(row.afterGraceCents)}</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="summary-kv" style={{ paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                  <span className="k">Private Total</span>
+                  <span className="v" style={{ color: 'var(--red)' }}>{formatCents(afterGraceBreakdown.privateAfterGraceCents)}</span>
+                </div>
+              </>
+            )}
+            <div className="summary-kv" style={{ marginTop: 4 }}>
+              <span className="k">Public Total{publicManualRepayment != null ? ' (manual)' : ' (est.)'}</span>
+              <span className="v" style={{ color: 'var(--red)' }}>
+                {publicManualRepayment != null ? formatCents(publicManualRepayment) : (afterGraceBreakdown.publicAfterGraceCents > 0 ? formatCents(afterGraceBreakdown.publicAfterGraceCents) : '-')}
+              </span>
+            </div>
+            <div className="summary-kv" style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+              <span className="k" style={{ fontWeight: 600 }}>Combined</span>
+              <span className="v" style={{ color: 'var(--red)', fontWeight: 600 }}>
+                {formatCents(afterGraceBreakdown.privateAfterGraceCents + (publicManualRepayment ?? afterGraceBreakdown.publicAfterGraceCents))}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {scenarioTab === 'extra' && (
+          <>
         <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 12 }}>
           See how extra monthly payments reduce your payoff timeline and total interest (avalanche method — highest rate first).
         </p>
@@ -2304,8 +2337,11 @@ export function LoansPage() {
             </div>
           );
         })()}
+          </>
+        )}
+
         <div style={{ marginTop: 16 }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowExtraPayCalc(false)}>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentScenarios(false)}>
             Close
           </button>
         </div>
