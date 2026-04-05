@@ -70,9 +70,9 @@ function appendSnapshot(cents: number) {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
     const arr: NetCashSnapshot[] = raw ? JSON.parse(raw) : [];
-    // Dedupe: skip if last entry has same value within 30 seconds
+    // Only skip if recorded within the last 5 seconds (prevents double-fire on mount)
     const last = arr[arr.length - 1];
-    if (last && last.cents === cents && now - last.ts < 30_000) return;
+    if (last && now - last.ts < 5_000) return;
     arr.push({ ts: now, cents });
     // Prune older than 30 days
     const cutoff = now - 30 * 24 * 60 * 60 * 1000;
