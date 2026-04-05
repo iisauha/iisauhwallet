@@ -1359,27 +1359,25 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      {/* Loans Summary — single ring showing public vs private balance */}
+      {/* Loans Summary — AES-style ring: principal (green) vs interest (orange) */}
       {(() => {
-        const totalCents = summary.totalBalance;
         const publicCents = summary.publicBalanceCents ?? 0;
         const privateCents = summary.privateBalanceCents ?? 0;
 
-        // Interest per category
+        // Interest per category (both contribute to the ring)
         const privateInterestCents = summary.totalUnpaidInterestCents;
         const avgPublicRate = summary.avgPublicRate ?? 0;
         const publicInterestCents = avgPublicRate > 0 ? Math.round(publicCents * avgPublicRate / 100) : 0;
 
-        // Principal displayed in center: total balance + accrued interest from both categories
-        const principalCents = totalCents + publicInterestCents + privateInterestCents;
+        // Totals for the ring: principal = all raw balances, interest = accumulated from both categories
+        const principalCents = summary.totalBalance; // public + private raw balances
+        const totalInterestCents = publicInterestCents + privateInterestCents;
+        const grandTotalCents = principalCents + totalInterestCents;
 
-        // Daily interest per category
+        // Daily interest (combined)
         const privateDailyInterestCents = summary.totalDailyInterestCents;
         const publicDailyInterestCents = avgPublicRate > 0 ? Math.round(publicCents * avgPublicRate / 100 / 365) : 0;
-
-        // Ring segments include accumulated interest (balance + interest = total owed per category)
-        const publicTotal = publicCents + publicInterestCents;
-        const privateTotal = privateCents + privateInterestCents;
+        const totalDailyInterestCents = privateDailyInterestCents + publicDailyInterestCents;
 
         const size = 180;
         const cx = size / 2;
@@ -1387,11 +1385,11 @@ export function LoansPage() {
         const r = 68;
         const stroke = 14;
         const circum = 2 * Math.PI * r;
-        const ringTotal = publicTotal + privateTotal;
 
+        // Ring: green = principal, orange = interest
         const segments = [
-          { cents: publicTotal, color: 'var(--green)', key: 'pub' },
-          { cents: privateTotal, color: 'var(--blue, #4a90d9)', key: 'priv' },
+          { cents: principalCents, color: 'var(--green)', key: 'principal' },
+          { cents: totalInterestCents, color: 'var(--accent)', key: 'interest' },
         ].filter(s => s.cents > 0);
 
         const segCount = segments.length;
@@ -1401,15 +1399,20 @@ export function LoansPage() {
 
         let offset = 0;
         const arcs = segments.map(seg => {
-          const len = ringTotal > 0 ? (seg.cents / ringTotal) * usable : 0;
+          const len = grandTotalCents > 0 ? (seg.cents / grandTotalCents) * usable : 0;
           const arc = { ...seg, len, offset: -offset };
           offset += len + gap;
           return arc;
         });
 
-        // Dynamic font size
-        const formatted = formatCents(principalCents);
-        const charCount = formatted.length;
+        // Center: compact format with k suffix for large amounts
+        const centerFormatted = (() => {
+          const dollars = Math.abs(grandTotalCents) / 100;
+          const sign = grandTotalCents < 0 ? '-' : '';
+          if (dollars >= 1000) return `${sign}$${(dollars / 1000).toFixed(1)}k`;
+          return formatCents(grandTotalCents);
+        })();
+        const charCount = centerFormatted.length;
         const fontSize = charCount <= 7 ? '1.5rem' : charCount <= 9 ? '1.25rem' : charCount <= 11 ? '1.05rem' : '0.9rem';
 
         return (
@@ -1441,25 +1444,43 @@ export function LoansPage() {
                 ))}
               </svg>
               <div className="loans-donut-center">
-                <div className="loans-donut-amount" style={{ fontSize }}>{formatted}</div>
-                <div className="loans-donut-label">Principal</div>
+                <div className="loans-donut-amount" style={{ fontSize }}>{centerFormatted}</div>
+                <div className="loans-donut-label">Total Balance</div>
               </div>
             </div>
-            {/* Legend */}
+            {/* Balance breakdown — AES layout */}
             <div className="loans-summary-rows">
-              {publicTotal > 0 && (
+              {/* Principal balance */}
+              <div className="loans-legend-row">
+                <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
+                <span className="loans-legend-label">Principal Balance</span>
+                <span className="loans-legend-value"><AnimatedNumber value={principalCents} format={formatCents} cacheKey="loan_principal" /></span>
+              </div>
+              {/* Interest balance */}
+              <div className="loans-legend-row">
+                <span className="loans-legend-dot" style={{ background: 'var(--accent)' }} />
+                <span className="loans-legend-label">Interest Balance</span>
+                <span className="loans-legend-value"><AnimatedNumber value={totalInterestCents} format={formatCents} cacheKey="loan_interest" /></span>
+              </div>
+              {/* Daily rate */}
+              {totalDailyInterestCents > 0 && (
+                <div className="loans-legend-sub">{formatCents(totalDailyInterestCents)} Added / Day</div>
+              )}
+              <div className="loans-legend-divider" />
+              {/* Public breakdown */}
+              {publicCents > 0 && (
                 <>
                   <div className="loans-legend-row">
-                    <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
+                    <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
                     <span className="loans-legend-label">Public</span>
-                    <span className="loans-legend-value"><AnimatedNumber value={publicTotal} format={formatCents} cacheKey="loan_public" /></span>
+                    <span className="loans-legend-value">{formatCents(publicCents)}</span>
                   </div>
                   <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
                     {summary.avgPublicRate != null && (
                       <span>Interest rate: {summary.avgPublicRate.toFixed(2)}%</span>
                     )}
                     {publicInterestCents > 0 && (
-                      <span>Interest: {formatCents(publicInterestCents)}</span>
+                      <span>Accumulated interest: {formatCents(publicInterestCents)}</span>
                     )}
                     {publicDailyInterestCents > 0 && (
                       <span>{formatCents(publicDailyInterestCents)}/day</span>
@@ -1467,19 +1488,20 @@ export function LoansPage() {
                   </div>
                 </>
               )}
-              {privateTotal > 0 && (
+              {/* Private breakdown */}
+              {privateCents > 0 && (
                 <>
                   <div className="loans-legend-row">
-                    <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
+                    <span className="loans-legend-dot" style={{ background: 'var(--yellow, #e6a817)' }} />
                     <span className="loans-legend-label">Private</span>
-                    <span className="loans-legend-value"><AnimatedNumber value={privateTotal} format={formatCents} cacheKey="loan_private" /></span>
+                    <span className="loans-legend-value">{formatCents(privateCents)}</span>
                   </div>
                   <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
                     {summary.avgPrivateRate != null && (
                       <span>Interest rate: {summary.avgPrivateRate.toFixed(2)}%</span>
                     )}
                     {privateInterestCents > 0 && (
-                      <span>Interest: {formatCents(privateInterestCents)}</span>
+                      <span>Accumulated interest: {formatCents(privateInterestCents)}</span>
                     )}
                     {privateDailyInterestCents > 0 && (
                       <span>{formatCents(privateDailyInterestCents)}/day</span>
