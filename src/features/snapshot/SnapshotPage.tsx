@@ -448,11 +448,21 @@ export function SnapshotPage({
   }
 
   function postLoanPayment(pendingId: string, loanAdjustments: any, userEdited: boolean = false) {
-    // Capture pre-posting balances for the summary
+    // Capture pre-posting state: original balances and active range mode per loan
     const preLoans = loadLoans();
-    const preBalances: Record<string, { name: string; balanceCents: number; rate: number; termMonths: number | undefined }> = {};
+    const preLoanInfo: Record<string, { name: string; balanceCents: number; rate: number; activeMode: string }> = {};
+    const todayKey = new Date().toISOString().slice(0, 10);
     for (const l of (preLoans.loans || [])) {
-      if (l.category === 'private') preBalances[l.id] = { name: l.name, balanceCents: l.balanceCents, rate: l.interestRatePercent, termMonths: l.termMonths };
+      if (l.category !== 'private') continue;
+      // Determine active range mode
+      const ranges = l.privatePaymentRanges;
+      let activeMode = l.privatePaymentMode ?? 'custom_monthly';
+      if (ranges && ranges.length > 0) {
+        for (const r of ranges) {
+          if (todayKey >= r.startDate && todayKey <= r.endDate) { activeMode = r.mode; break; }
+        }
+      }
+      preLoanInfo[l.id] = { name: l.name, balanceCents: l.balanceCents, rate: l.interestRatePercent, activeMode };
     }
 
     const res = actions.markPendingPosted('out', pendingId, { loanAdjustments });
@@ -468,14 +478,13 @@ export function SnapshotPage({
     const paymentRows: { name: string; subtractedCents: number; newBalanceCents: number }[] = [];
     for (const l of (postLoans.loans || [])) {
       if (l.category !== 'private') continue;
-      const pre = preBalances[l.id];
+      const pre = preLoanInfo[l.id];
       if (!pre) continue;
       const sub = pre.balanceCents - l.balanceCents;
       if (sub > 0) paymentRows.push({ name: pre.name, subtractedCents: sub, newBalanceCents: l.balanceCents });
     }
 
     // Check if auto-recalculation should run
-    const todayKey = new Date().toISOString().slice(0, 10);
     const lastRecompute = loadLastRecomputeDate();
     const shouldRecalc = !userEdited && lastRecompute !== todayKey;
 
@@ -483,17 +492,27 @@ export function SnapshotPage({
     let newMonthlyPaymentCents: number | null = null;
 
     if (shouldRecalc) {
-      // Auto interest capitalization: add monthly interest to each private loan's balance
+      // Interest capitalization: compute from ORIGINAL (pre-payment) balance, gated by range mode.
+      // interest_only / full_repayment: payment covers interest, no capitalization.
+      // deferred / custom_monthly: interest accrued on original balance must be capitalized.
       const loansState = loadLoans();
       const updatedLoans = loansState.loans.map((l: Loan) => {
         if (l.category !== 'private') return l;
-        const monthlyInt = Math.floor(l.balanceCents * (l.interestRatePercent / 100) / 12);
-        return { ...l, balanceCents: l.balanceCents + monthlyInt };
+        const pre = preLoanInfo[l.id];
+        if (!pre) return l;
+        const mode = pre.activeMode;
+        if (mode === 'interest_only' || mode === 'full_repayment') {
+          // Payment covers interest — no capitalization
+          return l;
+        }
+        // deferred or custom_monthly: capitalize interest computed from pre-payment balance
+        const capitalizedCents = Math.floor(pre.balanceCents * (pre.rate / 100) / 12);
+        return { ...l, balanceCents: l.balanceCents + capitalizedCents };
       });
       saveLoans({ ...loansState, loans: updatedLoans });
       saveLastRecomputeDate(todayKey);
 
-      // Build interest rows
+      // Build interest rows (only for loans where capitalization ran)
       interestRows = [];
       for (const l of updatedLoans) {
         if (l.category !== 'private') continue;
