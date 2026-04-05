@@ -935,7 +935,6 @@ function LoanCard(props: {
           {l.activePrivateRangeMode === 'deferred' && l.deferredDailyInterestCents != null && l.deferredDaysInRange != null && l.deferredInterestTotalCents != null && l.deferredProjectedBalanceCents != null ? (
             <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
               <div style={{ marginBottom: 2 }}>Deferred / Forbearance</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 2 }}>Daily interest: {formatCents(Math.floor(l.deferredDailyInterestCents))}</div>
               <div style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 2 }}>Days across deferred range: {l.deferredDaysInRange} days</div>
               <div style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 2 }}>Interest accrued across deferment: {formatCents(l.deferredInterestTotalCents)}</div>
               <div style={{ color: 'var(--ui-primary-text, var(--text))' }}>Balance after deferment ends: {formatCents(l.deferredProjectedBalanceCents)}</div>
@@ -945,11 +944,16 @@ function LoanCard(props: {
               Monthly interest: {formatCents(l.monthlyInterestCents)}
             </div>
           )}
-          {l.unpaidInterestCents != null && l.unpaidInterestCents > 0 ? (
-            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-              Accumulated interest: {formatCents(l.unpaidInterestCents)}
+          {l.dailyInterestCents > 0 && (
+            <div style={{ fontSize: '0.85rem', marginBottom: 4, color: 'var(--ui-primary-text, var(--text))' }}>
+              {formatCents(l.dailyInterestCents)} / day
             </div>
-          ) : null}
+          )}
+          {(l.unpaidInterestCents ?? 0) > 0 && (
+            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
+              Unpaid accumulated interest: {formatCents(l.unpaidInterestCents!)}
+            </div>
+          )}
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
             {l.payoffMonths != null && l.payoffMonths > 0 ? (
               <>Estimated payoff: {addMonths(new Date(), l.payoffMonths).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>
