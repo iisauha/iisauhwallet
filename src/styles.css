@@ -2537,14 +2537,14 @@ textarea:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   NET CASH CHART — Robinhood-style interactive line chart
+   NET CASH CHART — interactive stepwise line chart
    ═══════════════════════════════════════════════════════════════════ */
 .net-cash-chart-wrap {
   margin-bottom: 16px;
 }
 .net-cash-chart-header {
   text-align: center;
-  padding: 4px 0 8px;
+  padding: 4px 0 0;
 }
 .net-cash-chart-label {
   font-size: 0.72rem;
@@ -2560,11 +2560,20 @@ textarea:focus-visible {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1.1;
+  color: var(--ui-primary-text, var(--text));
+}
+/* Fixed-height row so layout doesn't shift when change text appears/disappears */
+.net-cash-chart-change-row {
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0 2px;
 }
 .net-cash-chart-change {
   font-size: 0.82rem;
   font-weight: 600;
-  margin-top: 4px;
   font-variant-numeric: tabular-nums;
 }
 .net-cash-chart-time {
@@ -2577,6 +2586,48 @@ textarea:focus-visible {
   color: var(--muted);
   margin-top: 2px;
 }
+
+/* Body — holds chart and summary layers at same size */
+.net-cash-chart-body {
+  position: relative;
+  min-height: 210px;
+  overflow: hidden;
+}
+
+/* Summary / chart toggle layers */
+.net-cash-chart-graph-layer {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.net-cash-chart-graph-layer.hidden {
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+.net-cash-chart-summary-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+.net-cash-chart-summary-layer.visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  position: relative;
+}
+.net-cash-chart-summary-layer > .summary-compact {
+  width: 100%;
+}
+
+/* Liquid glass chart area */
 .net-cash-chart-area {
   position: relative;
   touch-action: none;
@@ -2596,16 +2647,37 @@ textarea:focus-visible {
 .net-cash-chart-area svg {
   overflow: visible;
 }
+
+/* Line draw-in animation on range switch */
+.net-cash-line-anim {
+  animation: lineDrawIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes lineDrawIn {
+  from { opacity: 0; transform: scaleX(0.3); transform-origin: left center; }
+  to   { opacity: 1; transform: scaleX(1); transform-origin: left center; }
+}
+
+/* Pulsing dot */
+.net-cash-dot-pulse {
+  animation: dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 .net-cash-chart-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 120px;
+  height: 180px;
   color: var(--muted);
   font-size: 0.85rem;
   border: 1px dashed color-mix(in srgb, var(--ui-border, var(--border)) 40%, transparent);
   border-radius: var(--radius-card);
 }
+
+/* Range selector */
 .net-cash-chart-ranges {
   display: flex;
   justify-content: center;
@@ -2619,7 +2691,7 @@ textarea:focus-visible {
   font-size: 0.78rem;
   font-weight: 600;
   font-family: var(--app-font-family);
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
@@ -2632,6 +2704,34 @@ textarea:focus-visible {
 .net-cash-chart-range:active {
   transform: scale(0.95);
 }
+.net-cash-settings-btn {
+  font-size: 0.9rem;
+  padding: 6px 10px;
+}
+
+/* Settings panel */
+.net-cash-settings-panel {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-card, 12px);
+  background: color-mix(in srgb, var(--surface, #1a1a1a) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-border, var(--border)) 25%, transparent);
+  animation: cardSlideUp 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.net-cash-settings-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.net-cash-settings-options {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .net-cash-chart-range:hover:not(.active) {
     background: var(--surface-hover);

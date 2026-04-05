@@ -385,7 +385,6 @@ export function SnapshotPage({
     return () => window.removeEventListener('data-changed', handler);
   }, [data]);
 
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   const visibleBanks = useMemo(() => {
     return showZeroCashItems
@@ -492,15 +491,10 @@ export function SnapshotPage({
       {/* Recent Activity */}
       <RecentActivityWidget />
 
-      {/* Net Cash Chart — Robinhood-style interactive line */}
+      {/* Net Cash Chart — with inline summary toggle */}
       <NetCashChart
         currentCents={displayedFinalNetCashCents}
-        onExpandSummary={() => setSummaryExpanded(prev => !prev)}
-      />
-
-      {/* Expandable Summary Breakdown */}
-      {summaryExpanded && (
-        <div className="card" style={{ marginBottom: 16 }}>
+        summaryContent={
           <div className="summary-compact">
             <div className="summary-kv">
               <span className="k">Current Bank Balance</span>
@@ -544,8 +538,8 @@ export function SnapshotPage({
               </>
             ) : null}
           </div>
-        </div>
-      )}
+        }
+      />
 
       {/* Summary Stat Tiles */}
       <div className="stat-tiles-row">
