@@ -1,11 +1,20 @@
 /**
  * Nightly interest accrual Edge Function.
  *
- * Runs once per day (midnight UTC via pg_cron). For every active private loan:
- *   1. Reads the current balance from private_loans
- *   2. Computes daily_interest_cents = Math.floor(balance × rate / 100 / 365)
- *   3. Writes a new loan_interest_ledger row
- *   4. Updates private_loans.balance_cents += daily_interest_cents
+ * Runs once per day (midnight UTC via pg_cron). Processes all active loans:
+ *
+ * Private loans:
+ *   dailyInterest = Math.round(balance × rate / 100 / 365)
+ *   balance += dailyInterest
+ *   currentInterestBalance += dailyInterest
+ *
+ * Public unsubsidized loans:
+ *   Per-disbursement: dailyInterest = sum(Math.round(d.amountCents × rate / 100 / 365))
+ *   balance unchanged (principal stays fixed until capitalization at repayment start)
+ *   currentInterestBalance += dailyInterest
+ *
+ * Public subsidized loans:
+ *   Skipped entirely while in school (government covers interest)
  *
  * Uses the service role key so it bypasses RLS and can process all users.
  */
@@ -16,19 +25,18 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req: Request) => {
-  // Only allow POST (from pg_cron) or manual invocation with service role
   const authHeader = req.headers.get('Authorization') ?? '';
   if (!authHeader.includes(SERVICE_ROLE_KEY)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10);
 
-  // 1. Fetch all active private loans across all users
+  // 1. Fetch all active loans across all users
   const { data: loans, error: fetchErr } = await supabase
-    .from('private_loans')
-    .select('id, user_id, balance_cents, interest_rate_percent, current_interest_balance_cents')
+    .from('loans')
+    .select('id, user_id, balance_cents, interest_rate_percent, current_interest_balance_cents, category, subsidy_type, disbursements')
     .eq('is_active', true)
     .gt('balance_cents', 0);
 
@@ -48,50 +56,68 @@ Deno.serve(async (req: Request) => {
     daily_interest_cents: number;
     closing_balance_cents: number;
   }> = [];
-  const balanceUpdates: Array<{ user_id: string; id: string; new_balance: number; new_interest: number }> = [];
+  const updates: Array<{ user_id: string; id: string; new_balance: number; new_interest: number }> = [];
 
   for (const loan of loans) {
-    const openingBalance = loan.balance_cents;
+    const balance = loan.balance_cents;
     const rate = Number(loan.interest_rate_percent);
     const currentInterest = loan.current_interest_balance_cents ?? 0;
+    const category = loan.category ?? 'private';
+    const subsidyType = loan.subsidy_type;
 
-    // AES nightly accumulation convention: Math.round per day
-    const dailyInterest = Math.round(openingBalance * (rate / 100) / 365);
-    const closingBalance = openingBalance + dailyInterest;
-    // Update the interest balance anchor so tomorrow's client calculation starts from correct base
+    // Public subsidized: skip (government covers interest while in school)
+    if (category === 'public' && subsidyType === 'subsidized') continue;
+
+    let dailyInterest: number;
+
+    if (category === 'public' && subsidyType === 'unsubsidized') {
+      // Public unsubsidized: per-disbursement accrual
+      const disbursements: Array<{ date: string; amountCents: number }> =
+        typeof loan.disbursements === 'string' ? JSON.parse(loan.disbursements) : (loan.disbursements ?? []);
+      dailyInterest = 0;
+      for (const d of disbursements) {
+        dailyInterest += Math.round(d.amountCents * (rate / 100) / 365);
+      }
+    } else {
+      // Private: whole-balance accrual (AES nightly convention: Math.round)
+      dailyInterest = Math.round(balance * (rate / 100) / 365);
+    }
+
+    if (dailyInterest <= 0) continue;
+
+    // For private: interest adds to balance (interest capitalizes daily)
+    // For public unsub: interest adds to outstanding interest only (principal stays fixed)
+    const newBalance = category === 'private' ? balance + dailyInterest : balance;
     const newInterest = currentInterest + dailyInterest;
 
     ledgerRows.push({
       loan_id: loan.id,
       user_id: loan.user_id,
       date: today,
-      opening_balance_cents: openingBalance,
+      opening_balance_cents: balance,
       daily_interest_cents: dailyInterest,
-      closing_balance_cents: closingBalance,
+      closing_balance_cents: newBalance,
     });
 
-    balanceUpdates.push({
-      user_id: loan.user_id,
-      id: loan.id,
-      new_balance: closingBalance,
-      new_interest: newInterest,
-    });
+    updates.push({ user_id: loan.user_id, id: loan.id, new_balance: newBalance, new_interest: newInterest });
   }
 
   // 3. Batch-insert ledger rows (skip duplicates if re-run on same day)
-  const { error: ledgerErr } = await supabase
-    .from('loan_interest_ledger')
-    .upsert(ledgerRows, { onConflict: 'user_id,loan_id,date' });
+  if (ledgerRows.length > 0) {
+    const { error: ledgerErr } = await supabase
+      .from('loan_interest_ledger')
+      .upsert(ledgerRows, { onConflict: 'user_id,loan_id,date' });
 
-  if (ledgerErr) {
-    return new Response(JSON.stringify({ error: `Ledger insert: ${ledgerErr.message}` }), { status: 500 });
+    if (ledgerErr) {
+      return new Response(JSON.stringify({ error: `Ledger insert: ${ledgerErr.message}` }), { status: 500 });
+    }
   }
 
-  // 4. Update each loan's balance
+  // 4. Update each loan
   let updateErrors = 0;
-  for (const upd of balanceUpdates) {
+  for (const upd of updates) {
     const { error } = await supabase
-      .from('private_loans')
+      .from('loans')
       .update({
         balance_cents: upd.new_balance,
         current_interest_balance_cents: upd.new_interest,
@@ -103,11 +129,7 @@ Deno.serve(async (req: Request) => {
   }
 
   return new Response(
-    JSON.stringify({
-      processed: ledgerRows.length,
-      update_errors: updateErrors,
-      date: today,
-    }),
+    JSON.stringify({ processed: ledgerRows.length, update_errors: updateErrors, date: today }),
     { headers: { 'Content-Type': 'application/json' } }
   );
 });

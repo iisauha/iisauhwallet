@@ -1160,6 +1160,8 @@ export type Loan = {
   subsidyType?: LoanSubsidyType;
   /** Public loans: first disbursement date (for eligibility and unsubsidized interest). YYYY-MM-DD */
   disbursementDate?: string;
+  /** Public loans: per-disbursement amounts and dates for interest accrual tracking. */
+  disbursements?: Array<{ date: string; amountCents: number }>;
   /** Optional payment schedule ranges (start/end date + payment + optional rate). */
   paymentScheduleRanges?: PaymentScheduleRange[];
   nextPaymentCents?: number;

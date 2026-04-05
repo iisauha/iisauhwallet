@@ -21,36 +21,39 @@ async function getAuthUserId(): Promise<string | null> {
  * Called after every loan save so the nightly job has current data.
  * Only syncs the fields the accrual job needs — no sensitive notes/names leak beyond RLS.
  */
-export async function syncPrivateLoansToSupabase(loans: Loan[]): Promise<void> {
+/** Sync all loans (private + public) to Supabase for nightly interest accrual. */
+export async function syncLoansToSupabase(loans: Loan[]): Promise<void> {
   const userId = await getAuthUserId();
   if (!userId) return;
 
-  const privateLoans = loans.filter((l) => l.category === 'private');
+  const allLoans = loans.filter((l) => l.active !== false);
 
-  // Upsert active loans
-  if (privateLoans.length > 0) {
-    const rows = privateLoans.map((l) => ({
+  if (allLoans.length > 0) {
+    const rows = allLoans.map((l) => ({
       id: l.id,
       user_id: userId,
       name: l.name,
       balance_cents: l.balanceCents,
       interest_rate_percent: l.interestRatePercent,
-      is_active: l.active !== false,
+      is_active: true,
       current_interest_balance_cents: l.currentInterestBalanceCents ?? 0,
+      category: l.category,
+      subsidy_type: l.subsidyType ?? null,
+      disbursements: l.disbursements ? JSON.stringify(l.disbursements) : null,
       updated_at: new Date().toISOString(),
     }));
 
     const { error } = await supabase
-      .from('private_loans')
+      .from('loans')
       .upsert(rows, { onConflict: 'user_id,id' });
 
     if (error) console.error('[loanSync] upsert error:', error.message);
   }
 
   // Remove loans that no longer exist locally
-  const localIds = new Set(privateLoans.map((l) => l.id));
+  const localIds = new Set(allLoans.map((l) => l.id));
   const { data: remote } = await supabase
-    .from('private_loans')
+    .from('loans')
     .select('id')
     .eq('user_id', userId);
 
@@ -58,13 +61,16 @@ export async function syncPrivateLoansToSupabase(loans: Loan[]): Promise<void> {
     const toDelete = remote.filter((r) => !localIds.has(r.id)).map((r) => r.id);
     if (toDelete.length > 0) {
       await supabase
-        .from('private_loans')
+        .from('loans')
         .delete()
         .eq('user_id', userId)
         .in('id', toDelete);
     }
   }
 }
+
+/** @deprecated Use syncLoansToSupabase instead */
+export const syncPrivateLoansToSupabase = syncLoansToSupabase;
 
 // ─── Pull: read ledger data ──────────────────────────────────────
 
