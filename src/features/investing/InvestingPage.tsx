@@ -1810,7 +1810,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
       <div
         className="card"
         style={{
-          marginTop: 16,
+          marginTop: 4,
           background: 'var(--ui-surface-secondary, var(--surface))',
           borderColor: 'var(--ui-border, var(--border))',
         }}

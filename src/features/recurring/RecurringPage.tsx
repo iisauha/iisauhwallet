@@ -543,16 +543,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
             </div>
             {type === 'income' ? (
               <>
-                <div className="toggle-row">
-                  <input
-                    type="checkbox"
-                    id="recFullTimeJob"
-                    checked={isFullTimeJob}
-                    onChange={(e) => setIsFullTimeJob(e.target.checked)}
-                  />
-                  <label htmlFor="recFullTimeJob">Full-time job (has pre-tax deductions)<HelpTip text="Amounts deducted from your paycheck before taxes (e.g. 401k, health insurance). These reduce your take-home pay but are not tracked as spending." /></label>
-                </div>
-                {isFullTimeJob ? (
                   <div className="card" style={{ marginTop: 8 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                       <button
@@ -803,7 +793,6 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                       </div>
                     ))}
                   </div>
-                ) : null}
               </>
             ) : (
               <>
@@ -1219,7 +1208,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     notes: notes || undefined,
                     isSplit: type !== 'income' && isSplit ? true : undefined,
                     myPortionCents: type !== 'income' && isSplit ? parseCents(myPortion) : undefined,
-                    isFullTimeJob: type === 'income' && isFullTimeJob ? true : undefined,
+                    isFullTimeJob: undefined,
                     preTaxDeductions: type === 'income' && preTax.length ? (preTax as any) : undefined,
                     investingTransferEnabled:
                       type !== 'income' && investingTransferEnabled && getCategoryName(cfg, category) === 'Investing'
