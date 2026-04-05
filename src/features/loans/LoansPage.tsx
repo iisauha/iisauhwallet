@@ -588,13 +588,21 @@ function deriveForLoan(
           : null;
     }
 
-    if (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only') {
+    // Gate monthly payment on nextPaymentDate per loan.
+    // Before this date: monthlyNowCents = 0 (not in repayment yet).
+    // Interest still accrues and displays for unsubsidized.
+    const todayForPayment = toDateKey(new Date());
+    const inRepayment = loan.nextPaymentDate ? todayForPayment >= loan.nextPaymentDate : false;
+
+    if (!inRepayment) {
+      // Not yet in repayment: $0 current, compute projected future payment
       monthlyNowCents = 0;
-      monthlyLaterCents = eligibleForIdr ? approximateShareCents ?? null : null;
-      payoffMonths =
-        totalPayment != null && totalPayment > 0
-          ? computeMonthsToPayoff(balanceCents, interestRatePercent, approximateShareCents ?? fullPaymentCents)
-          : computeMonthsToPayoff(balanceCents, interestRatePercent, fullPaymentCents);
+      // Projected amortized payment at repayment start
+      const projTerm = loan.termMonths ?? 120;
+      monthlyLaterCents = computeAmortizedPaymentCents(balanceCents, interestRatePercent, projTerm) ?? 0;
+      payoffMonths = monthlyLaterCents > 0
+        ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyLaterCents)
+        : null;
     } else if (repaymentStatus === 'full_repayment') {
       monthlyNowCents = fullPaymentCents;
       monthlyLaterCents = null;
@@ -960,7 +968,7 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
   const repaymentStatus = isPublic ? (prev?.repaymentStatus ?? 'full_repayment') : 'full_repayment';
   const gracePeriodEndDate = isPublic ? prev?.gracePeriodEndDate : undefined;
   const futureRepaymentPlan = isPublic ? (prev?.futureRepaymentPlan ?? 'na') : undefined;
-  const nextPaymentDate = isPublic ? (prev?.nextPaymentDate ?? undefined) : undefined;
+  const nextPaymentDate = isPublic ? (e.nextPaymentDate?.trim() || undefined) : undefined;
 
   const subsidyType = e.category === 'public' ? e.subsidyType : undefined;
   const disbursementDate = e.category === 'public' && e.disbursementDate ? e.disbursementDate : undefined;
@@ -2222,6 +2230,26 @@ function LoanEditorForm(props: {
               </button>
             </div>
           )}
+          <div className="field">
+            <label>First payment date</label>
+            <input
+              type="date"
+              value={state.nextPaymentDate}
+              onChange={(e) => onChange({ ...state, nextPaymentDate: e.target.value })}
+              style={{
+                padding: '6px 8px',
+                borderRadius: 4,
+                border: '1px solid var(--border)',
+                background: 'var(--ui-card-bg, var(--surface))',
+                color: 'var(--ui-primary-text, var(--text))',
+                fontSize: '0.9rem',
+                width: '100%'
+              }}
+            />
+            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+              The date your loan enters repayment. Interest may still accrue before this date.
+            </p>
+          </div>
           <div className="field">
             <label>Borrower type</label>
             <Select
