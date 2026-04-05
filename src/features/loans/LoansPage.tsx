@@ -1333,13 +1333,23 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      {/* Loans Summary — single ring showing composition of total balance */}
+      {/* Loans Summary — single ring showing public vs private balance */}
       {(() => {
         const totalCents = summary.totalBalance;
-        const interestCents = summary.totalUnpaidInterestCents;
-        const principalCents = totalCents - interestCents;
         const publicCents = summary.publicBalanceCents ?? 0;
         const privateCents = summary.privateBalanceCents ?? 0;
+
+        // Interest per category
+        const privateInterestCents = summary.totalUnpaidInterestCents;
+        const avgPublicRate = summary.avgPublicRate ?? 0;
+        const publicInterestCents = avgPublicRate > 0 ? Math.round(publicCents * avgPublicRate / 100) : 0;
+
+        // Principal displayed in center: total balance + accrued interest from both categories
+        const principalCents = totalCents + publicInterestCents + privateInterestCents;
+
+        // Daily interest per category
+        const privateDailyInterestCents = summary.totalDailyInterestCents;
+        const publicDailyInterestCents = avgPublicRate > 0 ? Math.round(publicCents * avgPublicRate / 100 / 365) : 0;
 
         const size = 180;
         const cx = size / 2;
@@ -1347,12 +1357,12 @@ export function LoansPage() {
         const r = 68;
         const stroke = 14;
         const circum = 2 * Math.PI * r;
+        const ringTotal = publicCents + privateCents;
 
-        // Build segments proportional to total balance
+        // Build segments: public and private balances only
         const segments = [
           { cents: publicCents, color: 'var(--green)', key: 'pub' },
           { cents: privateCents, color: 'var(--blue, #4a90d9)', key: 'priv' },
-          { cents: interestCents, color: 'var(--accent)', key: 'int' },
         ].filter(s => s.cents > 0);
 
         const segCount = segments.length;
@@ -1362,14 +1372,14 @@ export function LoansPage() {
 
         let offset = 0;
         const arcs = segments.map(seg => {
-          const len = totalCents > 0 ? (seg.cents / totalCents) * usable : 0;
+          const len = ringTotal > 0 ? (seg.cents / ringTotal) * usable : 0;
           const arc = { ...seg, len, offset: -offset };
           offset += len + gap;
           return arc;
         });
 
         // Dynamic font size
-        const formatted = formatCents(totalCents);
+        const formatted = formatCents(principalCents);
         const charCount = formatted.length;
         const fontSize = charCount <= 7 ? '1.5rem' : charCount <= 9 ? '1.25rem' : charCount <= 11 ? '1.05rem' : '0.9rem';
 
@@ -1403,39 +1413,36 @@ export function LoansPage() {
               </svg>
               <div className="loans-donut-center">
                 <div className="loans-donut-amount" style={{ fontSize }}>{formatted}</div>
-                <div className="loans-donut-label">Est. Total</div>
+                <div className="loans-donut-label">Principal</div>
               </div>
             </div>
             {/* Legend */}
             <div className="loans-summary-rows">
-              <div className="loans-legend-row">
-                <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
-                <span className="loans-legend-label">Principal</span>
-                <span className="loans-legend-value"><AnimatedNumber value={principalCents} format={formatCents} cacheKey="loan_principal" /></span>
-              </div>
-              <div className="loans-legend-row">
-                <span className="loans-legend-dot" style={{ background: 'var(--accent)' }} />
-                <span className="loans-legend-label">Interest</span>
-                <span className="loans-legend-value"><AnimatedNumber value={interestCents} format={formatCents} cacheKey="loan_interest" /></span>
-              </div>
-              {summary.totalDailyInterestCents > 0 && (
-                <div className="loans-legend-sub">{formatCents(summary.totalDailyInterestCents)} Added / Day</div>
-              )}
-              <div className="loans-legend-divider" />
               {publicCents > 0 && (
-                <div className="loans-legend-row">
-                  <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
-                  <span className="loans-legend-label">Public</span>
-                  <span className="loans-legend-value">{formatCents(publicCents)}</span>
-                </div>
+                <>
+                  <div className="loans-legend-row">
+                    <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
+                    <span className="loans-legend-label">Public</span>
+                    <span className="loans-legend-value"><AnimatedNumber value={publicCents} format={formatCents} cacheKey="loan_public" /></span>
+                  </div>
+                  {publicInterestCents > 0 && (
+                    <div className="loans-legend-sub">Interest: {formatCents(publicInterestCents)}{publicDailyInterestCents > 0 ? ` · ${formatCents(publicDailyInterestCents)}/day` : ''}</div>
+                  )}
+                </>
               )}
               {privateCents > 0 && (
-                <div className="loans-legend-row">
-                  <span className="loans-legend-dot" style={{ background: 'var(--yellow, #e6a817)' }} />
-                  <span className="loans-legend-label">Private</span>
-                  <span className="loans-legend-value">{formatCents(privateCents)}</span>
-                </div>
+                <>
+                  <div className="loans-legend-row">
+                    <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
+                    <span className="loans-legend-label">Private</span>
+                    <span className="loans-legend-value"><AnimatedNumber value={privateCents} format={formatCents} cacheKey="loan_private" /></span>
+                  </div>
+                  {privateInterestCents > 0 && (
+                    <div className="loans-legend-sub">Interest: {formatCents(privateInterestCents)}{privateDailyInterestCents > 0 ? ` · ${formatCents(privateDailyInterestCents)}/day` : ''}</div>
+                  )}
+                </>
               )}
+              <div className="loans-legend-divider" />
               {summary.avgPublicRate != null && (
                 <div className="loans-legend-row" style={{ opacity: 0.7 }}>
                   <span className="loans-legend-dot" style={{ background: 'transparent' }} />

@@ -216,15 +216,17 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef(Date.now());
   useEffect(() => {
-    const minutes = loadAutoLockMinutes();
-    if (!storedHash || minutes === 0 || loadPasscodePaused()) return;
-    const ms = minutes * 60 * 1000;
+    const initialMinutes = loadAutoLockMinutes();
+    if (!storedHash || initialMinutes === 0 || loadPasscodePaused()) return;
 
     function clearTimer() {
       if (inactivityTimerRef.current) { clearTimeout(inactivityTimerRef.current); inactivityTimerRef.current = null; }
     }
 
     function doLock() {
+      // Re-check current setting in case user changed it (e.g. to "Never")
+      const currentMinutes = loadAutoLockMinutes();
+      if (currentMinutes === 0 || loadPasscodePaused()) { clearTimer(); return; }
       clearTimer();
       stopSync();
       lockCrypto();
@@ -234,6 +236,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
     function startTimer() {
       clearTimer();
+      // Re-read current setting each time the timer restarts
+      const currentMinutes = loadAutoLockMinutes();
+      if (currentMinutes === 0 || loadPasscodePaused()) return;
+      const ms = currentMinutes * 60 * 1000;
       const elapsed = Date.now() - lastActivityRef.current;
       const remaining = Math.max(0, ms - elapsed);
       inactivityTimerRef.current = setTimeout(doLock, remaining);
@@ -250,7 +256,10 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
         // App going to background — pause the timer entirely
         clearTimer();
       } else {
-        // App coming back — check if lock period elapsed while hidden
+        // App coming back — re-read current setting and check if lock period elapsed
+        const currentMinutes = loadAutoLockMinutes();
+        if (currentMinutes === 0 || loadPasscodePaused()) { clearTimer(); return; }
+        const ms = currentMinutes * 60 * 1000;
         const elapsed = Date.now() - lastActivityRef.current;
         if (elapsed >= ms) {
           doLock();

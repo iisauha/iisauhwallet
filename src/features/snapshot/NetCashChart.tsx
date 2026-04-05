@@ -64,15 +64,17 @@ function buildTrailingPath(lastPt: { x: number; y: number }, endX: number): stri
   return `M ${lastPt.x} ${lastPt.y} L ${endX} ${lastPt.y}`;
 }
 
-/** Save a single snapshot directly to localStorage */
-function appendSnapshot(cents: number) {
+/** Save a single snapshot directly to localStorage. Pass force=true to bypass dedup (used by interval ticks). */
+function appendSnapshot(cents: number, force = false) {
   const now = Date.now();
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
     const arr: NetCashSnapshot[] = raw ? JSON.parse(raw) : [];
-    // Dedupe: skip if last entry has same value within 30 seconds
-    const last = arr[arr.length - 1];
-    if (last && last.cents === cents && now - last.ts < 30_000) return;
+    // Dedupe: skip if last entry has same value within 30 seconds (unless forced)
+    if (!force) {
+      const last = arr[arr.length - 1];
+      if (last && last.cents === cents && now - last.ts < 30_000) return;
+    }
     arr.push({ ts: now, cents });
     // Prune older than 30 days
     const cutoff = now - 30 * 24 * 60 * 60 * 1000;
@@ -112,10 +114,10 @@ export function NetCashChart({
     appendSnapshot(currentCentsRef.current);
   }, []);
 
-  // Record at interval
+  // Record at interval — force=true so every tick creates a scrub point even if value unchanged
   useEffect(() => {
     const id = setInterval(() => {
-      appendSnapshot(currentCentsRef.current);
+      appendSnapshot(currentCentsRef.current, true);
       setTick(t => t + 1);
     }, updateInterval);
     return () => clearInterval(id);
