@@ -1615,9 +1615,9 @@ export function LoansPage() {
         // Ring: 4 segments — public principal, public interest, private principal, private interest
         const segments = [
           { cents: publicCents, color: 'var(--green)', key: 'pub' },
-          { cents: publicInterestCents, color: 'color-mix(in srgb, var(--green) 45%, transparent)', key: 'pub-interest' },
+          { cents: publicInterestCents, color: 'color-mix(in srgb, var(--green) 40%, transparent)', key: 'pub-interest' },
           { cents: privateCents, color: 'var(--blue, #4a90d9)', key: 'priv-principal' },
-          { cents: privateInterestCents, color: 'var(--accent)', key: 'priv-interest' },
+          { cents: privateInterestCents, color: 'color-mix(in srgb, var(--blue, #4a90d9) 40%, transparent)', key: 'priv-interest' },
         ].filter(s => s.cents > 0);
 
         const segCount = segments.length;
@@ -1720,7 +1720,7 @@ export function LoansPage() {
                   {(privateInterestCents > 0 || privateDailyInterestCents > 0) && (
                     <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
                       {privateInterestCents > 0 && (
-                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', marginRight: 6, verticalAlign: 'middle' }} />Unpaid Accumulated Interest: {formatCents(privateInterestCents)}</span>
+                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'color-mix(in srgb, var(--blue, #4a90d9) 40%, transparent)', marginRight: 6, verticalAlign: 'middle' }} />Unpaid Interest: {formatCents(privateInterestCents)}</span>
                       )}
                       {privateDailyInterestCents > 0 && (
                         <span>{formatCents(privateDailyInterestCents)} Added / Day</span>
@@ -1740,8 +1740,7 @@ export function LoansPage() {
               </div>
               <button
                 type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.78rem', padding: '4px 10px', marginTop: 6, width: '100%' }}
+                style={{ fontSize: '0.68rem', padding: '2px 0', marginTop: 2, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                 onClick={() => { setScenarioTab('after-grace'); setShowPaymentScenarios(true); }}
               >
                 Explore payments

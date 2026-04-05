@@ -99,26 +99,19 @@ export function NetCashChart({
   const [scrubData, setScrubData] = useState<{ cents: number; ts: number; px: number; py: number } | null>(null);
   const [width, setWidth] = useState(340);
   const [showSummary, setShowSummary] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [updateInterval, setUpdateInterval] = useState(loadUpdateInterval);
   const [lineAnimating, setLineAnimating] = useState(false);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Record current value on mount and at each update interval
+  // Record current value every time the user visits the snapshot tab (mount).
+  // Each visit = one scrub point on the chart.
   const [tick, setTick] = useState(0);
   const currentCentsRef = useRef(currentCents);
   currentCentsRef.current = currentCents;
 
-  // Record at interval ONLY — no mount snapshot, since mount fires on every tab visit
-  // and creates non-interval-aligned points. The clear handler records the initial point.
-  // The dynamic "now" trailing point in dataPoints shows the current value between ticks.
   useEffect(() => {
-    const id = setInterval(() => {
-      appendSnapshot(currentCentsRef.current, true);
-      setTick(t => t + 1);
-    }, updateInterval);
-    return () => clearInterval(id);
-  }, [updateInterval]);
+    appendSnapshot(currentCentsRef.current, true);
+    setTick(t => t + 1);
+  }, []);
 
   // Clear + reload
   const [clearCount, setClearCount] = useState(0);
@@ -411,36 +404,7 @@ export function NetCashChart({
             onClick={() => handleRangeChange(r)}
           >{r}</button>
         ))}
-        <button
-          type="button"
-          className={`net-cash-chart-range net-cash-settings-btn${showSettings ? ' active' : ''}`}
-          onClick={() => setShowSettings(prev => !prev)}
-          aria-label="Chart settings"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
       </div>
-
-      {showSettings && (
-        <div className="net-cash-settings-panel">
-          <div className="net-cash-settings-label">Update interval</div>
-          <div className="net-cash-settings-options">
-            {UPDATE_INTERVALS.map(opt => (
-              <button
-                key={opt.ms} type="button"
-                className={`net-cash-chart-range${updateInterval === opt.ms ? ' active' : ''}`}
-                onClick={() => { setUpdateInterval(opt.ms); saveUpdateInterval(opt.ms); }}
-              >{opt.label}</button>
-            ))}
-          </div>
-          <button type="button" className="net-cash-clear-btn" onClick={handleClear}>
-            Clear chart data
-          </button>
-        </div>
-      )}
     </div>
   );
 }

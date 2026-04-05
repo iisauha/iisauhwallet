@@ -828,6 +828,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     />
                   </div>
                 ) : null}
+                {type !== 'income' && (
                 <div className="field">
                   <label>Category</label>
                   <Select value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -838,7 +839,8 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                     ))}
                   </Select>
                 </div>
-                {subs.length ? (
+                )}
+                {type !== 'income' && subs.length ? (
                   <div className="field">
                     <label>Subcategory</label>
                     <Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)}>
