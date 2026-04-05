@@ -456,7 +456,7 @@ export function SnapshotPage({
       if (l.category !== 'private') continue;
       // Determine active range mode
       const ranges = l.privatePaymentRanges;
-      let activeMode = l.privatePaymentMode ?? 'custom_monthly';
+      let activeMode: string = l.privatePaymentMode ?? 'custom_monthly';
       if (ranges && ranges.length > 0) {
         for (const r of ranges) {
           if (todayKey >= r.startDate && todayKey <= r.endDate) { activeMode = r.mode; break; }
