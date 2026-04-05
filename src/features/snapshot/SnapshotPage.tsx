@@ -20,7 +20,7 @@ import {
   IconCreditCard, IconClock, IconPlus, IconArrowExchange,
 } from '../../ui/icons';
 import { NetCashChart } from './NetCashChart';
-import { recordNetCashSnapshot, ensureCurrentSnapshot } from '../../state/netCashHistory';
+// net cash history recording moved into NetCashChart component
 
 // --- Recent Activity Widget ---
 
@@ -377,13 +377,7 @@ export function SnapshotPage({
   const finalNetCashDisplayClass =
     displayedFinalNetCashCents >= 0 ? 'summary-kv final-net-cash positive' : 'summary-kv final-net-cash negative';
 
-  // Record net cash history for chart
-  useEffect(() => {
-    ensureCurrentSnapshot(data);
-    const handler = () => recordNetCashSnapshot(data);
-    window.addEventListener('data-changed', handler);
-    return () => window.removeEventListener('data-changed', handler);
-  }, [data]);
+  // Net cash history is now recorded inside NetCashChart at the chosen update interval
 
 
   const visibleBanks = useMemo(() => {

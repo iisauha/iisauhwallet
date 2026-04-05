@@ -9,7 +9,7 @@ const RANGE_MS: Record<Range, number> = {
   '1W': 7 * 24 * 60 * 60 * 1000,
   '1M': 30 * 24 * 60 * 60 * 1000,
   '3M': 90 * 24 * 60 * 60 * 1000,
-  'YTD': 0, // computed dynamically
+  'YTD': 0,
   '1Y': 365 * 24 * 60 * 60 * 1000,
   'ALL': Infinity,
 };
@@ -19,6 +19,8 @@ const CHART_PADDING_TOP = 20;
 const CHART_PADDING_BOTTOM = 16;
 const CHART_PADDING_LEFT = 6;
 const CHART_PADDING_RIGHT = 40;
+
+const HISTORY_KEY = 'iisauhwallet_net_cash_history_v1';
 
 const UPDATE_INTERVALS = [
   { label: '1 min', ms: 60_000 },
@@ -34,21 +36,20 @@ function loadUpdateInterval(): number {
     const v = localStorage.getItem(UPDATE_INTERVAL_KEY);
     if (v) return Number(v);
   } catch {}
-  return 60 * 60_000; // default 1hr
+  return 60 * 60_000;
 }
 function saveUpdateInterval(ms: number) {
   try { localStorage.setItem(UPDATE_INTERVAL_KEY, String(ms)); } catch {}
 }
 
-function formatTimeLabel(ts: number, range: Range): string {
+function formatTimeLabel(ts: number): string {
   const d = new Date(ts);
   const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
   const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  if (range === '1W') return `${time}, ${date}`;
   return `${time}, ${date}`;
 }
 
-/** Stepwise path: horizontal to next x, then vertical to next y (step-after) */
+/** Stepwise path: horizontal to next x, then vertical to next y */
 function buildStepPath(points: { x: number; y: number }[]): string {
   if (points.length === 0) return '';
   let d = `M ${points[0].x} ${points[0].y}`;
@@ -59,9 +60,29 @@ function buildStepPath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-/** Extend the last point rightward to simulate "still going" */
 function buildTrailingPath(lastPt: { x: number; y: number }, endX: number): string {
   return `M ${lastPt.x} ${lastPt.y} L ${endX} ${lastPt.y}`;
+}
+
+/** Save a single snapshot directly to localStorage */
+function appendSnapshot(cents: number) {
+  const now = Date.now();
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const arr: NetCashSnapshot[] = raw ? JSON.parse(raw) : [];
+    // Dedupe: skip if last entry has same value within 30 seconds
+    const last = arr[arr.length - 1];
+    if (last && last.cents === cents && now - last.ts < 30_000) return;
+    arr.push({ ts: now, cents });
+    // Prune older than 30 days
+    const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+    const pruned = arr.filter(s => s.ts >= cutoff);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(pruned));
+  } catch {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify([{ ts: now, cents }]));
+    } catch {}
+  }
 }
 
 export function NetCashChart({
@@ -81,15 +102,39 @@ export function NetCashChart({
   const [lineAnimating, setLineAnimating] = useState(false);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Live "creating" tick — reload history at update interval
+  // Record current value on mount and at each update interval
   const [tick, setTick] = useState(0);
+  const currentCentsRef = useRef(currentCents);
+  currentCentsRef.current = currentCents;
+
+  // Record on mount
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), updateInterval);
+    appendSnapshot(currentCentsRef.current);
+  }, []);
+
+  // Record at interval
+  useEffect(() => {
+    const id = setInterval(() => {
+      appendSnapshot(currentCentsRef.current);
+      setTick(t => t + 1);
+    }, updateInterval);
     return () => clearInterval(id);
   }, [updateInterval]);
 
-  // Load history (reloads on range change, tick, or clear)
+  // Also record whenever currentCents actually changes
+  const prevCentsRef = useRef(currentCents);
+  useEffect(() => {
+    if (currentCents !== prevCentsRef.current) {
+      prevCentsRef.current = currentCents;
+      appendSnapshot(currentCents);
+      setTick(t => t + 1);
+    }
+  }, [currentCents]);
+
+  // Clear + reload
   const [clearCount, setClearCount] = useState(0);
+
+  // Load history
   const history = useMemo(() => {
     const all = loadNetCashHistory();
     if (range === 'ALL') return all.sort((a, b) => a.ts - b.ts);
@@ -103,26 +148,15 @@ export function NetCashChart({
     return all.filter(s => s.ts >= cutoff).sort((a, b) => a.ts - b.ts);
   }, [range, tick, clearCount]);
 
-  // Add current value as the last point, then dedupe consecutive same-value runs
-  // (keep first and last of each run so the horizontal line spans the full time range)
+  // Build data points: use history + always append "now" as the trailing edge
   const dataPoints: NetCashSnapshot[] = useMemo(() => {
     const pts = [...history];
     const now = Date.now();
-    if (pts.length === 0 || now - pts[pts.length - 1].ts > 60_000) {
+    // Always add current value so the line extends to "now"
+    if (pts.length === 0 || now - pts[pts.length - 1].ts > 1000) {
       pts.push({ ts: now, cents: currentCents });
     }
-    if (pts.length <= 2) return pts;
-    const deduped: NetCashSnapshot[] = [pts[0]];
-    for (let i = 1; i < pts.length - 1; i++) {
-      const prev = pts[i - 1];
-      const next = pts[i + 1];
-      // Keep point if its value differs from previous or next (boundary of a step)
-      if (pts[i].cents !== prev.cents || pts[i].cents !== next.cents) {
-        deduped.push(pts[i]);
-      }
-    }
-    deduped.push(pts[pts.length - 1]);
-    return deduped;
+    return pts;
   }, [history, currentCents]);
 
   // Measure container width
@@ -148,9 +182,8 @@ export function NetCashChart({
       if (p.cents > maxC) maxC = p.cents;
     }
     const cRange = maxC - minC;
-    // When all values are the same (flat line), center it vertically
     if (cRange === 0) {
-      const pad = Math.max(Math.abs(maxC) * 0.1, 100); // at least $1
+      const pad = Math.max(Math.abs(maxC) * 0.1, 100);
       minC -= pad;
       maxC += pad;
     } else {
@@ -168,8 +201,7 @@ export function NetCashChart({
     return { points: pts };
   }, [dataPoints, width]);
 
-  // Scrub: stepwise values (snap to data point values) but smooth position along line
-  // Time interpolates smoothly, but cents snap to the step value (previous point's value until next step)
+  // Scrub: snap to nearest real data point
   const getScrubFromX = useCallback((clientX: number): { cents: number; ts: number; px: number; py: number } | null => {
     const el = containerRef.current;
     if (!el || points.length === 0 || dataPoints.length === 0) return null;
@@ -180,7 +212,6 @@ export function NetCashChart({
       return { cents: dataPoints[0].cents, ts: dataPoints[0].ts, px: points[0].x, py: points[0].y };
     }
 
-    // Snap to nearest data point — both value AND timestamp are real recorded values
     let closest = 0;
     let closestDist = Math.abs(x - points[0].x);
     for (let i = 1; i < points.length; i++) {
@@ -199,96 +230,72 @@ export function NetCashChart({
   }, [points, dataPoints, width]);
 
   const handleScrubStart = useCallback((clientX: number) => {
-    const s = getScrubFromX(clientX);
-    setScrubData(s);
+    setScrubData(getScrubFromX(clientX));
   }, [getScrubFromX]);
-
   const handleScrubMove = useCallback((clientX: number) => {
-    const s = getScrubFromX(clientX);
-    setScrubData(s);
+    setScrubData(getScrubFromX(clientX));
   }, [getScrubFromX]);
-
   const handleScrubEnd = useCallback(() => {
     setScrubData(null);
   }, []);
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    handleScrubStart(e.touches[0].clientX);
-  }, [handleScrubStart]);
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    handleScrubMove(e.touches[0].clientX);
-  }, [handleScrubMove]);
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    handleScrubStart(e.clientX);
-  }, [handleScrubStart]);
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (e.buttons > 0) handleScrubMove(e.clientX);
-  }, [handleScrubMove]);
+  const onTouchStart = useCallback((e: React.TouchEvent) => handleScrubStart(e.touches[0].clientX), [handleScrubStart]);
+  const onTouchMove = useCallback((e: React.TouchEvent) => { e.preventDefault(); handleScrubMove(e.touches[0].clientX); }, [handleScrubMove]);
+  const onMouseDown = useCallback((e: React.MouseEvent) => handleScrubStart(e.clientX), [handleScrubStart]);
+  const onMouseMove = useCallback((e: React.MouseEvent) => { if (e.buttons > 0) handleScrubMove(e.clientX); }, [handleScrubMove]);
 
-  // Display values
   const displayCents = scrubData ? scrubData.cents : currentCents;
-  const displayTime = scrubData ? formatTimeLabel(scrubData.ts, range) : null;
+  const displayTime = scrubData ? formatTimeLabel(scrubData.ts) : null;
 
-  // Change from first to current
   const firstCents = dataPoints.length > 0 ? dataPoints[0].cents : currentCents;
   const changeCents = displayCents - firstCents;
   const changePct = firstCents !== 0 ? (changeCents / Math.abs(firstCents)) * 100 : 0;
   const isPositiveChange = changeCents >= 0;
 
-  // Line color = accent
   const lineColor = 'var(--accent)';
-
   const hasData = dataPoints.length > 1;
 
-  // Range switch with morph animation
   const handleRangeChange = useCallback((r: Range) => {
     if (r === range) return;
-    // Fade out, switch, fade in
     setLineAnimating(true);
     if (animTimeoutRef.current) clearTimeout(animTimeoutRef.current);
     animTimeoutRef.current = setTimeout(() => {
       setRange(r);
       setScrubData(null);
-      // Small delay then fade back in
-      requestAnimationFrame(() => {
-        setLineAnimating(false);
-      });
-    }, 200); // half the transition duration
+      requestAnimationFrame(() => setLineAnimating(false));
+    }, 200);
   }, [range]);
 
-  // Toggle summary ↔ chart
   const handleValueClick = useCallback(() => {
     setShowSummary(prev => !prev);
   }, []);
 
-  // Build the highlighted segment path when scrubbing
+  // Highlighted segment when scrubbing
   const highlightPath = useMemo(() => {
     if (!scrubData || points.length < 2) return '';
-    // Highlight from start to scrub position
     const highlightPts: { x: number; y: number }[] = [];
     for (let i = 0; i < points.length; i++) {
       if (points[i].x <= scrubData.px) {
         highlightPts.push(points[i]);
       } else {
-        // Add the last horizontal segment to the scrub position
         if (highlightPts.length > 0) {
           highlightPts.push({ x: scrubData.px, y: highlightPts[highlightPts.length - 1].y });
         }
         break;
       }
     }
-    if (highlightPts.length === 0) return '';
-    // If scrub is past all points
-    if (scrubData.px >= points[points.length - 1].x && highlightPts.length === points.length) {
-      // all points included
-    }
-    return buildStepPath(highlightPts);
+    return highlightPts.length > 0 ? buildStepPath(highlightPts) : '';
   }, [scrubData, points]);
+
+  const handleClear = useCallback(() => {
+    clearNetCashHistory();
+    // Record current value as the fresh start
+    appendSnapshot(currentCentsRef.current);
+    setClearCount(c => c + 1);
+  }, []);
 
   return (
     <div className="net-cash-chart-wrap">
-      {/* Hero Value */}
       <div className="net-cash-chart-header">
         <div className="net-cash-chart-label">FINAL NET CASH</div>
         <div
@@ -322,19 +329,12 @@ export function NetCashChart({
         </div>
       </div>
 
-      {/* Chart / Summary toggle area */}
       <div className="net-cash-chart-body">
-        {/* Summary overlay */}
-        <div
-          className={`net-cash-chart-summary-layer${showSummary ? ' visible' : ''}`}
-        >
+        <div className={`net-cash-chart-summary-layer${showSummary ? ' visible' : ''}`}>
           {summaryContent}
         </div>
 
-        {/* Chart layer */}
-        <div
-          className={`net-cash-chart-graph-layer${showSummary ? ' hidden' : ''}`}
-        >
+        <div className={`net-cash-chart-graph-layer${showSummary ? ' hidden' : ''}`}>
           <div
             ref={containerRef}
             className="net-cash-chart-area"
@@ -359,78 +359,49 @@ export function NetCashChart({
                     <stop offset="0%" stopColor={lineColor} stopOpacity={0.6} />
                     <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
                   </linearGradient>
-                  {/* Glow filter for scrub highlight */}
                   <filter id="glowLine" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="3" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                   </filter>
-                  {/* Glow filter for dot */}
                   <filter id="glowDot" x="-100%" y="-100%" width="300%" height="300%">
                     <feGaussianBlur stdDeviation="4" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                   </filter>
                 </defs>
-                {/* Fill area under stepwise line */}
                 <g className={`net-cash-line-morph${lineAnimating ? ' morphing' : ''}`}>
                   <path
                     d={buildStepPath(points) + ` L ${points[points.length - 1].x} ${CHART_HEIGHT} L ${points[0].x} ${CHART_HEIGHT} Z`}
                     fill="url(#chartGrad)"
                   />
-                  {/* Base stepwise line — dimmed when scrubbing */}
                   <path
                     d={buildStepPath(points)}
-                    fill="none"
-                    stroke={lineColor}
-                    strokeWidth={2}
-                    strokeLinejoin="miter"
-                    strokeLinecap="butt"
+                    fill="none" stroke={lineColor} strokeWidth={2}
+                    strokeLinejoin="miter" strokeLinecap="butt"
                     opacity={scrubData ? 0.3 : 1}
                     style={{ transition: 'opacity 0.15s ease' }}
                   />
-                  {/* Highlighted portion when scrubbing */}
                   {scrubData && highlightPath && (
                     <path
                       d={highlightPath}
-                      fill="none"
-                      stroke={lineColor}
-                      strokeWidth={2.5}
-                      strokeLinejoin="miter"
-                      strokeLinecap="butt"
+                      fill="none" stroke={lineColor} strokeWidth={2.5}
+                      strokeLinejoin="miter" strokeLinecap="butt"
                       filter="url(#glowLine)"
                     />
                   )}
                 </g>
-                {/* Trailing line — fades out */}
                 {points.length > 0 && (
                   <path
                     d={buildTrailingPath(points[points.length - 1], width)}
-                    fill="none"
-                    stroke="url(#trailFade)"
-                    strokeWidth={2}
-                    strokeDasharray="4 3"
+                    fill="none" stroke="url(#trailFade)" strokeWidth={2} strokeDasharray="4 3"
                   />
                 )}
-                {/* Scrub dot — glowing */}
                 {scrubData && (
-                  <circle
-                    cx={scrubData.px} cy={scrubData.py}
-                    r={5} fill={lineColor}
-                    filter="url(#glowDot)"
-                  />
+                  <circle cx={scrubData.px} cy={scrubData.py} r={5} fill={lineColor} filter="url(#glowDot)" />
                 )}
-                {/* Pulsing end dot when not scrubbing */}
                 {!scrubData && points.length > 0 && (
                   <circle
                     cx={points[points.length - 1].x} cy={points[points.length - 1].y}
-                    r={4} fill={lineColor}
-                    filter="url(#glowDot)"
-                    className="net-cash-dot-pulse"
+                    r={4} fill={lineColor} filter="url(#glowDot)" className="net-cash-dot-pulse"
                   />
                 )}
               </svg>
@@ -443,17 +414,13 @@ export function NetCashChart({
         </div>
       </div>
 
-      {/* Range Selector + Settings */}
       <div className="net-cash-chart-ranges">
         {(['1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as Range[]).map(r => (
           <button
-            key={r}
-            type="button"
+            key={r} type="button"
             className={`net-cash-chart-range${range === r ? ' active' : ''}`}
             onClick={() => handleRangeChange(r)}
-          >
-            {r}
-          </button>
+          >{r}</button>
         ))}
         <button
           type="button"
@@ -468,27 +435,19 @@ export function NetCashChart({
         </button>
       </div>
 
-      {/* Settings panel */}
       {showSettings && (
         <div className="net-cash-settings-panel">
           <div className="net-cash-settings-label">Update interval</div>
           <div className="net-cash-settings-options">
             {UPDATE_INTERVALS.map(opt => (
               <button
-                key={opt.ms}
-                type="button"
+                key={opt.ms} type="button"
                 className={`net-cash-chart-range${updateInterval === opt.ms ? ' active' : ''}`}
                 onClick={() => { setUpdateInterval(opt.ms); saveUpdateInterval(opt.ms); }}
-              >
-                {opt.label}
-              </button>
+              >{opt.label}</button>
             ))}
           </div>
-          <button
-            type="button"
-            className="net-cash-clear-btn"
-            onClick={() => { clearNetCashHistory(); setClearCount(c => c + 1); }}
-          >
+          <button type="button" className="net-cash-clear-btn" onClick={handleClear}>
             Clear chart data
           </button>
         </div>

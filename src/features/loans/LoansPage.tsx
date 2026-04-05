@@ -1333,7 +1333,7 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      {/* Loans Summary — single ring donut with all segments */}
+      {/* Loans Summary — single ring showing composition of total balance */}
       {(() => {
         const totalCents = summary.totalBalance;
         const interestCents = summary.totalUnpaidInterestCents;
@@ -1341,29 +1341,23 @@ export function LoansPage() {
         const publicCents = summary.publicBalanceCents ?? 0;
         const privateCents = summary.privateBalanceCents ?? 0;
 
-        // Single ring with 4 segments: public principal, public interest, private principal, private interest
-        // Approximate split: assume interest is distributed proportionally between public/private
-        const publicInterest = publicCents > 0 && totalCents > 0
-          ? Math.round(interestCents * (publicCents / (publicCents + privateCents || 1)))
-          : 0;
-        const privateInterest = interestCents - publicInterest;
-        const publicPrincipal = publicCents - publicInterest;
-        const privatePrincipal = privateCents - privateInterest;
-
         const size = 180;
         const cx = size / 2;
         const cy = size / 2;
         const r = 68;
         const stroke = 14;
         const circum = 2 * Math.PI * r;
-        const gap = totalCents > 0 ? 3 : 0; // small gap between segments
+
+        // Build segments proportional to total balance
         const segments = [
-          { cents: publicPrincipal, color: 'var(--green)', label: 'Public Principal' },
-          { cents: publicInterest, color: 'var(--accent)', label: 'Public Interest' },
-          { cents: privatePrincipal, color: 'var(--blue, #4a90d9)', label: 'Private Principal' },
-          { cents: privateInterest, color: 'var(--yellow, #e6a817)', label: 'Private Interest' },
+          { cents: publicCents, color: 'var(--green)', key: 'pub' },
+          { cents: privateCents, color: 'var(--blue, #4a90d9)', key: 'priv' },
+          { cents: interestCents, color: 'var(--accent)', key: 'int' },
         ].filter(s => s.cents > 0);
-        const totalGap = gap * segments.length;
+
+        const segCount = segments.length;
+        const gap = segCount > 1 ? 3 : 0;
+        const totalGap = gap * segCount;
         const usable = circum - totalGap;
 
         let offset = 0;
@@ -1374,7 +1368,7 @@ export function LoansPage() {
           return arc;
         });
 
-        // Dynamic font size for center amount
+        // Dynamic font size
         const formatted = formatCents(totalCents);
         const charCount = formatted.length;
         const fontSize = charCount <= 7 ? '1.5rem' : charCount <= 9 ? '1.25rem' : charCount <= 11 ? '1.05rem' : '0.9rem';
