@@ -287,8 +287,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
         }),
     [drilldownFilteredPurchases]
   );
-  const hasMorePurchases = sortedPurchases.length > 5;
-  const visiblePurchases = showAllPurchases ? sortedPurchases : sortedPurchases.slice(0, 5);
+  const visiblePurchases = sortedPurchases;
 
   const getPurchaseUiId = (p: any) => {
     if (p.id) return String(p.id);
@@ -709,7 +708,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             ref={purchasesCarouselRef}
             onScroll={purchasesOnScroll}
           >
-          {visiblePurchases.map((p: any) => {
+          {visiblePurchases.map((p: any, _i: number) => {
             const uiId = getPurchaseUiId(p);
             return (
             <div className="card-carousel-item" key={uiId}><div className="card">
@@ -754,43 +753,13 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
                   Delete
                 </button>
               </div>
+            <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {visiblePurchases.length}</div>
             </div></div>
           )})}
           </div>
-          {visiblePurchases.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {purchasesCarouselIdx + 1} of {visiblePurchases.length}
-            </div>
-          )}
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
-        <button
-          type="button"
-          className="btn btn-add"
-          style={{ width: '100%' }}
-          onClick={() => {
-            setEditingPurchaseKey(null);
-            setReimbursementMode(false);
-            setOpenAdd(true);
-          }}
-        >
-          Add Purchase
-        </button>
-        <button
-          type="button"
-          className="btn btn-add"
-          style={{ width: '100%' }}
-          onClick={() => {
-            setEditingPurchaseKey(null);
-            setReimbursementMode(true);
-            setOpenAdd(true);
-          }}
-        >
-          Add Card Purchase (Full reimbursement expected)
-        </button>
-      </div>
       </>
       ) : null}
       <AddPurchaseModal

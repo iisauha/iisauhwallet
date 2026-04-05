@@ -700,7 +700,7 @@ export function SnapshotPage({
               scheduleSnapCorrection(el);
             }}
           >
-            {displayedBanks.map((b) => {
+            {displayedBanks.map((b, _i) => {
               const linkedLiquid = linkedHysaLiquidByBankId[b.id] || 0;
               const linkedHysa = hysaAccountsSorted.find((h: any) => h.linkedCheckingBankId === b.id);
               return (
@@ -768,16 +768,12 @@ export function SnapshotPage({
                         </button>
                       ) : null}
                     </div>
+                    <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedBanks.length}</div>
                   </div>
                 </div>
               );
             })}
           </div>
-          {displayedBanks.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {banksIdx + 1} of {displayedBanks.length}
-            </div>
-          )}
         </>
       </div>
 
@@ -816,7 +812,7 @@ export function SnapshotPage({
               scheduleSnapCorrection(el);
             }}
           >
-            {displayedCards.map((c) => {
+            {displayedCards.map((c, _i) => {
               const balanceCents = c.balanceCents ?? 0;
               const amountClass =
                 balanceCents > 0 ? 'amount amount-neg' : balanceCents < 0 ? 'amount amount-pos' : 'amount amount-pos';
@@ -907,16 +903,12 @@ export function SnapshotPage({
                         Delete
                       </button>
                     </div>
+                    <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedCards.length}</div>
                   </div>
                 </div>
               );
             })}
           </div>
-          {displayedCards.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {cardsIdx + 1} of {displayedCards.length}
-            </div>
-          )}
         </>
       </div>
 

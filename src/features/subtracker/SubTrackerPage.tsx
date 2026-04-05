@@ -497,7 +497,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
               scheduleSnapCorrection(el);
             }}
           >
-          {displayedCompleted.map((b) => {
+          {displayedCompleted.map((b, _i) => {
             const cashCents = completedBonusCashValueCents(b);
             const isPointsOrMiles = b.unitType === 'points' || b.unitType === 'miles';
             const bankLabel =
@@ -539,15 +539,11 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                   )}
                   {b.notes ? <div style={{ marginTop: 4 }}>Notes: {b.notes}</div> : null}
                 </div>
+                <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedCompleted.length}</div>
               </div></div>
             );
           })}
           </div>
-          {displayedCompleted.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {completedCarouselIdx + 1} of {displayedCompleted.length}
-            </div>
-          )}
           <button
             type="button"
             className="btn btn-add"
@@ -607,7 +603,7 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           scheduleSnapCorrection(el);
         }}
       >
-      {displayedEntries.map((e) => {
+      {displayedEntries.map((e, _i) => {
         const name = entryDisplayName(e);
         const start = toDate(e.startDate);
         const deadline = e.deadlineDate ? toDate(e.deadlineDate) : e.monthsWindow ? toDate(addMonthsFromStart(e.startDate, e.monthsWindow)) : new Date(NaN);
@@ -1000,16 +996,12 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
                 })()}
               </div>
             ) : null}
+            <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedEntries.length}</div>
           </div>
           </div>
         );
       })}
       </div>
-      {displayedEntries.length > 1 && (
-        <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-          {entriesCarouselIdx + 1} of {displayedEntries.length}
-        </div>
-      )}
 
       {confirmDelete ? (
         <div className="modal-overlay">
@@ -1122,29 +1114,6 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
           </div>
         </Modal>
       ) : null}
-
-      <button
-        type="button"
-        className="btn btn-add"
-        style={{ width: '100%', marginTop: 12 }}
-        onClick={() => {
-          setCardMode('card');
-          setCardId(cards[0]?.id || '');
-          setManualName('');
-          setStartDate(todayKey());
-          setUseDeadlineDate(true);
-          setDeadlineDate(todayKey());
-          setMonthsWindow('3');
-          setTierDrafts([{ id: uid(), spendTarget: '', rewardAmount: '', rewardUnit: 'points' }]);
-          setSpentInput('0.00');
-          setCppInput('');
-          setConfirmDelete(null);
-          setEditorEntryId(null);
-          setEditorOpen(true);
-        }}
-      >
-        Add tracked card
-      </button>
 
       <button
         type="button"

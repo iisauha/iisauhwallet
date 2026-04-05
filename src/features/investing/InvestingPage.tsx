@@ -1380,7 +1380,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             scheduleSnapCorrection(el);
           }}
         >
-        {visibleAccounts.map((a) => {
+        {visibleAccounts.map((a, _i) => {
           return (
             <div className="card-carousel-item" key={a.id}><div className="card ll-account-card">
               <div className="row ll-account-row">
@@ -1473,15 +1473,11 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
                       Delete
                     </button>
                   </div>
+                  <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {visibleAccounts.length}</div>
               </div></div>
             );
           })}
           </div>
-          {visibleAccounts.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {carouselIdx + 1} of {visibleAccounts.length}
-            </div>
-          )}
       </>
     );
   }
@@ -1794,9 +1790,10 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
         </div>
       </div>
 
-      <div
-        className="section-header"
-        style={{ marginTop: 16 }}
+      <button
+        type="button"
+        className="btn btn-secondary"
+        style={{ width: '100%', marginTop: 10 }}
         onClick={() => {
           const source = coastFireAssumptions || coastFireForm;
           setCoastFireForm({ ...source });
@@ -1804,9 +1801,8 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           setCoastFireOpen(true);
         }}
       >
-        <span className="section-header-left">See more: Coast FIRE</span>
-        <span className="chevron">▸</span>
-      </div>
+        See more: Coast FIRE
+      </button>
 
       {coastFireOpen ? (
         <div className="modal-overlay modal-overlay--fullscreen" onClick={() => { setCoastFireOpen(false); }}>

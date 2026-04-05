@@ -404,7 +404,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 setExpenseCatIdx((prev) => prev[catId] === newIdx ? prev : { ...prev, [catId]: newIdx });
               }}
             >
-            {displayedItems.map((r: any) => (
+            {displayedItems.map((r: any, _i: number) => (
               <div className="card-carousel-item" key={r.id}>
               <div className="card">
                     <div className="row">
@@ -478,15 +478,11 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                         Delete
                       </button>
                     </div>
+                    <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedItems.length}</div>
                   </div>
                   </div>
                 ))}
             </div>
-            {displayedItems.length > 1 && (
-              <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-                {(expenseCatIdx[catId] ?? 0) + 1} of {displayedItems.length}
-              </div>
-            )}
           </div>
         );
       })}
@@ -772,38 +768,42 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
               </>
             ) : (
               <>
-                <div className="toggle-row">
-                  <input
-                    type="checkbox"
-                    checked={isSplit}
-                    onChange={(e) => {
-                      const next = e.target.checked;
-                      setIsSplit(next);
-                      if (next) {
-                        const totalCents = parseCents(amount);
-                        if (totalCents > 0) {
-                          const half = Math.round(totalCents / 2);
-                          setMyPortion((half / 100).toFixed(2));
-                        }
-                      } else {
-                        setMyPortion('');
-                      }
-                    }}
-                    id="recSplit"
-                  />
-                  <label htmlFor="recSplit">Split with someone else<HelpTip text="When enabled, enter your portion of the bill. A pending inbound reimbursement will be auto-created for the other person's share each cycle." /></label>
-                </div>
-                {isSplit ? (
-                  <div className="field">
-                    <label>My portion ($)</label>
-                    <input
-                      value={myPortion}
-                      onChange={(e) => setMyPortion(e.target.value)}
-                      inputMode="decimal"
-                      placeholder="0.00"
-                    />
-                  </div>
-                ) : null}
+                {type !== 'income' && (
+                  <>
+                    <div className="toggle-row">
+                      <input
+                        type="checkbox"
+                        checked={isSplit}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setIsSplit(next);
+                          if (next) {
+                            const totalCents = parseCents(amount);
+                            if (totalCents > 0) {
+                              const half = Math.round(totalCents / 2);
+                              setMyPortion((half / 100).toFixed(2));
+                            }
+                          } else {
+                            setMyPortion('');
+                          }
+                        }}
+                        id="recSplit"
+                      />
+                      <label htmlFor="recSplit">Split with someone else<HelpTip text="When enabled, enter your portion of the bill. A pending inbound reimbursement will be auto-created for the other person's share each cycle." /></label>
+                    </div>
+                    {isSplit ? (
+                      <div className="field">
+                        <label>My portion ($)</label>
+                        <input
+                          value={myPortion}
+                          onChange={(e) => setMyPortion(e.target.value)}
+                          inputMode="decimal"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                )}
                 {type !== 'income' && (
                 <div className="field">
                   <label>Category</label>

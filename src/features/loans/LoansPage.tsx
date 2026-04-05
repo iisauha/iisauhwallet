@@ -1141,6 +1141,7 @@ function LoanCard(props: {
   onDelete: () => void;
   onPayoffAge?: () => void;
   onRefinance?: () => void;
+  children?: React.ReactNode;
 }) {
   const { loan: l, onEdit, onDelete } = props;
   const [plansOpen, setPlansOpen] = useState(false);
@@ -1277,6 +1278,7 @@ function LoanCard(props: {
         <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.85rem', minHeight: 'unset' }} onClick={onEdit}>Edit</button>
         <button type="button" className="btn btn-danger" style={{ padding: '4px 10px', fontSize: '0.85rem', minHeight: 'unset' }} onClick={onDelete}>Delete</button>
       </div>
+      {props.children}
     </div>
   );
 }
@@ -1857,7 +1859,7 @@ export function LoansPage() {
                   scheduleSnapCorrection(el);
                 }}
               >
-                {publicLoansWithDerived.map((l) => (
+                {publicLoansWithDerived.map((l, _i) => (
                   <div className="card-carousel-item" key={l.id}>
                     <LoanCard
                       loan={l}
@@ -1867,15 +1869,12 @@ export function LoansPage() {
                         if (!ok) return;
                         persist({ loans: state.loans.filter((x) => x.id !== l.id) });
                       }}
-                    />
+                    >
+                      <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {publicLoansWithDerived.length}</div>
+                    </LoanCard>
                   </div>
                 ))}
               </div>
-              {publicLoansWithDerived.length > 1 && (
-                <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-                  {publicCarouselIdx + 1} of {publicLoansWithDerived.length}
-                </div>
-              )}
             </>
           )}
         </>
@@ -1918,7 +1917,7 @@ export function LoansPage() {
               scheduleSnapCorrection(el);
             }}
           >
-          {displayedPrivateLoans.map((l) => (
+          {displayedPrivateLoans.map((l, _i) => (
             <div className="card-carousel-item" key={l.id}>
             <LoanCard
               loan={l}
@@ -1928,15 +1927,12 @@ export function LoansPage() {
                 if (!ok) return;
                 persist({ loans: state.loans.filter((x) => x.id !== l.id) });
               }}
-            />
+            >
+              <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedPrivateLoans.length}</div>
+            </LoanCard>
             </div>
           ))}
           </div>
-          {displayedPrivateLoans.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {privateCarouselIdx + 1} of {displayedPrivateLoans.length}
-            </div>
-          )}
         </>
       ) : null}
 

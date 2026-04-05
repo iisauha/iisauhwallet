@@ -416,7 +416,7 @@ export function UpcomingPage() {
               scheduleSnapCorrection(el);
             }}
           >
-          {displayedIncome.map((entry) => {
+          {displayedIncome.map((entry, _i) => {
             if (entry.kind === 'expected') {
               const i = entry.item;
               return (
@@ -465,6 +465,7 @@ export function UpcomingPage() {
                       Delete
                     </button>
                   </div>
+                  <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedIncome.length}</div>
                 </div>
                 </div>
               );
@@ -517,17 +518,13 @@ export function UpcomingPage() {
                       Delete
                     </button>
                   </div>
+                  <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedIncome.length}</div>
                 </div>
                 </div>
               );
             }
           })}
           </div>
-          {displayedIncome.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {incomeCarouselIdx + 1} of {displayedIncome.length}
-            </div>
-          )}
         </>
       ) : null}
 
@@ -581,7 +578,7 @@ export function UpcomingPage() {
               scheduleSnapCorrection(el);
             }}
           >
-          {displayedCosts.map((entry) => {
+          {displayedCosts.map((entry, _i) => {
             if (entry.kind === 'expected') {
               const c = entry.item;
               return (
@@ -657,6 +654,7 @@ export function UpcomingPage() {
                       Delete
                     </button>
                   </div>
+                  <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedCosts.length}</div>
                 </div>
                 </div>
               );
@@ -821,17 +819,13 @@ export function UpcomingPage() {
                       Delete
                     </button>
                   </div>
+                  <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4 }}>{_i + 1} of {displayedCosts.length}</div>
                 </div>
                 </div>
               );
             }
           })}
           </div>
-          {displayedCosts.length > 1 && (
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
-              {costsCarouselIdx + 1} of {displayedCosts.length}
-            </div>
-          )}
         </>
       ) : null}
 
