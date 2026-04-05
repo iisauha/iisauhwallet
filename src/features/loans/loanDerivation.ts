@@ -53,6 +53,19 @@ export function computeMonthlyInterestCents(
   return Math.floor(interestCents);
 }
 
+/**
+ * Projection-context monthly interest: rate/12 (consistent with amortization).
+ * Canonical for payoff calculations, amortization breakdowns, and forward-looking projections.
+ * For current-month display of accrued interest, use computeMonthlyInterestCents (rate/365 × daysInMonth).
+ */
+export function computeProjectionMonthlyInterestCents(
+  balanceCents: number,
+  ratePercent: number
+): number {
+  if (!(balanceCents > 0)) return 0;
+  return Math.round(balanceCents * (ratePercent / 100) / 12);
+}
+
 function computeInterestOnlyMonthlyCents(balanceCents: number, ratePercent: number): number {
   return computeMonthlyInterestCents(balanceCents, ratePercent);
 }
@@ -105,7 +118,8 @@ function computeFullRepaymentBreakdown(
   ratePercent: number,
   termMonths: number
 ): { fullRepaymentCents: number } {
-  const monthlyInterestCents = computeMonthlyInterestCents(balanceCents, ratePercent);
+  // Projection context: use rate/12 for breakdown consistency with amortization formula
+  const monthlyInterestCents = computeProjectionMonthlyInterestCents(balanceCents, ratePercent);
   const amortizedCents = computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
   const principalPortionCents = Math.max(0, amortizedCents - monthlyInterestCents);
   // Use single rounded amortized payment as full repayment to avoid 1-cent drift from interest+principal rounding.
@@ -225,9 +239,10 @@ function deriveMonthlyNowCents(
     return fullPaymentCents;
   }
 
-  // Private loans: range-based or legacy single mode; term derived from ranges
+  // Private loans: range-based or legacy single mode
   const ranges = getEffectivePrivateRanges(loan);
-  const derivedTermMonths = getRangeDerivedTermMonths(ranges);
+  // Canonical term: explicit loan.termMonths if set; range-span derivation as fallback only
+  const derivedTermMonths = (loan.termMonths && loan.termMonths > 0) ? loan.termMonths : getRangeDerivedTermMonths(ranges); /* fallback: range span */
   const today = new Date();
   const key = toDateKey(today);
   const active = getActivePrivateRange(ranges, key);

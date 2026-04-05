@@ -27,7 +27,7 @@ import {
   uid,
   loadBirthdateISO,
 } from '../../state/storage';
-import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimatedPaymentNowMap, computeMonthlyInterestCents } from './loanDerivation';
+import { getDetectedAgiFromRecurring, getPrivatePaymentNowTotal, getLoanEstimatedPaymentNowMap, computeMonthlyInterestCents, computeProjectionMonthlyInterestCents } from './loanDerivation';
 import type { RecurringItem } from '../../state/models';
 import { useDialog } from '../../ui/DialogProvider';
 import { Select } from '../../ui/Select';
@@ -116,7 +116,8 @@ function computeFullRepaymentBreakdown(
   ratePercent: number,
   termMonths: number
 ): { monthlyInterestCents: number; amortizedCents: number; principalPortionCents: number; fullRepaymentCents: number } {
-  const monthlyInterestCents = computeMonthlyInterestCents(balanceCents, ratePercent);
+  // Projection context: use rate/12 so breakdown is consistent with the amortization formula
+  const monthlyInterestCents = computeProjectionMonthlyInterestCents(balanceCents, ratePercent);
   const amortizedCents = computeAmortizedPaymentCents(balanceCents, ratePercent, termMonths) ?? 0;
   const principalPortionCents = Math.max(0, amortizedCents - monthlyInterestCents);
   // Use single rounded amortized payment as full repayment to avoid 1-cent drift.
@@ -291,7 +292,7 @@ function applyDeferredInterestToPrivateLoanIfNeeded(loan: Loan): Loan | null {
   };
 }
 
-/** Lender-style unpaid interest: balance * (rate/100) / 365.25 * elapsedDays. */
+/** Lender-style unpaid interest: balance * (rate/100) / 365 * elapsedDays. */
 function computeUnpaidInterestFromAccrual(
   balanceCents: number,
   ratePercent: number,
@@ -300,7 +301,8 @@ function computeUnpaidInterestFromAccrual(
 ): number {
   const days = daysBetween(anchorISO, asOfISO);
   if (days <= 0) return 0;
-  const dollars = (balanceCents / 100) * (ratePercent / 100) / 365.25 * days;
+  // Standardized to 365 for consistency with all other interest formulas in this codebase
+  const dollars = (balanceCents / 100) * (ratePercent / 100) / 365 * days;
   return Math.round(dollars * 100);
 }
 
@@ -479,10 +481,11 @@ function deriveForLoan(
       payoffMonths = null;
     }
   } else {
-    // Private loan: range-based payment logic; term derived from ranges
+    // Private loan: range-based payment logic
     const todayISO = toDateKey(new Date());
     const effectiveRanges = getEffectivePrivateRanges(loan);
-    const derivedTermMonths = getRangeDerivedTermMonths(effectiveRanges);
+    // Canonical term: explicit loan.termMonths if set; range-span derivation as fallback only
+    const derivedTermMonths = (loan.termMonths && loan.termMonths > 0) ? loan.termMonths : getRangeDerivedTermMonths(effectiveRanges); /* fallback: range span */
     const activeRange = getActivePrivateRange(effectiveRanges, todayISO);
     const paymentNow = activeRange
       ? paymentCentsFromPrivateRange(activeRange, balanceCents, interestRatePercent, derivedTermMonths)
@@ -522,7 +525,8 @@ function deriveForLoan(
         futureFullRepaymentInterestCents = fullRepaymentBreakdown.monthlyInterestCents;
         futureFullRepaymentPrincipalCents = fullRepaymentBreakdown.principalPortionCents;
       } else if (firstFuture.mode === 'interest_only') {
-        futureCents = computeMonthlyInterestCents(balanceCents, interestRatePercent);
+        // Projection context (future range): use rate/12 consistent with amortization
+        futureCents = computeProjectionMonthlyInterestCents(balanceCents, interestRatePercent);
       }
       futureFullRepaymentCents = futureCents;
       if (futureCents > 0) monthlyLaterCents = futureCents;
@@ -535,13 +539,21 @@ function deriveForLoan(
     if (firstFullRange && futureFullPayment > 0) {
       if (todayISO < firstFullRange.startDate) {
         const monthsUntilStart = monthsBetween(todayISO, firstFullRange.startDate);
-        const payoffFromStart = computeMonthsToPayoff(balanceCents, interestRatePercent, futureFullPayment);
+        // Issue 4: project the capitalized balance at repayment start — deferred interest will be added to principal
+        const capitalizedInterest = computeDeferredRangeInterestCents(balanceCents, interestRatePercent, todayISO, firstFullRange.startDate);
+        const projectedBalanceCents = balanceCents + capitalizedInterest;
+        // Recompute amortized payment from projected balance so payment and balance are consistent
+        const projectedPayment = derivedTermMonths > 0
+          ? computeFullRepaymentBreakdown(projectedBalanceCents, interestRatePercent, derivedTermMonths).fullRepaymentCents
+          : futureFullPayment;
+        const payoffFromStart = computeMonthsToPayoff(projectedBalanceCents, interestRatePercent, projectedPayment);
         payoffMonths = payoffFromStart != null ? monthsUntilStart + payoffFromStart : null;
       } else {
         payoffMonths = computeMonthsToPayoff(balanceCents, interestRatePercent, futureFullPayment);
       }
     } else {
-      const monthlyInterestOnly = computeMonthlyInterestCents(balanceCents, interestRatePercent);
+      // Projection context (payoff check): use rate/12 consistent with computeMonthsToPayoff
+      const monthlyInterestOnly = computeProjectionMonthlyInterestCents(balanceCents, interestRatePercent);
       if (paymentNow > 0 && paymentNow <= monthlyInterestOnly) {
         payoffMonths = null;
       } else {
