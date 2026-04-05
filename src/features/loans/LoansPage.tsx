@@ -5,8 +5,6 @@ import { scheduleSnapCorrection } from '../../ui/carouselSnap';
 import {
   loadLoans,
   saveLoans,
-  loadPublicPaymentNowAdded,
-  savePublicPaymentNowAdded,
   savePrivatePaymentNowBase,
   loadLastRecomputeDate,
   applyRecomputeCycleToPrivateBalances,
@@ -34,8 +32,7 @@ import { Select } from '../../ui/Select';
 import { Modal } from '../../ui/Modal';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { IconPlus } from '../../ui/icons';
-import { loadPublicLoanSummary, savePublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
-import { PublicLoanSimpleCard } from '../federalLoans/PublicLoanSimpleCard';
+// PublicLoanSummaryStore and PublicLoanSimpleCard replaced by individual public loan records
 import { syncLoansToSupabase, fetchLatestLedgerRows, type LedgerRow } from '../../state/loanSync';
 
 function todayISO(): string {
@@ -1335,8 +1332,6 @@ export function LoansPage() {
   const [editor, setEditor] = useState<{ mode: 'add' | 'edit'; value: LoanEditorState } | null>(null);
   const [refiLoan, setRefiLoan] = useState<LoanWithDerived | null>(null);
   const [payoffLoan, setPayoffLoan] = useState<LoanWithDerived | null>(null);
-  const [publicSummary, setPublicSummary] = useState(() => loadPublicLoanSummary());
-  const [publicPaymentNowAdded, setPublicPaymentNowAdded] = useState(() => loadPublicPaymentNowAdded());
   const [showAfterGraceBreakdown, setShowAfterGraceBreakdown] = useState(false);
   const [showRecomputeConfirm, setShowRecomputeConfirm] = useState(false);
   const [paymentNowOverride, setPaymentNowOverride] = useState<number | null>(() => loadPaymentNowManualOverride());
@@ -1354,20 +1349,6 @@ export function LoansPage() {
   }, []);
 
   const birthdateISO = loadBirthdateISO();
-
-  useEffect(() => {
-    const s = publicSummary;
-    if (s.paymentMode !== 'first_payment_date' || !s.firstPaymentDate || (s.estimatedMonthlyPaymentCents ?? 0) <= 0 || s.firstPaymentDateAutoAddPaused) return;
-    const today = todayISO();
-    if (s.firstPaymentDate > today) return;
-    const last = s.firstPaymentDateLastAutoAddedAt;
-    if (last != null && last >= s.firstPaymentDate) return;
-    const addCents = s.estimatedMonthlyPaymentCents!;
-    savePublicPaymentNowAdded(loadPublicPaymentNowAdded() + addCents);
-    savePublicLoanSummary({ ...s, firstPaymentDateLastAutoAddedAt: today });
-    setPublicPaymentNowAdded(loadPublicPaymentNowAdded());
-    setPublicSummary(loadPublicLoanSummary());
-  }, [publicSummary]);
 
   // When Loans page loads: if any private loan's deferred range has ended, add deferred interest to balance once
   useEffect(() => {

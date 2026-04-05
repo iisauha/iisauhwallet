@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { CreditCard, LedgerData, PendingInboundItem, PendingOutboundItem, Purchase, RecurringItem, RewardRule } from './models';
 import { loadData, loadSubTracker, loadInvesting, loadLoans, saveLoans, loadPublicPaymentNowAdded, savePublicPaymentNowAdded, savePrivatePaymentNowBase, getVisiblePaymentNowCents, accrueHysaAccounts, recordHysaBalanceEvent, nowIso, saveData, saveInvesting, saveSubTracker, setLastPostedBankId, uid } from './storage';
-import { loadPublicLoanSummary, savePublicLoanSummary } from '../features/federalLoans/PublicLoanSummaryStore';
+// PublicLoanSummaryStore no longer used — public loans are individual records
 import { getLoanEstimatedPaymentNowMap, getDetectedAnnualIncomeCentsFromRecurring } from '../features/loans/loanDerivation';
 import { PHYSICAL_CASH_ID } from './keys';
 import { addDaysLocal, addMonthsPreserveDay, addYearsPreserveDay, parseLocalDateKey, recurringIntervalDays, toLocalDateKey } from './calc';
@@ -943,19 +943,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
             }
           }
           savePrivatePaymentNowBase(0);
-          const publicSummary = loadPublicLoanSummary();
-          const publicPortionCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
-          if (publicPortionCents > 0) {
-            const current = loadPublicPaymentNowAdded();
-            savePublicPaymentNowAdded(Math.max(0, current - publicPortionCents));
-            const pub = loadPublicLoanSummary();
-            if (pub.totalBalanceCents != null && pub.totalBalanceCents > 0) {
-              savePublicLoanSummary({
-                ...pub,
-                totalBalanceCents: Math.max(0, pub.totalBalanceCents - publicPortionCents)
-              });
-            }
-          }
+          // Public loan balance reduction is handled by the per-loan loop above
+          // (public loans are now individual records in the same loans array)
         }
       }
 
