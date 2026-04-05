@@ -1041,13 +1041,13 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     accrualLastUpdatedAt: isPublic ? undefined : undefined,
     privatePaymentMode: isPublic ? undefined : e.privatePaymentMode,
     accrualAnchorDate: isPublic ? undefined : (e.accrualAnchorDate?.trim() || undefined),
-    currentInterestBalanceCents: isPublic ? undefined : (() => {
+    currentInterestBalanceCents: (isPublic && e.subsidyType === 'subsidized') ? undefined : (() => {
       const s = e.currentInterestBalance?.replace(/,/g, '').trim();
       if (!s) return undefined;
       const n = Math.round(parseFloat(s) * 100);
       return Number.isFinite(n) && n >= 0 ? n : undefined;
     })(),
-    interestBalanceAnchorDate: isPublic ? undefined : (() => {
+    interestBalanceAnchorDate: (isPublic && e.subsidyType === 'subsidized') ? undefined : (() => {
       const s = e.currentInterestBalance?.replace(/,/g, '').trim();
       if (!s) return prev?.interestBalanceAnchorDate;
       const n = Math.round(parseFloat(s) * 100);
@@ -2633,19 +2633,19 @@ function LoanEditorForm(props: {
           </div>
         </>
       ) : null}
-      {state.category === 'private' ? (
+      {(state.category === 'private' || (state.category === 'public' && state.subsidyType === 'unsubsidized')) ? (
         <>
           <div className="field" style={{ marginTop: 8 }}>
-            <label>Current interest balance ($, from AES)</label>
+            <label>Current interest balance ($, from {state.category === 'public' ? 'studentaid.gov' : 'AES'})</label>
             <input
               type="text"
               inputMode="decimal"
               value={state.currentInterestBalance}
               onChange={(e) => onChange({ ...state, currentInterestBalance: e.target.value })}
-              placeholder="e.g. 87.87"
+              placeholder="e.g. 262.01"
             />
             <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-              Check your AES account for the current unpaid interest on this loan.
+              {state.category === 'public' ? 'Check studentaid.gov for the outstanding interest on this loan.' : 'Check your AES account for the current unpaid interest on this loan.'}
             </p>
           </div>
           {state.privatePaymentRanges.some(r => r.mode === 'interest_only') && (
