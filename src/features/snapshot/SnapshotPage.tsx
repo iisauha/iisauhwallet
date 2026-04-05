@@ -6,7 +6,8 @@ import { HelpTip } from '../../ui/HelpTip';
 import { useContentGuard } from '../../state/useContentGuard';
 import { SHOW_ZERO_BALANCES_KEY, SHOW_ZERO_CARDS_KEY, SHOW_ZERO_CASH_KEY } from '../../state/keys';
 import { useLedgerStore } from '../../state/store';
-import { loadLoans, loadInvesting, type HysaAccount } from '../../state/storage';
+import { loadLoans, loadInvesting, loadLastRecomputeDate, saveLastRecomputeDate, saveLoans, savePrivatePaymentNowBase, type Loan, type HysaAccount } from '../../state/storage';
+import { getPrivatePaymentNowTotal, getDetectedAnnualIncomeCentsFromRecurring } from '../loans/loanDerivation';
 import { loadPublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { getLastPostedBankId, loadBoolPref, saveBoolPref, loadCategoryConfig, getCategoryName, getCategorySubcategories, uid, loadActivityLog } from '../../state/storage';
 import { useDropdownCollapsed } from '../../state/DropdownStateContext';
@@ -274,9 +275,16 @@ export function SnapshotPage({
     | {
         type: 'loan-payment-preview';
         pendingId: string;
-        privateRows: { loanId: string; name: string; currentBalanceCents: number; subCentsInput: string }[];
+        privateRows: { loanId: string; name: string; currentBalanceCents: number; subCentsInput: string; originalCents: number }[];
         publicPortionCents: number;
         publicCurrentBalanceCents: number | null;
+        userEdited: boolean;
+      }
+    | {
+        type: 'loan-post-summary';
+        paymentRows: { name: string; subtractedCents: number; newBalanceCents: number }[];
+        interestRows: { name: string; interestCents: number; newBalanceCents: number }[] | null;
+        newMonthlyPaymentCents: number | null;
       }
     | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
     | {
@@ -424,6 +432,7 @@ export function SnapshotPage({
         name: loan?.name || 'Private loan',
         currentBalanceCents,
         subCentsInput: ((subCents || 0) / 100).toFixed(2),
+        originalCents: subCents,
       };
     });
     const publicSummary = loadPublicLoanSummary();
@@ -434,18 +443,79 @@ export function SnapshotPage({
       privateRows,
       publicPortionCents,
       publicCurrentBalanceCents,
+      userEdited: false,
     };
   }
 
-  function postLoanPayment(pendingId: string, loanAdjustments: any) {
+  function postLoanPayment(pendingId: string, loanAdjustments: any, userEdited: boolean = false) {
+    // Capture pre-posting balances for the summary
+    const preLoans = loadLoans();
+    const preBalances: Record<string, { name: string; balanceCents: number; rate: number; termMonths: number | undefined }> = {};
+    for (const l of (preLoans.loans || [])) {
+      if (l.category === 'private') preBalances[l.id] = { name: l.name, balanceCents: l.balanceCents, rate: l.interestRatePercent, termMonths: l.termMonths };
+    }
+
     const res = actions.markPendingPosted('out', pendingId, { loanAdjustments });
-    if (!res.needsBankSelection) {
-      setModal({ type: 'none' });
+    if (res.needsBankSelection) {
+      const last = getLastPostedBankId('out');
+      const defaultId = data.banks.some((b) => b.id === last) ? last : data.banks[0]?.id || '';
+      setModal({ type: 'post-bank', kind: 'out', pendingId, bankId: `bank:${defaultId}`, loanAdjustments });
       return;
     }
-    const last = getLastPostedBankId('out');
-    const defaultId = data.banks.some((b) => b.id === last) ? last : data.banks[0]?.id || '';
-    setModal({ type: 'post-bank', kind: 'out', pendingId, bankId: `bank:${defaultId}`, loanAdjustments });
+
+    // Build payment rows from pre vs post balances
+    const postLoans = loadLoans();
+    const paymentRows: { name: string; subtractedCents: number; newBalanceCents: number }[] = [];
+    for (const l of (postLoans.loans || [])) {
+      if (l.category !== 'private') continue;
+      const pre = preBalances[l.id];
+      if (!pre) continue;
+      const sub = pre.balanceCents - l.balanceCents;
+      if (sub > 0) paymentRows.push({ name: pre.name, subtractedCents: sub, newBalanceCents: l.balanceCents });
+    }
+
+    // Check if auto-recalculation should run
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const lastRecompute = loadLastRecomputeDate();
+    const shouldRecalc = !userEdited && lastRecompute !== todayKey;
+
+    let interestRows: { name: string; interestCents: number; newBalanceCents: number }[] | null = null;
+    let newMonthlyPaymentCents: number | null = null;
+
+    if (shouldRecalc) {
+      // Auto interest capitalization: add monthly interest to each private loan's balance
+      const loansState = loadLoans();
+      const updatedLoans = loansState.loans.map((l: Loan) => {
+        if (l.category !== 'private') return l;
+        const monthlyInt = Math.floor(l.balanceCents * (l.interestRatePercent / 100) / 12);
+        return { ...l, balanceCents: l.balanceCents + monthlyInt };
+      });
+      saveLoans({ ...loansState, loans: updatedLoans });
+      saveLastRecomputeDate(todayKey);
+
+      // Build interest rows
+      interestRows = [];
+      for (const l of updatedLoans) {
+        if (l.category !== 'private') continue;
+        const postBal = (postLoans.loans || []).find((p: Loan) => p.id === l.id);
+        if (!postBal) continue;
+        const intAdded = l.balanceCents - postBal.balanceCents;
+        if (intAdded > 0) interestRows.push({ name: l.name, interestCents: intAdded, newBalanceCents: l.balanceCents });
+      }
+
+      // Re-derive monthly payment from updated balances
+      const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
+      const finalLoans = loadLoans();
+      newMonthlyPaymentCents = getPrivatePaymentNowTotal(finalLoans.loans || [], detectedIncome);
+      savePrivatePaymentNowBase(newMonthlyPaymentCents);
+    }
+
+    // Show summary modal
+    if (paymentRows.length > 0) {
+      setModal({ type: 'loan-post-summary', paymentRows, interestRows: shouldRecalc ? interestRows : null, newMonthlyPaymentCents });
+    } else {
+      setModal({ type: 'none' });
+    }
   }
 
   function handlePendingPosted(kind: 'in' | 'out', id: string) {
@@ -959,7 +1029,7 @@ export function SnapshotPage({
       {/* Summary moved above stat tiles — accessible via chart tap */}
 
       {modal.type !== 'none' ? (
-        <div className={modal.type === 'card-reward-config' || modal.type === 'loan-payment-preview' ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay'}>
+        <div className={modal.type === 'card-reward-config' || modal.type === 'loan-payment-preview' || modal.type === 'loan-post-summary' ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay'}>
           <div className="modal">
             {modal.type === 'add-bank' ? (
               <>
@@ -1071,7 +1141,7 @@ export function SnapshotPage({
                               onChange={(e) => {
                                 const nextRows = modal.privateRows.slice();
                                 nextRows[idx] = { ...row, subCentsInput: e.target.value };
-                                setModal({ ...modal, privateRows: nextRows });
+                                setModal({ ...modal, privateRows: nextRows, userEdited: true });
                               }}
                               style={{ width: '100%', padding: '4px 6px' }}
                             />
@@ -1116,10 +1186,61 @@ export function SnapshotPage({
                         );
                         overrides[row.loanId] = cents;
                       }
-                      postLoanPayment(modal.pendingId, { privateBreakdownOverrides: overrides });
+                      postLoanPayment(modal.pendingId, { privateBreakdownOverrides: overrides }, modal.userEdited);
                     }}
                   >
                     Confirm
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {modal.type === 'loan-post-summary' ? (
+              <>
+                <div className="modal-header modal-header--sticky">
+                  <h3 style={{ margin: 0, flex: 1 }}>Payment posted</h3>
+                  <button type="button" aria-label="Close" onClick={() => setModal({ type: 'none' })} className="modal-close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
+                </div>
+                <div className="card" style={{ padding: 10, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 8 }}>Payment Applied</div>
+                  {modal.paymentRows.map((row, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                      <span>{row.name}</span>
+                      <span>
+                        <span style={{ color: 'var(--green)' }}>-{formatCents(row.subtractedCents)}</span>
+                        <span style={{ color: 'var(--ui-primary-text, var(--text))', marginLeft: 8 }}>→ {formatCents(row.newBalanceCents)}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {modal.interestRows && modal.interestRows.length > 0 && (
+                  <div className="card" style={{ padding: 10, marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 8 }}>Monthly Interest Applied</div>
+                    {modal.interestRows.map((row, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
+                        <span>{row.name}</span>
+                        <span>
+                          <span style={{ color: 'var(--red)' }}>+{formatCents(row.interestCents)}</span>
+                          <span style={{ color: 'var(--ui-primary-text, var(--text))', marginLeft: 8 }}>→ {formatCents(row.newBalanceCents)}</span>
+                        </span>
+                      </div>
+                    ))}
+                    {modal.newMonthlyPaymentCents != null && (
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '0.9rem' }}>
+                        <span>New Monthly Payment</span>
+                        <span>{formatCents(modal.newMonthlyPaymentCents)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!modal.interestRows && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 10 }}>
+                    Amounts were manually edited. Use "Recalculate monthly payment" in Loan Tools to update balances with interest.
+                  </p>
+                )}
+                <div className="btn-row">
+                  <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: 'none' })}>
+                    Done
                   </button>
                 </div>
               </>
