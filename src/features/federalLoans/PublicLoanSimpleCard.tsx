@@ -227,7 +227,7 @@ export function PublicLoanSimpleCard(props: {
                   style={inputStyle}
                 />
               </div>
-              <div className="field" style={{ marginBottom: 0 }}>
+              <div className="field" style={{ marginBottom: 10 }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
                   Avg interest rate (%)
                 </label>
@@ -241,6 +241,17 @@ export function PublicLoanSimpleCard(props: {
                   placeholder="Optional"
                   style={{ ...inputStyle, maxWidth: 140 }}
                 />
+              </div>
+              <div className="toggle-row" style={{ alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  id="publicInterestInPrincipal"
+                  checked={summary.includeInterestInPrincipal ?? false}
+                  onChange={(e) => persist({ ...summary, includeInterestInPrincipal: e.target.checked })}
+                />
+                <label htmlFor="publicInterestInPrincipal" style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                  Add interest to balance for principal
+                </label>
               </div>
             </div>
 

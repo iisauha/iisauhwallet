@@ -20,6 +20,8 @@ export interface PublicLoanSummary {
   totalBalanceCents?: number | null;
   /** Optional summary: average public interest rate (e.g. 5.5 for 5.5%). */
   avgInterestRatePercent?: number | null;
+  /** When true, estimated interest (balance × avgRate) is added to the public principal shown in the donut ring. */
+  includeInterestInPrincipal?: boolean;
 }
 
 const DEFAULT: PublicLoanSummary = {
@@ -31,7 +33,8 @@ const DEFAULT: PublicLoanSummary = {
   firstPaymentDateLastAutoAddedAt: null,
   notesText: '',
   totalBalanceCents: null,
-  avgInterestRatePercent: null
+  avgInterestRatePercent: null,
+  includeInterestInPrincipal: false
 };
 
 function parseNum(v: unknown): number | null {
@@ -62,6 +65,7 @@ function parse(raw: unknown): PublicLoanSummary {
   const notesText = typeof o.notesText === 'string' ? o.notesText : '';
   const totalBalanceCents = parseNum(o.totalBalanceCents) ?? null;
   const avgInterestRatePercent = parseNum(o.avgInterestRatePercent) ?? null;
+  const includeInterestInPrincipal = o.includeInterestInPrincipal === true;
   return {
     estimatedMonthlyPaymentCents,
     currentPaymentCents,
@@ -71,7 +75,8 @@ function parse(raw: unknown): PublicLoanSummary {
     firstPaymentDateLastAutoAddedAt,
     notesText,
     totalBalanceCents,
-    avgInterestRatePercent
+    avgInterestRatePercent,
+    includeInterestInPrincipal
   };
 }
 
