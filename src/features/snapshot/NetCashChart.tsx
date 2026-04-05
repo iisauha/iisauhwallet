@@ -234,7 +234,8 @@ export function NetCashChart({
   const changePct = firstCents !== 0 ? (changeCents / Math.abs(firstCents)) * 100 : 0;
   const isPositiveChange = changeCents >= 0;
 
-  const lineColor = 'var(--accent)';
+  // Dynamic line color: green if positive, red if negative, neutral at 0
+  const lineColor = displayCents > 0 ? 'var(--green)' : displayCents < 0 ? 'var(--red)' : 'var(--text)';
   const hasData = dataPoints.length > 1;
 
   const handleRangeChange = useCallback((r: Range) => {
@@ -303,9 +304,6 @@ export function NetCashChart({
                   </span>
                 )}
               </div>
-              {scrubData && displayTime && (
-                <div className="net-cash-chart-scrub-time">{displayTime}</div>
-              )}
             </>
           )}
         </div>
@@ -317,6 +315,13 @@ export function NetCashChart({
         </div>
 
         <div className={`net-cash-chart-graph-layer${showSummary ? ' hidden' : ''}`}>
+          {scrubData && displayTime && (
+            <div style={{ position: 'relative', height: 0 }}>
+              <div style={{ position: 'absolute', left: scrubData.px, transform: 'translateX(-50%)', bottom: 0, fontSize: '0.68rem', color: lineColor, whiteSpace: 'nowrap', pointerEvents: 'none', opacity: 0.8 }}>
+                {displayTime}
+              </div>
+            </div>
+          )}
           <div
             ref={containerRef}
             className="net-cash-chart-area"
@@ -378,7 +383,10 @@ export function NetCashChart({
                   />
                 )}
                 {scrubData && (
-                  <circle cx={scrubData.px} cy={scrubData.py} r={5} fill={lineColor} filter="url(#glowDot)" />
+                  <>
+                    <line x1={scrubData.px} y1={0} x2={scrubData.px} y2={CHART_HEIGHT} stroke={lineColor} strokeWidth={1} opacity={0.25} strokeDasharray="3 2" />
+                    <circle cx={scrubData.px} cy={scrubData.py} r={5} fill={lineColor} filter="url(#glowDot)" />
+                  </>
                 )}
                 {!scrubData && points.length > 0 && (
                   <circle

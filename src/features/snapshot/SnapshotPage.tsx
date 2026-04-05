@@ -570,6 +570,9 @@ export function SnapshotPage({
 
   const totalCardDebtCents = totals.ccDebtCents;
   const totalCashCents = totals.bankTotalCents;
+  const pendingInCents = (data.pendingIn || []).reduce((s: number, p: any) => s + (p.amountCents || 0), 0);
+  const pendingOutCents = (data.pendingOut || []).reduce((s: number, p: any) => s + (p.amountCents || 0), 0);
+  const pendingNetCents = pendingInCents - pendingOutCents;
   const pendingCount = (data.pendingIn || []).length + (data.pendingOut || []).length;
 
   return (
@@ -660,7 +663,9 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'pending'}
         >
           <div className="stat-tile-icon"><IconClock /></div>
-          <div className="stat-tile-value" style={{ color: pendingCount > 0 ? 'var(--accent)' : undefined }}>{pendingCount}</div>
+          <div className="stat-tile-value" style={{ color: pendingNetCents > 0 ? 'var(--green)' : pendingNetCents < 0 ? 'var(--red)' : undefined, fontSize: '0.85rem' }}>
+            {pendingCount === 0 ? '0' : `${pendingNetCents >= 0 ? '+' : ''}${formatCents(pendingNetCents)}`}
+          </div>
           <div className="stat-tile-label">Pending</div>
         </button>
       </div>

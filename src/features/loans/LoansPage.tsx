@@ -1665,7 +1665,7 @@ export function LoansPage() {
                     stroke={arc.color} strokeWidth={stroke}
                     strokeDasharray={`${arc.len} ${circum - arc.len}`}
                     strokeDashoffset={arc.offset}
-                    strokeLinecap="round"
+                    strokeLinecap="butt"
                     transform={`rotate(-90 ${cx} ${cy})`}
                     filter="url(#donutGlow)"
                     style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1)' }}
@@ -1738,7 +1738,7 @@ export function LoansPage() {
               {(privateLoansWithDerived.some(l => l.activePrivateRangeMode !== 'full_repayment') || publicLoansWithDerived.some(l => l.nextPaymentDate && toDateKey(new Date()) < l.nextPaymentDate)) && (
                 <button
                   type="button"
-                  style={{ fontSize: '0.68rem', padding: '2px 0', marginTop: 2, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                  style={{ fontSize: '0.68rem', padding: '1px 0', marginTop: 1, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                   onClick={() => { setScenarioTab('after-grace'); setShowPaymentScenarios(true); }}
                 >
                   After Grace Period
