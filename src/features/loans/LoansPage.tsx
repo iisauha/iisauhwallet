@@ -1078,112 +1078,73 @@ function LoanCard(props: {
   const { loan: l, onEdit, onDelete } = props;
   const [plansOpen, setPlansOpen] = useState(false);
 
+  const payment = getActiveMonthlyPayment(l);
+  const isPublic = l.category === 'public';
+  const isPrivate = l.category === 'private';
+
   return (
     <div className="card" key={l.id} style={{ marginBottom: 10, padding: '12px 14px' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <span className="name" style={{ fontSize: '1rem', fontWeight: 600 }}>
+      {/* Header: name + badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <span style={{ fontSize: '1rem', fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {l.name}
         </span>
-        <span
-          style={{
-            fontSize: '0.7rem',
-            padding: '2px 6px',
-            borderRadius: 999,
-            background: l.category === 'public' ? 'rgba(59,130,246,0.15)' : 'rgba(234,179,8,0.15)',
-            color: l.category === 'public' ? 'var(--blue)' : 'var(--yellow)'
-          }}
-        >
-          {l.category === 'public' ? 'Public' : 'Private'}
-        </span>
+        {isPublic && l.subsidyType && (
+          <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 999, background: l.subsidyType === 'subsidized' ? 'rgba(34,197,94,0.15)' : 'rgba(59,130,246,0.15)', color: l.subsidyType === 'subsidized' ? 'var(--green)' : 'var(--blue)', flexShrink: 0 }}>
+            {l.subsidyType === 'subsidized' ? 'Sub' : 'Unsub'}
+          </span>
+        )}
+        {isPrivate && l.rateType === 'variable' && (
+          <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', color: 'var(--yellow)', flexShrink: 0 }}>Variable</span>
+        )}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px', marginBottom: 4 }}>
-        <span style={{ color: 'var(--red)', fontWeight: 600 }}>{formatCents(l.balanceCents)}</span>
-        <span style={{ fontSize: '0.9rem' }}>
-          {l.interestRatePercent.toFixed(2)}% {l.rateType === 'fixed' ? 'fixed' : 'variable'}
-        </span>
+
+      {/* Balance + rate line */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+        <span style={{ color: 'var(--red)', fontWeight: 600, fontSize: '1.05rem' }}>{formatCents(l.balanceCents)}</span>
+        <span style={{ fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))' }}>{l.interestRatePercent.toFixed(2)}%</span>
       </div>
-      {l.category === 'public' ? (
-        <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
-          <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>{statusLabel(l.repaymentStatus)}</span>
-          {l.subsidyType ? (
-            <span style={{ color: 'var(--ui-primary-text, var(--text))', fontSize: '0.8rem' }}> · {l.subsidyType}</span>
-          ) : null}
-        </div>
-      ) : null}
-      {l.category === 'public' && l.nextPaymentDate ? (
-        <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-          Next payment date: {l.nextPaymentDate}
-        </div>
-      ) : null}
-      <div style={{ fontSize: '0.9rem', marginBottom: 4, fontWeight: 700, color: 'var(--ui-primary-text, var(--text))' }}>
-        Current monthly payment: {getActiveMonthlyPayment(l) != null ? formatCents(getActiveMonthlyPayment(l)!) : '-'}
+
+      {/* Key metrics — compact grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>
+        <div>Payment <span style={{ fontWeight: 600, color: 'var(--text)' }}>{payment != null && payment > 0 ? formatCents(payment) : '$0'}</span></div>
+        <div>Daily <span style={{ fontWeight: 600, color: 'var(--text)' }}>{l.dailyInterestCents > 0 ? formatCents(l.dailyInterestCents) : '$0.00'}</span></div>
+        {(l.unpaidInterestCents ?? 0) > 0 && (
+          <div style={{ gridColumn: '1 / -1' }}>Unpaid interest <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{formatCents(l.unpaidInterestCents!)}</span></div>
+        )}
       </div>
-      {l.category === 'private' ? (
-        <>
-          <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-            Payment phase: {l.activePrivateRangeMode === 'deferred' ? 'Deferred / Forbearance' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : '-'}
-          </div>
-          {l.activePrivateRangeMode === 'deferred' && l.deferredDailyInterestCents != null && l.deferredDaysInRange != null && l.deferredInterestTotalCents != null && l.deferredProjectedBalanceCents != null ? (
-            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-              <div style={{ marginBottom: 2 }}>Deferred / Forbearance</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 2 }}>Days across deferred range: {l.deferredDaysInRange} days</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))', marginBottom: 2 }}>Interest accrued across deferment: {formatCents(l.deferredInterestTotalCents)}</div>
-              <div style={{ color: 'var(--ui-primary-text, var(--text))' }}>Balance after deferment ends: {formatCents(l.deferredProjectedBalanceCents)}</div>
-            </div>
-          ) : (
-            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-              Monthly interest: {formatCents(l.monthlyInterestCents)}
-            </div>
-          )}
-          {l.dailyInterestCents > 0 && (
-            <div style={{ fontSize: '0.85rem', marginBottom: 4, color: 'var(--ui-primary-text, var(--text))' }}>
-              {formatCents(l.dailyInterestCents)} / day
-            </div>
-          )}
-          {(l.unpaidInterestCents ?? 0) > 0 && (
-            <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-              Unpaid accumulated interest: {formatCents(l.unpaidInterestCents!)}
-            </div>
-          )}
-          <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-            {l.payoffMonths != null && l.payoffMonths > 0 ? (
-              <>Estimated payoff: {addMonths(new Date(), l.payoffMonths).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>
-            ) : (
-              <span style={{ color: 'var(--ui-primary-text, var(--text))' }}>Payment may be too low to reduce balance.</span>
-            )}
-          </div>
-          {l.lender ? (
-            <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-              Servicer: {l.lender}
-            </div>
-          ) : null}
-        </>
-      ) : null}
-      {l.category === 'public' && (l.totalFederalPaymentCents != null || l.approximateShareCents != null) ? (
-        <>
-          <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 2 }}>
-            Total federal payment (after grace): {l.totalFederalPaymentCents != null ? formatCents(l.totalFederalPaymentCents) : '-'}
-          </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-            Approximate share of total: {l.approximateShareCents != null ? formatCents(l.approximateShareCents) : '-'} (not separately calculated)
-          </div>
-        </>
-      ) : null}
-      {l.category === 'public' ? (
-        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
-          {l.lender ? `Servicer: ${l.lender} · ` : null}
-          Interest accrual ≈ {formatCents(l.dailyInterestCents)}/day · {formatCents(l.monthlyInterestCents)}/mo
-        </div>
-      ) : null}
-      {l.category === 'public' && l.federalPlans && l.federalPlans.length > 0 ? (
-        <div style={{ marginBottom: 8 }}>
+
+      {/* Status line */}
+      <div style={{ fontSize: '0.78rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6 }}>
+        {isPrivate && (
+          <span>
+            {l.activePrivateRangeMode === 'deferred' ? 'Deferred' : l.activePrivateRangeMode === 'interest_only' ? 'Interest Only' : l.activePrivateRangeMode === 'full_repayment' ? 'Full Repayment' : l.activePrivateRangeMode === 'custom_monthly' ? 'Custom' : ''}
+            {l.payoffMonths != null && l.payoffMonths > 0 ? ` · Payoff ${addMonths(new Date(), l.payoffMonths).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}` : ''}
+          </span>
+        )}
+        {isPublic && (
+          <span>
+            {statusLabel(l.repaymentStatus)}
+            {l.nextPaymentDate ? ` · Repayment ${l.nextPaymentDate}` : ''}
+          </span>
+        )}
+      </div>
+
+      {/* Servicer */}
+      {l.lender && (
+        <div style={{ fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7, marginBottom: 4 }}>{l.lender}</div>
+      )}
+
+      {/* Federal plans (public only, collapsible) */}
+      {isPublic && l.federalPlans && l.federalPlans.length > 0 ? (
+        <div style={{ marginBottom: 6 }}>
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+            style={{ padding: '4px 8px', fontSize: '0.78rem' }}
             onClick={() => setPlansOpen((o) => !o)}
           >
-            {plansOpen ? 'Hide' : 'Compare'} repayment plans
+            {plansOpen ? 'Hide' : 'Compare'} plans
           </button>
           {plansOpen ? (
             <div style={{ marginTop: 8, overflowX: 'auto' }}>
@@ -1346,6 +1307,7 @@ export function LoansPage() {
   const [showEditPaymentNow, setShowEditPaymentNow] = useState(false);
   const [editPaymentInput, setEditPaymentInput] = useState('');
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
+  const [publicCarouselIdx, setPublicCarouselIdx] = useState(0);
   const [showAllLoans, setShowAllLoans] = useState(false);
 
   // Ledger data from Supabase nightly interest accrual
@@ -1745,40 +1707,57 @@ export function LoansPage() {
       </div>
 
       {showPublic ? (
-        <div style={{ marginBottom: 16 }}>
+        <>
           {publicLoansWithDerived.length === 0 ? (
             <p className="empty-state-desc" style={{ marginTop: 0, marginBottom: 12 }}>
-              No federal loans. Add your public (federal) student loans here.
+              No federal loans yet.
             </p>
           ) : null}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
             <button
               type="button"
-              className="btn-icon-circle"
-              aria-label="Add public loan"
+              className="snapshot-add-btn"
               onClick={() => setEditor({ mode: 'add', value: { ...loanToEditor(null, hasRecurringIncome), category: 'public' } })}
             >
-              <IconPlus />
+              <IconPlus /> Add
             </button>
           </div>
           {publicLoansWithDerived.length > 0 && (
-            <div className="card-carousel" style={{ marginBottom: 0 }}>
-              {publicLoansWithDerived.map((l) => (
-                <div className="card-carousel-item" key={l.id}>
-                  <LoanCard
-                    loan={l}
-                    onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
-                    onDelete={async () => {
-                      const ok = await showConfirm('Delete this loan?');
-                      if (!ok) return;
-                      persist({ loans: state.loans.filter((x) => x.id !== l.id) });
-                    }}
-                  />
+            <>
+              <div
+                className="card-carousel"
+                style={{ marginBottom: 0 }}
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  const rawIdx = el.scrollLeft / (el.clientWidth || 1);
+                  setPublicCarouselIdx(Math.round(rawIdx));
+                  scheduleSnapCorrection(el);
+                }}
+              >
+                {publicLoansWithDerived.map((l) => (
+                  <div className="card-carousel-item" key={l.id}>
+                    <LoanCard
+                      loan={l}
+                      onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
+                      onDelete={async () => {
+                        const ok = await showConfirm('Delete this loan?');
+                        if (!ok) return;
+                        persist({ loans: state.loans.filter((x) => x.id !== l.id) });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              {publicLoansWithDerived.length > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
+                  {publicLoansWithDerived.map((_, i) => (
+                    <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === publicCarouselIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
-        </div>
+        </>
       ) : null}
       {showPrivate ? (
         <>
