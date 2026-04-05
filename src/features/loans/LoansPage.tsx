@@ -675,6 +675,27 @@ function deriveForLoan(
       monthlyLaterCents = null;
       payoffMonths = null;
     }
+
+    // Compute unpaid interest for public loans (same function as private)
+    const todayForInterest = toDateKey(new Date());
+    const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForLoan(loan, todayForInterest, ledgerMap);
+
+    return {
+      ...loan,
+      monthlyNowCents,
+      monthlyLaterCents,
+      dailyInterestCents,
+      monthlyInterestCents,
+      payoffMonths,
+      federalPlans,
+      totalFederalPaymentCents,
+      approximateShareCents,
+      projectedPaymentCents,
+      projectedTotalInterestCents,
+      projectedPayoffDate,
+      unpaidInterestCents,
+      unpaidInterestSource,
+    };
   } else {
     // Private loan: range-based payment logic
     const todayISO = toDateKey(new Date());
