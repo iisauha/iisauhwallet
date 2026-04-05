@@ -308,9 +308,84 @@ function computeUnpaidInterestFromAccrual(
 }
 
 /**
+ * Compute full months elapsed between two ISO dates, accounting for day-of-month.
+ * e.g. "2024-09-30" → "2026-04-05" = 18 (not 19, because Apr 5 < Sep 30 day).
+ */
+function fullMonthsElapsed(startISO: string, endISO: string): number {
+  const a = new Date(startISO + 'T00:00:00');
+  const b = new Date(endISO + 'T00:00:00');
+  let months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  if (b.getDate() < a.getDate()) months -= 1;
+  return Math.max(0, months);
+}
+
+/** Add N months to an ISO date string, return ISO string. */
+function addMonthsToISO(startISO: string, months: number): string {
+  const d = addMonths(new Date(startISO + 'T00:00:00'), months);
+  return toDateKey(d);
+}
+
+/**
+ * Compute unpaid accumulated interest from payment ranges (AES convention).
+ * Uses Math.round per day for accumulation (nightly convention).
+ * Iterates each range and accumulates based on mode:
+ *   deferred      → full daily accrual for elapsed days
+ *   interest_only → only the partial current-month remainder (full months are paid)
+ *   custom_monthly → monthly shortfall × full months + daily × remainder days
+ *   full_repayment → 0 (amortized payment covers interest)
+ */
+function computeRangeBasedUnpaidInterest(loan: Loan, asOfISO: string): number {
+  if (loan.category !== 'private') return 0;
+  const { balanceCents, interestRatePercent } = loan;
+  if (!(balanceCents > 0) || !(interestRatePercent > 0)) return 0;
+
+  const ranges = getEffectivePrivateRanges(loan);
+  // AES nightly accumulation convention: Math.round per day
+  const dailyCents = Math.round(balanceCents * (interestRatePercent / 100) / 365);
+  const monthlyInterestCents = Math.round(balanceCents * (interestRatePercent / 100) / 12);
+
+  let unpaidCents = 0;
+
+  for (const range of ranges) {
+    if (range.startDate > asOfISO) continue; // future range, no accrual yet
+    const rangeEnd = range.endDate < asOfISO ? range.endDate : asOfISO;
+
+    switch (range.mode) {
+      case 'deferred': {
+        const daysElapsed = daysBetween(range.startDate, rangeEnd);
+        unpaidCents += dailyCents * daysElapsed;
+        break;
+      }
+      case 'interest_only': {
+        // User pays monthly interest; only partial period since last payment accrues
+        const months = fullMonthsElapsed(range.startDate, rangeEnd);
+        const monthStart = addMonthsToISO(range.startDate, months);
+        const remainderDays = daysBetween(monthStart, rangeEnd);
+        unpaidCents += dailyCents * remainderDays;
+        break;
+      }
+      case 'custom_monthly': {
+        // Fixed payment may be less than interest → shortfall accumulates monthly
+        const customPayment = range.customPaymentCents ?? 0;
+        const shortfall = Math.max(0, monthlyInterestCents - customPayment);
+        const months = fullMonthsElapsed(range.startDate, rangeEnd);
+        const monthStart = addMonthsToISO(range.startDate, months);
+        const remainderDays = daysBetween(monthStart, rangeEnd);
+        unpaidCents += (shortfall * months) + (dailyCents * remainderDays);
+        break;
+      }
+      case 'full_repayment':
+        // Amortized payment covers all interest
+        break;
+    }
+  }
+
+  return unpaidCents;
+}
+
+/**
  * Unpaid interest for private loan.
- * Priority: ledger (server-computed nightly) → accrual anchor (local estimate) → 0.
- * ledgerMap is passed in so this remains a pure function callable from derivation.
+ * Priority: ledger (server-computed nightly) → range-based computation → 0.
  */
 function getUnpaidInterestForPrivate(
   loan: Loan,
@@ -320,18 +395,14 @@ function getUnpaidInterestForPrivate(
   // 1. Ledger: server-computed nightly interest (primary when available)
   const ledgerRow = ledgerMap?.[loan.id];
   if (ledgerRow) {
-    // closing_balance - original balance = cumulative accrued interest
     const accruedCents = ledgerRow.closing_balance_cents - loan.balanceCents;
     if (accruedCents >= 0) {
       return { cents: accruedCents, source: 'ledger' };
     }
   }
-  // 2. Fallback: local accrual anchor estimate
-  const anchor = loan.accrualAnchorDate;
-  if (anchor) {
-    const cents = computeUnpaidInterestFromAccrual(loan.balanceCents, loan.interestRatePercent, anchor, asOfISO);
-    return { cents, source: 'estimated' };
-  }
+  // 2. Range-based computation from payment ranges (not a flat accrual anchor)
+  const cents = computeRangeBasedUnpaidInterest(loan, asOfISO);
+  if (cents > 0) return { cents, source: 'estimated' };
   return { cents: 0, source: 'fallback' };
 }
 
