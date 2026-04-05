@@ -1202,6 +1202,8 @@ export type Loan = {
   interestBalanceAnchorDate?: string | null;
   /** Private interest_only only: day of month AES bills (1-31). Used to derive last payment date. */
   billingDayOfMonth?: number | null;
+  /** Variable rate loans: history of rate changes with timestamps. */
+  rateChangeHistory?: { rate: number; changedAt: string }[];
 };
 
 export type LoansState = {

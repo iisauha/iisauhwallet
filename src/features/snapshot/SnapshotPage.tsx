@@ -286,6 +286,13 @@ export function SnapshotPage({
         interestRows: { name: string; interestCents: number; newBalanceCents: number }[] | null;
         newMonthlyPaymentCents: number | null;
       }
+    | {
+        type: 'variable-rate-confirm';
+        pendingId: string;
+        overrides: Record<string, number>;
+        userEdited: boolean;
+        variableLoans: { loanId: string; name: string; balanceCents: number; currentRate: string; originalRate: number }[];
+      }
     | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
     | {
         type: 'card-reward-config';
@@ -1048,7 +1055,7 @@ export function SnapshotPage({
       {/* Summary moved above stat tiles — accessible via chart tap */}
 
       {modal.type !== 'none' ? (
-        <div className={modal.type === 'card-reward-config' || modal.type === 'loan-payment-preview' || modal.type === 'loan-post-summary' ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay'}>
+        <div className={modal.type === 'card-reward-config' || modal.type === 'loan-payment-preview' || modal.type === 'loan-post-summary' || modal.type === 'variable-rate-confirm' ? 'modal-overlay modal-overlay--fullscreen' : 'modal-overlay'}>
           <div className="modal">
             {modal.type === 'add-bank' ? (
               <>
@@ -1205,10 +1212,90 @@ export function SnapshotPage({
                         );
                         overrides[row.loanId] = cents;
                       }
+                      // Check for variable rate loans that need confirmation before recalc
+                      const todayKey = new Date().toISOString().slice(0, 10);
+                      const lastRecompute = loadLastRecomputeDate();
+                      const shouldRecalc = !modal.userEdited && lastRecompute !== todayKey;
+                      if (shouldRecalc) {
+                        const loansState = loadLoans();
+                        const variableLoans = (loansState.loans || [])
+                          .filter((l: Loan) => l.category === 'private' && l.rateType === 'variable')
+                          .map((l: Loan) => ({ loanId: l.id, name: l.name, balanceCents: l.balanceCents, currentRate: String(l.interestRatePercent), originalRate: l.interestRatePercent }));
+                        if (variableLoans.length > 0) {
+                          setModal({ type: 'variable-rate-confirm', pendingId: modal.pendingId, overrides, userEdited: modal.userEdited, variableLoans });
+                          return;
+                        }
+                      }
                       postLoanPayment(modal.pendingId, { privateBreakdownOverrides: overrides }, modal.userEdited);
                     }}
                   >
                     Confirm
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {modal.type === 'variable-rate-confirm' ? (
+              <>
+                <div className="modal-header modal-header--sticky">
+                  <h3 style={{ margin: 0, flex: 1 }}>Confirm Variable Rate</h3>
+                  <button type="button" aria-label="Close" onClick={() => setModal({ type: 'none' })} className="modal-close-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
+                </div>
+                <p style={{ color: 'var(--ui-primary-text, var(--text))', marginTop: 0 }}>
+                  One or more of your loans has a variable interest rate that may have changed since your last payment.
+                </p>
+                <div className="card" style={{ padding: 10, marginBottom: 10 }}>
+                  {modal.variableLoans.map((vl, idx) => (
+                    <div key={vl.loanId} style={{ marginBottom: idx < modal.variableLoans.length - 1 ? 10 : 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{vl.name}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 4 }}>
+                        {formatCents(vl.balanceCents)} — Current rate in app: {parseFloat(vl.currentRate).toFixed(3)}%
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={vl.currentRate}
+                          onChange={(e) => {
+                            const next = modal.variableLoans.slice();
+                            next[idx] = { ...vl, currentRate: e.target.value };
+                            setModal({ ...modal, variableLoans: next });
+                          }}
+                          style={{ width: 90, padding: '4px 8px', fontSize: '0.95rem' }}
+                        />
+                        <span style={{ fontSize: '0.9rem' }}>%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                  Confirm to continue with these rates, or update them before your balances are recalculated.
+                </p>
+                <div className="btn-row">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      // Save updated rates, log history, then proceed
+                      const loansState = loadLoans();
+                      const now = new Date().toISOString();
+                      let changed = false;
+                      const updatedLoans = loansState.loans.map((l: Loan) => {
+                        const vl = modal.variableLoans.find((v) => v.loanId === l.id);
+                        if (!vl) return l;
+                        const newRate = parseFloat(vl.currentRate);
+                        if (!Number.isFinite(newRate) || newRate < 0) return l;
+                        if (Math.abs(newRate - l.interestRatePercent) < 0.0001) return l;
+                        changed = true;
+                        const history = [...(l.rateChangeHistory ?? []), { rate: l.interestRatePercent, changedAt: now }];
+                        return { ...l, interestRatePercent: newRate, rateChangeHistory: history };
+                      });
+                      if (changed) saveLoans({ ...loansState, loans: updatedLoans });
+                      postLoanPayment(modal.pendingId, { privateBreakdownOverrides: modal.overrides }, modal.userEdited);
+                    }}
+                  >
+                    {modal.variableLoans.some((vl) => Math.abs(parseFloat(vl.currentRate) - vl.originalRate) >= 0.0001)
+                      ? 'Update Rate' : 'Confirm & Continue'}
                   </button>
                 </div>
               </>
