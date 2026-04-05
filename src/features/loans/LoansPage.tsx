@@ -36,6 +36,7 @@ import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { IconPlus } from '../../ui/icons';
 import { loadPublicLoanSummary, savePublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { PublicLoanSimpleCard } from '../federalLoans/PublicLoanSimpleCard';
+import { syncPrivateLoansToSupabase, fetchLatestLedgerRows, type LedgerRow } from '../../state/loanSync';
 
 function todayISO(): string {
   const d = new Date();
@@ -306,12 +307,26 @@ function computeUnpaidInterestFromAccrual(
   return Math.round(dollars * 100);
 }
 
-/** Unpaid interest for private loan: override → manual; else accrual anchor → estimated; else fallback. */
-function getUnpaidInterestForPrivate(loan: Loan, asOfISO: string): { cents: number; source: 'manual' | 'estimated' | 'fallback' } {
-  const override = loan.unpaidInterestOverrideCents;
-  if (override != null && override >= 0) {
-    return { cents: override, source: 'manual' };
+/**
+ * Unpaid interest for private loan.
+ * Priority: ledger (server-computed nightly) → accrual anchor (local estimate) → 0.
+ * ledgerMap is passed in so this remains a pure function callable from derivation.
+ */
+function getUnpaidInterestForPrivate(
+  loan: Loan,
+  asOfISO: string,
+  ledgerMap?: Record<string, LedgerRow>
+): { cents: number; source: 'ledger' | 'estimated' | 'fallback' } {
+  // 1. Ledger: server-computed nightly interest (primary when available)
+  const ledgerRow = ledgerMap?.[loan.id];
+  if (ledgerRow) {
+    // closing_balance - original balance = cumulative accrued interest
+    const accruedCents = ledgerRow.closing_balance_cents - loan.balanceCents;
+    if (accruedCents >= 0) {
+      return { cents: accruedCents, source: 'ledger' };
+    }
   }
+  // 2. Fallback: local accrual anchor estimate
   const anchor = loan.accrualAnchorDate;
   if (anchor) {
     const cents = computeUnpaidInterestFromAccrual(loan.balanceCents, loan.interestRatePercent, anchor, asOfISO);
@@ -368,9 +383,9 @@ type LoanWithDerived = Loan & {
   futureValueFromCustom?: boolean;
   /** Private only: mode of the active range (for display). */
   activePrivateRangeMode?: PrivatePaymentRangeMode | null;
-  /** Private only: unpaid interest cents and source (manual / estimated). */
+  /** Private only: unpaid interest cents and source (ledger / estimated / fallback). */
   unpaidInterestCents?: number;
-  unpaidInterestSource?: 'manual' | 'estimated' | 'fallback';
+  unpaidInterestSource?: 'ledger' | 'estimated' | 'fallback';
   /** For private deferred: estimated balance today from schedule timeline (display only). */
   estimatedCurrentBalanceCents?: number | null;
   /** For private deferred: balance at start of first repayment range (display only). */
@@ -406,7 +421,8 @@ function deriveForLoan(
   loan: Loan,
   allLoans: Loan[],
   detectedAnnualIncomeCents: number,
-  federalTotals: FederalTotals | null
+  federalTotals: FederalTotals | null,
+  ledgerMap?: Record<string, LedgerRow>
 ): LoanWithDerived {
   const { balanceCents, interestRatePercent, repaymentStatus, termMonths, category } = loan;
   const allPublicLoans = allLoans.filter((l) => l.category === 'public');
@@ -572,7 +588,7 @@ function deriveForLoan(
       if (r.endDate > latestRangeEndISO) latestRangeEndISO = r.endDate;
     }
 
-    const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForPrivate(loan, todayISO);
+    const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForPrivate(loan, todayISO, ledgerMap);
 
     // Deferred/forbearance: compute full-range interest and projected balance for display
     let deferredDailyInterestCents: number | undefined;
@@ -1138,6 +1154,14 @@ export function LoansPage() {
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
   const [showAllLoans, setShowAllLoans] = useState(false);
 
+  // Ledger data from Supabase nightly interest accrual
+  const [ledgerMap, setLedgerMap] = useState<Record<string, LedgerRow>>({});
+  useEffect(() => {
+    fetchLatestLedgerRows().then(setLedgerMap).catch(() => {});
+    // Initial sync of private loans to Supabase (fire-and-forget)
+    syncPrivateLoansToSupabase(state.loans || []).catch(() => {});
+  }, []);
+
   const birthdateISO = loadBirthdateISO();
 
   useEffect(() => {
@@ -1177,9 +1201,9 @@ export function LoansPage() {
   );
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
     return privateLoans.map((l) =>
-      deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents, null)
+      deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents, null, ledgerMap)
     );
-  }, [state.loans, privateLoans, detectedAnnualIncomeCents]);
+  }, [state.loans, privateLoans, detectedAnnualIncomeCents, ledgerMap]);
 
   const displayedLoans = showAllLoans ? loansWithDerived : loansWithDerived.slice(0, 5);
 
@@ -1320,6 +1344,8 @@ export function LoansPage() {
         loans: next.loans !== undefined ? next.loans : prev.loans
       };
       saveLoans(merged);
+      // Sync private loans to Supabase for nightly interest accrual (fire-and-forget)
+      syncPrivateLoansToSupabase(merged.loans || []).catch(() => {});
       return merged;
     });
   }
