@@ -836,15 +836,14 @@ export function SnapshotPage({
                         }
                       }}
                     >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div>
                         <span className="name bank-card-name">{c.name}</span>
                         <button
                           type="button"
-                          className="info-icon"
+                          style={{ display: 'block', fontSize: '0.68rem', padding: '1px 0', marginTop: 1, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                           onClick={(e) => {
                             e.stopPropagation();
                             const rules = getEffectiveRules(c);
-                            // Migrate legacy single-category rules to categories[] format
                             const migrateRule = (r: RewardRule): RewardRule => {
                               if ((r.categories?.length ?? 0) > 0) return r;
                               if (r.isCatchAll || !r.category) return { ...r, categories: [] };
@@ -867,11 +866,10 @@ export function SnapshotPage({
                               rewardCppStr: c.rewardType === 'points' || (c.rewardPoints != null && c.rewardPoints > 0) ? (typeof c.avgCentsPerPoint === 'number' ? String(c.avgCentsPerPoint) : '') : (typeof c.avgCentsPerMile === 'number' ? String(c.avgCentsPerMile) : '')
                             });
                           }}
-                          title="Card reward categories"
-                          aria-label="Card reward categories"
-                        />
-
-                      </span>
+                        >
+                          Rewards
+                        </button>
+                      </div>
                       <span className={amountClass}>{formatCents(balanceCents)}</span>
                     </div>
                     <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>

@@ -1615,9 +1615,9 @@ export function LoansPage() {
         // Ring: 4 segments — public principal, public interest, private principal, private interest
         const segments = [
           { cents: publicCents, color: 'var(--green)', key: 'pub' },
-          { cents: publicInterestCents, color: 'color-mix(in srgb, var(--green) 40%, transparent)', key: 'pub-interest' },
+          { cents: publicInterestCents, color: 'color-mix(in srgb, var(--green) 55%, var(--surface, #fff))', key: 'pub-interest' },
           { cents: privateCents, color: 'var(--blue, #4a90d9)', key: 'priv-principal' },
-          { cents: privateInterestCents, color: 'color-mix(in srgb, var(--blue, #4a90d9) 40%, transparent)', key: 'priv-interest' },
+          { cents: privateInterestCents, color: 'color-mix(in srgb, var(--blue, #4a90d9) 55%, var(--surface, #fff))', key: 'priv-interest' },
         ].filter(s => s.cents > 0);
 
         const segCount = segments.length;
@@ -1645,12 +1645,6 @@ export function LoansPage() {
 
         return (
           <div className="loans-summary-card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div className="loans-summary-title">Loans Summary</div>
-              <span style={{ fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.6 }}>
-                {syncStatus === 'synced' && syncTime ? (Date.now() - syncTime < 60000 ? 'Updated just now' : `Synced ${Math.round((Date.now() - syncTime) / 60000)}m ago`) : syncStatus === 'failed' ? 'Using estimated balance' : ''}
-              </span>
-            </div>
             <div className="loans-donut-wrap">
               <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="loans-donut-svg">
                 <defs>
@@ -1700,7 +1694,7 @@ export function LoansPage() {
                   {(publicInterestCents > 0 || publicDailyInterestCents > 0) && (
                     <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
                       {publicInterestCents > 0 && (
-                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'color-mix(in srgb, var(--green) 45%, transparent)', marginRight: 6, verticalAlign: 'middle' }} />Outstanding Interest: {formatCents(publicInterestCents)}</span>
+                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'color-mix(in srgb, var(--green) 55%, var(--surface, #fff))', marginRight: 6, verticalAlign: 'middle' }} />Accruing Interest: {formatCents(publicInterestCents)}</span>
                       )}
                       {publicDailyInterestCents > 0 && (
                         <span>{formatCents(publicDailyInterestCents)} Added / Day</span>
@@ -1720,7 +1714,7 @@ export function LoansPage() {
                   {(privateInterestCents > 0 || privateDailyInterestCents > 0) && (
                     <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
                       {privateInterestCents > 0 && (
-                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'color-mix(in srgb, var(--blue, #4a90d9) 40%, transparent)', marginRight: 6, verticalAlign: 'middle' }} />Unpaid Interest: {formatCents(privateInterestCents)}</span>
+                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'color-mix(in srgb, var(--blue, #4a90d9) 55%, var(--surface, #fff))', marginRight: 6, verticalAlign: 'middle' }} />Accruing Interest: {formatCents(privateInterestCents)}</span>
                       )}
                       {privateDailyInterestCents > 0 && (
                         <span>{formatCents(privateDailyInterestCents)} Added / Day</span>
@@ -1738,13 +1732,16 @@ export function LoansPage() {
                   {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} cacheKey="loan_monthly" /> : '-'}
                 </span>
               </div>
-              <button
-                type="button"
-                style={{ fontSize: '0.68rem', padding: '2px 0', marginTop: 2, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                onClick={() => { setScenarioTab('after-grace'); setShowPaymentScenarios(true); }}
-              >
-                Explore payments
-              </button>
+              {/* Show "After Grace Period" only if any private loan is not in full_repayment or any public loan's nextPaymentDate hasn't arrived */}
+              {(privateLoansWithDerived.some(l => l.activePrivateRangeMode !== 'full_repayment') || publicLoansWithDerived.some(l => l.nextPaymentDate && toDateKey(new Date()) < l.nextPaymentDate)) && (
+                <button
+                  type="button"
+                  style={{ fontSize: '0.68rem', padding: '2px 0', marginTop: 2, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                  onClick={() => { setScenarioTab('after-grace'); setShowPaymentScenarios(true); }}
+                >
+                  After Grace Period
+                </button>
+              )}
             </div>
           </div>
         );
@@ -2199,16 +2196,9 @@ export function LoansPage() {
       <Modal
         open={showPaymentScenarios}
         fullscreen
-        title="Explore Payments"
+        title="After Grace Period"
         onClose={() => setShowPaymentScenarios(false)}
       >
-        {/* Tab switcher */}
-        <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderRadius: 999, padding: 2, background: 'var(--ui-card-bg, var(--surface))', border: '1px solid var(--ui-border, var(--border))' }}>
-          <button type="button" style={{ flex: 1, padding: '6px 10px', fontSize: '0.82rem', fontWeight: scenarioTab === 'after-grace' ? 600 : 400, borderRadius: 999, background: scenarioTab === 'after-grace' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent', border: `1px solid ${scenarioTab === 'after-grace' ? 'var(--accent)' : 'transparent'}`, color: 'var(--text)', cursor: 'pointer' }} onClick={() => setScenarioTab('after-grace')}>After Grace</button>
-          <button type="button" style={{ flex: 1, padding: '6px 10px', fontSize: '0.82rem', fontWeight: scenarioTab === 'extra' ? 600 : 400, borderRadius: 999, background: scenarioTab === 'extra' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent', border: `1px solid ${scenarioTab === 'extra' ? 'var(--accent)' : 'transparent'}`, color: 'var(--text)', cursor: 'pointer' }} onClick={() => setScenarioTab('extra')}>Extra Payments</button>
-        </div>
-
-        {scenarioTab === 'after-grace' && (
           <div className="summary-compact" style={{ gap: 8 }}>
             {afterGraceBreakdown.privateLoansBreakdown.length > 0 && (
               <>
@@ -2240,29 +2230,7 @@ export function LoansPage() {
               </span>
             </div>
           </div>
-        )}
-
-        {scenarioTab === 'extra' && (
-          <>
-        <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 12 }}>
-          See how extra monthly payments reduce your payoff timeline and total interest (avalanche method — highest rate first).
-        </p>
-        <div className="field" style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: '0.85rem' }}>Extra monthly payment ($)</label>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={extraPayInput}
-            onChange={(e) => setExtraPayInput(e.target.value)}
-            placeholder="e.g. 100"
-            style={{ maxWidth: 160 }}
-          />
-        </div>
-        {(() => {
-          const extraCents = Math.round(parseFloat(extraPayInput.replace(/,/g, '') || '0') * 100);
-          if (!(extraCents > 0)) return <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Enter an amount to see results.</p>;
-
-          // Avalanche: sort all loans by rate descending, simulate payoff
+        {false && (() => {
           type SimLoan = { name: string; balanceCents: number; rate: number; paymentCents: number };
           const simLoans: SimLoan[] = loansWithDerived
             .filter(l => l.balanceCents > 0)
