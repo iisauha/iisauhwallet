@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
   // 1. Fetch all active loans across all users
   const { data: loans, error: fetchErr } = await supabase
     .from('loans')
-    .select('id, user_id, balance_cents, interest_rate_percent, current_interest_balance_cents, category, subsidy_type, disbursements')
+    .select('id, user_id, balance_cents, interest_rate_percent, current_interest_balance_cents, category, subsidy_type, disbursements, next_payment_date')
     .eq('is_active', true)
     .gt('balance_cents', 0);
 
@@ -65,8 +65,12 @@ Deno.serve(async (req: Request) => {
     const category = loan.category ?? 'private';
     const subsidyType = loan.subsidy_type;
 
-    // Public subsidized: skip (government covers interest while in school)
-    if (category === 'public' && subsidyType === 'subsidized') continue;
+    // Public subsidized: skip while pre-repayment (government covers interest in school/grace).
+    // Once nextPaymentDate is reached, subsidized loans accrue interest normally.
+    if (category === 'public' && subsidyType === 'subsidized') {
+      const nextPayment = loan.next_payment_date;
+      if (!nextPayment || today < nextPayment) continue; // still in school/grace
+    }
 
     let dailyInterest: number;
 

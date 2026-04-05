@@ -40,6 +40,7 @@ export async function syncLoansToSupabase(loans: Loan[]): Promise<void> {
       category: l.category,
       subsidy_type: l.subsidyType ?? null,
       disbursements: l.disbursements ? JSON.stringify(l.disbursements) : null,
+      next_payment_date: l.nextPaymentDate ?? null,
       updated_at: new Date().toISOString(),
     }));
 

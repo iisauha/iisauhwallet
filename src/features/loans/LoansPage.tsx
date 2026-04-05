@@ -336,8 +336,13 @@ function addMonthsToISO(startISO: string, months: number): string {
  * full_repayment: 0
  */
 function computeAnchoredUnpaidInterest(loan: Loan, asOfISO: string): number {
-  // Public subsidized: always 0 while in school
-  if (loan.category === 'public' && loan.subsidyType === 'subsidized') return 0;
+  // Public subsidized: $0 interest while in school or grace. After grace ends (repayment),
+  // subsidized loans accrue interest normally — government stops covering it.
+  if (
+    loan.category === 'public' &&
+    loan.subsidyType === 'subsidized' &&
+    (loan.repaymentStatus === 'in_school_interest_only' || loan.repaymentStatus === 'grace_interest_only')
+  ) return 0;
 
   const { balanceCents, interestRatePercent } = loan;
   if (!(balanceCents > 0) || !(interestRatePercent > 0)) return 0;
@@ -566,6 +571,15 @@ function deriveForLoan(
     : (loan.disbursements && loan.disbursements.length > 0)
       ? loan.disbursements.reduce((sum, d) => sum + Math.floor(d.amountCents * (interestRatePercent / 100) / 365), 0)
       : Math.floor(balanceCents * (interestRatePercent / 100) / 365);
+  // Verify display (floor) vs accumulation (round) consistency
+  if (category === 'public' && loan.subsidyType === 'unsubsidized' && loan.disbursements && loan.disbursements.length > 0) {
+    const accumDaily = loan.disbursements.reduce((s, d) => s + Math.round(d.amountCents * (interestRatePercent / 100) / 365), 0);
+    if (accumDaily !== dailyInterestCents) {
+      // Display uses floor, nightly accumulation uses round — they can differ by 1¢ per disbursement.
+      // This is intentional: floor for display, round for accumulation (AES convention).
+      console.log(`[interestCheck] ${loan.name}: display=${dailyInterestCents}¢/day (floor) vs accum=${accumDaily}¢/day (round) — diff=${accumDaily - dailyInterestCents}¢`);
+    }
+  }
   let monthlyInterestCents = dailyInterestCents * 30;
 
   const interestOnlyMonthly = computeInterestOnlyMonthlyCents(balanceCents, interestRatePercent);
