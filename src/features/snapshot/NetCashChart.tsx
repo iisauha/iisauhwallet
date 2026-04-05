@@ -109,14 +109,9 @@ export function NetCashChart({
   const currentCentsRef = useRef(currentCents);
   currentCentsRef.current = currentCents;
 
-  // Record on mount
-  useEffect(() => {
-    appendSnapshot(currentCentsRef.current);
-  }, []);
-
-  // Record at interval — force=true so every tick creates a scrub point even if value unchanged.
-  // Value changes between ticks are reflected by the dynamic "now" trailing point (dataPoints),
-  // but do NOT create extra persistent snapshots — this keeps scrub stops interval-aligned.
+  // Record at interval ONLY — no mount snapshot, since mount fires on every tab visit
+  // and creates non-interval-aligned points. The clear handler records the initial point.
+  // The dynamic "now" trailing point in dataPoints shows the current value between ticks.
   useEffect(() => {
     const id = setInterval(() => {
       appendSnapshot(currentCentsRef.current, true);
