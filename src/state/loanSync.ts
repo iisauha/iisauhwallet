@@ -72,6 +72,42 @@ export async function syncLoansToSupabase(loans: Loan[]): Promise<void> {
 /** @deprecated Use syncLoansToSupabase instead */
 export const syncPrivateLoansToSupabase = syncLoansToSupabase;
 
+// ─── Pull: sync fresh interest anchors from Supabase ─────────────
+
+export type AnchorSyncResult = { synced: number; failed: boolean };
+
+/**
+ * Fetch current_interest_balance_cents from the Supabase loans table
+ * for all accruing loans (public unsubsidized + private deferred/custom).
+ * Returns updated loan records to merge into local state.
+ */
+export async function fetchFreshAnchors(): Promise<Record<string, { currentInterestBalanceCents: number; anchorDate: string }>> {
+  const userId = await getAuthUserId();
+  if (!userId) return {};
+
+  const { data, error } = await supabase
+    .from('loans')
+    .select('id, current_interest_balance_cents, updated_at')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+
+  if (error || !data) {
+    if (error) console.error('[loanSync] anchor fetch error:', error.message);
+    return {};
+  }
+
+  const map: Record<string, { currentInterestBalanceCents: number; anchorDate: string }> = {};
+  for (const row of data) {
+    if (row.current_interest_balance_cents != null && row.current_interest_balance_cents > 0) {
+      map[row.id] = {
+        currentInterestBalanceCents: row.current_interest_balance_cents,
+        anchorDate: row.updated_at ? row.updated_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      };
+    }
+  }
+  return map;
+}
+
 // ─── Pull: read ledger data ──────────────────────────────────────
 
 export type LedgerRow = {

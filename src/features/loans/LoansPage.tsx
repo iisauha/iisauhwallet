@@ -33,7 +33,7 @@ import { Modal } from '../../ui/Modal';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { IconPlus } from '../../ui/icons';
 // PublicLoanSummaryStore and PublicLoanSimpleCard replaced by individual public loan records
-import { syncLoansToSupabase, fetchLatestLedgerRows, type LedgerRow } from '../../state/loanSync';
+import { syncLoansToSupabase, fetchLatestLedgerRows, fetchFreshAnchors, type LedgerRow } from '../../state/loanSync';
 
 function todayISO(): string {
   const d = new Date();
@@ -524,6 +524,12 @@ type LoanWithDerived = Loan & {
   deferredInterestTotalCents?: number;
   /** Private deferred only: projected balance when deferment ends (current + deferred interest). */
   deferredProjectedBalanceCents?: number;
+  /** Public loans: projected amortized monthly payment after repayment starts. */
+  projectedPaymentCents?: number;
+  /** Public loans: total interest paid over loan life (projected). */
+  projectedTotalInterestCents?: number;
+  /** Public loans: payoff date (ISO string). */
+  projectedPayoffDate?: string;
 };
 
 function getActiveMonthlyPayment(loan: LoanWithDerived): number | null {
@@ -594,12 +600,36 @@ function deriveForLoan(
     const todayForPayment = toDateKey(new Date());
     const inRepayment = loan.nextPaymentDate ? todayForPayment >= loan.nextPaymentDate : false;
 
-    if (!inRepayment) {
-      // Not yet in repayment: $0 current, compute projected future payment
-      monthlyNowCents = 0;
-      // Projected amortized payment at repayment start
+    // Public loan payoff projection
+    let projectedPaymentCents: number | undefined;
+    let projectedTotalInterestCents: number | undefined;
+    let projectedPayoffDate: string | undefined;
+    {
       const projTerm = loan.termMonths ?? 120;
-      monthlyLaterCents = computeAmortizedPaymentCents(balanceCents, interestRatePercent, projTerm) ?? 0;
+      const daysUntilPayment = loan.nextPaymentDate && todayForPayment < loan.nextPaymentDate
+        ? daysBetween(todayForPayment, loan.nextPaymentDate) : 0;
+      // Unsubsidized: interest capitalizes at repayment start
+      const outstandingInt = (loan.subsidyType === 'unsubsidized')
+        ? (loan.currentInterestBalanceCents ?? 0) + (dailyInterestCents * daysUntilPayment)
+        : 0;
+      const projBal = balanceCents + outstandingInt;
+      const projPay = computeAmortizedPaymentCents(projBal, interestRatePercent, projTerm);
+      if (projPay != null && projPay > 0) {
+        projectedPaymentCents = projPay;
+        const totalPaid = projPay * projTerm;
+        projectedTotalInterestCents = totalPaid - projBal;
+        // Payoff date: nextPaymentDate + termMonths
+        if (loan.nextPaymentDate) {
+          const start = new Date(loan.nextPaymentDate + 'T00:00:00');
+          const end = addMonths(start, projTerm);
+          projectedPayoffDate = toDateKey(end);
+        }
+      }
+    }
+
+    if (!inRepayment) {
+      monthlyNowCents = 0;
+      monthlyLaterCents = projectedPaymentCents ?? 0;
       payoffMonths = monthlyLaterCents > 0
         ? computeMonthsToPayoff(balanceCents, interestRatePercent, monthlyLaterCents)
         : null;
@@ -777,6 +807,9 @@ function deriveForLoan(
       futureIsProjected: futureIsProjected || undefined,
       activePrivateRangeMode: activeRange?.mode ?? null,
       latestRangeEndISO: latestRangeEndISO || undefined,
+      projectedPaymentCents,
+      projectedTotalInterestCents,
+      projectedPayoffDate,
       unpaidInterestCents: unpaidInterestCents,
       unpaidInterestSource: unpaidInterestSource,
       deferredDailyInterestCents: deferredDailyInterestCents ?? undefined,
@@ -1130,6 +1163,15 @@ function LoanCard(props: {
         )}
       </div>
 
+      {/* Public loan projections */}
+      {isPublic && l.projectedPaymentCents != null && l.projectedPaymentCents > 0 && (
+        <div style={{ fontSize: '0.78rem', color: 'var(--ui-primary-text, var(--text))', marginBottom: 6, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span>Est. payment: {formatCents(l.projectedPaymentCents)}/mo</span>
+          {l.projectedTotalInterestCents != null && <span>Lifetime interest: {formatCents(l.projectedTotalInterestCents)}</span>}
+          {l.projectedPayoffDate && <span>Payoff: {new Date(l.projectedPayoffDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>}
+        </div>
+      )}
+
       {/* Servicer */}
       {l.lender && (
         <div style={{ fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7, marginBottom: 4 }}>{l.lender}</div>
@@ -1309,11 +1351,36 @@ export function LoansPage() {
   const [privateCarouselIdx, setPrivateCarouselIdx] = useState(0);
   const [publicCarouselIdx, setPublicCarouselIdx] = useState(0);
   const [showAllLoans, setShowAllLoans] = useState(false);
+  const [showExtraPayCalc, setShowExtraPayCalc] = useState(false);
+  const [extraPayInput, setExtraPayInput] = useState('');
 
   // Ledger data from Supabase nightly interest accrual
   const [ledgerMap, setLedgerMap] = useState<Record<string, LedgerRow>>({});
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'synced' | 'failed'>('idle');
+  const [syncTime, setSyncTime] = useState<number | null>(null);
   useEffect(() => {
     fetchLatestLedgerRows().then(setLedgerMap).catch(() => {});
+    // Sync fresh interest anchors from Supabase (eliminates drift from nightly compounding)
+    fetchFreshAnchors().then((anchors) => {
+      if (Object.keys(anchors).length === 0) { setSyncStatus('failed'); return; }
+      const loansState = loadLoans();
+      let changed = false;
+      const updated = loansState.loans.map((l) => {
+        const fresh = anchors[l.id];
+        if (!fresh) return l;
+        if (fresh.currentInterestBalanceCents !== l.currentInterestBalanceCents) {
+          changed = true;
+          return { ...l, currentInterestBalanceCents: fresh.currentInterestBalanceCents, interestBalanceAnchorDate: fresh.anchorDate };
+        }
+        return l;
+      });
+      if (changed) {
+        saveLoans({ ...loansState, loans: updated });
+        setState(loadLoans());
+      }
+      setSyncStatus('synced');
+      setSyncTime(Date.now());
+    }).catch(() => setSyncStatus('failed'));
     // Initial sync of all loans to Supabase (fire-and-forget)
     syncLoansToSupabase(state.loans || []).catch(() => {});
   }, []);
@@ -1392,6 +1459,7 @@ export function LoansPage() {
 
     const avgPublicRate = publicBalanceCents > 0 ? publicWeightedRateNum / publicBalanceCents : null;
     const avgPrivateRate = privateBalanceCents > 0 ? privateWeightedRateNum / privateBalanceCents : null;
+    const blendedRate = totalBalance > 0 ? (publicWeightedRateNum + privateWeightedRateNum) / totalBalance : null;
 
     // Payoff age
     let latestPayoffDate: Date | null = null;
@@ -1420,6 +1488,7 @@ export function LoansPage() {
       privateBalanceCents,
       totalUnpaidInterestCents: privateUnpaidInterestCents,
       totalDailyInterestCents: privateDailyInterestCents,
+      blendedRate,
     };
   }, [loansWithDerived, birthdateISO]);
 
@@ -1538,7 +1607,12 @@ export function LoansPage() {
 
         return (
           <div className="loans-summary-card">
-            <div className="loans-summary-title">Loans Summary</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="loans-summary-title">Loans Summary</div>
+              <span style={{ fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.6 }}>
+                {syncStatus === 'synced' && syncTime ? (Date.now() - syncTime < 60000 ? 'Updated just now' : `Synced ${Math.round((Date.now() - syncTime) / 60000)}m ago`) : syncStatus === 'failed' ? 'Using estimated balance' : ''}
+              </span>
+            </div>
             <div className="loans-donut-wrap">
               <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="loans-donut-svg">
                 <defs>
@@ -1612,6 +1686,19 @@ export function LoansPage() {
                 </>
               )}
             </div>
+            {/* Combined debt summary */}
+            <div style={{ fontSize: '0.78rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 8, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                <span>Daily Interest</span>
+                <span style={{ fontWeight: 600 }}>{formatCents(privateDailyInterestCents + publicDailyInterestCents)}/day</span>
+              </div>
+              {summary.blendedRate != null && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Blended Rate</span>
+                  <span style={{ fontWeight: 600 }}>{summary.blendedRate.toFixed(2)}%</span>
+                </div>
+              )}
+            </div>
             {/* Payment */}
             <div className="loans-summary-payment">
               <div className={paymentNowDisplayClass} style={{ marginTop: 0, alignItems: 'center' }}>
@@ -1628,6 +1715,14 @@ export function LoansPage() {
                   {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} cacheKey="loan_monthly" /> : '-'}
                 </span>
               </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '4px 10px', marginTop: 6, width: '100%' }}
+                onClick={() => setShowExtraPayCalc(true)}
+              >
+                What if I paid extra?
+              </button>
             </div>
           </div>
         );
@@ -2097,6 +2192,123 @@ export function LoansPage() {
         </div>
         <div style={{ marginTop: 16 }}>
           <button type="button" className="btn btn-secondary" onClick={() => setShowAfterGraceBreakdown(false)}>
+            Close
+          </button>
+        </div>
+      </Modal>
+
+      {/* Extra Payment Calculator */}
+      <Modal
+        open={showExtraPayCalc}
+        fullscreen
+        title="What if I paid extra?"
+        onClose={() => setShowExtraPayCalc(false)}
+      >
+        <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 12 }}>
+          See how extra monthly payments reduce your payoff timeline and total interest (avalanche method — highest rate first).
+        </p>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: '0.85rem' }}>Extra monthly payment ($)</label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={extraPayInput}
+            onChange={(e) => setExtraPayInput(e.target.value)}
+            placeholder="e.g. 100"
+            style={{ maxWidth: 160 }}
+          />
+        </div>
+        {(() => {
+          const extraCents = Math.round(parseFloat(extraPayInput.replace(/,/g, '') || '0') * 100);
+          if (!(extraCents > 0)) return <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))' }}>Enter an amount to see results.</p>;
+
+          // Avalanche: sort all loans by rate descending, simulate payoff
+          type SimLoan = { name: string; balanceCents: number; rate: number; paymentCents: number };
+          const simLoans: SimLoan[] = loansWithDerived
+            .filter(l => l.balanceCents > 0)
+            .map(l => ({
+              name: l.name,
+              balanceCents: l.balanceCents + (l.unpaidInterestCents ?? 0),
+              rate: l.interestRatePercent,
+              paymentCents: Math.max(l.monthlyNowCents ?? 0, l.monthlyLaterCents ?? 0),
+            }))
+            .sort((a, b) => b.rate - a.rate);
+
+          function simulate(loans: SimLoan[], extraCents: number): { months: number; totalInterestCents: number; order: string[] } {
+            const bals = loans.map(l => l.balanceCents);
+            let totalInterest = 0;
+            const order: string[] = [];
+            for (let month = 0; month < 360; month++) {
+              let allPaid = true;
+              let extraRemaining = extraCents;
+              for (let i = 0; i < loans.length; i++) {
+                if (bals[i] <= 0) continue;
+                allPaid = false;
+                const monthlyInt = Math.round(bals[i] * (loans[i].rate / 100) / 12);
+                totalInterest += monthlyInt;
+                bals[i] = bals[i] + monthlyInt - loans[i].paymentCents;
+                if (bals[i] <= 0) {
+                  extraRemaining += Math.abs(bals[i]);
+                  bals[i] = 0;
+                  if (!order.includes(loans[i].name)) order.push(loans[i].name);
+                }
+              }
+              // Apply extra to highest-rate remaining loan
+              for (let i = 0; i < loans.length; i++) {
+                if (bals[i] > 0 && extraRemaining > 0) {
+                  const apply = Math.min(extraRemaining, bals[i]);
+                  bals[i] -= apply;
+                  extraRemaining -= apply;
+                  if (bals[i] <= 0 && !order.includes(loans[i].name)) order.push(loans[i].name);
+                }
+              }
+              if (allPaid) return { months: month, totalInterestCents: totalInterest, order };
+            }
+            return { months: 360, totalInterestCents: totalInterest, order };
+          }
+
+          const without = simulate(simLoans, 0);
+          const withExtra = simulate(simLoans, extraCents);
+          const savedMonths = without.months - withExtra.months;
+          const savedInterest = without.totalInterestCents - withExtra.totalInterestCents;
+
+          const fmtDate = (months: number) => {
+            const d = addMonths(new Date(), months);
+            return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+          };
+          const fmtYM = (months: number) => {
+            const y = Math.floor(months / 12);
+            const m = months % 12;
+            return (y > 0 ? `${y}y ` : '') + `${m}m`;
+          };
+
+          return (
+            <div className="summary-compact" style={{ gap: 8 }}>
+              <div className="summary-kv">
+                <span className="k">Without extra</span>
+                <span className="v">Payoff {fmtDate(without.months)} · Interest {formatCents(without.totalInterestCents)}</span>
+              </div>
+              <div className="summary-kv">
+                <span className="k">With +{formatCents(extraCents)}/mo</span>
+                <span className="v" style={{ color: 'var(--green)' }}>Payoff {fmtDate(withExtra.months)} · Interest {formatCents(withExtra.totalInterestCents)}</span>
+              </div>
+              <div className="summary-kv" style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                <span className="k" style={{ fontWeight: 600 }}>You save</span>
+                <span className="v" style={{ color: 'var(--green)', fontWeight: 600 }}>{fmtYM(savedMonths)} · {formatCents(savedInterest)}</span>
+              </div>
+              {withExtra.order.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>Payoff order (highest rate first):</div>
+                  {withExtra.order.map((name, i) => (
+                    <div key={i}>{i + 1}. {name}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        <div style={{ marginTop: 16 }}>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowExtraPayCalc(false)}>
             Close
           </button>
         </div>
