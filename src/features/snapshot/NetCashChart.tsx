@@ -73,13 +73,13 @@ export function NetCashChart({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<Range>('1W');
-  const [prevRange, setPrevRange] = useState<Range>('1W');
   const [scrubData, setScrubData] = useState<{ cents: number; ts: number; px: number; py: number } | null>(null);
   const [width, setWidth] = useState(340);
   const [showSummary, setShowSummary] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [updateInterval, setUpdateInterval] = useState(loadUpdateInterval);
-  const [lineAnimKey, setLineAnimKey] = useState(0);
+  const [lineAnimating, setLineAnimating] = useState(false);
+  const animTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Live "creating" tick — force re-render at update interval to extend line
   const [, setTick] = useState(0);
@@ -223,12 +223,20 @@ export function NetCashChart({
 
   const hasData = dataPoints.length > 1;
 
-  // Range switch with line animation
+  // Range switch with morph animation
   const handleRangeChange = useCallback((r: Range) => {
-    setPrevRange(range);
-    setRange(r);
-    setScrubData(null);
-    setLineAnimKey(k => k + 1);
+    if (r === range) return;
+    // Fade out, switch, fade in
+    setLineAnimating(true);
+    if (animTimeoutRef.current) clearTimeout(animTimeoutRef.current);
+    animTimeoutRef.current = setTimeout(() => {
+      setRange(r);
+      setScrubData(null);
+      // Small delay then fade back in
+      requestAnimationFrame(() => {
+        setLineAnimating(false);
+      });
+    }, 200); // half the transition duration
   }, [range]);
 
   // Toggle summary ↔ chart
@@ -268,7 +276,10 @@ export function NetCashChart({
         <div
           className="net-cash-chart-value"
           onClick={handleValueClick}
-          style={{ cursor: 'pointer' }}
+          style={{
+            cursor: 'pointer',
+            color: displayCents > 0 ? 'var(--green)' : displayCents < 0 ? 'var(--red)' : undefined,
+          }}
         >
           {scrubData ? formatCents(displayCents) : (
             <AnimatedNumber value={displayCents} format={formatCents} bounce cacheKey="snap_hero" />
@@ -348,7 +359,7 @@ export function NetCashChart({
                   </filter>
                 </defs>
                 {/* Fill area under stepwise line */}
-                <g key={lineAnimKey} className="net-cash-line-anim">
+                <g className={`net-cash-line-morph${lineAnimating ? ' morphing' : ''}`}>
                   <path
                     d={buildStepPath(points) + ` L ${points[points.length - 1].x} ${CHART_HEIGHT} L ${points[0].x} ${CHART_HEIGHT} Z`}
                     fill="url(#chartGrad)"
@@ -391,7 +402,7 @@ export function NetCashChart({
                 {scrubData && (
                   <circle
                     cx={scrubData.px} cy={scrubData.py}
-                    r={6} fill={lineColor} stroke="var(--text)" strokeWidth={2}
+                    r={5} fill={lineColor}
                     filter="url(#glowDot)"
                   />
                 )}
@@ -432,7 +443,10 @@ export function NetCashChart({
           onClick={() => setShowSettings(prev => !prev)}
           aria-label="Chart settings"
         >
-          ⚙
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
         </button>
       </div>
 
