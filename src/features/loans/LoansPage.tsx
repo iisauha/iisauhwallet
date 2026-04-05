@@ -654,14 +654,11 @@ type LoanEditorState = {
   paymentScheduleRanges: PaymentScheduleRange[];
   schedulePaymentStrings: Record<string, string>;
   scheduleAccruedInterestStrings: Record<string, string>;
-  excludeFromCurrentPayment: boolean;
   privatePaymentMode: 'interest_only' | 'full_repayment' | 'custom_monthly';
   /** Private: date ranges (start, end, mode, custom $ string). */
   privatePaymentRanges: { id: string; startDate: string; endDate: string; mode: PrivatePaymentRangeMode; customPayment: string }[];
   /** Private: interest accrual anchor date (YYYY-MM-DD). */
   accrualAnchorDate: string;
-  /** Private: manual unpaid interest override ($ string). */
-  unpaidInterestOverride: string;
 };
 
 function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): LoanEditorState {
@@ -692,11 +689,9 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       paymentScheduleRanges: [],
       schedulePaymentStrings: {},
       scheduleAccruedInterestStrings: {},
-      excludeFromCurrentPayment: false,
       privatePaymentMode: 'full_repayment',
       privatePaymentRanges: [],
-      accrualAnchorDate: '',
-      unpaidInterestOverride: ''
+      accrualAnchorDate: ''
     };
   }
   const priv = l as Loan;
@@ -753,11 +748,9 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       });
       return out;
     })(),
-    excludeFromCurrentPayment: l.excludeFromCurrentPayment ?? false,
     privatePaymentMode: priv.privatePaymentMode ?? 'custom_monthly',
     privatePaymentRanges: defaultRanges,
-    accrualAnchorDate: priv.accrualAnchorDate ?? '',
-    unpaidInterestOverride: priv.unpaidInterestOverrideCents != null ? (priv.unpaidInterestOverrideCents / 100).toFixed(2) : ''
+    accrualAnchorDate: priv.accrualAnchorDate ?? ''
   };
 }
 
@@ -826,15 +819,8 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     idrManualAnnualIncomeCents: e.category === 'public' ? undefined : idrManualAnnualIncomeCents,
     accruedInterestCents: isPublic ? undefined : undefined,
     accrualLastUpdatedAt: isPublic ? undefined : undefined,
-    excludeFromCurrentPayment: isPublic ? undefined : e.excludeFromCurrentPayment,
     privatePaymentMode: isPublic ? undefined : e.privatePaymentMode,
     accrualAnchorDate: isPublic ? undefined : (e.accrualAnchorDate?.trim() || undefined),
-    unpaidInterestOverrideCents: isPublic ? undefined : (() => {
-      const s = e.unpaidInterestOverride?.replace(/,/g, '').trim();
-      if (s === '') return undefined;
-      const n = Math.round(parseFloat(s) * 100);
-      return Number.isFinite(n) && n >= 0 ? n : undefined;
-    })(),
     privatePaymentRanges:
       isPublic
         ? undefined
@@ -880,9 +866,8 @@ function LoanCard(props: {
   onDelete: () => void;
   onPayoffAge?: () => void;
   onRefinance?: () => void;
-  onToggleExcludeFromPayment?: (exclude: boolean) => void;
 }) {
-  const { loan: l, onEdit, onDelete, onToggleExcludeFromPayment } = props;
+  const { loan: l, onEdit, onDelete } = props;
   const [plansOpen, setPlansOpen] = useState(false);
 
   return (
@@ -943,10 +928,9 @@ function LoanCard(props: {
               Monthly interest: {formatCents(l.monthlyInterestCents)}
             </div>
           )}
-          {(l.unpaidInterestCents != null && l.unpaidInterestCents > 0) || l.unpaidInterestSource === 'manual' || l.unpaidInterestSource === 'estimated' ? (
+          {l.unpaidInterestCents != null && l.unpaidInterestCents > 0 ? (
             <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
-              Unpaid interest: {formatCents(l.unpaidInterestCents ?? 0)}
-              {l.unpaidInterestSource === 'manual' ? ' (manual)' : l.unpaidInterestSource === 'estimated' ? ' (from accrual date)' : ''}
+              Accumulated interest: {formatCents(l.unpaidInterestCents)}
             </div>
           ) : null}
           <div style={{ fontSize: '0.85rem', marginBottom: 4 }}>
@@ -1215,7 +1199,7 @@ export function LoansPage() {
     loansWithDerived.forEach((l) => {
       const bal = l.balanceCents || 0;
       totalBalance += bal;
-      if (l.monthlyNowCents != null && !l.excludeFromCurrentPayment) derivedPrivatePaymentNowBase += l.monthlyNowCents;
+      if (l.monthlyNowCents != null) derivedPrivatePaymentNowBase += l.monthlyNowCents;
       if (l.monthlyLaterCents != null) {
         totalMonthlyLater += l.monthlyLaterCents;
         privateAfterGraceCents += l.monthlyLaterCents;
@@ -1367,18 +1351,21 @@ export function LoansPage() {
         const privateDailyInterestCents = summary.totalDailyInterestCents;
         const publicDailyInterestCents = avgPublicRate > 0 ? Math.round(publicCents * avgPublicRate / 100 / 365) : 0;
 
+        // Ring segments include accumulated interest (balance + interest = total owed per category)
+        const publicTotal = publicCents + publicInterestCents;
+        const privateTotal = privateCents + privateInterestCents;
+
         const size = 180;
         const cx = size / 2;
         const cy = size / 2;
         const r = 68;
         const stroke = 14;
         const circum = 2 * Math.PI * r;
-        const ringTotal = publicCents + privateCents;
+        const ringTotal = publicTotal + privateTotal;
 
-        // Build segments: public and private balances only
         const segments = [
-          { cents: publicCents, color: 'var(--green)', key: 'pub' },
-          { cents: privateCents, color: 'var(--blue, #4a90d9)', key: 'priv' },
+          { cents: publicTotal, color: 'var(--green)', key: 'pub' },
+          { cents: privateTotal, color: 'var(--blue, #4a90d9)', key: 'priv' },
         ].filter(s => s.cents > 0);
 
         const segCount = segments.length;
@@ -1434,12 +1421,12 @@ export function LoansPage() {
             </div>
             {/* Legend */}
             <div className="loans-summary-rows">
-              {publicCents > 0 && (
+              {publicTotal > 0 && (
                 <>
                   <div className="loans-legend-row">
                     <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
                     <span className="loans-legend-label">Public</span>
-                    <span className="loans-legend-value"><AnimatedNumber value={publicCents} format={formatCents} cacheKey="loan_public" /></span>
+                    <span className="loans-legend-value"><AnimatedNumber value={publicTotal} format={formatCents} cacheKey="loan_public" /></span>
                   </div>
                   <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
                     {summary.avgPublicRate != null && (
@@ -1454,12 +1441,12 @@ export function LoansPage() {
                   </div>
                 </>
               )}
-              {privateCents > 0 && (
+              {privateTotal > 0 && (
                 <>
                   <div className="loans-legend-row">
                     <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
                     <span className="loans-legend-label">Private</span>
-                    <span className="loans-legend-value"><AnimatedNumber value={privateCents} format={formatCents} cacheKey="loan_private" /></span>
+                    <span className="loans-legend-value"><AnimatedNumber value={privateTotal} format={formatCents} cacheKey="loan_private" /></span>
                   </div>
                   <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
                     {summary.avgPrivateRate != null && (
@@ -1627,9 +1614,6 @@ export function LoansPage() {
                 if (!ok) return;
                 persist({ loans: state.loans.filter((x) => x.id !== l.id) });
               }}
-              onToggleExcludeFromPayment={(exclude) =>
-                persist({ loans: (state.loans || []).map((x) => (x.id === l.id ? { ...x, excludeFromCurrentPayment: exclude } : x)) })
-              }
             />
             </div>
           ))}
@@ -2190,31 +2174,6 @@ function LoanEditorForm(props: {
               Add range
             </button>
           </div>
-          <div className="field">
-            <label>Unpaid interest override ($, optional)</label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={state.unpaidInterestOverride}
-              onChange={(e) => onChange({ ...state, unpaidInterestOverride: e.target.value })}
-              placeholder="Leave blank to use accrual estimate"
-            />
-            <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-              Manual unpaid interest; overrides accrual-from-anchor estimate when set.
-            </p>
-          </div>
-          <div className="toggle-row" style={{ marginTop: 4 }}>
-            <input
-              type="checkbox"
-              id="excludeFromPayment"
-              checked={state.excludeFromCurrentPayment}
-              onChange={(e) => onChange({ ...state, excludeFromCurrentPayment: e.target.checked })}
-            />
-            <label htmlFor="excludeFromPayment">Exclude from monthly payment total</label>
-          </div>
-          <p style={{ marginTop: 2, fontSize: '0.8rem', color: 'var(--ui-primary-text, var(--text))' }}>
-            If checked, this loan's payment won't be included in your monthly payment total. It will still appear in grace period and future estimates.
-          </p>
         </>
       ) : null}
       {state.category === 'public' ? (

@@ -321,7 +321,7 @@ export function getPrivatePaymentNowTotal(
   const map = getLoanEstimatedPaymentNowMap(loans, detectedAnnualIncomeCents);
   let total = 0;
   for (const l of loans) {
-    if (l.category !== 'private' || (l as any).excludeFromCurrentPayment) continue;
+    if (l.category !== 'private') continue;
     const c = map[l.id];
     if (c != null && c > 0) total += c;
   }
