@@ -867,8 +867,6 @@ export function SnapshotPage({
                     <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                       <button
                         type="button"
-                      <button
-                        type="button"
                         className="btn clear-btn btn-compact"
                         onClick={() =>
                           openConfirm(
