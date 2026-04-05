@@ -430,9 +430,10 @@ function deriveForLoan(
     category === 'public' &&
     loan.subsidyType === 'subsidized' &&
     (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only');
+  // AES-matched: floor per loan in cents, then sum across loans. Do not round or convert to dollars first.
   const dailyInterestCents = isPublicSubsidizedInSchoolOrGrace
     ? 0
-    : Math.round((balanceCents * (interestRatePercent / 100)) / 365);
+    : Math.floor(balanceCents * (interestRatePercent / 100) / 365);
   let monthlyInterestCents = dailyInterestCents * 30;
 
   const interestOnlyMonthly = computeInterestOnlyMonthlyCents(balanceCents, interestRatePercent);
