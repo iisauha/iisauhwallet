@@ -46,29 +46,9 @@ function CarouselIndicator({ count, activeIdx, showAll, onSeeMore }: { count: nu
     );
   }
   return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-        {Array.from({ length: count }, (_, i) => (
-          <span
-            key={i}
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              background: i === activeIdx ? 'var(--accent)' : 'var(--border)',
-              transition: 'background 0.2s',
-              display: 'inline-block',
-              flexShrink: 0,
-            }}
-          />
-        ))}
-      </div>
-      {count >= 5 && activeIdx >= count - 1 ? (
-        <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={onSeeMore}>See more</button>
-        </div>
-      ) : null}
-    </>
+    <div style={{ textAlign: 'right', fontSize: '0.68rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.4, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
+      {activeIdx + 1} of {count}
+    </div>
   );
 }
 

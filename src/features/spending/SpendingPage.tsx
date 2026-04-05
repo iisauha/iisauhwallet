@@ -465,7 +465,7 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
       <p className="section-title page-title" style={{ marginTop: 4 }}>
         {view === 'category' ? 'Where your money went' : view === 'card' ? 'Spending by card' : 'Rewards overview'}
       </p>
-      <div className={view === 'category' ? 'card card-no-press' : 'card'} style={view === 'category' ? { position: 'relative' } : undefined}>
+      <div className={view === 'category' ? 'card card-no-press' : 'card'} style={view === 'category' ? { position: 'relative', background: 'color-mix(in srgb, var(--surface, #1a1a1a) 55%, transparent)', backdropFilter: 'blur(20px) saturate(1.4)', WebkitBackdropFilter: 'blur(20px) saturate(1.4)' } : undefined}>
         {view === 'category' ? (
           <>
             {byCategory.length > 0 ? (

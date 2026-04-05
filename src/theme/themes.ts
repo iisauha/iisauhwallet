@@ -1,5 +1,6 @@
 /** Theme ids must match [data-theme] values in theme.css and storage validation. */
 export type ThemeId =
+  | 'alenjo'
   | 'blue'
   | 'green'
   | 'light'
@@ -16,6 +17,7 @@ export type ThemeId =
   | 'custom';
 
 export const THEME_OPTIONS: { id: ThemeId; label: string }[] = [
+  { id: 'alenjo', label: 'Alenjo' },
   { id: 'blue', label: 'Blue' },
   { id: 'green', label: 'Green' },
   { id: 'teal', label: 'Teal' },

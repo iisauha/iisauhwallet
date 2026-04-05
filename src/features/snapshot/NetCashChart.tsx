@@ -316,8 +316,8 @@ export function NetCashChart({
 
         <div className={`net-cash-chart-graph-layer${showSummary ? ' hidden' : ''}`}>
           {scrubData && displayTime && (
-            <div style={{ position: 'relative', height: 0 }}>
-              <div style={{ position: 'absolute', left: scrubData.px, transform: 'translateX(-50%)', bottom: 0, fontSize: '0.68rem', color: lineColor, whiteSpace: 'nowrap', pointerEvents: 'none', opacity: 0.8 }}>
+            <div style={{ position: 'relative', height: 14, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', left: Math.max(CHART_PADDING_LEFT, Math.min(scrubData.px, width - CHART_PADDING_RIGHT)), transform: 'translateX(-50%)', bottom: 0, fontSize: '0.65rem', color: 'var(--ui-primary-text, var(--text))', whiteSpace: 'nowrap', pointerEvents: 'none', opacity: 0.6 }}>
                 {displayTime}
               </div>
             </div>
@@ -384,7 +384,7 @@ export function NetCashChart({
                 )}
                 {scrubData && (
                   <>
-                    <line x1={scrubData.px} y1={0} x2={scrubData.px} y2={CHART_HEIGHT} stroke={lineColor} strokeWidth={1} opacity={0.25} strokeDasharray="3 2" />
+                    <line x1={scrubData.px} y1={CHART_PADDING_TOP} x2={scrubData.px} y2={CHART_HEIGHT - CHART_PADDING_BOTTOM} stroke="var(--border)" strokeWidth={1} opacity={0.4} strokeDasharray="3 2" />
                     <circle cx={scrubData.px} cy={scrubData.py} r={5} fill={lineColor} filter="url(#glowDot)" />
                   </>
                 )}

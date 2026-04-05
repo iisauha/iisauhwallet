@@ -1801,7 +1801,7 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
           setCoastFireOpen(true);
         }}
       >
-        See more: Coast FIRE
+        Coast FIRE
       </button>
 
       {coastFireOpen ? (

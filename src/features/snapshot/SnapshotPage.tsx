@@ -663,8 +663,8 @@ export function SnapshotPage({
           aria-expanded={activeSection === 'pending'}
         >
           <div className="stat-tile-icon"><IconClock /></div>
-          <div className="stat-tile-value" style={{ color: pendingNetCents > 0 ? 'var(--green)' : pendingNetCents < 0 ? 'var(--red)' : undefined, fontSize: '0.85rem' }}>
-            {pendingCount === 0 ? '0' : `${pendingNetCents >= 0 ? '+' : ''}${formatCents(pendingNetCents)}`}
+          <div className="stat-tile-value" style={{ color: pendingNetCents > 0 ? 'var(--green)' : pendingNetCents < 0 ? 'var(--red)' : undefined }}>
+            {pendingCount === 0 ? '$0' : formatCents(pendingNetCents)}
           </div>
           <div className="stat-tile-label">Pending</div>
         </button>
@@ -726,15 +726,6 @@ export function SnapshotPage({
                       </div>
                     ) : null}
                     <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-compact"
-                        onClick={() =>
-                          setModal({ type: 'edit-balance', kind: 'bank', id: b.id, amount: '', useSet: false })
-                        }
-                      >
-                        Update Balance
-                      </button>
                       {linkedHysa && onAdjustHysaAllocForAccount ? (
                         <button
                           type="button"
@@ -876,11 +867,6 @@ export function SnapshotPage({
                     <div className="btn-row" style={{ marginTop: 10, marginBottom: 0 }}>
                       <button
                         type="button"
-                        className="btn btn-secondary btn-compact"
-                        onClick={() => setModal({ type: 'edit-balance', kind: 'card', id: c.id, amount: '', useSet: false })}
-                      >
-                        Update Balance
-                      </button>
                       <button
                         type="button"
                         className="btn clear-btn btn-compact"
