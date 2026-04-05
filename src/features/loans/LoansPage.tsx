@@ -346,6 +346,9 @@ function computeRangeBasedUnpaidInterest(loan: Loan, asOfISO: string): number {
 
   let unpaidCents = 0;
 
+  // DEBUG: temporary logging — remove after confirming per-loan values
+  const debugRanges: string[] = [];
+
   for (const range of ranges) {
     if (range.startDate > asOfISO) continue; // future range, no accrual yet
     const rangeEnd = range.endDate < asOfISO ? range.endDate : asOfISO;
@@ -353,7 +356,9 @@ function computeRangeBasedUnpaidInterest(loan: Loan, asOfISO: string): number {
     switch (range.mode) {
       case 'deferred': {
         const daysElapsed = daysBetween(range.startDate, rangeEnd);
-        unpaidCents += dailyCents * daysElapsed;
+        const contrib = dailyCents * daysElapsed;
+        unpaidCents += contrib;
+        debugRanges.push(`  deferred ${range.startDate}→${rangeEnd}: dailyCents=${dailyCents} × days=${daysElapsed} = ${contrib}¢ ($${(contrib/100).toFixed(2)})`);
         break;
       }
       case 'interest_only': {
@@ -361,7 +366,9 @@ function computeRangeBasedUnpaidInterest(loan: Loan, asOfISO: string): number {
         const months = fullMonthsElapsed(range.startDate, rangeEnd);
         const monthStart = addMonthsToISO(range.startDate, months);
         const remainderDays = daysBetween(monthStart, rangeEnd);
-        unpaidCents += dailyCents * remainderDays;
+        const contrib = dailyCents * remainderDays;
+        unpaidCents += contrib;
+        debugRanges.push(`  interest_only ${range.startDate}→${rangeEnd}: months=${months} monthStart=${monthStart} remainderDays=${remainderDays} dailyCents=${dailyCents} → ${contrib}¢ ($${(contrib/100).toFixed(2)})`);
         break;
       }
       case 'custom_monthly': {
@@ -371,14 +378,19 @@ function computeRangeBasedUnpaidInterest(loan: Loan, asOfISO: string): number {
         const months = fullMonthsElapsed(range.startDate, rangeEnd);
         const monthStart = addMonthsToISO(range.startDate, months);
         const remainderDays = daysBetween(monthStart, rangeEnd);
-        unpaidCents += (shortfall * months) + (dailyCents * remainderDays);
+        const contrib = (shortfall * months) + (dailyCents * remainderDays);
+        unpaidCents += contrib;
+        debugRanges.push(`  custom_monthly ${range.startDate}→${rangeEnd}: monthlyInt=${monthlyInterestCents} custom=${customPayment} shortfall=${shortfall} months=${months} monthStart=${monthStart} remainderDays=${remainderDays} dailyCents=${dailyCents} → (${shortfall}×${months})+(${dailyCents}×${remainderDays})=${contrib}¢ ($${(contrib/100).toFixed(2)})`);
         break;
       }
       case 'full_repayment':
-        // Amortized payment covers all interest
+        debugRanges.push(`  full_repayment ${range.startDate}→${rangeEnd}: 0¢`);
         break;
     }
   }
+
+  // DEBUG: log per-loan result
+  console.log(`[unpaidInterest] ${loan.name} | bal=${balanceCents}¢ ($${(balanceCents/100).toFixed(2)}) rate=${interestRatePercent}% | dailyCents=${dailyCents} monthlyInt=${monthlyInterestCents} | TOTAL=${unpaidCents}¢ ($${(unpaidCents/100).toFixed(2)})\n${debugRanges.join('\n')}`);
 
   return unpaidCents;
 }
