@@ -114,7 +114,9 @@ export function NetCashChart({
     appendSnapshot(currentCentsRef.current);
   }, []);
 
-  // Record at interval — force=true so every tick creates a scrub point even if value unchanged
+  // Record at interval — force=true so every tick creates a scrub point even if value unchanged.
+  // Value changes between ticks are reflected by the dynamic "now" trailing point (dataPoints),
+  // but do NOT create extra persistent snapshots — this keeps scrub stops interval-aligned.
   useEffect(() => {
     const id = setInterval(() => {
       appendSnapshot(currentCentsRef.current, true);
@@ -122,16 +124,6 @@ export function NetCashChart({
     }, updateInterval);
     return () => clearInterval(id);
   }, [updateInterval]);
-
-  // Also record whenever currentCents actually changes
-  const prevCentsRef = useRef(currentCents);
-  useEffect(() => {
-    if (currentCents !== prevCentsRef.current) {
-      prevCentsRef.current = currentCents;
-      appendSnapshot(currentCents);
-      setTick(t => t + 1);
-    }
-  }, [currentCents]);
 
   // Clear + reload
   const [clearCount, setClearCount] = useState(0);
