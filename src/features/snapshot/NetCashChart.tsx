@@ -3,34 +3,48 @@ import { formatCents } from '../../state/calc';
 import { loadNetCashHistory, type NetCashSnapshot } from '../../state/netCashHistory';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
 
-type Range = '1D' | '1W' | '1M' | 'ALL';
+type Range = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
 
 const RANGE_MS: Record<Range, number> = {
   '1D': 24 * 60 * 60 * 1000,
   '1W': 7 * 24 * 60 * 60 * 1000,
   '1M': 30 * 24 * 60 * 60 * 1000,
+  '3M': 90 * 24 * 60 * 60 * 1000,
+  'YTD': 0, // computed dynamically
+  '1Y': 365 * 24 * 60 * 60 * 1000,
   'ALL': Infinity,
 };
 
-const CHART_HEIGHT = 160;
-const CHART_PADDING_TOP = 12;
-const CHART_PADDING_BOTTOM = 8;
+const CHART_HEIGHT = 180;
+const CHART_PADDING_TOP = 20;
+const CHART_PADDING_BOTTOM = 16;
+const CHART_PADDING_LEFT = 6;
+const CHART_PADDING_RIGHT = 40; // extra room so line "never reaches end"
 
 function formatTimeLabel(ts: number, range: Range): string {
   const d = new Date(ts);
-  if (range === '1D') {
-    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
-  }
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+  const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (range === '1D') return time;
+  return `${time}, ${date}`;
 }
 
-function buildPath(points: { x: number; y: number }[]): string {
+/** Stepwise path: horizontal to next x, then vertical to next y (step-after) */
+function buildStepPath(points: { x: number; y: number }[]): string {
   if (points.length === 0) return '';
   let d = `M ${points[0].x} ${points[0].y}`;
   for (let i = 1; i < points.length; i++) {
+    // horizontal line to the next point's x at the current y
+    d += ` L ${points[i].x} ${points[i - 1].y}`;
+    // vertical line down/up to the next point's y
     d += ` L ${points[i].x} ${points[i].y}`;
   }
   return d;
+}
+
+/** Extend the last point rightward to simulate "still going" */
+function buildTrailingPath(lastPt: { x: number; y: number }, endX: number): string {
+  return `M ${lastPt.x} ${lastPt.y} L ${endX} ${lastPt.y}`;
 }
 
 export function NetCashChart({
@@ -49,7 +63,13 @@ export function NetCashChart({
   const history = useMemo(() => {
     const all = loadNetCashHistory();
     if (range === 'ALL') return all.sort((a, b) => a.ts - b.ts);
-    const cutoff = Date.now() - RANGE_MS[range];
+    let cutoff: number;
+    if (range === 'YTD') {
+      const now = new Date();
+      cutoff = new Date(now.getFullYear(), 0, 1).getTime();
+    } else {
+      cutoff = Date.now() - RANGE_MS[range];
+    }
     return all.filter(s => s.ts >= cutoff).sort((a, b) => a.ts - b.ts);
   }, [range]);
 
@@ -75,7 +95,7 @@ export function NetCashChart({
     return () => ro.disconnect();
   }, []);
 
-  // Compute SVG points
+  // Compute SVG points — uses left/right padding so line never reaches edges
   const { points, minCents, maxCents } = useMemo(() => {
     if (dataPoints.length === 0) return { points: [], minCents: 0, maxCents: 0 };
     const minTs = dataPoints[0].ts;
@@ -92,15 +112,16 @@ export function NetCashChart({
     minC -= yPad;
     maxC += yPad;
     const drawH = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
+    const drawW = width - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
 
     const pts = dataPoints.map(p => ({
-      x: ((p.ts - minTs) / tsRange) * width,
+      x: CHART_PADDING_LEFT + ((p.ts - minTs) / tsRange) * drawW,
       y: CHART_PADDING_TOP + drawH - ((p.cents - minC) / (maxC - minC)) * drawH,
     }));
     return { points: pts, minCents: minC, maxCents: maxC };
   }, [dataPoints, width]);
 
-  // Scrub handling — interpolate between data points for smooth dragging
+  // Scrub handling — stepwise: snap to nearest data point (no interpolation)
   const getScrubFromX = useCallback((clientX: number): { idx: number; cents: number; ts: number; px: number; py: number } | null => {
     const el = containerRef.current;
     if (!el || points.length === 0 || dataPoints.length === 0) return null;
@@ -111,20 +132,23 @@ export function NetCashChart({
       return { idx: 0, cents: dataPoints[0].cents, ts: dataPoints[0].ts, px: points[0].x, py: points[0].y };
     }
 
-    // Find the two surrounding points and interpolate
-    for (let i = 0; i < points.length - 1; i++) {
-      if (x >= points[i].x && x <= points[i + 1].x) {
-        const segWidth = points[i + 1].x - points[i].x;
-        const t = segWidth > 0 ? (x - points[i].x) / segWidth : 0;
-        const cents = Math.round(dataPoints[i].cents + (dataPoints[i + 1].cents - dataPoints[i].cents) * t);
-        const ts = Math.round(dataPoints[i].ts + (dataPoints[i + 1].ts - dataPoints[i].ts) * t);
-        const py = points[i].y + (points[i + 1].y - points[i].y) * t;
-        return { idx: i, cents, ts, px: x, py };
+    // Snap to nearest data point — stepwise, no interpolation
+    let closest = 0;
+    let closestDist = Math.abs(x - points[0].x);
+    for (let i = 1; i < points.length; i++) {
+      const dist = Math.abs(x - points[i].x);
+      if (dist < closestDist) {
+        closest = i;
+        closestDist = dist;
       }
     }
-    // Past the last point
-    const last = points.length - 1;
-    return { idx: last, cents: dataPoints[last].cents, ts: dataPoints[last].ts, px: points[last].x, py: points[last].y };
+    return {
+      idx: closest,
+      cents: dataPoints[closest].cents,
+      ts: dataPoints[closest].ts,
+      px: points[closest].x,
+      py: points[closest].y,
+    };
   }, [points, dataPoints, width]);
 
   const handleScrubStart = useCallback((clientX: number) => {
@@ -188,10 +212,19 @@ export function NetCashChart({
           )}
         </div>
         {hasData && (
-          <div className="net-cash-chart-change" style={{ color: isPositiveChange ? 'var(--green)' : 'var(--red)' }}>
-            {isPositiveChange ? '▲' : '▼'} {formatCents(Math.abs(changeCents))} ({Math.abs(changePct).toFixed(1)}%)
-            {displayTime ? <span className="net-cash-chart-time"> • {displayTime}</span> : null}
-          </div>
+          <>
+            <div className="net-cash-chart-change" style={{ color: isPositiveChange ? 'var(--green)' : 'var(--red)' }}>
+              {isPositiveChange ? '▲' : '▼'} {formatCents(Math.abs(changeCents))} ({Math.abs(changePct).toFixed(1)}%)
+              {!scrubData && (
+                <span className="net-cash-chart-time">
+                  {' '}{range === '1D' ? 'today' : range === '1W' ? 'last week' : range === '1M' ? 'last month' : range === '3M' ? 'last 3 months' : range === 'YTD' ? 'year to date' : range === '1Y' ? 'last year' : 'all time'}
+                </span>
+              )}
+            </div>
+            {scrubData && displayTime && (
+              <div className="net-cash-chart-scrub-time">{displayTime}</div>
+            )}
+          </>
         )}
       </div>
 
@@ -212,28 +245,43 @@ export function NetCashChart({
       >
         {hasData ? (
           <svg width={width} height={CHART_HEIGHT} style={{ display: 'block' }}>
-            {/* Gradient fill under line */}
             <defs>
+              {/* Gradient fill under line */}
               <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity={0.2} />
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.18} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+              </linearGradient>
+              {/* Fade-out gradient for trailing line */}
+              <linearGradient id="trailFade" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={0.6} />
                 <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
               </linearGradient>
             </defs>
-            {/* Fill area */}
+            {/* Fill area under stepwise line */}
             <path
-              d={buildPath(points) + ` L ${points[points.length - 1].x} ${CHART_HEIGHT} L ${points[0].x} ${CHART_HEIGHT} Z`}
+              d={buildStepPath(points) + ` L ${points[points.length - 1].x} ${CHART_HEIGHT} L ${points[0].x} ${CHART_HEIGHT} Z`}
               fill="url(#chartGrad)"
             />
-            {/* Line */}
+            {/* Stepwise line */}
             <path
-              d={buildPath(points)}
+              d={buildStepPath(points)}
               fill="none"
               stroke={lineColor}
               strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
+              strokeLinejoin="miter"
+              strokeLinecap="butt"
             />
-            {/* Scrub indicator — follows finger/mouse smoothly between points */}
+            {/* Trailing line — fades out to suggest "still updating" */}
+            {points.length > 0 && (
+              <path
+                d={buildTrailingPath(points[points.length - 1], width)}
+                fill="none"
+                stroke="url(#trailFade)"
+                strokeWidth={2}
+                strokeDasharray="4 3"
+              />
+            )}
+            {/* Scrub indicator — snaps to data points */}
             {scrubData && (
               <>
                 <line
@@ -247,7 +295,7 @@ export function NetCashChart({
                 />
               </>
             )}
-            {/* End dot when not scrubbing */}
+            {/* Pulsing end dot when not scrubbing */}
             {!scrubData && points.length > 0 && (
               <circle
                 cx={points[points.length - 1].x} cy={points[points.length - 1].y}
@@ -266,7 +314,7 @@ export function NetCashChart({
 
       {/* Range Selector */}
       <div className="net-cash-chart-ranges">
-        {(['1D', '1W', '1M', 'ALL'] as Range[]).map(r => (
+        {(['1W', '1M', '3M', 'YTD', '1Y', 'ALL'] as Range[]).map(r => (
           <button
             key={r}
             type="button"
