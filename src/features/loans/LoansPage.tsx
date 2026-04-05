@@ -1559,14 +1559,6 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      {/* Combined daily interest + blended rate bar */}
-      {(summary.totalDailyInterestCents + summary.publicDailyInterestCents > 0 || summary.blendedRate != null) && (
-        <div style={{ fontSize: '0.75rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7, textAlign: 'center', marginBottom: 6 }}>
-          {formatCents(summary.totalDailyInterestCents + summary.publicDailyInterestCents)}/day total interest
-          {summary.blendedRate != null ? ` · ${summary.blendedRate.toFixed(2)}% blended rate` : ''}
-        </div>
-      )}
-
       {/* Loans Summary — ring: 4 segments (public principal, public interest, private principal, private interest) */}
       {(() => {
         const publicCents = summary.publicBalanceCents;
@@ -1654,6 +1646,12 @@ export function LoansPage() {
                 <div className="loans-donut-label">Total Balance</div>
               </div>
             </div>
+            {/* Daily interest + blended rate below ring, above legend */}
+            {(privateDailyInterestCents + publicDailyInterestCents > 0 || summary.blendedRate != null) && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.6, textAlign: 'center', marginTop: 4, marginBottom: 4 }}>
+                {formatCents(privateDailyInterestCents + publicDailyInterestCents)}/day · {summary.blendedRate != null ? `${summary.blendedRate.toFixed(2)}% blended` : ''}
+              </div>
+            )}
             {/* Legend */}
             <div className="loans-summary-rows">
               {/* Public */}
@@ -1799,6 +1797,15 @@ export function LoansPage() {
             </p>
           ) : null}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
+            {publicLoansWithDerived.length > 0 && (
+              <button
+                type="button"
+                className="snapshot-util-btn"
+                onClick={() => { setPublicManualInput(publicManualRepayment != null ? (publicManualRepayment / 100).toFixed(2) : ''); setShowPublicLoanTools(true); }}
+              >
+                Loan Tools
+              </button>
+            )}
             <button
               type="button"
               className="snapshot-add-btn"
@@ -1841,38 +1848,6 @@ export function LoansPage() {
                 </div>
               )}
             </>
-          )}
-          {/* Public Loan Tools */}
-          {publicLoansWithDerived.length > 0 && (
-            <div className="card" style={{ marginTop: 10, padding: '10px 14px' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 8 }}>Loan Tools</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 10px' }}
-                  onClick={() => { setPublicManualInput(publicManualRepayment != null ? (publicManualRepayment / 100).toFixed(2) : ''); setShowPublicLoanTools(true); }}>
-                  I know my repayment amount
-                </button>
-                <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 10px' }}
-                  onClick={() => window.open('https://studentaid.gov/loan-simulator/', '_blank', 'noopener')}>
-                  Calculate my repayment plan →
-                </button>
-                <p style={{ fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7, margin: '2px 0 0 0' }}>
-                  The federal loan simulator shows your estimated payment under every repayment plan including IBR, SAVE, PAYE, and Standard. Once you know your amount, come back and enter it above.
-                </p>
-              </div>
-              {publicManualRepayment != null && (
-                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>
-                    Override: {formatCents(publicManualRepayment)}/mo
-                    {(() => { const earliest = publicLoansWithDerived.reduce((min, l) => l.nextPaymentDate && (!min || l.nextPaymentDate < min) ? l.nextPaymentDate : min, '' as string); return earliest ? ` after ${earliest}` : ''; })()}
-                    <span style={{ fontSize: '0.7rem', opacity: 0.7, marginLeft: 4 }}>Manual</span>
-                  </span>
-                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '2px 8px', minHeight: 'unset' }}
-                    onClick={() => { savePublicManualRepaymentCents(null); setPublicManualRepayment(null); }}>
-                    Clear
-                  </button>
-                </div>
-              )}
-            </div>
           )}
         </>
       ) : null}
@@ -2157,31 +2132,47 @@ export function LoansPage() {
         title="Repayment Amount"
         onClose={() => setShowPublicLoanTools(false)}
       >
-        <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 10 }}>
-          Enter your estimated monthly payment after your grace period ends.
-        </p>
-        <div className="field" style={{ marginBottom: 10 }}>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={publicManualInput}
-            onChange={(e) => setPublicManualInput(e.target.value)}
-            placeholder="0.00"
-            style={{ maxWidth: 160 }}
-          />
-          <p style={{ marginTop: 4, fontSize: '0.78rem', color: 'var(--ui-primary-text, var(--text))' }}>
-            This overrides all computed estimates and will be used as your monthly payment starting on your first payment date.
-          </p>
-        </div>
-        <div className="btn-row">
-          <button type="button" className="btn btn-secondary" onClick={() => setShowPublicLoanTools(false)}>Cancel</button>
-          <button type="button" className="btn btn-secondary" onClick={() => {
-            const n = parseFloat(publicManualInput.replace(/,/g, '') || '0');
-            const cents = Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null;
-            savePublicManualRepaymentCents(cents);
-            setPublicManualRepayment(cents);
-            setShowPublicLoanTools(false);
-          }}>Save</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 0, marginBottom: 8 }}>
+              Enter your estimated monthly payment after your grace period ends.
+            </p>
+            <div className="field" style={{ marginBottom: 6 }}>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={publicManualInput}
+                onChange={(e) => setPublicManualInput(e.target.value)}
+                placeholder="0.00"
+                style={{ maxWidth: 160 }}
+              />
+            </div>
+            <div className="btn-row">
+              <button type="button" className="btn btn-secondary" onClick={() => {
+                const n = parseFloat(publicManualInput.replace(/,/g, '') || '0');
+                const cents = Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null;
+                savePublicManualRepaymentCents(cents);
+                setPublicManualRepayment(cents);
+                setShowPublicLoanTools(false);
+              }}>Save</button>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+            <button type="button" className="btn btn-secondary" style={{ width: '100%', fontSize: '0.82rem' }}
+              onClick={() => window.open('https://studentaid.gov/loan-simulator/', '_blank', 'noopener')}>
+              Calculate my repayment plan →
+            </button>
+            <p style={{ fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.7, marginTop: 4, marginBottom: 0 }}>
+              Use the federal simulator to find your payment under IBR, SAVE, PAYE, or Standard, then enter it above.
+            </p>
+          </div>
+          {publicManualRepayment != null && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Current: {formatCents(publicManualRepayment)}/mo <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>Manual</span></span>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.72rem', padding: '2px 8px', minHeight: 'unset' }}
+                onClick={() => { savePublicManualRepaymentCents(null); setPublicManualRepayment(null); }}>Clear</button>
+            </div>
+          )}
         </div>
       </Modal>
 

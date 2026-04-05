@@ -541,7 +541,7 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
                 readOnly={useLoanEstimatedPayment && totalVisiblePaymentNowCents > 0}
               />
             </div>
-            {type === 'income' ? (
+            {type === '_disabled_income' ? (
               <>
                   <div className="card" style={{ marginTop: 8 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
