@@ -1390,11 +1390,11 @@ export function LoansPage() {
         const stroke = 14;
         const circum = 2 * Math.PI * r;
 
-        // Ring: green = public, blue = private principal, lighter blue = private interest (Change 3)
+        // Ring: green = public, blue = private principal, orange/accent = private unpaid interest
         const segments = [
           { cents: publicPrincipal, color: 'var(--green)', key: 'pub' },
           { cents: privateCents, color: 'var(--blue, #4a90d9)', key: 'priv-principal' },
-          { cents: privateInterestCents, color: 'color-mix(in srgb, var(--blue, #4a90d9) 45%, transparent)', key: 'priv-interest' },
+          { cents: privateInterestCents, color: 'var(--accent)', key: 'priv-interest' },
         ].filter(s => s.cents > 0);
 
         const segCount = segments.length;
@@ -1473,23 +1473,23 @@ export function LoansPage() {
                   </div>
                 </>
               )}
-              {/* Private — AES layout: principal row, interest row, daily rate (Change 1) */}
+              {/* Private */}
               {privateCents > 0 && (
-                <div className="loans-legend-row">
-                  <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
-                  <span className="loans-legend-label">Principal Balance</span>
-                  <span className="loans-legend-value"><AnimatedNumber value={privateCents} format={formatCents} cacheKey="loan_priv_principal" /></span>
-                </div>
-              )}
-              {privateInterestCents > 0 && (
                 <>
                   <div className="loans-legend-row">
-                    <span className="loans-legend-dot" style={{ background: 'color-mix(in srgb, var(--blue, #4a90d9) 45%, transparent)' }} />
-                    <span className="loans-legend-label">Interest Balance</span>
-                    <span className="loans-legend-value"><AnimatedNumber value={privateInterestCents} format={formatCents} cacheKey="loan_priv_interest" /></span>
+                    <span className="loans-legend-dot" style={{ background: 'var(--blue, #4a90d9)' }} />
+                    <span className="loans-legend-label">Private</span>
+                    <span className="loans-legend-value"><AnimatedNumber value={privateCents} format={formatCents} cacheKey="loan_priv_principal" /></span>
                   </div>
-                  {privateDailyInterestCents > 0 && (
-                    <div className="loans-legend-sub">{formatCents(privateDailyInterestCents)} Added / Day</div>
+                  {(privateInterestCents > 0 || privateDailyInterestCents > 0) && (
+                    <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
+                      {privateInterestCents > 0 && (
+                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', marginRight: 6, verticalAlign: 'middle' }} />Unpaid Accumulated Interest: {formatCents(privateInterestCents)}</span>
+                      )}
+                      {privateDailyInterestCents > 0 && (
+                        <span>{formatCents(privateDailyInterestCents)} Added / Day</span>
+                      )}
+                    </div>
                   )}
                 </>
               )}
