@@ -36,7 +36,7 @@ import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { IconPlus } from '../../ui/icons';
 import { loadPublicLoanSummary, savePublicLoanSummary } from '../federalLoans/PublicLoanSummaryStore';
 import { PublicLoanSimpleCard } from '../federalLoans/PublicLoanSimpleCard';
-import { syncPrivateLoansToSupabase, fetchLatestLedgerRows, type LedgerRow } from '../../state/loanSync';
+import { syncLoansToSupabase, fetchLatestLedgerRows, type LedgerRow } from '../../state/loanSync';
 
 function todayISO(): string {
   const d = new Date();
@@ -337,16 +337,30 @@ function addMonthsToISO(startISO: string, months: number): string {
  * full_repayment: 0
  */
 function computeAnchoredUnpaidInterest(loan: Loan, asOfISO: string): number {
-  if (loan.category !== 'private') return 0;
+  // Public subsidized: always 0 while in school
+  if (loan.category === 'public' && loan.subsidyType === 'subsidized') return 0;
+
   const { balanceCents, interestRatePercent } = loan;
   if (!(balanceCents > 0) || !(interestRatePercent > 0)) return 0;
 
   const anchor = loan.currentInterestBalanceCents;
-  if (anchor == null) return 0; // user hasn't entered AES balance yet
+  if (anchor == null) return 0; // user hasn't entered interest balance yet
 
-  // AES nightly accumulation convention: Math.round per day
-  const dailyCents = Math.round(balanceCents * (interestRatePercent / 100) / 365);
+  // AES nightly accumulation convention: Math.round per day (per disbursement for public unsub)
+  const dailyCents = (loan.disbursements && loan.disbursements.length > 0)
+    ? loan.disbursements.reduce((sum, d) => sum + Math.round(d.amountCents * (interestRatePercent / 100) / 365), 0)
+    : Math.round(balanceCents * (interestRatePercent / 100) / 365);
   const anchorDate = loan.interestBalanceAnchorDate ?? asOfISO;
+
+  // Public unsubsidized: simple anchor + daily forward (no payment ranges)
+  if (loan.category === 'public') {
+    const daysElapsed = daysBetween(anchorDate, asOfISO);
+    const unpaid = anchor + (dailyCents * daysElapsed);
+    console.log(`[unpaidInterest] ${loan.name} | public unsub | anchor=${anchor}¢ daily=${dailyCents} days=${daysElapsed} → $${(unpaid/100).toFixed(2)}`);
+    return unpaid;
+  }
+
+  // Private loans: range-based logic
   const ranges = getEffectivePrivateRanges(loan);
   const activeRange = getActivePrivateRange(ranges, asOfISO);
   const mode = activeRange?.mode ?? 'deferred';
@@ -421,10 +435,11 @@ function computeAnchoredUnpaidInterest(loan: Loan, asOfISO: string): number {
 }
 
 /**
- * Unpaid interest for private loan.
+ * Unpaid interest for any loan (private or public unsubsidized).
  * Priority: ledger (server-computed nightly) → anchored computation → 0.
+ * Public subsidized always returns 0 (handled inside computeAnchoredUnpaidInterest).
  */
-function getUnpaidInterestForPrivate(
+function getUnpaidInterestForLoan(
   loan: Loan,
   asOfISO: string,
   ledgerMap?: Record<string, LedgerRow>
@@ -540,10 +555,12 @@ function deriveForLoan(
     category === 'public' &&
     loan.subsidyType === 'subsidized' &&
     (repaymentStatus === 'in_school_interest_only' || repaymentStatus === 'grace_interest_only');
-  // AES-matched: floor per loan in cents, then sum across loans. Do not round or convert to dollars first.
+  // AES-matched: floor per loan (or per disbursement) in cents, then sum.
   const dailyInterestCents = isPublicSubsidizedInSchoolOrGrace
     ? 0
-    : Math.floor(balanceCents * (interestRatePercent / 100) / 365);
+    : (loan.disbursements && loan.disbursements.length > 0)
+      ? loan.disbursements.reduce((sum, d) => sum + Math.floor(d.amountCents * (interestRatePercent / 100) / 365), 0)
+      : Math.floor(balanceCents * (interestRatePercent / 100) / 365);
   let monthlyInterestCents = dailyInterestCents * 30;
 
   const interestOnlyMonthly = computeInterestOnlyMonthlyCents(balanceCents, interestRatePercent);
@@ -721,7 +738,7 @@ function deriveForLoan(
       }
     }
 
-    const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForPrivate(loan, todayISO, ledgerMap);
+    const { cents: unpaidInterestCents, source: unpaidInterestSource } = getUnpaidInterestForLoan(loan, todayISO, ledgerMap);
 
     // Deferred/forbearance: compute full-range interest and projected balance for display
     let deferredDailyInterestCents: number | undefined;
@@ -790,6 +807,8 @@ type LoanEditorState = {
   futureRepaymentPlan: FutureRepaymentPlan;
   subsidyType: 'subsidized' | 'unsubsidized';
   disbursementDate: string;
+  /** Public loans: per-disbursement amounts for interest tracking. */
+  disbursements: { date: string; amount: string }[];
   gracePeriodEndDate: string;
   nextPayment: string;
   nextPaymentDate: string;
@@ -829,6 +848,7 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
       futureRepaymentPlan: 'na',
       subsidyType: 'unsubsidized',
       disbursementDate: '',
+      disbursements: [],
       gracePeriodEndDate: '',
       nextPayment: '',
       nextPaymentDate: '',
@@ -883,6 +903,7 @@ function loanToEditor(l: Loan | null | undefined, hasRecurringIncome: boolean): 
     futureRepaymentPlan: l.futureRepaymentPlan || 'na',
     subsidyType: l.subsidyType || 'unsubsidized',
     disbursementDate: l.disbursementDate || '',
+    disbursements: (l.disbursements || []).map(d => ({ date: d.date, amount: (d.amountCents / 100).toFixed(2) })),
     gracePeriodEndDate: l.gracePeriodEndDate || '',
     nextPayment: l.nextPaymentCents != null ? (l.nextPaymentCents / 100).toFixed(2) : '',
     nextPaymentDate: l.nextPaymentDate || '',
@@ -946,6 +967,9 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
 
   const subsidyType = e.category === 'public' ? e.subsidyType : undefined;
   const disbursementDate = e.category === 'public' && e.disbursementDate ? e.disbursementDate : undefined;
+  const disbursements = e.category === 'public' && e.disbursements.length > 0
+    ? e.disbursements.filter(d => d.date && d.amount).map(d => ({ date: d.date, amountCents: Math.round(parseFloat(d.amount.replace(/,/g, '')) * 100) })).filter(d => Number.isFinite(d.amountCents) && d.amountCents > 0)
+    : undefined;
   const householdSize = undefined;
   const dependents = undefined;
   const stateOfResidency = undefined;
@@ -963,6 +987,7 @@ function editorToLoan(e: LoanEditorState, prev: Loan | null): Loan | null {
     futureRepaymentPlan: futureRepaymentPlan ?? undefined,
     subsidyType,
     disbursementDate,
+    disbursements,
     borrowerType: e.category === 'public' ? e.borrowerType : undefined,
     householdSize,
     dependents,
@@ -1324,8 +1349,8 @@ export function LoansPage() {
   const [ledgerMap, setLedgerMap] = useState<Record<string, LedgerRow>>({});
   useEffect(() => {
     fetchLatestLedgerRows().then(setLedgerMap).catch(() => {});
-    // Initial sync of private loans to Supabase (fire-and-forget)
-    syncPrivateLoansToSupabase(state.loans || []).catch(() => {});
+    // Initial sync of all loans to Supabase (fire-and-forget)
+    syncLoansToSupabase(state.loans || []).catch(() => {});
   }, []);
 
   const birthdateISO = loadBirthdateISO();
@@ -1361,80 +1386,63 @@ export function LoansPage() {
   );
   const detectedAnnualIncomeCents = detectedAgi.agiCents;
 
-  const privateLoans = useMemo(
-    () => (state.loans || []).filter((l) => l.category === 'private'),
+  const allActiveLoans = useMemo(
+    () => (state.loans || []).filter((l) => l.active !== false),
     [state.loans]
   );
   const loansWithDerived: LoanWithDerived[] = useMemo(() => {
-    return privateLoans.map((l) =>
+    return allActiveLoans.map((l) =>
       deriveForLoan(l, state.loans || [], detectedAnnualIncomeCents, null, ledgerMap)
     );
-  }, [state.loans, privateLoans, detectedAnnualIncomeCents, ledgerMap]);
+  }, [state.loans, allActiveLoans, detectedAnnualIncomeCents, ledgerMap]);
 
-  const displayedLoans = showAllLoans ? loansWithDerived : loansWithDerived.slice(0, 5);
+  // Split for rendering
+  const publicLoansWithDerived = useMemo(() => loansWithDerived.filter(l => l.category === 'public'), [loansWithDerived]);
+  const privateLoansWithDerived = useMemo(() => loansWithDerived.filter(l => l.category === 'private'), [loansWithDerived]);
+
+  const displayedPrivateLoans = showAllLoans ? privateLoansWithDerived : privateLoansWithDerived.slice(0, 5);
 
 
 
   const summary = useMemo(() => {
     let totalBalance = 0;
-    let derivedPrivatePaymentNowBase = 0;
+    let totalMonthlyNow = 0;
     let totalMonthlyLater = 0;
-    let weightedRateNumerator = 0;
-
     let anyLater = false;
 
-    let privateAfterGraceCents = 0;
-    let totalUnpaidInterestCents = 0;
-    let totalDailyInterestCents = 0;
+    // Per-category accumulators
+    let publicBalanceCents = 0;
+    let publicUnpaidInterestCents = 0;
+    let publicDailyInterestCents = 0;
+    let publicWeightedRateNum = 0;
+    let privateBalanceCents = 0;
+    let privateUnpaidInterestCents = 0;
+    let privateDailyInterestCents = 0;
+    let privateWeightedRateNum = 0;
+
     loansWithDerived.forEach((l) => {
       const bal = l.balanceCents || 0;
       totalBalance += bal;
-      if (l.monthlyNowCents != null) derivedPrivatePaymentNowBase += l.monthlyNowCents;
-      if (l.monthlyLaterCents != null) {
-        totalMonthlyLater += l.monthlyLaterCents;
-        privateAfterGraceCents += l.monthlyLaterCents;
-        anyLater = true;
+      if (l.monthlyNowCents != null) totalMonthlyNow += l.monthlyNowCents;
+      if (l.monthlyLaterCents != null) { totalMonthlyLater += l.monthlyLaterCents; anyLater = true; }
+
+      if (l.category === 'public') {
+        publicBalanceCents += bal;
+        publicUnpaidInterestCents += l.unpaidInterestCents ?? 0;
+        publicDailyInterestCents += l.dailyInterestCents;
+        publicWeightedRateNum += bal * l.interestRatePercent;
+      } else {
+        privateBalanceCents += bal;
+        privateUnpaidInterestCents += l.unpaidInterestCents ?? 0;
+        privateDailyInterestCents += l.dailyInterestCents;
+        privateWeightedRateNum += bal * l.interestRatePercent;
       }
-      weightedRateNumerator += bal * l.interestRatePercent;
-      totalUnpaidInterestCents += l.unpaidInterestCents ?? 0;
-      totalDailyInterestCents += l.dailyInterestCents;
     });
 
-    const publicEstimateCents = (() => {
-      const mode = publicSummary.paymentMode ?? (publicSummary.firstPaymentDate ? 'first_payment_date' : 'current_payment');
-      const estimated = publicSummary.estimatedMonthlyPaymentCents ?? 0;
-      if (mode === 'first_payment_date') {
-        if (estimated <= 0) return 0;
-        const first = publicSummary.firstPaymentDate;
-        if (!first || todayISO() < first) return 0;
-        return estimated;
-      }
-      return (publicSummary.currentPaymentCents != null && publicSummary.currentPaymentCents > 0)
-        ? publicSummary.currentPaymentCents
-        : (estimated > 0 ? estimated : 0);
-    })();
+    const avgPublicRate = publicBalanceCents > 0 ? publicWeightedRateNum / publicBalanceCents : null;
+    const avgPrivateRate = privateBalanceCents > 0 ? privateWeightedRateNum / privateBalanceCents : null;
 
-    // Private base always derived live from each loan card's Payment(now) value.
-    // Public loan is only included when the user has explicitly opted in via
-    // "Add to monthly total" in the Payment Actions modal (publicPaymentNowAdded > 0).
-    const privatePaymentNowBase = derivedPrivatePaymentNowBase;
-    const totalMonthlyNow = derivedPrivatePaymentNowBase + (publicPaymentNowAdded > 0 ? publicEstimateCents : 0);
-
-    const privateTotalBalance = totalBalance;
-    const publicBalanceCents = publicSummary.totalBalanceCents ?? 0;
-    if (publicBalanceCents > 0) totalBalance += publicBalanceCents;
-
-    const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
-    if (publicAfterGraceCents > 0) {
-      totalMonthlyLater += publicAfterGraceCents;
-      anyLater = true;
-    }
-
-    const avgPrivateRate =
-      privateTotalBalance > 0 ? weightedRateNumerator / privateTotalBalance : null;
-    const avgPublicRate = publicSummary.avgInterestRatePercent ?? null;
-
-    // Payoff age: based on loan whose repayment timeline ends the latest (latest range end date across private loans)
+    // Payoff age
     let latestPayoffDate: Date | null = null;
     loansWithDerived.forEach((l) => {
       const endISO = (l as LoanWithDerived).latestRangeEndISO;
@@ -1443,7 +1451,6 @@ export function LoansPage() {
         if (!latestPayoffDate || d > latestPayoffDate) latestPayoffDate = d;
       }
     });
-
     let payoffAge: number | null = null;
     if (latestPayoffDate && birthdateISO) {
       payoffAge = computeAgeFromBirthdate(birthdateISO, latestPayoffDate);
@@ -1453,21 +1460,17 @@ export function LoansPage() {
       totalBalance,
       totalMonthlyNow,
       totalMonthlyLater: anyLater ? totalMonthlyLater : null,
-      publicAfterGraceCents,
-      privateAfterGraceCents,
       avgPrivateRate,
       avgPublicRate,
       payoffAge,
       publicBalanceCents,
-      privateBalanceCents: privateTotalBalance,
-      privatePaymentNowBase,
-      derivedPrivatePaymentNowBase,
-      publicPaymentNowAdded,
-      publicEstimateCents,
-      totalUnpaidInterestCents,
-      totalDailyInterestCents,
+      publicUnpaidInterestCents,
+      publicDailyInterestCents,
+      privateBalanceCents,
+      totalUnpaidInterestCents: privateUnpaidInterestCents,
+      totalDailyInterestCents: privateDailyInterestCents,
     };
-  }, [loansWithDerived, birthdateISO, publicSummary, publicPaymentNowAdded]);
+  }, [loansWithDerived, birthdateISO]);
 
   /** After-grace: per private loan use first future value (custom → full repayment → interest-only). */
   const afterGraceBreakdown = useMemo(() => {
@@ -1497,14 +1500,19 @@ export function LoansPage() {
         });
       }
     });
-    const publicAfterGraceCents = publicSummary.estimatedMonthlyPaymentCents ?? 0;
+    // Public loans: sum monthlyLaterCents from individual public loan records
+    let publicAfterGraceCents = 0;
+    loansWithDerived.forEach((l) => {
+      if (l.category !== 'public') return;
+      if (l.monthlyLaterCents != null && l.monthlyLaterCents > 0) publicAfterGraceCents += l.monthlyLaterCents;
+    });
     return {
       privateAfterGraceCents,
       privateLoansBreakdown,
       publicAfterGraceCents,
       combinedAfterGraceCents: privateAfterGraceCents + publicAfterGraceCents
     };
-  }, [loansWithDerived, publicSummary]);
+  }, [loansWithDerived]);
 
   function persist(next: Partial<LoansState>) {
     setState((prev) => {
@@ -1513,8 +1521,8 @@ export function LoansPage() {
         loans: next.loans !== undefined ? next.loans : prev.loans
       };
       saveLoans(merged);
-      // Sync private loans to Supabase for nightly interest accrual (fire-and-forget)
-      syncPrivateLoansToSupabase(merged.loans || []).catch(() => {});
+      // Sync all loans to Supabase for nightly interest accrual (fire-and-forget)
+      syncLoansToSupabase(merged.loans || []).catch(() => {});
       return merged;
     });
   }
@@ -1528,24 +1536,16 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      {/* Loans Summary — ring: public, private principal, private interest */}
+      {/* Loans Summary — ring: 4 segments (public principal, public interest, private principal, private interest) */}
       {(() => {
-        const publicCents = summary.publicBalanceCents ?? 0;
-        const privateCents = summary.privateBalanceCents ?? 0;
-
-        // Private accumulated interest (floored per-loan then summed — display convention)
+        const publicCents = summary.publicBalanceCents;
+        const publicInterestCents = summary.publicUnpaidInterestCents;
+        const publicDailyInterestCents = summary.publicDailyInterestCents;
+        const privateCents = summary.privateBalanceCents;
         const privateInterestCents = summary.totalUnpaidInterestCents;
         const privateDailyInterestCents = summary.totalDailyInterestCents;
 
-        // Public interest: only included if user checked the box on the public card
-        const avgPublicRate = summary.avgPublicRate ?? 0;
-        const publicInterestCents = avgPublicRate > 0 ? Math.round(publicCents * avgPublicRate / 100) : 0;
-        const includePublicInterest = publicSummary.includeInterestInPrincipal === true;
-
-        const publicPrincipal = publicCents + (includePublicInterest ? publicInterestCents : 0);
-        // Private total = principal + unpaid interest (Change 2)
-        const privateTotalCents = privateCents + privateInterestCents;
-        const grandTotalCents = publicPrincipal + privateTotalCents;
+        const grandTotalCents = publicCents + publicInterestCents + privateCents + privateInterestCents;
 
         const size = 180;
         const cx = size / 2;
@@ -1554,9 +1554,10 @@ export function LoansPage() {
         const stroke = 14;
         const circum = 2 * Math.PI * r;
 
-        // Ring: green = public, blue = private principal, orange/accent = private unpaid interest
+        // Ring: 4 segments — public principal, public interest, private principal, private interest
         const segments = [
-          { cents: publicPrincipal, color: 'var(--green)', key: 'pub' },
+          { cents: publicCents, color: 'var(--green)', key: 'pub' },
+          { cents: publicInterestCents, color: 'color-mix(in srgb, var(--green) 45%, transparent)', key: 'pub-interest' },
           { cents: privateCents, color: 'var(--blue, #4a90d9)', key: 'priv-principal' },
           { cents: privateInterestCents, color: 'var(--accent)', key: 'priv-interest' },
         ].filter(s => s.cents > 0);
@@ -1619,22 +1620,24 @@ export function LoansPage() {
             </div>
             {/* Legend */}
             <div className="loans-summary-rows">
-              {/* Public — unchanged */}
-              {publicPrincipal > 0 && (
+              {/* Public */}
+              {publicCents > 0 && (
                 <>
                   <div className="loans-legend-row">
                     <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
                     <span className="loans-legend-label">Public</span>
-                    <span className="loans-legend-value"><AnimatedNumber value={publicPrincipal} format={formatCents} cacheKey="loan_public" /></span>
+                    <span className="loans-legend-value"><AnimatedNumber value={publicCents} format={formatCents} cacheKey="loan_public" /></span>
                   </div>
-                  <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
-                    {summary.avgPublicRate != null && (
-                      <span>Interest rate: {summary.avgPublicRate.toFixed(2)}%</span>
-                    )}
-                    {includePublicInterest && publicInterestCents > 0 && (
-                      <span>Accumulated interest: {formatCents(publicInterestCents)}</span>
-                    )}
-                  </div>
+                  {(publicInterestCents > 0 || publicDailyInterestCents > 0) && (
+                    <div className="loans-legend-details" style={{ paddingLeft: 22, fontSize: '0.8rem', opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, marginBottom: 4 }}>
+                      {publicInterestCents > 0 && (
+                        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'color-mix(in srgb, var(--green) 45%, transparent)', marginRight: 6, verticalAlign: 'middle' }} />Outstanding Interest: {formatCents(publicInterestCents)}</span>
+                      )}
+                      {publicDailyInterestCents > 0 && (
+                        <span>{formatCents(publicDailyInterestCents)} Added / Day</span>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
               {/* Private */}
@@ -1754,17 +1757,43 @@ export function LoansPage() {
 
       {showPublic ? (
         <div style={{ marginBottom: 16 }}>
-          <PublicLoanSimpleCard
-            onSave={() => setPublicSummary(loadPublicLoanSummary())}
-            onAddToPaymentNow={() => setPublicPaymentNowAdded(loadPublicPaymentNowAdded())}
-            onRemoveFromPaymentNow={() => { savePublicPaymentNowAdded(0); setPublicPaymentNowAdded(0); }}
-            isIncludedInTotal={publicPaymentNowAdded > 0}
-          />
+          {publicLoansWithDerived.length === 0 ? (
+            <p className="empty-state-desc" style={{ marginTop: 0, marginBottom: 12 }}>
+              No federal loans. Add your public (federal) student loans here.
+            </p>
+          ) : null}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
+            <button
+              type="button"
+              className="btn-icon-circle"
+              aria-label="Add public loan"
+              onClick={() => setEditor({ mode: 'add', value: { ...loanToEditor(null, hasRecurringIncome), category: 'public' } })}
+            >
+              <IconPlus />
+            </button>
+          </div>
+          {publicLoansWithDerived.length > 0 && (
+            <div className="card-carousel" style={{ marginBottom: 0 }}>
+              {publicLoansWithDerived.map((l) => (
+                <div className="card-carousel-item" key={l.id}>
+                  <LoanCard
+                    loan={l}
+                    onEdit={() => setEditor({ mode: 'edit', value: loanToEditor(l, hasRecurringIncome) })}
+                    onDelete={async () => {
+                      const ok = await showConfirm('Delete this loan?');
+                      if (!ok) return;
+                      persist({ loans: state.loans.filter((x) => x.id !== l.id) });
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
       {showPrivate ? (
         <>
-          {loansWithDerived.length === 0 ? (
+          {privateLoansWithDerived.length === 0 ? (
             <p className="empty-state-desc" style={{ marginTop: 0, marginBottom: 12 }}>
               No private loans. Track student and other private loans here. All values are manual and for estimates only.
             </p>
@@ -1800,7 +1829,7 @@ export function LoansPage() {
               scheduleSnapCorrection(el);
             }}
           >
-          {displayedLoans.map((l) => (
+          {displayedPrivateLoans.map((l) => (
             <div className="card-carousel-item" key={l.id}>
             <LoanCard
               loan={l}
@@ -1814,18 +1843,18 @@ export function LoansPage() {
             </div>
           ))}
           </div>
-          {displayedLoans.length > 1 && (showAllLoans && loansWithDerived.length >= 5 ? (
+          {displayedPrivateLoans.length > 1 && (showAllLoans && privateLoansWithDerived.length >= 5 ? (
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
-              {privateCarouselIdx + 1} of {displayedLoans.length}
+              {privateCarouselIdx + 1} of {displayedPrivateLoans.length}
             </div>
           ) : (
             <>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                {displayedLoans.map((_, i) => (
+                {displayedPrivateLoans.map((_, i) => (
                   <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === privateCarouselIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
                 ))}
               </div>
-              {loansWithDerived.length >= 5 && privateCarouselIdx >= displayedLoans.length - 1 ? (
+              {privateLoansWithDerived.length >= 5 && privateCarouselIdx >= displayedPrivateLoans.length - 1 ? (
                 <div style={{ textAlign: 'center', marginTop: 8 }}>
                   <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllLoans(true)}>See more</button>
                 </div>
@@ -2197,6 +2226,21 @@ function LoanEditorForm(props: {
                 : 'Used for federal plan eligibility.'}
             </p>
           </div>
+          {state.subsidyType === 'unsubsidized' && (
+            <div className="field" style={{ marginTop: 4 }}>
+              <label>Disbursements (for per-disbursement interest)</label>
+              {state.disbursements.map((d, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
+                  <input type="date" value={d.date} onChange={(e) => { const next = state.disbursements.slice(); next[idx] = { ...d, date: e.target.value }; onChange({ ...state, disbursements: next }); }} style={{ flex: 1, padding: '4px 6px' }} />
+                  <input type="text" inputMode="decimal" value={d.amount} placeholder="$" onChange={(e) => { const next = state.disbursements.slice(); next[idx] = { ...d, amount: e.target.value }; onChange({ ...state, disbursements: next }); }} style={{ width: 90, padding: '4px 6px' }} />
+                  <button type="button" style={{ padding: '2px 6px', fontSize: '0.8rem' }} onClick={() => onChange({ ...state, disbursements: state.disbursements.filter((_, i) => i !== idx) })}>X</button>
+                </div>
+              ))}
+              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '4px 8px', marginTop: 2 }} onClick={() => onChange({ ...state, disbursements: [...state.disbursements, { date: '', amount: '' }] })}>
+                Add disbursement
+              </button>
+            </div>
+          )}
           <div className="field">
             <label>Borrower type</label>
             <Select
