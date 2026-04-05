@@ -1194,6 +1194,8 @@ export function LoansPage() {
     let anyLater = false;
 
     let privateAfterGraceCents = 0;
+    let totalUnpaidInterestCents = 0;
+    let totalDailyInterestCents = 0;
     loansWithDerived.forEach((l) => {
       const bal = l.balanceCents || 0;
       totalBalance += bal;
@@ -1204,6 +1206,8 @@ export function LoansPage() {
         anyLater = true;
       }
       weightedRateNumerator += bal * l.interestRatePercent;
+      totalUnpaidInterestCents += l.unpaidInterestCents ?? 0;
+      totalDailyInterestCents += l.dailyInterestCents;
     });
 
     const publicEstimateCents = (() => {
@@ -1269,7 +1273,9 @@ export function LoansPage() {
       privatePaymentNowBase,
       derivedPrivatePaymentNowBase,
       publicPaymentNowAdded,
-      publicEstimateCents
+      publicEstimateCents,
+      totalUnpaidInterestCents,
+      totalDailyInterestCents,
     };
   }, [loansWithDerived, birthdateISO, publicSummary, publicPaymentNowAdded]);
 
@@ -1327,66 +1333,110 @@ export function LoansPage() {
     <div className="tab-panel active" id="loansContent">
       <p className="section-title page-title" style={{ marginBottom: 8 }}>Loans</p>
 
-      <div className="summary">
-        <div className="summary-compact" style={{ marginBottom: 0 }}>
-          <div className="summary-kv" style={{ marginTop: 0 }}>
-            <span className="k">Total balance</span>
-            <span className="v" style={{ color: 'var(--red)' }}>
-              <AnimatedNumber value={summary.totalBalance} format={formatCents} bounce cacheKey="loan_total" />
-            </span>
-          </div>
-          <div className="summary-kv" style={{ marginTop: 2, fontSize: '0.85rem' }}>
-            <span className="k">Public</span>
-            <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
-              <AnimatedNumber value={summary.publicBalanceCents ?? 0} format={formatCents} cacheKey="loan_pub" />
-            </span>
-          </div>
-          <div className="summary-kv" style={{ marginTop: 0, fontSize: '0.85rem' }}>
-            <span className="k">Private</span>
-            <span className="v" style={{ color: 'var(--ui-primary-text, var(--text))' }}>
-              <AnimatedNumber value={summary.privateBalanceCents ?? 0} format={formatCents} cacheKey="loan_priv" />
-            </span>
-          </div>
-
-          {summary.avgPublicRate != null ? (
-            <div className="summary-kv" style={{ marginTop: 0 }}>
-              <span className="k">Avg public rate</span>
-              <span className="v">{summary.avgPublicRate.toFixed(2)}%</span>
+      {/* Loans Summary — AES-style donut chart */}
+      {(() => {
+        const totalCents = summary.totalBalance;
+        const interestCents = summary.totalUnpaidInterestCents;
+        const principalCents = totalCents - interestCents;
+        const interestFrac = totalCents > 0 ? interestCents / totalCents : 0;
+        const principalFrac = totalCents > 0 ? principalCents / totalCents : 1;
+        // SVG donut math
+        const size = 160;
+        const cx = size / 2;
+        const cy = size / 2;
+        const r = 62;
+        const stroke = 12;
+        const circumference = 2 * Math.PI * r;
+        const principalLen = circumference * principalFrac;
+        const interestLen = circumference * interestFrac;
+        // Format shorthand for center label
+        const formatShort = (c: number) => {
+          const abs = Math.abs(c);
+          if (abs >= 100_000_00) return `$${(c / 100_000_00).toFixed(1)}k`;
+          return formatCents(c);
+        };
+        return (
+          <div className="loans-summary-card">
+            <div className="loans-summary-title">Loans Summary</div>
+            {/* Donut Chart */}
+            <div className="loans-donut-wrap">
+              <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="loans-donut-svg">
+                {/* Background track */}
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} opacity={0.2} />
+                {/* Principal arc */}
+                <circle
+                  cx={cx} cy={cy} r={r}
+                  fill="none"
+                  stroke="var(--green)"
+                  strokeWidth={stroke}
+                  strokeDasharray={`${principalLen} ${circumference}`}
+                  strokeDashoffset={0}
+                  strokeLinecap="round"
+                  transform={`rotate(-90 ${cx} ${cy})`}
+                  style={{ transition: 'stroke-dasharray 0.6s ease' }}
+                />
+                {/* Interest arc */}
+                {interestCents > 0 && (
+                  <circle
+                    cx={cx} cy={cy} r={r}
+                    fill="none"
+                    stroke="var(--accent)"
+                    strokeWidth={stroke}
+                    strokeDasharray={`${interestLen} ${circumference}`}
+                    strokeDashoffset={-principalLen}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${cx} ${cy})`}
+                    style={{ transition: 'stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease' }}
+                  />
+                )}
+              </svg>
+              <div className="loans-donut-center">
+                <div className="loans-donut-amount">{formatShort(totalCents)}</div>
+                <div className="loans-donut-label">Est. Total</div>
+              </div>
             </div>
-          ) : null}
-          {summary.avgPrivateRate != null ? (
-            <div className="summary-kv" style={{ marginTop: 0 }}>
-              <span className="k">Avg private rate</span>
-              <span className="v">{summary.avgPrivateRate.toFixed(2)}%</span>
+            {/* Legend rows */}
+            <div className="loans-summary-rows">
+              <div className="loans-legend-row">
+                <span className="loans-legend-dot" style={{ background: 'var(--green)' }} />
+                <span className="loans-legend-label">Principal Balance</span>
+                <span className="loans-legend-value"><AnimatedNumber value={principalCents} format={formatCents} cacheKey="loan_principal" /></span>
+              </div>
+              <div className="loans-legend-row">
+                <span className="loans-legend-dot" style={{ background: 'var(--accent)' }} />
+                <span className="loans-legend-label">Interest Balance</span>
+                <span className="loans-legend-value"><AnimatedNumber value={interestCents} format={formatCents} cacheKey="loan_interest" /></span>
+              </div>
+              {summary.totalDailyInterestCents > 0 && (
+                <div className="loans-legend-sub">{formatCents(summary.totalDailyInterestCents)} Added / Day</div>
+              )}
             </div>
-          ) : null}
-
-          <div className={paymentNowDisplayClass} style={{ marginTop: 0, alignItems: 'center' }}>
-            <span
-              className="k"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              Monthly Payment
-              <button
-                type="button"
-                className="info-icon"
-                aria-label="Future payment breakdown"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowAfterGraceBreakdown(true);
-                }}
-              />
-            </span>
-            <span className="v" style={{ color: paymentNowAmountColor }}>
-              {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} cacheKey="loan_monthly" /> : '-'}
-            </span>
+            {/* Payment row */}
+            <div className="loans-summary-payment">
+              <div className={paymentNowDisplayClass} style={{ marginTop: 0, alignItems: 'center' }}>
+                <span
+                  className="k"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  Monthly Payment
+                  <button
+                    type="button"
+                    className="info-icon"
+                    aria-label="Future payment breakdown"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAfterGraceBreakdown(true);
+                    }}
+                  />
+                </span>
+                <span className="v" style={{ color: paymentNowAmountColor }}>
+                  {summary.totalMonthlyNow > 0 ? <AnimatedNumber value={summary.totalMonthlyNow} format={formatCents} cacheKey="loan_monthly" /> : '-'}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       <div
         className="segmented"
