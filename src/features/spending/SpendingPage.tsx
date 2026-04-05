@@ -757,31 +757,10 @@ export function SpendingPage({ tabVisible = true, addTrigger = 0, reimburseAddTr
             </div></div>
           )})}
           </div>
-          {showAllPurchases ? (
-            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+          {visiblePurchases.length > 1 && (
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
               {purchasesCarouselIdx + 1} of {visiblePurchases.length}
             </div>
-          ) : (
-            <>
-              {visiblePurchases.length > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                  {visiblePurchases.map((_, i) => (
-                    <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === purchasesCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
-                  ))}
-                </div>
-              )}
-              {hasMorePurchases && (
-                <div style={{ textAlign: 'center', marginTop: 8, opacity: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 1 : 0, pointerEvents: purchasesCarouselIdx >= visiblePurchases.length - 1 ? 'auto' : 'none', transition: 'opacity 0.15s ease' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-compact"
-                    onClick={() => setShowAllPurchases(true)}
-                  >
-                    See more
-                  </button>
-                </div>
-              )}
-            </>
           )}
         </div>
       ) : null}

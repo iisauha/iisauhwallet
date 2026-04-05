@@ -543,24 +543,11 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
             );
           })}
           </div>
-          {displayedCompleted.length > 1 && (showAllCompleted && completedBonuses.length >= 5 ? (
-            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+          {displayedCompleted.length > 1 && (
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
               {completedCarouselIdx + 1} of {displayedCompleted.length}
             </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                {displayedCompleted.map((_, i) => (
-                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === completedCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
-                ))}
-              </div>
-              {completedBonuses.length >= 5 && completedCarouselIdx >= displayedCompleted.length - 1 ? (
-                <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllCompleted(true)}>See more</button>
-                </div>
-              ) : null}
-            </>
-          ))}
+          )}
           <button
             type="button"
             className="btn btn-add"
@@ -1018,24 +1005,11 @@ export function SubTrackerPage({ addTrigger = 0 }: { addTrigger?: number } = {})
         );
       })}
       </div>
-      {displayedEntries.length > 1 && (showAllEntries && entries.length >= 5 ? (
-        <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+      {displayedEntries.length > 1 && (
+        <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
           {entriesCarouselIdx + 1} of {displayedEntries.length}
         </div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-            {displayedEntries.map((_, i) => (
-              <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: i === entriesCarouselIdx ? 'var(--ui-add-btn, var(--accent))' : 'var(--ui-border, var(--border))', transition: 'background 0.15s' }} />
-            ))}
-          </div>
-          {entries.length >= 5 && entriesCarouselIdx >= displayedEntries.length - 1 ? (
-            <div style={{ textAlign: 'center', marginTop: 8 }}>
-              <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllEntries(true)}>See more</button>
-            </div>
-          ) : null}
-        </>
-      ))}
+      )}
 
       {confirmDelete ? (
         <div className="modal-overlay">

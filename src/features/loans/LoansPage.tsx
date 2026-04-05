@@ -1875,10 +1875,8 @@ export function LoansPage() {
                 ))}
               </div>
               {publicLoansWithDerived.length > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                  {publicLoansWithDerived.map((_, i) => (
-                    <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === publicCarouselIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
-                  ))}
+                <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
+                  {publicCarouselIdx + 1} of {publicLoansWithDerived.length}
                 </div>
               )}
             </>
@@ -1937,24 +1935,11 @@ export function LoansPage() {
             </div>
           ))}
           </div>
-          {displayedPrivateLoans.length > 1 && (showAllLoans && privateLoansWithDerived.length >= 5 ? (
-            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+          {displayedPrivateLoans.length > 1 && (
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
               {privateCarouselIdx + 1} of {displayedPrivateLoans.length}
             </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                {displayedPrivateLoans.map((_, i) => (
-                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === privateCarouselIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
-                ))}
-              </div>
-              {privateLoansWithDerived.length >= 5 && privateCarouselIdx >= displayedPrivateLoans.length - 1 ? (
-                <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllLoans(true)}>See more</button>
-                </div>
-              ) : null}
-            </>
-          ))}
+          )}
         </>
       ) : null}
 

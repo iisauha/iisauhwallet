@@ -773,24 +773,11 @@ export function SnapshotPage({
               );
             })}
           </div>
-          {displayedBanks.length > 1 && (showAllBanks && visibleBanks.length >= 5 ? (
-            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+          {displayedBanks.length > 1 && (
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
               {banksIdx + 1} of {displayedBanks.length}
             </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                {displayedBanks.map((_, i) => (
-                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === banksIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
-                ))}
-              </div>
-              {visibleBanks.length >= 5 && banksIdx >= displayedBanks.length - 1 ? (
-                <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" className="btn btn-secondary btn-compact" onClick={() => setShowAllBanks(true)}>See more</button>
-                </div>
-              ) : null}
-            </>
-          ))}
+          )}
         </>
       </div>
 
@@ -927,24 +914,11 @@ export function SnapshotPage({
               );
             })}
           </div>
-          {displayedCards.length > 1 && (showAllCards && visibleCards.length >= 5 ? (
-            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+          {displayedCards.length > 1 && (
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
               {cardsIdx + 1} of {displayedCards.length}
             </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                {displayedCards.map((_, i) => (
-                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === cardsIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
-                ))}
-              </div>
-              {visibleCards.length >= 5 && cardsIdx >= displayedCards.length - 1 ? (
-                <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" className="btn btn-secondary btn-compact" onClick={() => setShowAllCards(true)}>See more</button>
-                </div>
-              ) : null}
-            </>
-          ))}
+          )}
         </>
       </div>
 

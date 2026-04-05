@@ -1477,24 +1477,11 @@ export function InvestingPage({ openTransferTrigger = 0, openHysaAllocTrigger = 
             );
           })}
           </div>
-          {visibleAccounts.length > 1 && (sectionShowAll && allVisibleAccounts.length >= 5 ? (
-            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ui-primary-text, var(--text))', marginTop: 6, marginBottom: 8 }}>
+          {visibleAccounts.length > 1 && (
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--ui-primary-text, var(--text))', opacity: 0.5, marginTop: 4, marginBottom: 4, paddingRight: 4 }}>
               {carouselIdx + 1} of {visibleAccounts.length}
             </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 8 }}>
-                {visibleAccounts.map((_, i) => (
-                  <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i === carouselIdx ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', display: 'inline-block', flexShrink: 0 }} />
-                ))}
-              </div>
-              {allVisibleAccounts.length >= 5 && carouselIdx >= visibleAccounts.length - 1 ? (
-                <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '6px 14px', minHeight: 'unset' }} onClick={() => setShowAllInvesting((prev) => ({ ...prev, [type]: true }))}>See more</button>
-                </div>
-              ) : null}
-            </>
-          ))}
+          )}
       </>
     );
   }
