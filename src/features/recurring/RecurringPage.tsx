@@ -108,10 +108,13 @@ export function RecurringPage({ addTrigger = 0, addExpenseTrigger = 0, addIncome
     return getLoanEstimatedPaymentNowMap(loansState.loans || [], detectedIncome);
   }, [data.recurring, loansState.loans]);
   const totalVisiblePaymentNowCents = useMemo(() => {
-    const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
-    const derivedPrivate = getPrivatePaymentNowTotal(loansState.loans || [], detectedIncome);
-    return getVisiblePaymentNowCents(derivedPrivate);
-  }, [loansState.loans, data.recurring]);
+    // Sum all loans (public + private) for the visible total
+    let total = 0;
+    for (const [, cents] of Object.entries(loanPaymentMap)) {
+      if (cents != null && cents > 0) total += cents;
+    }
+    return getVisiblePaymentNowCents(total);
+  }, [loanPaymentMap]);
   const loanList = loansState.loans || [];
   const showLoanLinkSection = type === 'expense' && (category === 'loan_payment' || useLoanEstimatedPayment);
 

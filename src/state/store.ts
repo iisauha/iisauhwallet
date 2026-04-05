@@ -749,13 +749,13 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
               if (r.linkedLoanId && loanPaymentMap[r.linkedLoanId] != null) {
                 fullAmountCents = loanPaymentMap[r.linkedLoanId]!;
               } else if (!r.linkedLoanId) {
-                const privateLoans = (loansState.loans || []).filter((l: any) => l.category === 'private' && !l.excludeFromCurrentPayment);
-                let privateTotal = 0;
-                for (const l of privateLoans) {
+                // Sum all loans (public + private) for the total payment
+                let allLoansTotal = 0;
+                for (const l of (loansState.loans || [])) {
                   const amt = loanPaymentMap[l.id];
-                  if (amt != null && amt > 0) privateTotal += amt;
+                  if (amt != null && amt > 0) allLoansTotal += amt;
                 }
-                fullAmountCents = getVisiblePaymentNowCents(privateTotal);
+                fullAmountCents = getVisiblePaymentNowCents(allLoansTotal);
               } else {
                 fullAmountCents =
                   r.expectedMinCents != null && r.expectedMaxCents != null
@@ -942,9 +942,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
               }
             }
           }
-          savePrivatePaymentNowBase(0);
-          // Public loan balance reduction is handled by the per-loan loop above
-          // (public loans are now individual records in the same loans array)
+          // Balance reduction handled by the per-loan loop above.
+          // Do NOT reset savePrivatePaymentNowBase(0) here — it causes "not set" in recurring.
+          // The post-posting recalc in postLoanPayment saves the correct new value.
         }
       }
 

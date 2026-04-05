@@ -133,11 +133,13 @@ export function UpcomingPage() {
   }, [data.recurring]);
 
   const totalVisiblePaymentNowCents = useMemo(() => {
-    const loansState = loadLoans();
-    const detectedIncome = getDetectedAnnualIncomeCentsFromRecurring((data as any).recurring || []);
-    const derivedPrivate = getPrivatePaymentNowTotal(loansState.loans || [], detectedIncome);
-    return getVisiblePaymentNowCents(derivedPrivate);
-  }, [loanPaymentMap, data.recurring]);
+    // Sum all loans (public + private) for the visible total
+    let total = 0;
+    for (const [, cents] of Object.entries(loanPaymentMap)) {
+      if (cents != null && cents > 0) total += cents;
+    }
+    return getVisiblePaymentNowCents(total);
+  }, [loanPaymentMap]);
 
   const recurringFilterOpts = useMemo(
     () => ({

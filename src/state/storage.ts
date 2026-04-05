@@ -1433,12 +1433,12 @@ export function saveAppFontScale(value: number) {
  * Use this for recurring "Use current loan payment" and anywhere the single general Payment(now) is the source of truth.
  * @param derivedPrivatePaymentNowBase - sum of current per-loan private Payment(now) (e.g. from getPrivatePaymentNowTotal)
  */
-export function getVisiblePaymentNowCents(derivedPrivatePaymentNowBase: number): number {
+export function getVisiblePaymentNowCents(derivedTotalPaymentNowCents: number): number {
   const override = loadPaymentNowManualOverride();
   if (override !== null && override !== undefined) return override;
-  const privateBase = loadPrivatePaymentNowBase();
-  const p = privateBase !== null && privateBase !== undefined ? privateBase : derivedPrivatePaymentNowBase;
-  return p + loadPublicPaymentNowAdded();
+  // Use the live derived total (all loans, both public + private).
+  // Stored privateBase is stale after posting resets it to 0, so always prefer the live value.
+  return derivedTotalPaymentNowCents;
 }
 
 function todayISO(): string {
