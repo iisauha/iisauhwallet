@@ -680,8 +680,8 @@ function deriveForLoan(
     // 3) Fix 3: custom_monthly active with no future range → project full repayment as after-grace estimate.
     if (futureFullRepaymentCents == null && activeRange?.mode === 'custom_monthly' && futureFullPayment > 0) {
       futureFullRepaymentCents = futureFullPayment;
-      futureFullRepaymentInterestCents = fullRepaymentBreakdown?.monthlyInterestCents ?? undefined;
-      futureFullRepaymentPrincipalCents = fullRepaymentBreakdown?.principalPortionCents ?? undefined;
+      futureFullRepaymentInterestCents = fullRepaymentBreakdown?.monthlyInterestCents ?? null;
+      futureFullRepaymentPrincipalCents = fullRepaymentBreakdown?.principalPortionCents ?? null;
       futureIsProjected = true;
       monthlyLaterCents = futureFullPayment;
     }
@@ -689,7 +689,7 @@ function deriveForLoan(
     // 4) Fix 1: deferred with no future range → project payment from projected balance at deferment end.
     if (futureFullRepaymentCents == null && (activeRange?.mode === 'deferred' || !activeRange) && derivedTermMonths > 0) {
       // Use the deferred range's end date (or latest range end) as the grace end proxy
-      const graceEndISO = activeRange?.endDate ?? latestRangeEndISO || todayISO;
+      const graceEndISO = activeRange?.endDate ?? (latestRangeEndISO || todayISO);
       const graceEnd = graceEndISO > todayISO ? graceEndISO : todayISO;
       const projBal = balanceCents + computeDeferredRangeInterestCents(balanceCents, interestRatePercent, todayISO, graceEnd);
       const projBreakdown = computeFullRepaymentBreakdown(projBal, interestRatePercent, derivedTermMonths);
